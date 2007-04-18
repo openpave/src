@@ -77,8 +77,11 @@ MODULES_core :=                                  \
   openpave/core                                  \
   $(NULL)
 
+REQUIRES_test :=                                 \
+  core                                           \
+  $(NULL)
+
 MODULES_test :=                                  \
-  $(MODULES_core)                                \
   openpave/test                                  \
   $(NULL)
 
@@ -160,6 +163,7 @@ include $(TOPSRCDIR)/.opconfig.mk
 # Options that may come from opconfig
 
 OP_PROJECT_LIST := $(subst $(comma), ,$(OP_CO_PROJECT))
+OP_PROJECT_LIST += $(foreach project,$(OP_PROJECT_LIST),$(REQUIRES_$(project)))
 
 ifneq (,$(filter-out $(AVAILABLE_PROJECTS),$(OP_PROJECT_LIST)))
 $(error OP_CO_PROJECT contains an unrecognized project.)
