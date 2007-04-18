@@ -356,7 +356,7 @@ endif
 $(OBJDIR)/config.status: $(CONFIG_STATUS_DEPS)
 	@$(MAKE) -f $(TOPSRCDIR)/openpave.mk configure
 
-$(OBJDIR)/Makefile: $(OBJDIR)/Makefile.in $(OBJDIR)/config.status
+$(OBJDIR)/Makefile: $(TOPSRCDIR)/Makefile.in $(OBJDIR)/config.status
 	cd $(OBJDIR); \
 	  CONFIG_FILES=Makefile ./config.status
 
@@ -399,14 +399,14 @@ cleansrcdir:
 	  rm -fr `find . -type d \( -name .deps -print -o -name CVS \
 	          -o -exec test ! -d {}/CVS \; \) -prune \
 	          -o \( -name '*.[ao]' -o -name '*.so' \) -type f -print`; \
-	  rm -f config-defs.h \
-	        config.cache \
-	        config.log \
-            config.status \
-            .opconfig.out \
-			.opconfig.mk \
-		; \
-	fi;
+	fi; \
+	rm -f config-defs.h \
+	      config.cache \
+	      config.log \
+	      config.status \
+	      .opconfig.out \
+	      .opconfig.mk \
+	;
 
 
-.PHONY: checkout real_checkout depend build export libs alldep install clean realclean distclean cleansrcdir pull_all build_all clobber clobber_all pull_and_build_all everything configure
+.PHONY: checkout real_checkout depend build export libs alldep install clean realclean distclean cleansrcdir everything configure
