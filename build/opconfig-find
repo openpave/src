@@ -37,22 +37,19 @@
 #
 # ***** END LICENSE BLOCK *****
 
-# opconfigfind - Loads options from .opconfig onto configure's
-#    command-line. The .opconfig file is searched for in the 
+# opconfigfind - Loads options from opconfig onto configure's
+#    command-line. The opconfig file is searched for in the 
 #    order:
-#       if $MOZCONFIG is set, use that.
-#       Otherwise, use $TOPSRCDIR/.opconfig
-#       Otherwise, use $HOME/.opconfig
+#       if $OPCONFIG is set, use that.
+#       Otherwise, use $TOPSRCDIR/opconfig
+#       Otherwise, use $HOME/opconfig
 #
 # $OpenPave$
 #
 topsrcdir=$1
 
-for _config in "$MOZCONFIG" \
-               "$MOZ_MYCONFIG" \
-               "$topsrcdir/.opconfig" \
+for _config in "$OPCONFIG" \
                "$topsrcdir/opconfig" \
-               "$HOME/.opconfig" \
                "$HOME/opconfig"
 do
   if test -f "$_config"; then

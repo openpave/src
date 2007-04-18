@@ -37,17 +37,17 @@
 #
 # ***** END LICENSE BLOCK *****
 
-# opconfig2configure - Loads options from .opconfig onto configure's
+# opconfig2configure - Loads options from opconfig onto configure's
 #    command-line. See opconfig-find for how the config file is
 #    found
 #
 # $OpenPave$
 #
-#    The options from .opconfig are inserted into the command-line
+#    The options from opconfig are inserted into the command-line
 #    before the real command-line options. This way the real options
-#    will override any .opconfig options.
+#    will override any opconfig options.
 #
-# .opconfig is a shell script. To add an option to configure's
+# opconfig is a shell script. To add an option to configure's
 #    command-line use the pre-defined function, ac_add_options,
 #
 #       ac_add_options  <configure-option> [<configure-option> ... ]
@@ -56,7 +56,7 @@
 #
 #       ac_add_options --with-pthreads --enable-debug
 #
-# ac_add_options can be called multiple times in .opconfig.
+# ac_add_options can be called multiple times in opconfig.
 #    Each call adds more options to configure's command-line.
 
 # Note: $_AUTOCONF_TOOLS_DIR must be defined in the script that includes this.

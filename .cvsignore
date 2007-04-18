@@ -1,0 +1,8 @@
+Makefile
+config.log
+config.cache
+config.status
+config-defs.h
+opconfig
+.opconfig.mk
+.opconfig.out

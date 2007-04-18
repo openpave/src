@@ -64,7 +64,7 @@ AVAILABLE_PROJECTS = \
   $(NULL)
 
 MODULES_core :=                                  \
-  openpave/core                                  \
+  openpave/include                               \
   $(NULL)
 
 MODULES_test :=                                  \
@@ -97,22 +97,16 @@ ROOTDIR   := $(CWD)
 TOPSRCDIR := $(CWD)/openpave
 endif
 
-ifndef TOPSRCDIR_OP
-TOPSRCDIR_OP=$(TOPSRCDIR)
-endif
-
 # if ROOTDIR equals only drive letter (i.e. "C:"), set to "/"
 DIRNAME := $(shell echo "$(ROOTDIR)" | sed -e 's/^.://')
 ifeq ($(DIRNAME),)
 ROOTDIR := /.
 endif
 
-AUTOCONF := autoconf
-MKDIR := mkdir
-SH := /bin/sh
-ifndef MAKE
-MAKE := gmake
-endif
+AUTOCONF ?= autoconf
+MKDIR ?= mkdir
+SH ?= /bin/sh
+MAKE ?= gmake
 
 CONFIG_GUESS_SCRIPT := $(wildcard $(TOPSRCDIR)/build/config.guess)
 ifdef CONFIG_GUESS_SCRIPT
@@ -143,6 +137,10 @@ CVSCO_LOGFILE := $(shell echo $(CVSCO_LOGFILE) | sed s%//%/%)
 
 OPCONFIG_LOADER := openpave/build/opconfig2make
 OPCONFIG_FINDER := openpave/build/opconfig-find 
+OPCONFIG_CONFIG := openpave/COPYING-ADDL-1.0 \
+                   openpave/configure.in \
+                   openpave/build
+                   $(NULL)
 run_for_side_effects := \
   $(shell cd $(ROOTDIR); \
      if test "$(_IS_FIRST_CHECKOUT)"; then \
@@ -167,16 +165,11 @@ endif
 
 OP_MODULE_LIST := $(subst $(comma), ,$(OP_CO_MODULE)) $(foreach project,$(OP_PROJECT_LIST),$(MODULES_$(project)))
 
-OPCONFIG_MODULES += $(foreach project,$(OP_PROJECT_LIST),$(BOOTSTRAP_$(project)))
+OPCONFIG_CONFIG += $(foreach project,$(OP_PROJECT_LIST),$(BOOTSTRAP_$(project)))
 
 # Using $(sort) here because it also removes duplicate entries.
 OP_MODULE_LIST := $(sort $(OP_MODULE_LIST))
-OPCONFIG_MODULES := $(sort $(OPCONFIG_MODULES))
-
-# Change CVS flags if anonymous root is requested
-ifdef OP_CO_USE_MIRROR
-  CVS_FLAGS := -d :pserver:anonymous@cvs.openpave.org:/home/cvs
-endif
+OPCONFIG_CONFIG := $(sort $(OPCONFIG_CONFIG))
 
 # OP_CVS_FLAGS - Basic CVS flags
 ifeq "$(origin OP_CVS_FLAGS)" "undefined"
@@ -248,14 +241,6 @@ else
 all:: checkout alldep
 endif
 
-# Windows equivalents
-pull_all: checkout
-build_all: build
-build_all_dep: alldep
-build_all_depend: alldep
-clobber clobber_all: clean
-pull_and_build_all: checkout alldep
-
 # Do everything from scratch
 everything: checkout clean build
 
@@ -274,9 +259,9 @@ ifdef RUN_AUTOCONF_LOCALLY
 	$(RM) -f openpave/configure
 endif
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE)
-	@echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) openpave/openpave.mk $(OPCONFIG_MODULES)'; \
+	@echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) openpave/openpave.mk $(OPCONFIG_CONFIG)'; \
         cd $(ROOTDIR) && \
-	$(CVSCO) $(CVS_CO_DATE_FLAGS) openpave/openpave.mk $(OPCONFIG_MODULES)
+	$(CVSCO) $(CVS_CO_DATE_FLAGS) openpave/openpave.mk $(OPCONFIG_CONFIG)
 	@cd $(ROOTDIR) && $(MAKE) -f openpave/openpave.mk real_checkout
 
 #	Start the checkout. Split the output to the tty and a log file.
@@ -285,7 +270,7 @@ real_checkout:
 	@set -e; \
 	cvs_co() { set -e; echo "$$@" ; \
 	  "$$@" 2>&1 | tee -a $(CVSCO_LOGFILE); }; \
-	$(CHECKOUT_MODULES);
+	$(CHECKOUT_MODULES)
 	@echo "checkout finish: "`date` | tee -a $(CVSCO_LOGFILE)
 #	@: Check the log for conflicts. ;
 	@conflicts=`egrep "^C " $(CVSCO_LOGFILE)` ;\
@@ -298,8 +283,7 @@ real_checkout:
 	fi
 ifdef RUN_AUTOCONF_LOCALLY
 	@echo Generating configures using $(AUTOCONF) ; \
-	cd $(TOPSRCDIR) && $(AUTOCONF) && \
-	cd $(TOPSRCDIR)/directory/c-sdk && $(AUTOCONF)
+	cd $(TOPSRCDIR) && $(AUTOCONF)
 endif
 
 #####################################################
@@ -335,20 +319,15 @@ else
 CONFIG_STATUS = $(wildcard $(OBJDIR)/config.status)
 CONFIG_CACHE  = $(wildcard $(OBJDIR)/config.cache)
 
-ifdef RUN_AUTOCONF_LOCALLY
 EXTRA_CONFIG_DEPS := \
-	$(TOPSRCDIR)/aclocal.m4 \
-	$(wildcard $(TOPSRCDIR)/build/*.m4) \
 	$(NULL)
 
 $(TOPSRCDIR)/configure: $(TOPSRCDIR)/configure.in $(EXTRA_CONFIG_DEPS)
 	@echo Generating $@ using autoconf
 	cd $(TOPSRCDIR); $(AUTOCONF)
-endif
 
 CONFIG_STATUS_DEPS := \
 	$(TOPSRCDIR)/configure \
-	$(TOPSRCDIR)/allmakefiles.sh \
 	$(TOPSRCDIR)/.opconfig.mk \
 	$(NULL)
 
@@ -358,10 +337,6 @@ CONFIG_STATUS_DEPS := \
 ifeq ($(TOPSRCDIR),$(OBJDIR))
   CONFIGURE = ./configure
 else
-  CONFIGURE = $(TOPSRCDIR)/configure
-endif
-
-ifdef OP_TOOLS
   CONFIGURE = $(TOPSRCDIR)/configure
 endif
 
@@ -407,6 +382,8 @@ install export libs clean realclean distclean alldep:: $(OBJDIR)/Makefile $(OBJD
 	$(OP_MAKE) $@
 
 endif # OP_CURRENT_PROJECT
+# (! IS_FIRST_CHECKOUT)
+endif
 
 cleansrcdir:
 	@cd $(TOPSRCDIR); \
@@ -417,10 +394,14 @@ cleansrcdir:
 	  rm -fr `find . -type d \( -name .deps -print -o -name CVS \
 	          -o -exec test ! -d {}/CVS \; \) -prune \
 	          -o \( -name '*.[ao]' -o -name '*.so' \) -type f -print`; \
-	  build/clean-config.sh; \
+	  rm -f config-defs.h \
+	        config.cache \
+	        config.log \
+            config.status \
+            .opconfig.out \
+			.opconfig.mk \
+		; \
 	fi;
 
-# (! IS_FIRST_CHECKOUT)
-endif
 
 .PHONY: checkout real_checkout depend build export libs alldep install clean realclean distclean cleansrcdir pull_all build_all clobber clobber_all pull_and_build_all everything configure
