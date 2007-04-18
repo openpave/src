@@ -70,6 +70,7 @@ MODULES_core :=                                  \
   openpave/Makefile.in                           \
   openpave/build                                 \
   openpave/include                               \
+  openpave/core                                  \
   $(NULL)
 
 MODULES_test :=                                  \
