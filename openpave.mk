@@ -64,6 +64,11 @@ AVAILABLE_PROJECTS = \
   $(NULL)
 
 MODULES_core :=                                  \
+  openpave/.cvsignore                            \
+  openpave/COPYING-ADDL-1.0                      \
+  openpave/configure.in                          \
+  openpave/Makefile                              \
+  openpave/build                                 \
   openpave/include                               \
   $(NULL)
 
@@ -137,10 +142,6 @@ CVSCO_LOGFILE := $(shell echo $(CVSCO_LOGFILE) | sed s%//%/%)
 
 OPCONFIG_LOADER := openpave/build/opconfig2make
 OPCONFIG_FINDER := openpave/build/opconfig-find 
-OPCONFIG_CONFIG := openpave/COPYING-ADDL-1.0 \
-                   openpave/configure.in \
-                   openpave/build
-                   $(NULL)
 run_for_side_effects := \
   $(shell cd $(ROOTDIR); \
      if test "$(_IS_FIRST_CHECKOUT)"; then \
