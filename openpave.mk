@@ -67,7 +67,7 @@ MODULES_core :=                                  \
   openpave/.cvsignore                            \
   openpave/COPYING-ADDL-1.0                      \
   openpave/configure.in                          \
-  openpave/Makefile                              \
+  openpave/Makefile.in                           \
   openpave/build                                 \
   openpave/include                               \
   $(NULL)
