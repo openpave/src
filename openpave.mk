@@ -260,9 +260,9 @@ ifdef RUN_AUTOCONF_LOCALLY
 	$(RM) -f openpave/configure
 endif
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE)
-	@echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) openpave/openpave.mk $(OPCONFIG_CONFIG)'; \
+	@echo '$(CVSCO) openpave/openpave.mk $(OPCONFIG_CONFIG)'; \
         cd $(ROOTDIR) && \
-	$(CVSCO) $(CVS_CO_DATE_FLAGS) openpave/openpave.mk $(OPCONFIG_CONFIG)
+	$(CVSCO) openpave/openpave.mk $(OPCONFIG_CONFIG)
 	@cd $(ROOTDIR) && $(MAKE) -f openpave/openpave.mk real_checkout
 
 #	Start the checkout. Split the output to the tty and a log file.
@@ -341,7 +341,7 @@ else
   CONFIGURE = $(TOPSRCDIR)/configure
 endif
 
-configure::
+configure:: $(TOPSRCDIR)/configure.in
 ifdef OP_BUILD_PROJECTS
 	@if test ! -d $(OP_OBJDIR); then $(MKDIR) $(OP_OBJDIR); else true; fi
 endif
@@ -353,33 +353,37 @@ endif
                \"$(MAKE) -f openpave.mk build\"" && exit 1 )
 	@touch $(OBJDIR)/Makefile
 
-$(OBJDIR)/Makefile $(OBJDIR)/config.status: $(CONFIG_STATUS_DEPS)
+$(OBJDIR)/config.status: $(CONFIG_STATUS_DEPS)
 	@$(MAKE) -f $(TOPSRCDIR)/openpave.mk configure
 
-ifneq (,$(CONFIG_STATUS))
-$(OBJDIR)/config/autoconf.mk: $(TOPSRCDIR)/config/autoconf.mk.in
+$(OBJDIR)/Makefile: $(OBJDIR)/Makefile.in $(OBJDIR)/config.status
 	cd $(OBJDIR); \
-	  CONFIG_FILES=config/autoconf.mk ./config.status
+	  CONFIG_FILES=Makefile ./config.status
+
+ifneq (,$(CONFIG_STATUS))
+$(OBJDIR)/build/autoconf.mk: $(TOPSRCDIR)/build/autoconf.mk.in
+	cd $(OBJDIR); \
+	  CONFIG_FILES=build/autoconf.mk ./config.status
 endif
 
 
 ####################################
 # Depend
 
-depend:: $(OBJDIR)/Makefile $(OBJDIR)/config.status
+depend:: $(OBJDIR)/Makefile
 	$(OP_MAKE) export && $(OP_MAKE) depend
 
 ####################################
 # Build it
 
-build::  $(OBJDIR)/Makefile $(OBJDIR)/config.status
+build::  $(OBJDIR)/Makefile
 	$(OP_MAKE)
 
 ####################################
 # Other targets
 
 # Pass these target onto the real build system
-install export libs clean realclean distclean alldep:: $(OBJDIR)/Makefile $(OBJDIR)/config.status
+install export libs clean realclean distclean alldep:: $(OBJDIR)/Makefile
 	$(OP_MAKE) $@
 
 endif # OP_CURRENT_PROJECT
