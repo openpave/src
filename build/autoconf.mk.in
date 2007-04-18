@@ -7,7 +7,7 @@ exec_prefix	= @exec_prefix@
 bindir		= @bindir@
 includedir	= @includedir@
 libdir		= @libdir@
-datadir		= @datadir@
+datadir		= @datarootdir@
 
 OBJ_SUFFIX	= @OBJ_SUFFIX@
 LIB_SUFFIX	= @LIB_SUFFIX@
