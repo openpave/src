@@ -132,9 +132,9 @@ endif
 endif
 
 CVS_CO_DATE_FLAGS = $(if $(OP_CO_DATE),-D "$(OP_CO_DATE)")
-CVSCO = $(CVS) $(CVS_FLAGS) co $(OP_CO_FLAGS) $(if $(OP_CO_TAG),-r $(OP_CO_TAG)) $(CVS_CO_DATE_FLAGS)
+CVSCO = $(CVS) $(CVS_FLAGS) co $(OP_CO_FLAGS) $(if $(OP_CO_TAG),-r $(OP_CO_TAG),-A) $(CVS_CO_DATE_FLAGS)
 
-CVSCO_LOGFILE := $(ROOTDIR)/cvsco.log
+CVSCO_LOGFILE := $(ROOTDIR)/op-cvs.log
 CVSCO_LOGFILE := $(shell echo $(CVSCO_LOGFILE) | sed s%//%/%)
 
 ####################################
