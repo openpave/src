@@ -63,11 +63,15 @@ AVAILABLE_PROJECTS = \
   test \
   $(NULL)
 
-MODULES_core :=                                  \
+BOOTSTRAP_core :=                                \
   openpave/.cvsignore                            \
   openpave/COPYING-ADDL-1.0                      \
   openpave/configure.in                          \
+  openpave/configure                             \
   openpave/Makefile.in                           \
+  $(NULL)
+
+MODULES_core :=                                  \
   openpave/build                                 \
   openpave/include                               \
   openpave/core                                  \
