@@ -63,10 +63,8 @@
 #
 ################################################################################
 
-CFLAGS		= $(VISIBILITY_FLAGS) $(CC_ONLY_FLAGS) $(OPTIMIZER)\
-		  $(OS_CFLAGS) $(XP_DEFINE) $(DEFINES) $(INCLUDES) $(XCFLAGS)
-CXXFLAGS	= $(VISIBILITY_FLAGS) $(CXX_ONLY_FLAGS) $(OPTIMIZER)\
-		  $(OS_CFLAGS) $(XP_DEFINE) $(DEFINES) $(INCLUDES) $(XCFLAGS)
+CFLAGS		= $(VISIBILITY_FLAGS) $(OS_CFLAGS) $(DEFINES) $(INCLUDES)
+CXXFLAGS	= $(VISIBILITY_FLAGS) $(OS_CFLAGS) $(DEFINES) $(INCLUDES)
 
 LDFLAGS		= $(OS_LDFLAGS) $(LIBS)
 
@@ -76,7 +74,7 @@ ifeq ($(OS_ARCH),Darwin)
 PWD := $(shell pwd)
 endif
 
-ifeq (,$(CROSS_COMPILE)$(filter-out WINNT, $(OS_ARCH)))
+ifeq (,$(CROSS_COMPILE)$(filter-out WINNT,$(OS_ARCH)))
 INSTALL		= $(NSINSTALL)
 else
 ifeq ($(NSDISTMODE),copy)
@@ -130,11 +128,7 @@ endif
 
 ifndef TARGETS
 ifdef LIBRARY
-ifeq (,$(filter-out WINNT,$(OS_ARCH)))
 TARGETS		+= $(LIBRARY) $(SHARED_LIBRARY) $(IMPORT_LIBRARY)
-else
-TARGETS		+= $(LIBRARY) $(SHARED_LIBRARY)
-endif
 endif
 ifdef PROGRAM
 TARGETS		+= $(PROGRAM)
@@ -260,7 +254,7 @@ Makefile: $(srcdir)/Makefile.in $(MOD_DEPTH)/config.status
 
 $(PROGRAM): $(OBJS)
 ifeq ($(USING_GCC)_$(OS_ARCH),_WINNT)
-	$(CC) $(OBJS) -Fe$@ -link $(LDFLAGS) $(OS_LIBS) $(EXTRA_LIBS)
+	$(CC) $(OBJS) -Fe$@ -link $(LDFLAGS:-l%=lib%.$(LIB_SUFFIX):-L=/LIBPATH:) $(OS_LIBS)
 else
 ifdef CPPSRCS
 	$(CXX) -o $@ $(CFLAGS) $(OBJS) $(LDFLAGS)
@@ -280,9 +274,9 @@ $(LIBRARY): $(OBJS)
 $(SHARED_LIBRARY): $(OBJS) $(RES) $(MAPFILE)
 	rm -f $@
 ifeq ($(USING_GCC)_$(OS_ARCH),_WINNT)
-	$(LINK_DLL) -MAP $(DLLBASE) $(DLL_LIBS) $(EXTRA_LIBS) $(OBJS) $(RES)
+	$(LINK_DLL) -MAP $(DLLBASE) $(DLL_LIBS) $(OBJS) $(RES)
 else
-	$(MKSHLIB) $(OBJS) $(RES) $(EXTRA_LIBS)
+	$(MKSHLIB) $(OBJS) $(RES)
 endif	# WINNT
 ifdef ENABLE_STRIP
 	$(STRIP) $@

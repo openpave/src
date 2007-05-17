@@ -2362,7 +2362,6 @@ esac
 
 
 
-
 MAKEFILES="
 Makefile
 build/autoconf.mk
@@ -2568,7 +2567,6 @@ s%@FILTER@%$FILTER%g
 s%@IMPLIB@%$IMPLIB%g
 s%@OS_LIBS@%$OS_LIBS%g
 s%@RESOLVE_LINK_SYMBOLS@%$RESOLVE_LINK_SYMBOLS%g
-s%@OPTIMIZER@%$OPTIMIZER%g
 s%@RC@%$RC%g
 s%@RCFLAGS@%$RCFLAGS%g
 s%@DLLFLAGS@%$DLLFLAGS%g
