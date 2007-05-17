@@ -9,7 +9,7 @@ VPATH		= @srcdir@
 
 include $(MOD_DEPTH)/build/autoconf.mk
 
-DIRS = src
+DIRS = include src
 
 DIRS += test
 

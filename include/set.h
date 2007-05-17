@@ -225,15 +225,15 @@ public:
 
 	// Add one element, at the end.
 	inline bool add(const V & v) {
-		return add(size+1,&v,1);
+		return add(this->size+1,&v,1);
 	};
 	// Add a whole set, at the end.
 	inline bool add(const fset<V> & v) {
-		return add(size+1,&v.value[1],v.size);
+		return add(this->size+1,&v.value[1],v.size);
 	};
 	// Add an array, at the end.
 	inline bool add(const V * v, const int s = 1) {
-		return add(size+1,v,s);
+		return add(this->size+1,v,s);
 	};
 	// Insert one element at position p.
 	inline bool add(const int p, const V & v) {
@@ -248,57 +248,57 @@ public:
 		int i;
 		if (p < 1 || s < 1)
 			return false;
-		if (p > size) {
-			if (reallocate(p+s-1)) {
-				V * temp = value;
-				if (!allocate(p+s-1))
+		if (p > this->size) {
+			if (this->reallocate(p+s-1)) {
+				V * temp = this->value;
+				if (!this->allocate(p+s-1))
 					return false;
-				for (int i = 0; i <= size; i++)
-					value[i] = temp[i];
+				for (int i = 0; i <= this->size; i++)
+					this->value[i] = temp[i];
 				delete [] temp;
 			}
-			for (i = size+1; i < p; i++)
-				value[i] = value[0];
-			size = p+s-1;
+			for (i = this->size+1; i < p; i++)
+				this->value[i] = this->value[0];
+			this->size = p+s-1;
 			for (i = 0; i < s; i++)
-				value[p+i] = v[i];
+				this->value[p+i] = v[i];
 		} else {
-			if (reallocate(size+s)) {
-				V * temp = value;
-				if (!allocate(size+s))
+			if (this->reallocate(this->size+s)) {
+				V * temp = this->value;
+				if (!this->allocate(this->size+s))
 					return false;
-				size += s;
-				for (int i = 0, j = i; i <= size; i++)
-					value[i] = (i >= p && i < p+s ? v[i-p] : temp[j++]);
+				this->size += s;
+				for (int i = 0, j = i; i <= this->size; i++)
+					this->value[i] = (i >= p && i < p+s ? v[i-p] : temp[j++]);
 				delete [] temp;
 			} else {
-				size += s;
-				for (int i = size, j = i - 1; i >= p ; i--)
-					value[i] = (i >= p && i < p+s ? v[i-p] : value[j--]);
+				this->size += s;
+				for (int i = this->size, j = i - 1; i >= p ; i--)
+					this->value[i] = (i >= p && i < p+s ? v[i-p] : this->value[j--]);
 			}
 		}
 		return true;
 	};
 	// Remove the last element.
 	inline bool remove() {
-		return remove(size,1);
+		return remove(this->size,1);
 	};
 	// Remove s elements, starting at position p.
 	bool remove(const int p, const int s = 1) {
-		if (inbounds(p) && s > 0) {
-			int as = (p+s-1 > size ? size-p+1 : s);
-			if (reallocate(size-as)) {
-				V * temp = value;
-				if (!allocate(size-as))
+		if (this->inbounds(p) && s > 0) {
+			int as = (p+s-1 > this->size ? this->size-p+1 : s);
+			if (reallocate(this->size-as)) {
+				V * temp = this->value;
+				if (!allocate(this->size-as))
 					return false;
-				size -= as;
-				for (int i = 0; i <= size; i++)
-					value[i] = (i < p ? temp[i] : temp[i+as]);
+				this->size -= as;
+				for (int i = 0; i <= this->size; i++)
+					this->value[i] = (i < p ? temp[i] : temp[i+as]);
 				delete [] temp;
 			} else {
-				size -= as;
-				for (int i = p; i <= size; i++)
-					value[i] = value[i+as];
+				this->size -= as;
+				for (int i = p; i <= this->size; i++)
+					this->value[i] = this->value[i+as];
 			}
 		} else {
 			return false;
@@ -306,13 +306,13 @@ public:
 		return true;
 	};
 	bool empty() {
-		if (reallocate(0)) {
-			delete [] value;
-			value = 0;
-			if (!allocate(0))
+		if (this->reallocate(0)) {
+			delete [] this->value;
+			this->value = 0;
+			if (!this->allocate(0))
 				return false;
 		}
-		size = 0;
+		this->size = 0;
 		return true;
 	};
 };
@@ -349,7 +349,7 @@ public:
 
 	// Guess what?
 	void sort() {
-		qsort(1,size);
+		qsort(1,this->size);
 	};
 
 protected:
@@ -357,19 +357,19 @@ protected:
 	void qsort(const int l, const int r) {
 		if (r > l) {
 			int i, j, k, p = (l+r)/2;
-			if (value[p] <= value[l])
-				swap(value[l],value[p]);
-			if (value[r] <= value[l])
-				swap(value[l],value[r]);
-			if (value[r] <= value[p])
-				swap(value[p],value[r]);
+			if (this->value[p] <= this->value[l])
+				swap(this->value[l],this->value[p]);
+			if (this->value[r] <= this->value[l])
+				swap(this->value[l],this->value[r]);
+			if (this->value[r] <= this->value[p])
+				swap(this->value[p],this->value[r]);
 			for (i = l, j = r, k = 0; ;
 								p = (p==i?j++:(p==j?i--:p)), k++) {
-				while (++i < p && value[i] <= value[p]);
-				while (p < --j && value[p] <= value[j]);
+				while (++i < p && this->value[i] <= this->value[p]);
+				while (p < --j && this->value[p] <= this->value[j]);
 				if (i >= j)
 					break;
-				swap(value[i],value[j]);
+				swap(this->value[i],this->value[j]);
 			}
 			if (k == 0) {
 				isort(l, p-1);
@@ -383,8 +383,8 @@ protected:
 	// Insertion sort for if the set looks sorted already.
 	void isort(const int l, const int r) {
 		for (int i = l+1; i <= r; i++) {
-			for (int j = i; j > l && value[j] <= value[j-1]; j--)
-				swap(value[j],value[j-1]);
+			for (int j = i; j > l && this->value[j] <= this->value[j-1]; j--)
+				swap(this->value[j],this->value[j-1]);
 		}
 	};
 };
@@ -416,18 +416,18 @@ public:
 
 	// Sort then compact the set.
 	void sort() {
-		qsort(1,size);
+		qsort(1,this->size);
 		compact();
 	};
 
 protected:
 	void compact() {
 		int i, j;
-		for (i = 2, j = 1; i <= size; i++) {
-			if (value[j] != value[i] && ++j != i)
-				value[j] = value[i];
+		for (i = 2, j = 1; i <= this->size; i++) {
+			if (this->value[j] != this->value[i] && ++j != i)
+				this->value[j] = this->value[i];
 		}
-		size = j;
+		this->size = j;
 	};
 };
 
@@ -449,35 +449,35 @@ public:
 	// Simple constructor.
 	kfset(const int s, const int b = DFLT_BLK, const V * v = 0)
 		: set(s,b) {
-		if (!allocate(size))
+		if (!allocate(this->size))
 			return;
 		for (int i = 0, j = i; v && i < s; i++) {
 			if (int p = haskey(v[i])) {
-				size--;
-				value[p] = v[i];
+				this->size--;
+				this->value[p] = v[i];
 			} else {
-				value[++j] = v[i];
+				this->value[++j] = v[i];
 			}
 		}
 	};
 	// Copy constuctor.
 	kfset(const kfset<K,V> & v) : set(v.size,v.block) {
-		if (!allocate(size))
+		if (!allocate(this->size))
 			return;
-		for (int i = 0; i <= size; i++)
-			value[i] = v.value[i];
+		for (int i = 0; i <= this->size; i++)
+			this->value[i] = v.value[i];
 	};
 	// Clean up.
 	~kfset() {
-		if (value)
-			delete [] value;
-		value = 0;
+		if (this->value)
+			delete [] this->value;
+		this->value = 0;
 	};
 
 	// Do a key lookup, and return zero if the key is not found.
 	int haskey(const K & k) const {
-		for (int i = 1; i <= size; i++) {
-			if ((K &)(value[i]) == k)
+		for (int i = 1; i <= this->size; i++) {
+			if ((K &)(this->value[i]) == k)
 				return i;
 		}
 		return 0;
@@ -485,27 +485,27 @@ public:
 	// Assignment operator.
 	kfset<K,V> & operator = (const kfset<K,V> & v) {
 		if (reallocate(v.size)) {
-			delete [] value;
-			value = 0;
+			delete [] this->value;
+			this->value = 0;
 			if (!allocate(v.size)) {
-				size = 0;
+				this->size = 0;
 				return *this;
 			}
 		}
-		size = v.size;
+		this->size = v.size;
 		block = v.block;
-		for (int i = 0; i <= size; i++)
-			value[i] = v.value[i];
+		for (int i = 0; i <= this->size; i++)
+			this->value[i] = v.value[i];
 		return *this;
 	};
 	// Set our default elelment.
 	void setdefault(const V & v) {
-		value[0] = v;
+		this->value[0] = v;
 	};
 	// Return data based on a key lookup. The default value is
 	// returned if the key is not found.
 	V & data(const K & k) const {
-		return value[haskey(k)];
+		return this->value[haskey(k)];
 	};
 	// Look and feel like an array.
 	V & operator [] (const K & k) const {
@@ -513,7 +513,7 @@ public:
 	};
 	// Allow integer keys.
 	V & operator [] (const int p) const {
-		return value[p+1];
+		return this->value[p+1];
 	};
 
 protected:
@@ -521,12 +521,12 @@ protected:
 
 	// Hide the allocation function.
 	bool allocate(const int s) {
-		V * tmp = value;
+		V * tmp = this->value;
 		if (s > 10*block)
 			block *= 10;
-		value = new V[buffer(s)];
-		if (value == 0) {
-			value = tmp;
+		this->value = new V[buffer(s)];
+		if (this->value == 0) {
+			this->value = tmp;
 			event_msg(EVENT_ERROR,"Out of memory in kfset::allocate!");
 			return false;
 		};
@@ -534,7 +534,7 @@ protected:
 	};
 	// And the null constructor.
 	kfset() : set() {
-		allocate(size);
+		allocate(this->size);
 	};
 };
 
@@ -563,27 +563,27 @@ public:
 	};
 	// Add a whole set, at the end.
 	inline bool add(const kfset<K,V> & v) {
-		add(&v.value[1],v.size);
+		return add(&v.value[1],v.size);
 	};
 	// Add an array of values... There is no point in
 	// a position based addition. 
 	bool add(const V * v, const int s = 1) {
 		if (s <= 0 || v == 0)
 			return false;
-		if (reallocate(size+s)) {
-			V * tempval = value;
-			if (!allocate(size+s))
+		if (reallocate(this->size+s)) {
+			V * tempval = this->value;
+			if (!allocate(this->size+s))
 				return false;
-			for (int i = 0; i <= size; i++)
-				value[i] = tempval[i];
+			for (int i = 0; i <= this->size; i++)
+				this->value[i] = tempval[i];
 			delete [] tempval;
 		}
 		for (int i = 0; i < s; i++) {
 			if (int p = haskey(v[i])) {
-				value[p] = v[i];
+				this->value[p] = v[i];
 			} else {
-				size++;
-				value[size] = v[i];
+				this->size++;
+				this->value[this->size] = v[i];
 			}
 		}
 		return true;
@@ -591,18 +591,18 @@ public:
 	// Remove based on key.
 	bool remove(const K & k) {
 		if (int p = haskey(k)) {
-			if (reallocate(size--)) {
-				V * tempval = value;
-				if (!allocate(size))
+			if (reallocate(this->size--)) {
+				V * tempval = this->value;
+				if (!allocate(this->size))
 					return false;
-				for (int i = 0,j = i; j <= size; i++) {
+				for (int i = 0,j = i; j <= this->size; i++) {
 					if (i != p)
-						value[j++] = tempval[i];
+						this->value[j++] = tempval[i];
 				}
 				delete [] tempval;
 			} else {
-				for (int i = p; i <= size; i++)
-					value[i] = value[i+1];
+				for (int i = p; i <= this->size; i++)
+					this->value[i] = this->value[i+1];
 			}
 		} else {
 			return false;
@@ -612,20 +612,20 @@ public:
 	// Replace key/value with another.
 	bool replace(const K & ko, const V & v) {
 		if (int p = haskey(ko)) {
-			value[p] = v;
+			this->value[p] = v;
 			return true;
 		}
 		return false;
 	};
 	bool empty() {
-		if (reallocate(0)) {
-			delete [] value;
-			value = 0;
-			size = 0;
-			if (!allocate(0))
+		if (this->reallocate(0)) {
+			delete [] this->value;
+			this->value = 0;
+			this->size = 0;
+			if (!this->allocate(0))
 				return false;
 		}
-		size = 0;
+		this->size = 0;
 		return true;
 	};
 };
@@ -649,25 +649,25 @@ public:
 	};
 
 	inline void sort() {
-		qsort(1,size);
+		qsort(1,this->size);
 	};
 protected:
 	void qsort(const int l, const int r) {
 		if (r > l) {
-			int p = (l+r)/2;
-			if (value[l] > value[p])
-				swap(value[l],value[p]);
-			if (value[l] > value[r])
-				swap(value[l],value[r]);
-			if (value[p] > value[r])
-				swap(value[p],value[r]);
-			for (int i = l, j = r, k = 0; ;
+			int i, j, k, p = (l+r)/2;
+			if (this->value[l] > this->value[p])
+				swap(this->value[l],this->value[p]);
+			if (this->value[l] > this->value[r])
+				swap(this->value[l],this->value[r]);
+			if (this->value[p] > this->value[r])
+				swap(this->value[p],this->value[r]);
+			for (i = l, j = r, k = 0; ;
 							p = (p==i?j++:(p==j?i--:p)), k++) {
-				while (++i < p && value[i] <= value[p]);
-				while (p < --j && value[p] <= value[j]);
+				while (++i < p && this->value[i] <= this->value[p]);
+				while (p < --j && this->value[p] <= this->value[j]);
 				if (i >= j)
 					break;
-				swap(value[i],value[j]);
+				swap(this->value[i],this->value[j]);
 			}
 			if (k == 0) {
 				isort(l, p-1);
@@ -680,8 +680,8 @@ protected:
 	};
 	void isort(const int l, const int r) {
 		for (int i = l+1; i <= r; i++) {
-			for (int j = i; j > l && value[j-1] > value[j]; j--) {
-				swap(value[j],value[j-1]);
+			for (int j = i; j > l && this->value[j-1] > this->value[j]; j--) {
+				swap(this->value[j],this->value[j-1]);
 			}
 		}
 	};
@@ -843,14 +843,14 @@ public:
 	bool add(const K * k, const V * v = 0, const int s = 1) {
 		if (s <= 0)
 			return false;
-		if (reallocate(size+s)) {
-			K * tempkey = key;
-			V * tempval = value;
-			if (!allocate(size+s))
+		if (this->reallocate(this->size+s)) {
+			K * tempkey = this->key;
+			V * tempval = this->value;
+			if (!allocate(this->size+s))
 				return false;
-			for (int i = 0; i <= size; i++) {
-				key[i] = tempkey[i];
-				value[i] = tempval[i];
+			for (int i = 0; i <= this->size; i++) {
+				this->key[i] = tempkey[i];
+				this->value[i] = tempval[i];
 			};
 			delete [] tempkey;
 			delete [] tempval;
@@ -858,12 +858,12 @@ public:
 		for (int i = 0; i < s; i++) {
 			if (int p = haskey(k[i])) {
 				if (v != 0)
-					value[p] = v[i];
+					this->value[p] = v[i];
 			} else {
-				size++;
-				key[size] = k[i];
+				this->size++;
+				this->key[this->size] = k[i];
 				if (v != 0)
-					value[size] = v[i];
+					this->value[this->size] = v[i];
 			}
 		}
 		return true;
@@ -871,23 +871,23 @@ public:
 	// Now start removing them...
 	bool remove(const K & k) {
 		if (int p = haskey(k)) {
-			if (reallocate(size--)) {
-				K * tempkey = key;
-				V * tempval = value;
-				if (!allocate(size))
+			if (this->reallocate(this->size--)) {
+				K * tempkey = this->key;
+				V * tempval = this->value;
+				if (!allocate(this->size))
 					return false;
-				for (int i = 0,j = i; j <= size; i++) {
+				for (int i = 0,j = i; j <= this->size; i++) {
 					if (i != p) {
-						key[j] = tempkey[i];
-						value[j++] = tempval[i];
+						this->key[j] = tempkey[i];
+						this->value[j++] = tempval[i];
 					}
 				}
 				delete [] tempkey;
 				delete [] tempval;
 			} else {
-				for (int i = p; i <= size; i++) {
-					key[i] = key[i+1];
-					value[i] = value[i+1];
+				for (int i = p; i <= this->size; i++) {
+					this->key[i] = this->key[i+1];
+					this->value[i] = this->value[i+1];
 				}
 			}
 		} else {
@@ -898,24 +898,24 @@ public:
 	// Or replacing them...
 	bool replace(const K & ko, const K & k, const V & v) {
 		if (int p = haskey(ko)) {
-			key[p] = k;
-			value[p] = v;
+			this->key[p] = k;
+			this->value[p] = v;
 			return true;
 		} else {
 			return false;
 		}
 	};
 	bool empty() {
-		if (reallocate(0)) {
-			delete [] key;
-			delete [] value;
-			key = value = 0;
-			if (!allocate(0)) {
-				size = 0;
+		if (this->reallocate(0)) {
+			delete [] this->key;
+			delete [] this->value;
+			this->key = this->value = 0;
+			if (!this->allocate(0)) {
+				this->size = 0;
 				return false;
 			}
 		}
-		size = 0;
+		this->size = 0;
 		return true;
 	};
 };
@@ -939,32 +939,32 @@ public:
 	};
 
 	inline void sort() {
-		qsort(1,size);
+		qsort(1,this->size);
 	};
 protected:
 	void qsort(const int l, const int r) {
 		if (r > l) {
 			int i, j, k, p = (l+r)/2;
-			if (value[l] > value[p]) {
-				swap(key[l],key[p]);
-				swap(value[l],value[p]);
+			if (this->value[l] > this->value[p]) {
+				swap(this->key[l],this->key[p]);
+				swap(this->value[l],this->value[p]);
 			}
-			if (value[l] > value[r]) {
-				swap(key[l],key[r]);
-				swap(value[l],value[r]);
+			if (this->value[l] > this->value[r]) {
+				swap(this->key[l],this->key[r]);
+				swap(this->value[l],this->value[r]);
 			}
-			if (value[p] > value[r]) {
-				swap(key[p],key[r]);
-				swap(value[p],value[r]);
+			if (this->value[p] > this->value[r]) {
+				swap(this->key[p],this->key[r]);
+				swap(this->value[p],this->value[r]);
 			}
 			for (i = l, j = r, k = 0; ;
 								p = (p==i?j++:(p==j?i--:p)), k++) {
-				while (++i < p && value[i] <= value[p]);
-				while (p < --j && value[p] <= value[j]);
+				while (++i < p && this->value[i] <= this->value[p]);
+				while (p < --j && this->value[p] <= this->value[j]);
 				if (i >= j)
 					break;
-				swap(key[i],key[j]);
-				swap(value[i],value[j]);
+				swap(this->key[i],this->key[j]);
+				swap(this->value[i],this->value[j]);
 			}
 			if (k == 0) {
 				isort(l, p-1);
@@ -977,9 +977,9 @@ protected:
 	};
 	void isort(const int l, const int r) {
 		for (int i = l+1; i <= r; i++) {
-			for (int j = i; j > l && value[j-1] > value[j]; j--) {
-				swap(key[j],key[j-1]);
-				swap(value[j],value[j-1]);
+			for (int j = i; j > l && this->value[j-1] > this->value[j]; j--) {
+				swap(this->key[j],this->key[j-1]);
+				swap(this->value[j],this->value[j-1]);
 			}
 		}
 	};

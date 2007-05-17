@@ -10,9 +10,8 @@ VPATH		= @srcdir@
 
 include $(MOD_DEPTH)/build/autoconf.mk
 
-LIBRAY_NAME	= libop
-FORCE_STATIC_LIB = 1
-FORCE_USE_PIC	= 1
+LIBRARY_NAME	= openpave
+ONLY_STATIC_LIB	= 1
 
 DIRS =                      \
 	$(NULL)
@@ -22,8 +21,10 @@ LOCAL_INCLUDES =            \
 	$(NULL)
 
 CPPSRCS =                   \
-	pavement.cpp        \
+	traffic.cpp         \
 	matrix.cpp          \
+	pavement.cpp        \
+	reliability.cpp     \
 	$(NULL)
 
 EXPORTS =                   \

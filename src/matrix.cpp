@@ -1221,7 +1221,9 @@ abort:
 #ifdef NOBUILD
 #define n 10
 #define m 8
-void main () {
+int
+main()
+{
 	int i, j, k, r = 0;
 	double s, dot = 0.0;
 	double * A = new double[n*n];
@@ -1299,7 +1301,9 @@ abort:
 #endif
 
 #ifdef NOBUILD
-void main () {
+int
+main()
+{
 	int n, m, i, j, k;
 	int * A;
 
@@ -1336,7 +1340,9 @@ void main () {
 
 #ifdef NOBUILD
 #define n 10
-void main () {
+int
+main()
+{
 	bool rv = false;
 	int i, j, k, iter = 0;
 	double * A = new double[n*n];
@@ -1396,7 +1402,9 @@ abort:
 
 #ifdef NOBUILD
 #define n 5
-void main () {
+int
+main()
+{
 	int i, j, k;
 	double * A = new double[n*n];
 	double * B = new double[n*n];

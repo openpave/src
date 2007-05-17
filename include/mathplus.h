@@ -42,32 +42,83 @@
 #include <float.h>
 #include <limits.h>
 #include <math.h>
+#if defined(_MSC_VER)
 #include <ymath.h>
+#endif
 #include <stdlib.h>
 
+#if !defined(M_E)
 #define	M_E			2.71828182845904523536		// e
+#endif
+#if !defined(M_1_E)
 #define M_1_E       .367879441171442321596		// 1/e
+#endif
+#if !defined(M_LOG2E)
 #define	M_LOG2E		1.44269504088896340736		// log 2e
+#endif
+#if !defined(M_LOG10E)
 #define	M_LOG10E	.434294481903251827651		// log 10e
+#endif
+#if !defined(M_LN2)
 #define	M_LN2		.693147180559945309417		// log e2
+#endif
+#if !defined(M_LN10)
 #define	M_LN10		2.30258509299404568402		// log e10
+#endif
+#if !defined(M_PI)
 #define	M_PI		3.14159265358979323846		// pi
+#endif
+#if !defined(M_2PI)
 #define M_2PI       6.28318530717958647693		// 2*pi
+#endif
+#if !defined(M_PI_2)
 #define	M_PI_2		1.57079632679489661923		// pi/2
+#endif
+#if !defined(M_PI_4)
 #define	M_PI_4		.785398163397448309616		// pi/4
+#endif
+#if !defined(M_1_PI)
 #define	M_1_PI		.318309886183790671538		// 1/pi
+#endif
+#if !defined(M_2_PI)
 #define	M_2_PI		.636619772367581343076		// 2/pi
+#endif
+#if !defined(M_PISQUARE)
 #define M_PISQUARE  9.86960440108935861883		// pi*pi
+#endif
+#if !defined(M_SQRTPI)
 #define M_SQRTPI    1.77245385090551602730		// sqrt(pi)
+#endif
+#if !defined(M_SQRT2PI)
 #define M_SQRT2PI   2.50662827463100050242		// sqrt(2*pi)
+#endif
+#if !defined(M_1_SQRTPI)
 #define M_1_SQRTPI  .564189583547756286948		// 1/sqrt(pi)
+#endif
+#if !defined(M_2_SQRTPI)
 #define	M_2_SQRTPI	1.12837916709551257390		// 2/sqrt(pi)
+#endif
+#if !defined(M_1_SQRT2PI)
+#define M_1_SQRT2PI .398942280401432677940		// 1/sqrt(2*pi)
+#endif
+#if !defined(M_180_PI)
 #define M_180_PI    57.2957795130823208768		// 180/pi
+#endif
+#if !defined(M_PI_180)
 #define M_PI_180    1.74532925199432957692e-2 	// pi/180
+#endif
+#if !defined(M_LNPI)
 #define M_LNPI      1.14472988584940017414		// log pi
+#endif
+#if !defined(M_SQRT2)
 #define	M_SQRT2		1.41421356237309504880		// sqrt(2)
+#endif
+#if !defined(M_SQRT1_2)
 #define	M_SQRT1_2	.707106781186547524401		// 1/sqrt(2)
+#endif
+#if !defined(M_EULER)
 #define M_EULER     .577215664901532860607		// euler's constant
+#endif
 
 #define	MAX_EXP		log(DBL_MAX)				// Max/Min value for exp()
 
@@ -82,8 +133,19 @@
 #define RAND(a,b)	((a)+((b)-(a))*(double)(rand()+1)/(double)(RAND_MAX+2))
 
 // Make some protable names for the bessel functions.
-#define	j0(x)	_j0(x)
-#define j1(x)	_j1(x)
+#if defined(_MSC_VER)
+#define	j0(x)		_j0(x)
+#define j1(x)		_j1(x)
+#define isnan(x) 	_isnan(x)
+#define isfinite(x)	_finite(x)
+#if _MSC_VER > 1200
+#define INFINITY	_Inf._Double
+#define NAN			_Nan._Double
+#else
+#define INFINITY	_Inf._D
+#define	NAN			_Nan._D
+#endif
+#endif
 
 /*
  * Simple template functions for swapping things. One day
@@ -109,7 +171,7 @@ inline double pythag(const double a, const double b) {
  * Computes n choose k
  */
 inline int choose(const int n, const int k) {
-	unsigned int i, j = n-k+1, c = j;
+	int i, j = n-k+1, c = j;
 	if (k < 0 || k > n)
 		return 0;
 	if (k == 0 || k == n)

@@ -623,13 +623,9 @@ buildabcd_full(const double m, const int nl, const double * h,
 			for (k2 = 0; k2 < 2; k2++) {
 				A[(il*4-4+k1)*(nl*4)+il*4-2+k2] *=  exp(-2*t1);
 				A[(il*4-2+k1)*(nl*4)+il*4-4+k2] *=  (2*t1<MAX_EXP?exp(2*t1):DBL_MAX);
-				if (!_finite(A[(il*4-2+k1)*(nl*4)+il*4-4+k2]))
-					A[(il*4-2+k1)*(nl*4)+il*4-4+k2] = 0.0;
 				A[(il*4-4+k1)*(nl*4)+il*4+0+k2] *= -1.0;
 				A[(il*4-4+k1)*(nl*4)+il*4+2+k2] *= -exp(-2*t1);
 				A[(il*4-2+k1)*(nl*4)+il*4+0+k2] *= -(2*t1<MAX_EXP?exp(2*t1):DBL_MAX);
-				if (!_finite(A[(il*4-2+k1)*(nl*4)+il*4+0+k2]))
-					A[(il*4-2+k1)*(nl*4)+il*4+0+k2] = 0.0;
 				A[(il*4-2+k1)*(nl*4)+il*4+2+k2] *= -1.0;
 			}
 		}

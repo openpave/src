@@ -88,7 +88,7 @@ MODULES_test :=                                  \
 #######################################################################
 # Defines
 #
-CVS = cvs
+CVS ?= cvs
 comma := ,
 empty :=
 space := $(empty) $(empty)
@@ -304,7 +304,7 @@ endif
 ifdef _IS_FIRST_CHECKOUT
 # First time, do build target in a new process to pick up new files.
 build::
-	$(MAKE) -f $(TOPSRCDIR)/openpave.mk build
+	@cd $(ROOTDIR) && $(MAKE) -f openpave/openpave.mk build
 else
 
 #####################################################
@@ -317,7 +317,7 @@ ifeq (,$(OP_CURRENT_PROJECT)$(if $(OP_BUILD_PROJECTS),,1))
 configure depend build install export libs clean realclean distclean alldep::
 	set -e; \
 	for app in $(OP_BUILD_PROJECTS); do \
-	  $(MAKE) -f $(TOPSRCDIR)/openpave.mk $@ OP_CURRENT_PROJECT=$$app; \
+	  @cd $(ROOTDIR) && $(MAKE) -f openpave/openpave.mk $@ OP_CURRENT_PROJECT=$$app; \
 	done
 
 else
@@ -369,11 +369,11 @@ endif
 	@echo $(CONFIGURE) $(CONFIGURE_ARGS)
 	@cd $(OBJDIR) && $(BUILD_PROJECT_ARG) $(CONFIGURE_ENV_ARGS) $(CONFIGURE) $(CONFIGURE_ARGS) \
 	  || ( echo "*** Fix above errors and then restart with\
-               \"$(MAKE) -f openpave.mk build\"" && exit 1 )
+               \"$(MAKE) -f openpave/openpave.mk build\"" && exit 1 )
 	@touch $(OBJDIR)/Makefile
 
 $(CONFIG_STATUS_OUTS): $(CONFIG_STATUS_DEPS)
-	@$(MAKE) -f $(TOPSRCDIR)/openpave.mk configure
+	@cd $(ROOTDIR) && $(MAKE) -f openpave/openpave.mk configure
 
 ####################################
 # Depend

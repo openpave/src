@@ -65,10 +65,10 @@
 
 CFLAGS		= $(VISIBILITY_FLAGS) $(CC_ONLY_FLAGS) $(OPTIMIZER)\
 		  $(OS_CFLAGS) $(XP_DEFINE) $(DEFINES) $(INCLUDES) $(XCFLAGS)
-CCCFLAGS	= $(VISIBILITY_FLAGS) $(CCC_ONLY_FLAGS) $(OPTIMIZER)\
+CXXFLAGS	= $(VISIBILITY_FLAGS) $(CXX_ONLY_FLAGS) $(OPTIMIZER)\
 		  $(OS_CFLAGS) $(XP_DEFINE) $(DEFINES) $(INCLUDES) $(XCFLAGS)
 
-LDFLAGS		= $(OS_LDFLAGS)
+LDFLAGS		= $(OS_LDFLAGS) $(LIBS)
 
 LINK_DLL	= $(LD) $(OS_DLLFLAGS) $(DLLFLAGS)
 
@@ -76,7 +76,7 @@ ifeq ($(OS_ARCH),Darwin)
 PWD := $(shell pwd)
 endif
 
-ifeq (,$(CROSS_COMPILE)$(filter-out WINNT OS2, $(OS_ARCH)))
+ifeq (,$(CROSS_COMPILE)$(filter-out WINNT, $(OS_ARCH)))
 INSTALL		= $(NSINSTALL)
 else
 ifeq ($(NSDISTMODE),copy)
@@ -112,25 +112,33 @@ DIST_GARBAGE	+= Makefile
 #
 
 ifdef LIBRARY_NAME
+LIBRARY		= lib$(LIBRARY_NAME)$(LIBRARY_VERSION).$(LIB_SUFFIX)
+ifndef ONLY_STATIC_LIB
 ifeq (,$(filter-out WINNT,$(OS_ARCH)))
 LIBRARY		= lib$(LIBRARY_NAME)$(LIBRARY_VERSION)_s.$(LIB_SUFFIX)
 SHARED_LIBRARY	= lib$(LIBRARY_NAME)$(LIBRARY_VERSION).$(DLL_SUFFIX)
 IMPORT_LIBRARY	= lib$(LIBRARY_NAME)$(LIBRARY_VERSION).$(LIB_SUFFIX)
 else
-LIBRARY		= lib$(LIBRARY_NAME)$(LIBRARY_VERSION).$(LIB_SUFFIX)
-ifdef MKSHLIB
 SHARED_LIBRARY	= lib$(LIBRARY_NAME)$(LIBRARY_VERSION).$(DLL_SUFFIX)
 endif
 endif
 endif
 
-ifndef TARGETS
-ifeq (,$(filter-out WINNT,$(OS_ARCH)))
-TARGETS		= $(LIBRARY) $(SHARED_LIBRARY) $(IMPORT_LIBRARY)
-else
-TARGETS		= $(LIBRARY) $(SHARED_LIBRARY)
+ifdef PROGRAM_NAME
+PROGRAM		= $(PROGRAM_NAME)$(EXE_SUFFIX)
 endif
-TARGETS		+= $(PROGRAM)$(EXE_SUFFIX)
+
+ifndef TARGETS
+ifdef LIBRARY
+ifeq (,$(filter-out WINNT,$(OS_ARCH)))
+TARGETS		+= $(LIBRARY) $(SHARED_LIBRARY) $(IMPORT_LIBRARY)
+else
+TARGETS		+= $(LIBRARY) $(SHARED_LIBRARY)
+endif
+endif
+ifdef PROGRAM
+TARGETS		+= $(PROGRAM)
+endif
 endif
 
 #
@@ -167,20 +175,22 @@ endif
 
 ################################################################################
 
-all:: $(MOD_DEPTH)/config.status
+all:: $(MOD_DEPTH)/config.status Makefile
 	+$(LOOP_OVER_DIRS)
 
-clean::
+clean:: Makefile
 	rm -rf $(OBJS) $(RES) $(GARBAGE)
 	+$(LOOP_OVER_DIRS)
 
-realclean::
+realclean:: Makefile
 	rm -rf $(ALL_TRASH)
 	+$(LOOP_OVER_DIRS)
 
-distclean::
+distclean:: Makefile
 	rm -rf $(ALL_TRASH) $(DIST_GARBAGE)
 	+$(LOOP_OVER_DIRS)
+
+all:: $(TARGETS)
 
 install:: $(RELEASE_BINS) $(RELEASE_HEADERS) $(RELEASE_LIBS)
 ifdef RELEASE_BINS
@@ -246,13 +256,17 @@ endif
 	+$(LOOP_OVER_DIRS)
 
 Makefile: $(srcdir)/Makefile.in $(MOD_DEPTH)/config.status
-	@$(MAKE) -f $(TOPSRCDIR)/openpave.mk configure
+	$(MAKE) -C $(topsrcdir) -f openpave.mk configure
 
-$(PROGRAM)$(EXE_SUFFIX): $(OBJS)
+$(PROGRAM): $(OBJS)
 ifeq ($(USING_GCC)_$(OS_ARCH),_WINNT)
 	$(CC) $(OBJS) -Fe$@ -link $(LDFLAGS) $(OS_LIBS) $(EXTRA_LIBS)
 else
+ifdef CPPSRCS
+	$(CXX) -o $@ $(CFLAGS) $(OBJS) $(LDFLAGS)
+else
 	$(CC) -o $@ $(CFLAGS) $(OBJS) $(LDFLAGS)
+endif
 endif
 ifdef ENABLE_STRIP
 	$(STRIP) $@

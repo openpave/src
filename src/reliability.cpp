@@ -12,7 +12,7 @@
 **************************************************************************/
 
 #include <stdlib.h>
-#include "..\include\mathplus.h"
+#include "../include/mathplus.h"
 #include "reliability.h"
 
 /*
@@ -120,13 +120,9 @@ double stdnormal_cdf(const double u)
 	};
 	register double y, z;
 
-	if (_isnan(u))
-#if _MSC_VER > 1200
-		return _Nan._Double;
-#else
-		return _Nan._D;
-#endif
-	if (!_finite(u))
+	if (isnan(u))
+		return NAN;
+	if (!isfinite(u))
 		return (u < 0 ? 0.0 : 1.0);
 	y = fabs(u);
 	if (y <= 0.662912607362388) {
@@ -186,24 +182,12 @@ double stdnormal_inv(double p)
 
 	register double q, t, u;
 
-	if (_isnan(p) || p > 1.0 || p < 0.0)
-#if _MSC_VER > 1200
-		return _Nan._Double;
-#else
-		return _Nan._D;
-#endif
+	if (isnan(p) || p > 1.0 || p < 0.0)
+		return NAN;
 	if (p == 0.0)
-#if _MSC_VER > 1200
-		return -_Inf._Double;
-#else
-		return -_Inf._D;
-#endif
+		return -INFINITY;
 	if (p == 1.0)
-#if _MSC_VER > 1200
-		return _Inf._Double;
-#else
-		return _Inf._D;
-#endif
+		return INFINITY;
 	q = MIN(p,1-p);
 	if (q > 0.02425) {
 		// Rational approximation for central region.
@@ -278,7 +262,7 @@ public:
 	};
 
 protected:
-	friend reliability;
+	friend class reliability;
 
 	rv_normal(reliability * o, randomvar * p, double m, double s)
 		: randomvar(o,p) {
@@ -309,7 +293,7 @@ public:
 	};
 
 protected:
-	friend reliability;
+	friend class reliability;
 
 	rv_lognormal(reliability * o, randomvar * p, double m, double s)
 		: randomvar(o,p) {

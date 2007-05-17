@@ -211,7 +211,7 @@ public:
 	virtual ~LElayer() {
 	};
 private:
-	friend LEsystem;
+	friend class LEsystem;
 	double h;							// The thickness of the layer.
 	double E;							// The elastic modulus.
 	double v;							// Poisson's ratio.
@@ -257,7 +257,7 @@ struct paveload : point2d {
 	virtual ~paveload() {
 	};
 private:
-	friend LEsystem;
+	friend class LEsystem;
 	double f;
 	double p;
 };
@@ -283,8 +283,8 @@ struct pavedata : point3d {
 //private:
 	double data[9][3];
 	sset<double> deflgrad;
-	friend LEsystem;
-	friend LEbackcalc;
+	friend class LEsystem;
+	friend class LEbackcalc;
 	void principle(double v, double E);
 };
 
@@ -339,11 +339,11 @@ public:
 	};
 //private:
 	int callcount;
-	sset<paveload> load;
 	ksset<point3d,pavedata> data;
-	friend listelement_o<LEsystem, LElayer>;
-	friend list_owned<LEsystem, LElayer>;
-	friend LEbackcalc;
+	sset<paveload> load;
+	friend class listelement_o<LEsystem, LElayer>;
+	friend class list_owned<LEsystem, LElayer>;
+	friend class LEbackcalc;
 };
 
 /*
@@ -365,7 +365,7 @@ struct defldata : point3d {
 //private:
 	double measured;
 	double calculated;
-	friend LEbackcalc;
+	friend class LEbackcalc;
 };
 
 /*

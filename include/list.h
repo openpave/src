@@ -91,8 +91,8 @@ protected:
 			next->prev = prev;
 	};
 	// These are so the other classes can access our points.
-	friend listelement_d<T>;
-	friend list_double<T>;
+	//friend class listelement_d<T>;
+	friend class list_double<T>;
 };
 
 /*
@@ -110,29 +110,29 @@ protected:
 	listelement_o(O *o, T *p) : listelement_d<T>(p) {
 		owner = o;
 		if (owner != NULL) {
-			if (prev == NULL) {
-				prev = owner->last;
-				if (prev != NULL)
-					prev->next = (T *)this;
+			if (this->prev == NULL) {
+				this->prev = owner->last;
+				if (this->prev != NULL)
+					this->prev->next = (T *)this;
 				else
 					owner->first = (T *)this;
 			}
-			if (next == NULL)
+			if (this->next == NULL)
 				owner->last = (T *)this;
 		}
 	};
 	// Also manage our owner's pointers.
 	virtual ~listelement_o() {
 		if (owner != NULL) {
-			if (prev == NULL)
-				owner->first = next;
-			if (next == NULL)
-				owner->last = prev;
+			if (this->prev == NULL)
+				owner->first = this->next;
+			if (this->next == NULL)
+				owner->last = this->prev;
 		}
 	};
 	// Be a bit social.
-	friend O;
-	friend list_owned<O,T>;
+	//friend class O;
+	friend class list_owned<O,T>;
 };
 
 /*
@@ -195,8 +195,8 @@ protected:
 	virtual ~list_owned() {
 	};
 
-	friend listelement_o<O,T>;
-	friend O;
+	friend class listelement_o<O,T>;
+	//friend class O;
 };
 
 #endif // LIST_H

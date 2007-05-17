@@ -14,8 +14,18 @@
 #include "traffic.h"
 #include "../include/set.h"
 #include <ctype.h>
+#if defined(_MSC_VER)
 #include <direct.h>
 #include <io.h>
+#define strdup		_strdup
+#define chdir 		_chdir
+#define getcwd		_getcwd
+#define stat		_stat
+#define S_IFREG		_S_IFREG
+#else
+#include <unistd.h>
+#include <glob.h>
+#endif
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -70,9 +80,9 @@ time_t str2time(const char * s, struct tm * date)
  */
 int fexists(const char * fname)
 {
-	struct _stat sb;
+	struct stat sb;
 
-	return (_stat(fname, &sb) == 0 && sb.st_mode & _S_IFREG);
+	return (stat(fname, &sb) == 0 && sb.st_mode & S_IFREG);
 }
 
 /*
@@ -308,26 +318,32 @@ bool WIMsurvey::ProcessRSADir(const char * dir, const char * bname)
 {
 	int i;
 	char pwd[FILENAME_MAX], * fname;
-    struct _finddata_t found_file;
+#if defined(_MSC_VER)
+    _finddata_t found_file;
     long fn;
+#else
+	glob_t g;
+	const char * fn;
+#endif
 	FILE * bp;
 	aoset<char *,time_t> RSAfiles;
 	WIMday day;
 
-	if (_getcwd(pwd,FILENAME_MAX) == NULL) {
+	if (getcwd(pwd,FILENAME_MAX) == NULL) {
 		event_msg(EVENT_ERROR,"Unable to get current working directory!");
 		return false;
 	}
-	if (_chdir(dir)) {
+	if (chdir(dir)) {
 		event_msg(EVENT_ERROR,"Unable to change to directory '%s'!",dir);
 		return false;
 	}
+#if defined(_MSC_VER)
 	if ((fn = _findfirst("*.RSA",&found_file)) == -1L) {
 		event_msg(EVENT_ERROR,"No .RSA files found in direcory '%s'!\n",dir);
 		return false;
 	} else {
 		do {
-			if ((fname = _strdup(found_file.name)) == NULL
+			if ((fname = strdup(found_file.name)) == NULL
 			 || !RSAfiles.add(fname,WIMday::GetRSADate(fname))) {
 				event_msg(EVENT_FATAL,"Out of memeory in WIMsurvey::ProcessRSADir()!");
 				return false;
@@ -335,6 +351,23 @@ bool WIMsurvey::ProcessRSADir(const char * dir, const char * bname)
 		} while (_findnext(fn,&found_file) == 0);
 		_findclose(fn);
 	}
+#else
+	memset(&g,0,sizeof(glob_t));
+	if (glob("*.RSA",0,NULL,&g) || g.gl_pathc == 0) {
+		event_msg(EVENT_ERROR,"No .RSA files found in direcory '%s'!\n",dir);
+		return false;
+	} else {
+		fn = *(g.gl_pathv);
+		do {
+			if ((fname = strdup(fn)) == NULL
+			 || !RSAfiles.add(fname,WIMday::GetRSADate(fname))) {
+				event_msg(EVENT_FATAL,"Out of memeory in WIMsurvey::ProcessRSADir()!");
+				return false;
+			}
+		} while (++fn != 0);
+	}
+	globfree(&g);
+#endif
 	RSAfiles.sort();
 	bp = fopen(bname,"wb");
 	day.day = RSAfiles.getvalue(1);
@@ -347,7 +380,7 @@ bool WIMsurvey::ProcessRSADir(const char * dir, const char * bname)
 	if (start <= day.day && end >= day.day)
 		*this += day;
 	fclose(bp);
-	_chdir(pwd);
+	chdir(pwd);
 	return true;
 }
 

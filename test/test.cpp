@@ -11,14 +11,16 @@
 
 #define _EVENT_IMP
 #define _PROGRESS_IMP
-#include "../core/pavement.h"
-#include "../core/traffic.h"
-#include "../core/reliability.h"
+#include "../src/pavement.h"
+#include "../src/traffic.h"
+#include "../src/reliability.h"
 #include <stdlib.h>
 #include <time.h>
 
 #ifdef NOBUILD
-void main () {
+int
+main()
+{
 	WIMsurvey WIM(str2time("000101",NULL),str2time("040101",NULL));
 
 	WIM.ProcessRSADir("C:/Work/SANRAL LEF/NEURAL/2030","C:/Work/SANRAL LEF/NEURAL/2030.WIM");
@@ -26,7 +28,9 @@ void main () {
 #endif
 
 #ifdef NOBUILD
-int main(int argc, char* argv[]) {
+int
+main(int argc, char* argv[])
+{
 	int i, l;
 	LEbackcalc Bowl;
 
@@ -123,7 +127,9 @@ redo:
 #endif
 
 #ifdef NOBUILD
-int main(int argc, char* argv[]) {
+int
+main(int argc, char* argv[])
+{
 	int i;
 
 double Ebad[17][5] = {
@@ -243,7 +249,9 @@ redo:
 #endif
 
 #ifdef NOBUILD
-int main(int argc, char* argv[]) {
+int
+main(int argc, char* argv[])
+{
 	int line = 0;
 	int i;
 
@@ -467,7 +475,9 @@ redo:
 #endif
 
 #ifdef NOBUILD
-int main(int argc, char* argv[]) {
+int
+main(int argc, char* argv[])
+{
 	int i;
 	LEbackcalc Bowl;
 
@@ -513,7 +523,9 @@ int main(int argc, char* argv[]) {
 #endif
 
 #ifdef NOBUILD
-void main () {
+int
+main()
+{
 	LEsystem Pavement;
 	int i;
 
@@ -549,7 +561,9 @@ void main () {
 #endif
 
 #ifdef NOBUILD
-void main () {
+int
+main()
+{
 	LEsystem Pavement;
 	int i;
 
@@ -565,7 +579,9 @@ void main () {
 #endif
 
 #ifdef NOBUILD
-void main () {
+int
+main()
+{
 	cset<point3d> * _p = new cset<point3d>(0,100);
 	cset<point3d> & p = *_p;
 	LEsystem Best;
@@ -623,7 +639,9 @@ void main () {
 #endif
 
 #ifdef NOBUILD
-void main () {
+int
+main()
+{
 	//LEsystem Best;
 	LEsystem Slow;
 	//LEsystem Fast;
@@ -648,7 +666,9 @@ void main () {
 #endif
 
 #ifdef NOBUILD
-void main () {
+int
+main()
+{
 	double t = 0;
 	
 	double E1i = 5800.0;
@@ -703,7 +723,9 @@ void main () {
 #endif
 
 #ifdef NOBUILD
-int main(int argc, char* argv[]) {
+int
+main(int argc, char* argv[])
+{
 	int i;
 	double t;
 
@@ -804,7 +826,9 @@ redo:
 
 #ifdef NOBUILD
 // This is the special program for the paper...
-void main() {
+int
+main()
+{
 	int i;
 	double mz;
 	LEbackcalc Bowl;
@@ -897,7 +921,9 @@ void main() {
 
 #ifdef NOBUILD
 // This is the second special program for the paper...
-void main() {
+int
+main()
+{
 	int i;
 	double mz[7], E[2], t;
 	LEbackcalc Bowl;
@@ -945,8 +971,8 @@ redo:
 }
 #endif
 
-/* Bessel J_0(x) function in double precision */
 #ifdef NOBUILD
+/* Bessel J_0(x) function in double precision */
 double dbesj0(double x)
 {
     int k;
@@ -1258,13 +1284,15 @@ double dbesj1(double x)
     return x < 0 ? -y : y;
 }
 
-void main () {
+int
+main()
+{
 	double  d;
 
 	//FILE * fp = fopen("Release/bestest.dat","w");
 	for (d = 0.0; d < 1<<12; d += 0.001) {
-		double m0 = _j0(d);
-		double m1 = _j1(d);
+		double m0 = j0(d);
+		double m1 = j1(d);
 		double d0 = dbesj0(d);
 		double d1 = dbesj1(d);
 		if (fabs(m0-d0) > 1e-15 || fabs(m1-d1) > 1e-15)
@@ -1276,7 +1304,9 @@ void main () {
 
 #ifdef NOBUILD
 double quad8_vdp(double r, double z, double s, double v, double a = 0.0, double b = M_PI, double Q = 10.0);
-void main () {
+int
+main()
+{
 	int i;
 
 	FILE * fp = fopen("real.dat","w");
@@ -1289,7 +1319,9 @@ void main () {
 #endif
 
 #ifdef NOBUILD
-void main () {
+int
+main()
+{
 	LEsystem Pavement;
 
 	Pavement.addlayer(1.0,1.0,0.5,0.001);
@@ -1325,7 +1357,9 @@ void main () {
 #endif
 
 #ifdef NOBUILD
-void main () {
+int
+main()
+{
 	fixed<6> a;
 	fixed<6> b(0);
 	fixed<6> c(12);
@@ -1348,7 +1382,9 @@ void main () {
 #endif
 
 #ifdef NOBUILD
-void main () {
+int
+main()
+{
 	int i;
 
 	for (i = 0; i < 10000000; i++) {
@@ -1358,8 +1394,10 @@ void main () {
 }
 #endif
 
-#ifdef NOBUILD
-void main () {
+#ifdef BUILD
+int
+main()
+{
 	double p;
 
 	for (p = 2.5; p <= 6.0; p += 0.001) {
@@ -1372,4 +1410,3 @@ void main () {
 	}
 }
 #endif
-

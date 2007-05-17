@@ -60,6 +60,7 @@ _OPTIMIZE_FLAGS=-O
 _DEBUG_FLAGS=-g
 OP_DEBUG=1
 OP_OPTIMIZE=
+DEFINES='-DBUILD'
 LIBOP='-L$(dist_libdir) -lop$(MOD_MAJOR_VERSION)'
 CYGWIN_WRAPPER=
 MACOS_SDK_DIR=
@@ -189,8 +190,7 @@ if test -z "$SKIP_PATH_CHECKS"; then
 fi
 
 if test -n "$OP_DEBUG"; then
-    AC_DEFINE(DEBUG)
-    DEFINES="$DEFINES -UNDEBUG"
+    DEFINES="$DEFINES -DDEBUG -UNDEBUG"
 
     case "${target_os}" in
     msvc*|mks*|cygwin*|mingw*)
@@ -201,8 +201,7 @@ if test -n "$OP_DEBUG"; then
         ;;
     esac
 else
-    AC_DEFINE(NDEBUG)
-    DEFINES="$DEFINES -UDEBUG"
+    DEFINES="$DEFINES -DNDEBUG -UDEBUG"
 fi
 
 if test -z "$SKIP_COMPILER_CHECKS"; then
@@ -334,7 +333,6 @@ OBJ_SUFFIX=o
 LIB_SUFFIX=a
 DLL_SUFFIX=so
 EXE_SUFFIX=
-EXE_SUFFIX=.exe
 MKSHLIB='$(LD) $(DSO_LDOPTS) -o $@'
 AR_FLAGS='cr $@'
 AS='$(CC)'
@@ -599,12 +597,12 @@ tools are selected during the Xcode/Developer Tools installation.])
     AC_DEFINE(XP_PC)
     AC_DEFINE(WIN32)
     RESOLVE_LINK_SYMBOLS=1
+    DLL_SUFFIX=dll
+    EXE_SUFFIX=.exe
 
     if test -n "$GNU_CC"; then
         CC="$CC -mno-cygwin"
         CXX="$CXX -mno-cygwin"
-        DLL_SUFFIX=dll
-        EXE_SUFFIX=.exe
         MKSHLIB='$(CC) -shared -Wl,--export-all-symbols -Wl,--out-implib -Wl,$(IMPORT_LIBRARY) $(DLLBASE) -o $(SHARED_LIBRARY)'
         RC=$WINDRES
         # Use temp file for windres (bug 213281)
@@ -620,7 +618,6 @@ tools are selected during the Xcode/Developer Tools installation.])
         RC=rc.exe
         OBJ_SUFFIX=obj
         LIB_SUFFIX=lib
-        DLL_SUFFIX=dll
 
         # Determine compiler version
         CC_VERSION=`"${CC}" -v 2>&1 | grep Version | sed -e 's|.* Version ||' -e 's| .*||'`
@@ -643,7 +640,7 @@ tools are selected during the Xcode/Developer Tools installation.])
         fi
 
         if test -n "$OP_DEBUG"; then
-            AC_DEFINE(_DEBUG)
+            DEFINES="$DEFINES -D_DEBUG"
         else
             DEFINES="$DEFINES -U_DEBUG"
         fi
@@ -823,11 +820,13 @@ dnl Generate output files.
 dnl ========================================================
 MAKEFILES="
 Makefile
-src/Makefile
 build/autoconf.mk
+include/Makefile
+src/Makefile
+test/Makefile
 "
-if test -n "$OP_MODULE_test"; then
-    MAKEFILES="$MAKEFILES test/Makefile"
-fi
+dnl if test -n "$OP_MODULE_test"; then
+dnl     MAKEFILES="$MAKEFILES test/Makefile"
+dnl fi
 
 AC_OUTPUT([$MAKEFILES])

@@ -10,18 +10,23 @@ VPATH		= @srcdir@
 
 include $(MOD_DEPTH)/build/autoconf.mk
 
-PROG_NAME	= test
+PROGRAM_NAME	= test
 
-DIRS =                      \
+DIRS =                                 \
 	$(NULL)
 
-LOCAL_INCLUDES =            \
-	-I$(srcdir)/../include \
-	-I$(srcdir)/../src  \
+INCLUDES =                             \
+	-I$(srcdir)/../include         \
+	-I$(srcdir)/../src             \
 	$(NULL)
 
-CPPSRCS =                   \
-	test.cpp            \
+LIBS =                                 \
+	-L$(MOD_DEPTH)/src             \
+	-lopenpave                     \
+	$(NULL)
+
+CPPSRCS =                              \
+	test.cpp                       \
 	$(NULL)
 
 include $(topsrcdir)/build/rules.mk
