@@ -70,7 +70,7 @@ BOOTSTRAP_core :=                                \
   openpave/Makefile.in                           \
   $(NULL)
 
-ifdef RUN_AUTOCONF
+ifndef RUN_AUTOCONF
 BOOTSTRAP_core += openpave/configure
 endif
 
