@@ -1,0 +1,27 @@
+#! gmake
+#
+# $OpenPave$
+#
+
+MOD_DEPTH	= ..
+topsrcdir	= @top_srcdir@
+srcdir		= @srcdir@
+VPATH		= @srcdir@
+
+include $(MOD_DEPTH)/build/autoconf.mk
+
+PROG_NAME	= test
+
+DIRS =                      \
+	$(NULL)
+
+LOCAL_INCLUDES =            \
+	-I$(srcdir)/../include \
+	-I$(srcdir)/../src  \
+	$(NULL)
+
+CPPSRCS =                   \
+	test.cpp            \
+	$(NULL)
+
+include $(topsrcdir)/build/rules.mk

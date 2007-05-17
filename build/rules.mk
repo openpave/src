@@ -63,9 +63,42 @@
 #
 ################################################################################
 
-ifndef OP_CONFIG_MK
-include $(topsrcdir)/build/config.mk
+CFLAGS		= $(VISIBILITY_FLAGS) $(CC_ONLY_FLAGS) $(OPTIMIZER)\
+		  $(OS_CFLAGS) $(XP_DEFINE) $(DEFINES) $(INCLUDES) $(XCFLAGS)
+CCCFLAGS	= $(VISIBILITY_FLAGS) $(CCC_ONLY_FLAGS) $(OPTIMIZER)\
+		  $(OS_CFLAGS) $(XP_DEFINE) $(DEFINES) $(INCLUDES) $(XCFLAGS)
+
+LDFLAGS		= $(OS_LDFLAGS)
+
+LINK_DLL	= $(LD) $(OS_DLLFLAGS) $(DLLFLAGS)
+
+ifeq ($(OS_ARCH),Darwin)
+PWD := $(shell pwd)
 endif
+
+ifeq (,$(CROSS_COMPILE)$(filter-out WINNT OS2, $(OS_ARCH)))
+INSTALL		= $(NSINSTALL)
+else
+ifeq ($(NSDISTMODE),copy)
+# copy files, but preserve source mtime
+INSTALL		= $(NSINSTALL) -t
+else
+ifeq ($(NSDISTMODE),absolute_symlink)
+# install using absolute symbolic links
+ifeq ($(OS_ARCH),Darwin)
+INSTALL		= $(NSINSTALL) -L $(PWD)
+else
+INSTALL		= $(NSINSTALL) -L `$(MOD_DEPTH)/config/nfspwd`
+endif
+else
+# install using relative symbolic links
+INSTALL		= $(NSINSTALL) -R
+endif
+endif
+endif # (WINNT || OS2) && !CROSS_COMPILE
+
+GARBAGE		+= .depend core $(wildcard core.[0-9]*)
+DIST_GARBAGE	+= Makefile
 
 #
 # This makefile contains rules for building the following kinds of
@@ -80,35 +113,24 @@ endif
 
 ifdef LIBRARY_NAME
 ifeq (,$(filter-out WINNT,$(OS_ARCH)))
-
 LIBRARY		= lib$(LIBRARY_NAME)$(LIBRARY_VERSION)_s.$(LIB_SUFFIX)
 SHARED_LIBRARY	= lib$(LIBRARY_NAME)$(LIBRARY_VERSION).$(DLL_SUFFIX)
 IMPORT_LIBRARY	= lib$(LIBRARY_NAME)$(LIBRARY_VERSION).$(LIB_SUFFIX)
-SHARED_LIB_PDB	= lib$(LIBRARY_NAME)$(LIBRARY_VERSION).pdb
-
 else
-
 LIBRARY		= lib$(LIBRARY_NAME)$(LIBRARY_VERSION).$(LIB_SUFFIX)
 ifdef MKSHLIB
 SHARED_LIBRARY	= lib$(LIBRARY_NAME)$(LIBRARY_VERSION).$(DLL_SUFFIX)
 endif
-
 endif
 endif
 
 ifndef TARGETS
 ifeq (,$(filter-out WINNT,$(OS_ARCH)))
 TARGETS		= $(LIBRARY) $(SHARED_LIBRARY) $(IMPORT_LIBRARY)
-ifndef BUILD_OPT
-ifdef MSC_VER
-ifneq (,$(filter-out 1100 1200,$(MSC_VER)))
-TARGETS		+= $(SHARED_LIB_PDB)
-endif
-endif
-endif
 else
 TARGETS		= $(LIBRARY) $(SHARED_LIBRARY)
 endif
+TARGETS		+= $(PROGRAM)$(EXE_SUFFIX)
 endif
 
 #
@@ -119,7 +141,8 @@ endif
 
 ifndef OBJS
 OBJS		= $(CSRCS:.c=.$(OBJ_SUFFIX)) \
-		  $(ASFILES:.s=.$(OBJ_SUFFIX))
+		  $(CPPSRCS:.cpp=.$(OBJ_SUFFIX)) \
+		  $(ASFILES:.$(ASM_SUFFIX)=.$(OBJ_SUFFIX))
 endif
 
 ALL_TRASH	= $(TARGETS) $(OBJS) $(RES) $(GARBAGE)
@@ -144,7 +167,7 @@ endif
 
 ################################################################################
 
-all::
+all:: $(MOD_DEPTH)/config.status
 	+$(LOOP_OVER_DIRS)
 
 clean::
@@ -222,7 +245,10 @@ ifdef RELEASE_HEADERS
 endif
 	+$(LOOP_OVER_DIRS)
 
-$(PROGRAM): $(OBJS)
+Makefile: $(srcdir)/Makefile.in $(MOD_DEPTH)/config.status
+	@$(MAKE) -f $(TOPSRCDIR)/openpave.mk configure
+
+$(PROGRAM)$(EXE_SUFFIX): $(OBJS)
 ifeq ($(USING_GCC)_$(OS_ARCH),_WINNT)
 	$(CC) $(OBJS) -Fe$@ -link $(LDFLAGS) $(OS_LIBS) $(EXTRA_LIBS)
 else
@@ -283,7 +309,7 @@ else
 	$(CC) -o $@ -c $(CFLAGS) $<
 endif
 
-%.$(OBJ_SUFFIX): %.s
+%.$(OBJ_SUFFIX): %.$(ASM_SUFFIX)
 	$(AS) -o $@ $(ASFLAGS) -c $<
 
 %.i: %.c
@@ -298,7 +324,7 @@ endif
 # hundreds of built-in suffix rules for stuff we don't need.
 #
 .SUFFIXES:
-.SUFFIXES: .a .$(OBJ_SUFFIX) .c .cpp .s .h .i
+.SUFFIXES: .$(LIB_SUFFIX) .$(DLL_SUFFIX) .$(OBJ_SUFFIX) .c .cpp .$(ASM_SUFFIX) .h .i
 
 #
 # Fake targets.  Always run these rules, even if a file/directory with that

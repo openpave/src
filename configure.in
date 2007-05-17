@@ -329,10 +329,12 @@ fi
 dnl ========================================================
 dnl Default platform specific options
 dnl ========================================================
+ASM_SUFFIX=s
 OBJ_SUFFIX=o
 LIB_SUFFIX=a
 DLL_SUFFIX=so
-ASM_SUFFIX=s
+EXE_SUFFIX=
+EXE_SUFFIX=.exe
 MKSHLIB='$(LD) $(DSO_LDOPTS) -o $@'
 AR_FLAGS='cr $@'
 AS='$(CC)'
@@ -553,7 +555,6 @@ tools are selected during the Xcode/Developer Tools installation.])
     AC_DEFINE(HAVE_BSD_FLOCK)
     AC_DEFINE(HAVE_SOCKLEN_T)
     CFLAGS="$CFLAGS -ansi -Wall"
-    DLL_SUFFIX=so
     MKSHLIB='$(CC) $(DSO_LDOPTS) -o $@'
     DSO_CFLAGS=-fPIC
     DSO_LDOPTS='-shared -Wl,-soname -Wl,$(notdir $@)'
@@ -603,6 +604,7 @@ tools are selected during the Xcode/Developer Tools installation.])
         CC="$CC -mno-cygwin"
         CXX="$CXX -mno-cygwin"
         DLL_SUFFIX=dll
+        EXE_SUFFIX=.exe
         MKSHLIB='$(CC) -shared -Wl,--export-all-symbols -Wl,--out-implib -Wl,$(IMPORT_LIBRARY) $(DLLBASE) -o $(SHARED_LIBRARY)'
         RC=$WINDRES
         # Use temp file for windres (bug 213281)
@@ -682,14 +684,6 @@ tools are selected during the Xcode/Developer Tools installation.])
 
     if test -n "$USE_STATIC_TLS"; then
         AC_DEFINE(_PR_USE_STATIC_TLS)
-    fi
-
-    if test "$OS_ARCH" = "WINNT"; then
-        AC_DEFINE(WINNT)
-    else
-        AC_DEFINE(WIN95)
-        # undefine WINNT as some versions of mingw gcc define it by default
-        DEFINES="$DEFINES -UWINNT"
     fi
 
     case "$target_cpu" in
@@ -783,10 +777,11 @@ AC_SUBST(MOD_MINOR_VERSION)
 AC_SUBST(MOD_PATCH_VERSION)
 AC_SUBST(CPU_ARCH)
 
+AC_SUBST(ASM_SUFFIX)
 AC_SUBST(OBJ_SUFFIX)
 AC_SUBST(LIB_SUFFIX)
 AC_SUBST(DLL_SUFFIX)
-AC_SUBST(ASM_SUFFIX)
+AC_SUBST(EXE_SUFFIX)
 AC_SUBST(MKSHLIB)
 AC_SUBST(DSO_CFLAGS)
 AC_SUBST(DSO_LDOPTS)
@@ -828,6 +823,7 @@ dnl Generate output files.
 dnl ========================================================
 MAKEFILES="
 Makefile
+src/Makefile
 build/autoconf.mk
 "
 if test -n "$OP_MODULE_test"; then

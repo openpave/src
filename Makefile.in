@@ -9,11 +9,11 @@ VPATH		= @srcdir@
 
 include $(MOD_DEPTH)/build/autoconf.mk
 
-DIRS = include
+DIRS = src
+
+DIRS += test
 
 DIST_GARBAGE = config.cache config.log config.status
-
-all:: config.status
 
 include $(topsrcdir)/build/rules.mk
 
@@ -27,4 +27,3 @@ endif
 # Delete config/autoconf.mk last because it is included by every makefile.
 distclean::
 	rm -f config/autoconf.mk
-	rm -f `cat unallmakefiles` unallmakefiles

@@ -1,0 +1,20 @@
+#!gmake
+#
+# $OpenPave$
+#
+
+MOD_DEPTH	= ..
+topsrcdir	= @top_srcdir@
+srcdir		= @srcdir@
+VPATH		= @srcdir@
+
+include $(MOD_DEPTH)/build/autoconf.mk
+
+DIRS =                      \
+	$(NULL)
+
+EXPORTS =                   \
+	list.h              \
+	$(NULL)
+
+include $(topsrcdir)/build/rules.mk

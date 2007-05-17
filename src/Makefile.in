@@ -1,0 +1,33 @@
+#!gmake
+#
+# $OpenPave$
+#
+
+MOD_DEPTH	= ..
+topsrcdir	= @top_srcdir@
+srcdir		= @srcdir@
+VPATH		= @srcdir@
+
+include $(MOD_DEPTH)/build/autoconf.mk
+
+LIBRAY_NAME	= libop
+FORCE_STATIC_LIB = 1
+FORCE_USE_PIC	= 1
+
+DIRS =                      \
+	$(NULL)
+
+LOCAL_INCLUDES =            \
+	-I$(srcdir)/../include \
+	$(NULL)
+
+CPPSRCS =                   \
+	pavement.cpp        \
+	matrix.cpp          \
+	$(NULL)
+
+EXPORTS =                   \
+	pavement.h          \
+	$(NULL)
+
+include $(topsrcdir)/build/rules.mk

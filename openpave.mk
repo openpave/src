@@ -74,7 +74,7 @@ BOOTSTRAP_core :=                                \
 MODULES_core :=                                  \
   openpave/build                                 \
   openpave/include                               \
-  openpave/core                                  \
+  openpave/src                                   \
   $(NULL)
 
 REQUIRES_test :=                                 \
@@ -90,6 +90,8 @@ MODULES_test :=                                  \
 #
 CVS = cvs
 comma := ,
+empty :=
+space := $(empty) $(empty)
 
 CWD := $(shell pwd)
 ifneq (1,$(words $(CWD)))
@@ -337,8 +339,16 @@ $(TOPSRCDIR)/configure: $(TOPSRCDIR)/configure.in $(EXTRA_CONFIG_DEPS)
 	cd $(TOPSRCDIR); $(AUTOCONF)
 
 CONFIG_STATUS_DEPS := \
+	$(TOPSRCDIR)/openpave.mk \
+	$(TOPSRCDIR)/configure.in \
 	$(TOPSRCDIR)/configure \
 	$(TOPSRCDIR)/.opconfig.mk \
+	$(NULL)
+
+CONFIG_STATUS_OUTS := \
+	$(OBJDIR)/config.status \
+	$(OBJDIR)/Makefile \
+	$(OBJDIR)/build/autoconf.mk \
 	$(NULL)
 
 # configure uses the program name to determine @srcdir@. Calling it without
@@ -350,7 +360,7 @@ else
   CONFIGURE = $(TOPSRCDIR)/configure
 endif
 
-configure:: $(TOPSRCDIR)/configure.in
+configure:: $(TOPSRCDIR)/configure.in $(CONFIG_STATUS_DEPS)
 ifdef OP_BUILD_PROJECTS
 	@if test ! -d $(OP_OBJDIR); then $(MKDIR) $(OP_OBJDIR); else true; fi
 endif
@@ -362,30 +372,19 @@ endif
                \"$(MAKE) -f openpave.mk build\"" && exit 1 )
 	@touch $(OBJDIR)/Makefile
 
-$(OBJDIR)/config.status: $(CONFIG_STATUS_DEPS)
+$(CONFIG_STATUS_OUTS): $(CONFIG_STATUS_DEPS)
 	@$(MAKE) -f $(TOPSRCDIR)/openpave.mk configure
-
-$(OBJDIR)/Makefile: $(TOPSRCDIR)/Makefile.in $(OBJDIR)/config.status
-	cd $(OBJDIR); \
-	  CONFIG_FILES=Makefile ./config.status
-
-ifneq (,$(CONFIG_STATUS))
-$(OBJDIR)/build/autoconf.mk: $(TOPSRCDIR)/build/autoconf.mk.in
-	cd $(OBJDIR); \
-	  CONFIG_FILES=build/autoconf.mk ./config.status
-endif
-
 
 ####################################
 # Depend
 
-depend:: $(OBJDIR)/Makefile
+depend:: $(CONFIG_STATUS_OUTS)
 	$(OP_MAKE) export && $(OP_MAKE) depend
 
 ####################################
 # Build it
 
-build::  $(OBJDIR)/Makefile
+build::  $(CONFIG_STATUS_OUTS)
 	$(OP_MAKE)
 
 ####################################
