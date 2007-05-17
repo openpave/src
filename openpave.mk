@@ -67,9 +67,12 @@ BOOTSTRAP_core :=                                \
   openpave/.cvsignore                            \
   openpave/COPYING-ADDL-1.0                      \
   openpave/configure.in                          \
-  openpave/configure                             \
   openpave/Makefile.in                           \
   $(NULL)
+
+ifdef RUN_AUTOCONF
+BOOTSTRAP_core += openpave/configure
+endif
 
 MODULES_core :=                                  \
   openpave/build                                 \
@@ -265,11 +268,6 @@ checkout::
 	  mv $(CVSCO_LOGFILE) $(CVSCO_LOGFILE).old; \
 	else true; \
 	fi
-ifdef RUN_AUTOCONF_LOCALLY
-	@echo "Removing local configures" ; \
-	cd $(ROOTDIR) && \
-	$(RM) -f openpave/configure
-endif
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE)
 	@echo '$(CVSCO) openpave/openpave.mk $(OPCONFIG_CONFIG)'; \
         cd $(ROOTDIR) && \
@@ -293,10 +291,6 @@ real_checkout:
 	  false; \
 	else true; \
 	fi
-ifdef RUN_AUTOCONF_LOCALLY
-	@echo Generating configures using $(AUTOCONF) ; \
-	cd $(TOPSRCDIR) && $(AUTOCONF)
-endif
 
 #####################################################
 # First Checkout
@@ -334,9 +328,11 @@ CONFIG_CACHE  = $(wildcard $(OBJDIR)/config.cache)
 EXTRA_CONFIG_DEPS := \
 	$(NULL)
 
+ifdef RUN_AUTOCONF
 $(TOPSRCDIR)/configure: $(TOPSRCDIR)/configure.in $(EXTRA_CONFIG_DEPS)
 	@echo Generating $@ using autoconf
 	cd $(TOPSRCDIR); $(AUTOCONF)
+endif
 
 CONFIG_STATUS_DEPS := \
 	$(TOPSRCDIR)/openpave.mk \
