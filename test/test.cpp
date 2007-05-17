@@ -1291,14 +1291,36 @@ void main () {
 #ifdef NOBUILD
 void main () {
 	LEsystem Pavement;
-	int i;
 
-	Pavement.addlayer(10.0,100.0,0.2);
-	Pavement.addload(point2d(0.0,0.0),1.0,0.0,0.6*sqrt(1.0/M_PI));
-	Pavement.addpoint(point3d(0,0,0));
+	Pavement.addlayer(1.0,1.0,0.5,0.001);
+	Pavement.addlayer(0.0,1.0,0.5);
+	Pavement.addload(point2d(0.0,0.0),1.0,0.0,1.0);
+	Pavement.addpoint(point3d(0.0,0.0,0.0));
+	//Pavement.addpoint(point3d(1.0,0.0,0.999999999999999));
+	Pavement.addpoint(point3d(1.0,0.0,1.0));
 	Pavement.calculate();
-	const pavedata & d = Pavement.result(point3d(0,0,0));
-	printf("%0.8f\t",d.result(pavedata::deflct,pavedata::zz));
+	const pavedata & d1 = Pavement.result(point3d(0.0,0.0,0.0));
+	//const pavedata & d1 = Pavement.result(point3d(1.0,0.0,0.999999999999999));
+	printf("%0.16f\n",d1.result(pavedata::deflct,pavedata::zz));
+	printf("%0.16f\n",d1.result(pavedata::deflct,pavedata::yy));
+	printf("%0.16f\n",d1.result(pavedata::deflct,pavedata::xx));
+	printf("%0.16f\n",d1.result(pavedata::stress,pavedata::zz));
+	printf("%0.16f\n",d1.result(pavedata::stress,pavedata::yy));
+	printf("%0.16f\n",d1.result(pavedata::stress,pavedata::xx));
+	printf("%0.16f\n",d1.result(pavedata::stress,pavedata::xy));
+	printf("%0.16f\n",d1.result(pavedata::stress,pavedata::xz));
+	printf("%0.16f\n",d1.result(pavedata::stress,pavedata::yz));
+	printf("\n");
+	const pavedata & d2 = Pavement.result(point3d(1.0,0.0,1.0));
+	printf("%0.16f\n",d2.result(pavedata::deflct,pavedata::zz));
+	printf("%0.16f\n",d2.result(pavedata::deflct,pavedata::yy));
+	printf("%0.16f\n",d2.result(pavedata::deflct,pavedata::xx));
+	printf("%0.16f\n",d2.result(pavedata::stress,pavedata::zz));
+	printf("%0.16f\n",d2.result(pavedata::stress,pavedata::yy));
+	printf("%0.16f\n",d2.result(pavedata::stress,pavedata::xx));
+	printf("%0.16f\n",d2.result(pavedata::stress,pavedata::xy));
+	printf("%0.16f\n",d2.result(pavedata::stress,pavedata::xz));
+	printf("%0.16f\n",d2.result(pavedata::stress,pavedata::yz));
 };
 #endif
 

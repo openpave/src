@@ -313,8 +313,8 @@ protected:
 
 	rv_lognormal(reliability * o, randomvar * p, double m, double s)
 		: randomvar(o,p) {
-		param(0, sqrt(log(1+s*s/m/m)));
-		param(1, log(m) - d[1]*d[1]/2);
+		param(1, sqrt(log(1+s*s/m/m)));
+		param(0, log(m) - d[1]*d[1]/2);
 	}
 	virtual ~rv_lognormal() {
 	};

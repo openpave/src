@@ -182,22 +182,31 @@ public:
 	double poissons(const double tv) {
 		return v = tv;
 	};
+	double slip() const {
+		return s;
+	};
+	double slip(const double ts) {
+		return s = ts;
+	};
 	LElayer(LEsystem * o, LElayer * p)
 		: listelement_o<LEsystem,LElayer>(o,p) {
 		h = E = v = 0.0;
+		s = 1.0;
 	};
 	LElayer(LEsystem * o, LElayer * p,
-			const double th, const double te, const double tv)
+			const double th, const double te, const double tv, const double ts = 1.0)
 		: listelement_o<LEsystem,LElayer>(o,p) {
 		h = th;
 		E = te;
 		v = tv;
+		s = ts;
 	};
 	LElayer(LEsystem * o, LElayer * p, const LElayer & pl)
 		: listelement_o<LEsystem,LElayer>(o,p) {
 		h = pl.h;
 		E = pl.E;
 		v = pl.v;
+		s = pl.s;
 	};
 	virtual ~LElayer() {
 	};
@@ -206,6 +215,7 @@ private:
 	double h;							// The thickness of the layer.
 	double E;							// The elastic modulus.
 	double v;							// Poisson's ratio.
+	double s;							// Layer slip (on bottom boundary).
 };
 
 /*
@@ -284,7 +294,7 @@ struct pavedata : point3d {
 class LEsystem : private list_owned<LEsystem, LElayer> {
 public:
 	bool addlayer(const double h, const double e, const double v,
-				const int p = -1);
+	              const double s = 1.0, const int p = -1);
 	bool removelayer(const int l);
 	bool removelayers();
 	bool addload(const point2d & l, double f, double p, double r = 0) {
@@ -319,19 +329,15 @@ public:
 
 	LEsystem()
 		: list_owned<LEsystem,LElayer>(), data(), load() {
-		ci = ff;
 		callcount = 0;
 	};
 	LEsystem::LEsystem(LEsystem & p)
 		: list_owned<LEsystem,LElayer>(p), data(p.data), load(p.load) {
-		ci = p.ci;
 		callcount = 0;
 	};
 	~LEsystem() {
 	};
 //private:
-	// Bottom interface condition (Full Friction, No Friction)
-	enum friction {ff, nf} ci;
 	int callcount;
 	sset<paveload> load;
 	ksset<point3d,pavedata> data;
@@ -412,4 +418,3 @@ public:
 };
 
 #endif // PAVEMENT_H
-

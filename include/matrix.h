@@ -519,6 +519,16 @@ inline void div(dlgmat & A, const dlgmat & B) {
 		A[i] /= B[i];
 };
 
+/*
+ * Returns the size of the special banded matrix storage array
+ */
+#define B_SIZE(n,m)		((m+1)*n-m*(m+1)/2)
+/*
+ * Returns the index into the special banded matrix storage array
+ * This is in column major format, so loops over i are efficent.
+ */
+#define B_IDX(n,m,i,j)		(j <= m ? j*(j+1)/2+i : (j+1)*m+i-m*(m+1)/2)
+
 void orth_gs(const int n, double * Q);
 bool equ_lu(const int n, const double * A, const double * b, double * x);
 bool inv_lu(const int n, double * A);
