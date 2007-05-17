@@ -15,9 +15,20 @@
 #include <stdio.h>
 
 /*
+ * The minimum condition number for SVD and eigenvalue decompositions.
+ */
+#define EIG_TOL 10e-18
+/*
+ * The miminimum error in the result of an equals operation to trigger a refinement.
+ */
+#define ERR_TOL 10e-6
+
+/*
  * Orthonormalize the nxn matrix Q, using the Gramm-Schmidt algorithm.
  */
-void orth_gs(const int n, double * Q) {
+void
+orth_gs(const int n, double * Q)
+{
 	double r;
 	int i, j, k;
 
@@ -46,7 +57,9 @@ void orth_gs(const int n, double * Q) {
  * idx holds the row interchange index, and d is negative if an odd number
  * of interchanges have been performed (this is for the determinant calc).
  */
-bool decmp_lu(const int n, double * A, int * idx, int & d) {
+bool
+decmp_lu(const int n, double * A, int * idx, int & d)
+{
 	bool rv = true;
 	int i, j, k;
 
@@ -58,8 +71,8 @@ bool decmp_lu(const int n, double * A, int * idx, int & d) {
 	}
 
 	d = 1;
-	/* compute the LU decomposition of a row permutation of matrix a;
-	   the permutation itself is saved in idx[]	*/
+	// compute the LU decomposition of a row permutation of matrix a;
+	// the permutation itself is saved in idx[]
 	for (i = 0; i < n; i++) {
 		double tmp, max = 0.0;
 		for (j = 0; j < n; j++)
@@ -70,40 +83,34 @@ bool decmp_lu(const int n, double * A, int * idx, int & d) {
 			rv = false;
 			goto abort;
 		}
-		work[i] = 1/max;
+		work[i] = max;
 	}
-	
 	for (j = 0; j < n; j++) {
 		for (i = 0; i < j; i++) {
-			double sum = A[i*n+j];
 			for (k = 0; k < i; k++)
-				sum -= A[i*n+k]*A[k*n+j];
-			A[i*n+j] = sum;
+				A[i*n+j] -= A[i*n+k]*A[k*n+j];
 		}
 		double tmp, max = 0.0;
 		for (i = j, idx[j] = -1; i < n; i++) {
-			double sum = A[i*n+j];
 			for (k = 0; k < j; k++)
-				sum -= A[i*n+k]*A[k*n+j];
-			A[i*n+j] = sum;
-			if ((tmp = work[i]*fabs(sum)) >= max)
+				A[i*n+j] -= A[i*n+k]*A[k*n+j];
+			if (idx[j] == -1
+			 || (tmp = fabs(A[i*n+j])/work[i]) > max)
 				max = tmp, idx[j] = i;
 		}
 		if (j != idx[j]){
 			for (k = 0; k < n; k++)
 				swap(A[idx[j]*n+k],A[j*n+k]);
 			d *= -1;
-			work[idx[j]] = work[j];
+			swap(work[idx[j]],work[j]);
 		}
-		if (A[j*n+j] == 0.0)
-			A[j*n+j] = DBL_MIN;
+		//if (A[j*n+j] == 0.0)
+		//	A[j*n+j] = DBL_MIN;
 		for (i = j+1; i < n; i++)
 			A[i*n+j] /= A[j*n+j];
 	}
-
 abort:
-	if (work != 0)
-		delete [] work;
+	delete [] work;
 	return rv;
 }
 
@@ -116,8 +123,10 @@ abort:
  *
  * m is the number of columns in b, and c is the column index.
  */
-void bksub_lu(const int n, const double * A, const int * idx,
-			  double * b, const int m = 1, const int c = 0) {
+void
+bksub_lu(const int n, const double * A, const int * idx,
+         double * b, const int m = 1, const int c = 0)
+{
 	int i, j, k;
 
 	for (i = k = 0; i < n; i++) {
@@ -145,7 +154,9 @@ void bksub_lu(const int n, const double * A, const int * idx,
  * The function employs LU decomposition followed by forward/back
  * substitution, with a single step refinement.
  */
-bool equ_lu(const int n, const double * A, const double * b, double * x) {
+bool
+equ_lu(const int n, const double * A, const double * b, double * x)
+{
 	bool rv = true;
 	int i, j, d;
 
@@ -176,12 +187,9 @@ bool equ_lu(const int n, const double * A, const double * b, double * x) {
 		x[i] -= r[i];
 
   abort:
-	if (r != 0)
-		delete [] r;
-	if (a != 0)
-		delete [] a;
-	if (idx != 0)
-		delete [] idx;
+	delete [] r;
+	delete [] a;
+	delete [] idx;
 	return rv;
 }
 
@@ -189,7 +197,9 @@ bool equ_lu(const int n, const double * A, const double * b, double * x) {
  * This function returns the nxm matrix X = A^-1*B.  Both A and B are destoryed...
  * The result is returned in B.
  */
-bool inv_mul_lu(const int n, const int m, double * A, double * B) {
+bool
+inv_mul_lu(const int n, const int m, double * A, double * B)
+{
 	bool rv = true;
 	int i, d;
 
@@ -199,7 +209,6 @@ bool inv_mul_lu(const int n, const int m, double * A, double * B) {
 		rv = false;
 		goto abort;
 	}
-
 	if (!decmp_lu(n,A,idx,d)) {
 		memset(B,0,sizeof(double)*n*m);
 		rv = false;
@@ -207,17 +216,17 @@ bool inv_mul_lu(const int n, const int m, double * A, double * B) {
 	}
 	for (i = 0; i < m; i++)
 		bksub_lu(n,A,idx,B,m,i);
-
 abort:
-	if (idx != 0)
-		delete [] idx;
+	delete [] idx;
 	return rv;
 }
 
 /*
  * Matrix inverse of the real nxn matrix A using LU decomposition.  
  */
-bool inv_lu(const int n, double * A) {
+bool
+inv_lu(const int n, double * A)
+{
 	bool rv = true;
 	int i, d;
 
@@ -228,7 +237,6 @@ bool inv_lu(const int n, double * A) {
 		rv = false;
 		goto abort;
 	}
-
 	memcpy(a,A,sizeof(double)*n*n);
 	memset(A,0,sizeof(double)*n*n);
 	for (i = 0; i < n; i++)
@@ -240,10 +248,8 @@ bool inv_lu(const int n, double * A) {
 	for (i = 0; i < n; i++)
 		bksub_lu(n,a,idx,A,n,i);
 abort:
-	if (a != 0)
-		delete [] a;
-	if (idx != 0)
-		delete [] idx;
+	delete [] a;
+	delete [] idx;
 	return rv;
 }
 
@@ -253,7 +259,9 @@ abort:
  * Returns L in the lower triangle of A (and overwrites the diagonal with
  * the *inverse* of the true diagonal).
  */
-bool decmp_chol(const int n, double * A) {
+bool
+decmp_chol(const int n, double * A)
+{
 	int i, j, k;
 	double sum;
 
@@ -263,8 +271,8 @@ bool decmp_chol(const int n, double * A) {
 			for (k = i-1; k >= 0; k--)
                 sum -= A[i*n+k]*A[j*n+k];
 			if (i == j) {
-                if (sum <= 0) {
-					event_msg(EVENT_WARN,"Non-positive definite matrix in INV_CHOL(%f)!",sum);
+                if (sum <= 0.0) {
+					event_msg(EVENT_WARN,"Non-positive definite matrix in inv_chol(%f)!",sum);
 					return false;
 				}
                 A[i*n+i] = sqrt(1.0/sum);
@@ -276,49 +284,101 @@ bool decmp_chol(const int n, double * A) {
 }
 
 /*
+ * Cholesky Decomposition of postive definite nxn matrix A.  The matrix is banded,
+ * with bandwidth 2*w+1, and only the upper triangle is stored.
+ *
+ * Returns U in the upper triangle of A (and overwrites the diagonal with
+ * the _inverse_ of the true diagonal).
+ */
+bool
+decmp_chol(const int n, const int w, double * A)
+{
+	int i, j, k;
+	double sum;
+	
+    for (i = 0; i < n; i++) {
+        for (j = i; j <= i+w && j < n; j++) {
+			sum = A[B_IDX(n,w,i,j)];
+			for (k = i-1; k >= j-w && k >= 0; k--)
+				sum -=  A[B_IDX(n,w,k,i)]*A[B_IDX(n,w,k,j)];
+			if (i == j) {
+				if (sum <= 0) {
+					event_msg(EVENT_WARN,"Non-positive definite matrix in inv_chol(%f)!",sum);
+					return false;
+				}
+				A[B_IDX(n,w,i,i)] = sqrt(1.0/sum);
+			} else
+				A[B_IDX(n,w,i,j)] = sum*A[B_IDX(n,w,i,i)];
+		}
+	}
+	return true;
+}
+
+/*
  * This function performs forward/back substitution of a Cholesky decomposed
  * matrix, to solve a particular system.
  *
  * m is the number of columns in b, and c is the column index.
  */
-void bksub_chol(const int n, const double * A,
-			  double * b, const int m = 1, const int c = 0) {
+void
+bksub_chol(const int n, const double * A,
+           double * b, const int m = 1, const int c = 0)
+{
 	int i, k;
-	double sum;
 
 	for (i = 0; i < n; i++) {
-		sum = b[i*m+c];
 		for (k = i-1; k >= 0; k--)
-			sum -= A[i*n+k]*b[k*m+c];
-		b[i*m+c] = sum*A[i*n+i];
+			b[i*m+c] -= A[i*n+k]*b[k*m+c];
+		b[i*m+c] *= A[i*n+i];
 	}
 	for (i = n-1; i >= 0; i--) {
-		sum = b[i*m+c];
 		for (k = i+1; k < n; k++)
-			sum -= A[k*n+i]*b[k*m+c];
-		b[i*m+c] = sum*A[i*n+i];
+			b[i*m+c] -= A[k*n+i]*b[k*m+c];
+		b[i*m+c] *= A[i*n+i];
 	}
 }
 
 /*
- * This function returns the solution of Ax = b
- *
- * The function employs Cholesky decomposition followed by forward/back
- * substitution, with a single step refinement.
+ * This function performs forward/back substitution of a Cholesky decomposed
+ * matrix, to solve a particular system.
  */
-bool equ_chol(const int n, const double * A, const double * b, double * x) {
+void
+bksub_chol(const int n, const int w, const double * A,
+           double * b, const int m = 1, const int c = 0)
+{
+	int i, k;
+	
+    for (i = 0; i < n; i++) {
+		for (k = i-1; k >= i-w && k >= 0; k--)
+            b[i*m+c] -= A[B_IDX(n,w,k,i)]*b[k*m+c];
+		b[i*m+c] *= A[B_IDX(n,w,i,i)];
+    }
+	for (i = n-1; i >= 0; i--) {
+		for (k = i+1; k <= i+w && k < n; k++)
+			b[i*m+c] -= A[B_IDX(n,w,i,k)]*b[k*m+c];
+		b[i*m+c] *= A[B_IDX(n,w,i,i)];
+	}
+}
+
+
+/*
+ * Solve of Ax = b by Cholesky decomposition followed by forward/back
+ * substitution.
+ */
+bool
+equ_chol(const int n, const double * A, const double * b, double * x)
+{
 	bool rv = true;
-	int i, j;
+	//int i, j;
 
 	double * a = new double[n*n];
-	double * r = new double[n];
-	if (a == 0 || r == 0) {
+	//double * r = new double[n];
+	if (a == 0) { // || r == 0
 		event_msg(EVENT_ERROR,"Out of memory in equ_chol()!");
 		rv = false;
 		goto abort;
 	}
-
-	/* avoid destroying A, B by copying them to a, x resp. */
+	// avoid destroying A and B by copying them to a and x resp.
 	memcpy(a,A,sizeof(double)*n*n);
 	memcpy(x,b,sizeof(double)*n);
 	if (!decmp_chol(n,a)) {
@@ -327,19 +387,65 @@ bool equ_chol(const int n, const double * A, const double * b, double * x) {
 		goto abort;
 	}
 	bksub_chol(n,a,x);
-	for (i = 0; i < n; i++) {
+	/*for (i = 0, dot = 0.0; i < n; i++) {
 		for (j = 0, r[i] = -b[i]; j < n; j++)
 			r[i] += A[i*n+j]*x[j];
+		dot += r[i]*r[i];
 	}
+	printf(" %g",dot);
+	if (dot > ERR_TOL)
+		return rv;
 	bksub_chol(n,a,r);
 	for (i = 0; i < n; i++)
-		x[i] -= r[i];
+		x[i] -= r[i];*/
+abort:
+	//delete [] r;
+	delete [] a;
+	return rv;
+}
 
-  abort:
-	if (r != 0)
-		delete [] r;
-	if (a != 0)
-		delete [] a;
+
+/*
+ * This function returns the solution of Ax = b, where A is banded.
+ *
+ * The function employs Cholesky decomposition followed by forward/back
+ * substitution, with a single step refinement.
+ */
+bool
+equ_chol(const int n, const int w, const double * A, const double * b, double * x)
+{
+	bool rv = true;
+	//int i, j;
+
+	double * a = new double[B_SIZE(n,w)];
+	double * r = new double[n];
+	if (a == 0 || r == 0) {
+		event_msg(EVENT_ERROR,"Out of memory in equ_chol()!");
+		rv = false;
+		goto abort;
+	}
+	// avoid destroying A and B by copying them to a and x resp.
+	memcpy(a,A,sizeof(double)*B_SIZE(n,w));
+	memcpy(x,b,sizeof(double)*n);
+	if (!decmp_chol(n,w,a)) {
+		memset(x,0,sizeof(double)*n);
+		rv = false;
+		goto abort;
+	}
+	bksub_chol(n,w,a,x);
+	/*for (i = 0; i < n; i++) {
+		r[i] = -b[i];
+		for (j = MAX(i-w,0); j < i; j++)
+			r[i] += A[B_IDX(n,w,j,i)]*x[j];
+		for (j = i; j <= i+w && j < n; j++)
+			r[i] += A[B_IDX(n,w,i,j)]*x[j];
+	}
+	bksub_chol(n,w,a,r);
+	for (i = 0; i < n; i++)
+		x[i] -= r[i];*/
+abort:
+	delete [] r;
+	delete [] a;
 	return rv;
 }
 
@@ -347,7 +453,9 @@ bool equ_chol(const int n, const double * A, const double * b, double * x) {
  * Matrix inverse of the real positive definite nxn matrix A using
  * Cholesky decomposition.  
  */
-bool inv_chol(int n, double * A) {
+bool
+inv_chol(int n, double * A)
+{
 	int i, j, k;
 	double sum;
 
@@ -381,31 +489,26 @@ bool inv_chol(int n, double * A) {
  * Returns L in the upper triangle of A (all diagonal elements are 1),
  * with D in the diagonal.
  */
-bool decmp_ldl(const int n, double * A) {
+bool
+decmp_ldl(const int n, double * A)
+{
 	int i, j, k;
 	double sum;
 
-	printf("\n");
 	for (i = 0; i < n; i++) {
-		printf("%d: %0.16e\n",i,A[i*n+i]);
 		for (k = i-1, sum = 0.0; k >= 0; k--) {
-			printf("\t%+0.6e\t%+0.6e\t%+0.6e\n",A[k*n+k],A[i*n+k],A[k*n+k]*A[i*n+k]*A[i*n+k]);
 			sum += A[k*n+k]*(A[i*n+k]*A[i*n+k]);
 		}
 		A[i*n+i] -= sum;
-		printf("%d: %0.16e\t%0.16e\n",i,A[i*n+i],sum);
         if (fabs(A[i*n+i]) < DBL_EPSILON) {
 			event_msg(EVENT_WARN,"Indefinite matrix in decmp_ldl(%f)!",A[i*n+i]);
 			return false;
 		}
 		for (j = i+1; j < n; j++) {
-			printf("%d %d: %0.16e\n",i,j,A[j*n+i]);
 			for (k = i-1, sum = 0.0; k >= 0; k--) {
-				printf("\t%+0.6e\t%+0.6e\t%+0.6e\t%+0.6e\n",A[k*n+k],A[i*n+k],A[j*n+k],A[k*n+k]*A[i*n+k]*A[j*n+k]);
 				sum += A[k*n+k]*(A[i*n+k]*A[j*n+k]);
 			}
 			A[j*n+i] = (A[j*n+i]-sum)/A[i*n+i];
-			printf("%d %d: %0.16e\t%0.16e\n",i,j,A[j*n+i],sum);
 		}
 	}
 	return true;
@@ -417,8 +520,10 @@ bool decmp_ldl(const int n, double * A) {
  *
  * m is the number of columns in b, and c is the column index.
  */
-void bksub_ldl(const int n, const double * A,
- 			   double * b, const int m = 1, const int c = 0) {
+void
+bksub_ldl(const int n, const double * A,
+          double * b, const int m = 1, const int c = 0)
+{
 	int i, k;
 	double sum;
 
@@ -441,7 +546,9 @@ void bksub_ldl(const int n, const double * A,
  * The function employs LDL^T decomposition followed by forward/back
  * substitution, (with a single step refinement).
  */
-bool equ_ldl(const int n, const double * A, const double * b, double * x) {
+bool
+equ_ldl(const int n, const double * A, const double * b, double * x)
+{
 	bool rv = true;
 	int i, j;
 
@@ -452,8 +559,7 @@ bool equ_ldl(const int n, const double * A, const double * b, double * x) {
 		rv = false;
 		goto abort;
 	}
-
-	/* avoid destroying A, B by copying them to a, x resp. */
+	// avoid destroying A and B by copying them to a and x resp.
 	memcpy(a,A,sizeof(double)*n*n);
 	memcpy(x,b,sizeof(double)*n);
 	if (!decmp_ldl(n,a)) {
@@ -469,12 +575,9 @@ bool equ_ldl(const int n, const double * A, const double * b, double * x) {
 	bksub_ldl(n,a,r);
 	for (i = 0; i < n; i++)
 		x[i] -= r[i];
-
   abort:
-	if (r != 0)
-		delete [] r;
-	if (a != 0)
-		delete [] a;
+	delete [] r;
+	delete [] a;
 	return rv;
 }
 
@@ -484,7 +587,9 @@ bool equ_ldl(const int n, const double * A, const double * b, double * x) {
  * The diagonal matrix of singular values, W, is output as a vector W.
  * The matrix V (not the transpose of V) is output as V.
  */
-void decmp_svd(const int m, const int n, double *A, double *W, double *V) {
+void
+decmp_svd(const int m, const int n, double * A, double * W, double * V)
+{
 	double F, G = 0.0, H;
 	double C, S, X, Y;
 	double scale = 0.0;
@@ -584,7 +689,6 @@ void decmp_svd(const int m, const int n, double *A, double *W, double *V) {
 		}
 		A[i*n+i] += 1.0;
 	}
-	
 	// Diagonalization of the bidiagonal form, looping over
 	// singular values.
 	for (i = n-1; i >= 0; i--) {
@@ -598,7 +702,6 @@ void decmp_svd(const int m, const int n, double *A, double *W, double *V) {
 				} else if ((fabs(W[q-1]) + anorm) == anorm)
 					break;
 			}
-			
 			// Cancellation of rv1[q], if q > 0.
 			if (flag) {
 				C = 0.0; S = 1.0;
@@ -657,12 +760,13 @@ void decmp_svd(const int m, const int n, double *A, double *W, double *V) {
 		}
 	}
 abort:
-	if (rv1 != 0)
-		delete [] rv1;
+	delete [] rv1;
 }
 
-void bksub_svd(const int m, const int n, const double * U, const double * W,
-			   const double * V, double * b, const int p = 1, const int c = 0) {
+void
+bksub_svd(const int m, const int n, const double * U, const double * W,
+         const double * V, double * b, const int p = 1, const int c = 0)
+{
 	int i, j;
 
 	double * tmp = new double[n];
@@ -670,7 +774,6 @@ void bksub_svd(const int m, const int n, const double * U, const double * W,
 		event_msg(EVENT_ERROR,"Out of memory in bksub_svd()!");
 		goto abort;
 	}
-
 	for (j = 0; j < n; j++) {
 		tmp[j] = 0.0;
 		if (W[j] != 0.0) {
@@ -686,8 +789,7 @@ void bksub_svd(const int m, const int n, const double * U, const double * W,
 	}
 
 abort:
-	if (tmp != 0)
-		delete [] tmp;
+	delete [] tmp;
 }
 
 /*
@@ -696,7 +798,9 @@ abort:
  * The function employs SVD decomposition followed by forward/back
  * substitution, with refinement.
  */
-void equ_svd(const int n, const double * A, const double * b, double * x) {
+void
+equ_svd(const int n, const double * A, const double * b, double * x)
+{
 	double max;
 	int i, j;
 
@@ -715,7 +819,7 @@ void equ_svd(const int n, const double * A, const double * b, double * x) {
 	for (i = 0, max = 0.0; i < n; i++)
 		if (W[i] > max)
 			max = W[i];
-	for (i = 0, max *= 1e-12; i < n; i++)
+	for (i = 0, max *= EIG_TOL; i < n; i++)
 		if (W[i] < max)
 			W[i] = 0.0;
 	bksub_svd(n,n,U,W,V,x);
@@ -727,20 +831,18 @@ void equ_svd(const int n, const double * A, const double * b, double * x) {
 	for (i = 0; i < n; i++)
 		x[i] -= r[i];
 abort:
-	if (r != 0)
-		delete [] r;
-	if (U != 0)
-		delete [] U;
-	if (W != 0)
-		delete [] W;
-	if (V != 0)
-		delete [] V;
+	delete [] r;
+	delete [] U;
+	delete [] W;
+	delete [] V;
 }
 
 /*
  * Matrix inverse of the real nxn matrix A using SVD decomposition.
  */
-void inv_svd(const int n, double * A) {
+void
+inv_svd(const int n, double * A)
+{
 	double max;
 	int i, j, k;
 
@@ -756,7 +858,7 @@ void inv_svd(const int n, double * A) {
 	for (i = 0, max = 0.0; i < n; i++)
 		if (W[i] > max)
 			max = W[i];
-	for (i = 0, max *= 1e-12; i < n; i++)
+	for (i = 0, max *= EIG_TOL; i < n; i++)
 		if (W[i] < max)
 			W[i] = 0.0;
 	for (i = 0; i < n; i++) {
@@ -768,19 +870,17 @@ void inv_svd(const int n, double * A) {
 		}
 	}
 abort:
-	if (U != 0)
-		delete [] U;
-	if (W != 0)
-		delete [] W;
-	if (V != 0)
-		delete [] V;
+	delete [] U;
+	delete [] W;
+	delete [] V;
 }
 
 /*
  * Orthonormalize the nxn matrix Q, using the SVD decomposition.
  */
-void orth_svd(const int n, double * Q) {
-
+void
+orth_svd(const int n, double * Q)
+{
 	double * W = new double[n];
 	double * V = new double[n*n];
 	if (W == 0 || V == 0) {
@@ -789,10 +889,8 @@ void orth_svd(const int n, double * Q) {
 	}
 	decmp_svd(n,n,Q,W,V);
 abort:
-	if (W != 0)
-		delete [] W;
-	if (V != 0)
-		delete [] V;
+	delete [] W;
+	delete [] V;
 }
 
 /*
@@ -800,7 +898,9 @@ abort:
  *
  * XXX: this routine is using a stupid access scheme.
  */
-bool decmp_qr(const int n, double * A, double * s, double * d) {
+bool
+decmp_qr(const int n, double * A, double * s, double * d)
+{
 	bool rv = true;
 	int i, j, k;
 	
@@ -841,8 +941,9 @@ bool decmp_qr(const int n, double * A, double * s, double * d) {
  * Performs a backsubstitution for a QR decomposed matrix A, solving
  * Ax = b. 
  */
-void bksbp_qr(const int n, const double * A, const double * s, const double * d,
-			  double * b, const int m = 1, const int c = 0)
+void
+bksbp_qr(const int n, const double * A, const double * s, const double * d,
+         double * b, const int m = 1, const int c = 0)
 {
 	int i, j;
 	double sum;
@@ -864,7 +965,9 @@ void bksbp_qr(const int n, const double * A, const double * s, const double * d,
 /*
  * Householder reduction of a nxn matrix A to tridiagonal form.
  */
-void tridiag_hh(const int n, double * A, double * d, double * e)  {
+void
+tridiag_hh(const int n, double * A, double * d, double * e)
+{
 	int i, j, k;
 	double scale, f;
 	
@@ -920,7 +1023,9 @@ void tridiag_hh(const int n, double * A, double * d, double * e)  {
  * implicit shifts to determine the eigenvalues and
  * eigenvectors of a real symmetric tridiagonal matrix.
  */
-void eig_tri_ql(const int n, double * d, double * e, double * A) {
+void
+eig_tri_ql(const int n, double * d, double * e, double * A)
+{
 	int i, j, k, m;
 	double b,c,f,g,p,r,s;
 
@@ -965,7 +1070,9 @@ void eig_tri_ql(const int n, double * d, double * e, double * A) {
  * Obtain the eigenvalues and eigenvectors of a real symmetric matrix by
  * QL transform.
  */
-void eig_ql(const int n, double * A, double * d) {
+void
+eig_ql(const int n, double * A, double * d)
+{
 	double t;
 	int i, j, k;
 
@@ -993,12 +1100,13 @@ void eig_ql(const int n, double * A, double * d) {
 		}
 	}
 abort:
-	if (e != 0)
-		delete [] e;
+	delete [] e;
 }
 
-void bksub_eig(const int n, const double * Q, const double * d,
-			   double * b, const int p = 1, const int c = 0) {
+void
+bksub_eig(const int n, const double * Q, const double * d,
+          double * b, const int p = 1, const int c = 0)
+{
 	int i, j;
 
 	double * tmp = new double[n];
@@ -1019,8 +1127,7 @@ void bksub_eig(const int n, const double * Q, const double * d,
 			b[j] += Q[j*n+i]*tmp[i];
 	}
 abort:
-	if (tmp != 0)
-		delete [] tmp;
+	delete [] tmp;
 }
 
 /*
@@ -1029,7 +1136,9 @@ abort:
  * The function employs an Eigenvalue decomposition followed by forward/back
  * substitution, with refinement.
  */
-void equ_eig(const int n, const double * A, const double * b, double * x) {
+void
+equ_eig(const int n, const double * A, const double * b, double * x)
+{
 	double max;
 	int i, j;
 
@@ -1049,7 +1158,7 @@ void equ_eig(const int n, const double * A, const double * b, double * x) {
 		if (fabs(d[i]) > max)
 			max = fabs(d[i]);
 	}
-	for (i = 0, max *= 1e-12; i < n; i++) {
+	for (i = 0, max *= EIG_TOL; i < n; i++) {
 		if (fabs(d[i]) < max)
 			d[i] = 0.0;
 	}
@@ -1062,20 +1171,18 @@ void equ_eig(const int n, const double * A, const double * b, double * x) {
 	for (i = 0; i < n; i++)
 		x[i] -= r[i];
 abort:
-	if (r != 0)
-		delete [] r;
-	if (e != 0)
-		delete [] e;
-	if (d != 0)
-		delete [] d;
-	if (Q != 0)
-		delete [] Q;
+	delete [] r;
+	delete [] e;
+	delete [] d;
+	delete [] Q;
 }
 
 /*
  * Matrix inverse of the real symmetric nxn matrix A using eigenvalue decomposition.
  */
-void inv_eig(const int n, double * A) {
+void
+inv_eig(const int n, double * A)
+{
 	double max;
 	int i, j, k;
 
@@ -1093,7 +1200,7 @@ void inv_eig(const int n, double * A) {
 		if (fabs(d[i]) > max)
 			max = fabs(d[i]);
 	}
-	for (i = 0, max *= 1e-12; i < n; i++) {
+	for (i = 0, max *= EIG_TOL; i < n; i++) {
 		if (fabs(d[i]) < max)
 			d[i] = 0.0;
 	}
@@ -1106,16 +1213,14 @@ void inv_eig(const int n, double * A) {
 		}
 	}
 abort:
-	if (e != 0)
-		delete [] e;
-	if (d != 0)
-		delete [] d;
-	if (Q != 0)
-		delete [] Q;
+	delete [] e;
+	delete [] d;
+	delete [] Q;
 }
 
-#ifdef BUILD
+#ifdef NOBUILD
 #define n 10
+#define m 8
 void main () {
 	int i, j, k, r = 0;
 	double s, dot = 0.0;
@@ -1123,68 +1228,109 @@ void main () {
 	double * B = new double[n*n];
 	double * b = new double[n];
 	double * x = new double[n];
-	if (A == 0 || b == 0 || x == 0) {
+	if (A == 0 || B == 0 || b == 0 || x == 0) {
 		event_msg(EVENT_ERROR,"Out of memory!");
 		goto abort;
 	}
 
 again:
 	printf(".");
-	for (i = 0; i < n*n; i++)
-		A[i] = RAND(0.0,1.0);
+	memset(A,0,sizeof(double)*n*n);
+	for (i = 0; i < n; i++) {
+		for (j = i; j <= i+m && j < n; j++)
+			A[i*n+j] = RAND(-1.0,1.0);
+	}
 	for (i = 0; i < n; i++) {
 		for (j = 0; j < n; j++) {
 			B[i*n+j] = 0.0;
 			for (k = 0; k < n; k++)
 				B[i*n+j] += A[i*n+k]*A[j*n+k];
 		}
-		//B[i*n+i] = 1.0;
 	}
 	for (i = 0; i < n; i++)
 		b[i] = RAND(0.0,1.0);
-	if (++r < 5)
-		goto again;
-	printf("(%d",r);
-	memcpy(A,B,sizeof(double)*n*n);
+	printf("(%d",r++);
+	
+	//memcpy(A,B,sizeof(double)*n*n);
 	//equ_lu(n,A,b,x);
-	equ_chol(n,A,b,x);
+	//equ_chol(n,A,b,x);
 	//equ_ldl(n,A,b,x);
 	//equ_svd(n,A,b,x);
+	//equ_eig(n,A,b,x);
+
+	for (i = 0; i < n; i++) {
+		for (j = i; j <= i+m && j < n; j++)
+			A[B_IDX(n,m,i,j)] = B[i*n+j];
+	}
+	equ_chol(n,m,A,b,x);
+	
 	printf(")");
 	for (i = 0, dot = 0.0; i < n; i++) {
 		for (j = 0, s = 0.0; j < n; j++)
-			s += A[i*n+j]*x[j];
+			s += B[i*n+j]*x[j];
 		dot += (s-b[i])*(s-b[i]);
 	}
-	//if (sqrt(dot) > 1e-10) {
-		printf("\n%g\nA = [ ",sqrt(dot));
+	if (sqrt(dot) > 1e-1) {
+/*		printf("\n%g\nA = [ ",sqrt(dot));
 		for (i = 0; i < n; i++) {
 			for (j = 0; j < n; j++)
-				printf("%.18e\t",A[i*n+j]);
+				printf("%.18e\t",B[i*n+j]);
 			printf("; ...\n");
 		}
 		printf("];\n b = [");
 		for (i = 0; i < n; i++) {
-			printf("%.18e;\n",b[i]);
+			printf("%.18e; ...\n",b[i]);
 		}
 		printf("];\n x = [");
 		for (i = 0; i < n; i++) {
-			printf("%.18e;\n",x[i]);
+			printf("%.18e; ...\n",x[i]);
 		}
-		printf("];\n");
+		printf("];\n");*/
 		exit(1);
-	//}
-	//goto again;
+	}
+	goto again;
 
 abort:
-	if (x != 0)
-		delete [] x;
-	if (b != 0)
-		delete [] b;
-	if (B != 0)
-		delete [] B;
-	if (A != 0)
-		delete [] A;
+	delete [] x;
+	delete [] b;
+	delete [] B;
+	delete [] A;
+};
+#endif
+
+#ifdef NOBUILD
+void main () {
+	int n, m, i, j, k;
+	int * A;
+
+	for (n = 0; n < 1000; n++) {
+		for (m = 0; m < n; m++) {
+			A = new int[B_SIZE(n,m)];
+			memset(A,0,sizeof(int)*B_SIZE(n,m));
+			for (i = 0; i < n; i++) {
+				for (j = i; j >= i-m && j >= 0; j--) {
+					k = B_IDX(n,m,j,i);
+					if (k < 0 || k >= B_SIZE(n,m)) {
+						printf("%d\t%d\t%d\t%d\t%d\t%d\n",n,m,i,j,B_SIZE(n,m),k);
+						exit(1);
+					}
+					printf("%d\t%d\t%d\t%d\t%d\n",n,m,i,j,k);
+					if (A[k] == 1) {
+						printf("OVERLAP\n");
+						exit(1);
+					}
+					A[k] = 1;
+				}
+			}
+			for (i = 0; i < B_SIZE(n,m); i++) {
+				if (A[i] != 1) {
+					printf("MISSED\n");
+					exit(1);
+				}
+			}
+			delete [] A;
+		}
+	}
 };
 #endif
 
@@ -1301,7 +1447,6 @@ again:
 		}
 	}
 	//goto again;
-
 abort:
 	if (e != 0)
 		delete [] e;
@@ -1315,4 +1460,3 @@ abort:
 		delete [] I;
 };
 #endif
-
