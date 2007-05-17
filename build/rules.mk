@@ -63,12 +63,15 @@
 #
 ################################################################################
 
-CFLAGS		= $(VISIBILITY_FLAGS) $(OS_CFLAGS) $(DEFINES) $(INCLUDES)
-CXXFLAGS	= $(VISIBILITY_FLAGS) $(OS_CFLAGS) $(DEFINES) $(INCLUDES)
+CFLAGS		:= $(VISIBILITY_FLAGS) $(OS_CFLAGS) $(DEFINES) $(INCLUDES)
+CXXFLAGS	:= $(VISIBILITY_FLAGS) $(OS_CFLAGS) $(DEFINES) $(INCLUDES)
+LDFLAGS		:= $(OS_LDFLAGS) $(LIBS) $(OS_LIBS)
 
-LDFLAGS		= $(OS_LDFLAGS) $(LIBS)
-
-LINK_DLL	= $(LD) $(OS_DLLFLAGS) $(DLLFLAGS)
+ifeq (,$(filter-out WINNT,$(OS_ARCH)))
+LDFLAGS 	:= $(LDFLAGS:-l%=lib%.$(LIB_SUFFIX))
+LDFLAGS		:= $(LDFLAGS:-L=/LIBPATH:)
+MKSHLIB		:= $(LD) $(OS_DLLFLAGS) $(DLLFLAGS)
+endif
 
 ifeq ($(OS_ARCH),Darwin)
 PWD := $(shell pwd)
@@ -121,6 +124,7 @@ SHARED_LIBRARY	= lib$(LIBRARY_NAME)$(LIBRARY_VERSION).$(DLL_SUFFIX)
 endif
 endif
 endif
+
 
 ifdef PROGRAM_NAME
 PROGRAM		= $(PROGRAM_NAME)$(EXE_SUFFIX)
@@ -254,7 +258,7 @@ Makefile: $(srcdir)/Makefile.in $(MOD_DEPTH)/config.status
 
 $(PROGRAM): $(OBJS)
 ifeq ($(USING_GCC)_$(OS_ARCH),_WINNT)
-	$(CC) $(OBJS) -Fe$@ -link $(LDFLAGS:-l%=lib%.$(LIB_SUFFIX):-L=/LIBPATH:) $(OS_LIBS)
+	$(CC) $(OBJS) -Fe$@ -link $(LDFLAGS)
 else
 ifdef CPPSRCS
 	$(CXX) -o $@ $(CFLAGS) $(OBJS) $(LDFLAGS)
@@ -274,10 +278,10 @@ $(LIBRARY): $(OBJS)
 $(SHARED_LIBRARY): $(OBJS) $(RES) $(MAPFILE)
 	rm -f $@
 ifeq ($(USING_GCC)_$(OS_ARCH),_WINNT)
-	$(LINK_DLL) -MAP $(DLLBASE) $(DLL_LIBS) $(OBJS) $(RES)
+	$(MKSHLIB) -MAP $(DLLBASE) $(DLL_LIBS) $(OBJS) $(RES)
 else
 	$(MKSHLIB) $(OBJS) $(RES)
-endif	# WINNT
+endif
 ifdef ENABLE_STRIP
 	$(STRIP) $@
 endif
