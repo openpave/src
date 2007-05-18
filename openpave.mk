@@ -176,14 +176,14 @@ endif
 
 OP_MODULE_LIST := $(subst $(comma), ,$(OP_CO_MODULE)) $(foreach project,$(OP_PROJECT_LIST),$(MODULES_$(project)))
 
-OPCONFIG_CONFIG += $(foreach project,$(OP_PROJECT_LIST),$(BOOTSTRAP_$(project)))
+OP_BOOTSTRAP_LIST += $(foreach project,$(OP_PROJECT_LIST),$(BOOTSTRAP_$(project)))
 
 # Using $(sort) here because it also removes duplicate entries.
 OP_MODULE_LIST := $(sort $(OP_MODULE_LIST))
-OPCONFIG_CONFIG := $(sort $(OPCONFIG_CONFIG))
+OP_BOOTSTRAP_LIST := $(sort $(OP_BOOTSTRAP_LIST))
 
 ifndef RUN_AUTOCONF
-OPCONFIG += openpave/configure
+OP_BOOTSTRAP_LIST += openpave/configure
 endif
 
 # OP_CVS_FLAGS - Basic CVS flags
@@ -269,9 +269,9 @@ checkout::
 	else true; \
 	fi
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE)
-	@echo '$(CVSCO) openpave/openpave.mk $(OPCONFIG_CONFIG)'; \
+	@echo '$(CVSCO) openpave/openpave.mk $(OP_BOOTSTRAP_LIST)'; \
         cd $(ROOTDIR) && \
-	$(CVSCO) openpave/openpave.mk $(OPCONFIG_CONFIG)
+	$(CVSCO) openpave/openpave.mk $(OP_BOOTSTRAP_LIST)
 	@cd $(ROOTDIR) && $(MAKE) -f openpave/openpave.mk real_checkout
 
 #	Start the checkout. Split the output to the tty and a log file.
