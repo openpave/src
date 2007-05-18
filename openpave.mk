@@ -132,16 +132,27 @@ endif
 ####################################
 # CVS
 
+# OP_CVS_FLAGS - Basic CVS flags
+ifdef OP_CVS_FLAGS
+  CVS_FLAGS := $(OP_CVS_FLAGS)
+else
 # Add the CVS root to CVS_FLAGS if needed
 CVS_ROOT_IN_TREE := $(shell cat $(TOPSRCDIR)/CVS/Root 2>/dev/null)
 ifneq ($(CVS_ROOT_IN_TREE),)
-ifneq ($(CVS_ROOT_IN_TREE),$(CVSROOT))
   CVS_FLAGS := -d $(CVS_ROOT_IN_TREE)
 endif
+  CVS_FLAGS := $(CVS_FLAGS) -q -z 3 
 endif
 
-CVS_CO_DATE_FLAGS = $(if $(OP_CO_DATE),-D "$(OP_CO_DATE)")
-CVSCO = $(CVS) $(CVS_FLAGS) co $(OP_CO_FLAGS) $(if $(OP_CO_TAG),-r $(OP_CO_TAG),-A) $(CVS_CO_DATE_FLAGS)
+# OP_CO_FLAGS - Checkout flags
+ifdef OP_CO_FLAGS
+  CVSCO_FLAGS := $(OP_CO_FLAGS)
+else
+  CVSCO_FLAGS := -P
+endif
+CVSCO_FLAGS := $(CVSCO_FLAGS) $(if $(OP_CO_DATE),-D "$(OP_CO_DATE)")
+CVSCO_FLAGS := $(CVSCO_FLAGS) $(if $(OP_CO_TAG),-r $(OP_CO_TAG),-A)
+CVSCO = $(CVS) $(CVS_FLAGS) co $(CVSCO_FLAGS)
 
 CVSCO_LOGFILE := $(ROOTDIR)/op-cvs.log
 CVSCO_LOGFILE := $(shell echo $(CVSCO_LOGFILE) | sed s%//%/%)
@@ -163,11 +174,11 @@ include $(TOPSRCDIR)/.opconfig.mk
 ####################################
 # Options that may come from opconfig
 
-OP_PROJECT_LIST := $(subst $(comma), ,$(OP_CO_PROJECT))
+OP_PROJECT_LIST := $(subst $(comma), ,$(OP_PROJECTS))
 OP_PROJECT_LIST += $(foreach project,$(OP_PROJECT_LIST),$(REQUIRES_$(project)))
 
 ifneq (,$(filter-out $(AVAILABLE_PROJECTS),$(OP_PROJECT_LIST)))
-$(error OP_CO_PROJECT contains an unrecognized project.)
+$(error OP_PROJECTS contains an unrecognized project.)
 endif
 
 ifeq (all,$(filter all,$(OP_PROJECT_LIST)))
@@ -175,39 +186,15 @@ ifeq (all,$(filter all,$(OP_PROJECT_LIST)))
 endif
 
 OP_MODULE_LIST := $(subst $(comma), ,$(OP_CO_MODULE)) $(foreach project,$(OP_PROJECT_LIST),$(MODULES_$(project)))
-
 OP_BOOTSTRAP_LIST += $(foreach project,$(OP_PROJECT_LIST),$(BOOTSTRAP_$(project)))
-
-# Using $(sort) here because it also removes duplicate entries.
-OP_MODULE_LIST := $(sort $(OP_MODULE_LIST))
-OP_BOOTSTRAP_LIST := $(sort $(OP_BOOTSTRAP_LIST))
 
 ifndef RUN_AUTOCONF
 OP_BOOTSTRAP_LIST += openpave/configure
 endif
 
-# OP_CVS_FLAGS - Basic CVS flags
-ifeq "$(origin OP_CVS_FLAGS)" "undefined"
-  CVS_FLAGS := $(CVS_FLAGS) -q -z 3 
-else
-  CVS_FLAGS := $(OP_CVS_FLAGS)
-endif
-
-ifdef OP_BUILD_PROJECTS
-
-ifndef OP_OBJDIR
-  $(error When OP_BUILD_PROJECTS is set, you must set OP_OBJDIR)
-endif
-ifdef OP_CURRENT_PROJECT
-  OBJDIR = $(OP_OBJDIR)/$(OP_CURRENT_PROJECT)
-  OP_MAKE = $(MAKE) $(OP_MAKE_FLAGS) -C $(OBJDIR)
-  BUILD_PROJECT_ARG = OP_BUILD_APP=$(OP_CURRENT_PROJECT)
-else
-  OBJDIR = $(error Cannot find the OBJDIR when OP_CURRENT_PROJECT is not set.)
-  OP_MAKE = $(error Cannot build in the OBJDIR when OP_CURRENT_PROJECT is not set.)
-endif
-
-else # OP_BUILD_PROJECTS
+# Using $(sort) here because it also removes duplicate entries.
+OP_MODULE_LIST := $(sort $(OP_MODULE_LIST))
+OP_BOOTSTRAP_LIST := $(sort $(OP_BOOTSTRAP_LIST))
 
 ifdef OP_OBJDIR
   OBJDIR = $(OP_OBJDIR)
@@ -217,25 +204,14 @@ else
   OP_MAKE := $(MAKE) $(OP_MAKE_FLAGS)
 endif
 
-endif # OP_BUILD_PROJECTS
-
 ###################################
 # Checkout main modules
 #
 
-# sort is used to remove duplicates.
-OP_MODULE_LIST := $(sort $(OP_MODULE_LIST))
-
-MODULES_CO_FLAGS := -P
-ifdef OP_CO_FLAGS
-  MODULES_CO_FLAGS := $(OP_CO_FLAGS)
-endif
-MODULES_CO_FLAGS := $(MODULES_CO_FLAGS) $(if $(OP_CO_TAG),-r $(OP_CO_TAG),-A)
-
 ifeq (,$(strip $(OP_MODULE_LIST)))
-CHECKOUT_MODULES   = $(error No modules or projects were specified. Use OP_CO_PROJECT to specify a project for checkout.)
+CHECKOUT_MODULES   = $(error No modules or projects were specified. Use OP_PROJECTS to specify a project for checkout.)
 else
-CHECKOUT_MODULES   := cvs_co $(CVS) $(CVS_FLAGS) co $(MODULES_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(OP_MODULE_LIST);
+CHECKOUT_MODULES   := cvs_co $(CVSCO) $(OP_MODULE_LIST);
 endif
 
 #######################################################################
@@ -243,25 +219,25 @@ endif
 # 
 
 # Print out any options loaded from opconfig.
-all build checkout clean depend distclean export libs install realclean::
+all build checkout clean depend distclean install realclean::
 	@if test -f .opconfig.out; then \
 	  cat .opconfig.out; \
 	  rm -f .opconfig.out; \
 	else true; \
 	fi
 
-ifdef _IS_FIRST_CHECKOUT
+.PHONY: all
+.DEFAULT: all
 all:: checkout build
-else
-all:: checkout alldep
-endif
 
 # Do everything from scratch
+.PHONY: everything
 everything: checkout clean build
 
 ####################################
 # CVS checkout
 #
+.PHONY: checkout
 checkout::
 #	@: Backup the last checkout log.
 	@if test -f $(CVSCO_LOGFILE) ; then \
@@ -276,6 +252,7 @@ checkout::
 
 #	Start the checkout. Split the output to the tty and a log file.
 
+.PHONY: real_checkout
 real_checkout:
 	@set -e; \
 	cvs_co() { set -e; echo "$$@" ; \
@@ -297,27 +274,13 @@ real_checkout:
 
 ifdef _IS_FIRST_CHECKOUT
 # First time, do build target in a new process to pick up new files.
+.PHONY build
 build::
-	@cd $(ROOTDIR) && $(MAKE) -f openpave/openpave.mk build
+	@cd $(TOPSRCDIR) && $(MAKE) -f openpave.mk build
 else
 
 #####################################################
 # After First Checkout
-
-# If we're building multiple projects, but haven't specified which project,
-# loop through them.
-
-ifeq (,$(OP_CURRENT_PROJECT)$(if $(OP_BUILD_PROJECTS),,1))
-configure depend build install export libs clean realclean distclean alldep::
-	set -e; \
-	for app in $(OP_BUILD_PROJECTS); do \
-	  @cd $(ROOTDIR) && $(MAKE) -f openpave/openpave.mk $@ OP_CURRENT_PROJECT=$$app; \
-	done
-
-else
-
-# OP_CURRENT_PROJECT: either doing a single-project build, or building an
-# individual project in a multi-project build.
 
 ####################################
 # Configure
@@ -330,7 +293,7 @@ EXTRA_CONFIG_DEPS := \
 
 ifdef RUN_AUTOCONF
 $(TOPSRCDIR)/configure: $(TOPSRCDIR)/configure.in $(EXTRA_CONFIG_DEPS)
-	@echo Generating $@ using autoconf
+	@echo Generating $@ using $(AUTOCONF)
 	cd $(TOPSRCDIR); $(AUTOCONF)
 endif
 
@@ -356,54 +319,38 @@ else
   CONFIGURE = $(TOPSRCDIR)/configure
 endif
 
-configure:: $(TOPSRCDIR)/configure.in $(CONFIG_STATUS_DEPS)
-ifdef OP_BUILD_PROJECTS
-	@if test ! -d $(OP_OBJDIR); then $(MKDIR) $(OP_OBJDIR); else true; fi
-endif
+.PHONY: configure
+configure:: $(CONFIG_STATUS_DEPS)
 	@if test ! -d $(OBJDIR); then $(MKDIR) $(OBJDIR); else true; fi
 	@echo cd $(OBJDIR);
 	@echo $(CONFIGURE) $(CONFIGURE_ARGS)
-	@cd $(OBJDIR) && $(BUILD_PROJECT_ARG) $(CONFIGURE_ENV_ARGS) $(CONFIGURE) $(CONFIGURE_ARGS) \
+	@cd $(OBJDIR) && $(CONFIGURE_ENV_ARGS) $(CONFIGURE) $(CONFIGURE_ARGS) \
 	  || ( echo "*** Fix above errors and then restart with\
-               \"$(MAKE) -f openpave/openpave.mk build\"" && exit 1 )
+               \"$(MAKE) -f openpave.mk build\"" && exit 1 )
 	@touch $(OBJDIR)/Makefile
 
 $(CONFIG_STATUS_OUTS): $(CONFIG_STATUS_DEPS)
-	@cd $(ROOTDIR) && $(MAKE) -f openpave/openpave.mk configure
-
-####################################
-# Depend
-
-depend:: $(CONFIG_STATUS_OUTS)
-	$(OP_MAKE) export && $(OP_MAKE) depend
+	@cd $(TOPSRCDIR) && $(MAKE) -f openpave.mk configure
 
 ####################################
 # Build it
 
-build::  $(CONFIG_STATUS_OUTS)
+.PHONY: build
+build:: $(CONFIG_STATUS_OUTS)
 	$(OP_MAKE)
 
 ####################################
 # Other targets
 
 # Pass these target onto the real build system
-install export libs clean realclean distclean alldep:: $(OBJDIR)/Makefile
+.PHONY: depend install install clean realclean distclean
+depend install clean realclean distclean:: $(CONFIG_STATUS_OUTS)
 	$(OP_MAKE) $@
 
-endif # OP_CURRENT_PROJECT
-# (! IS_FIRST_CHECKOUT)
-endif
+endif # (! IS_FIRST_CHECKOUT)
 
-cleansrcdir:
+distclean::
 	@cd $(TOPSRCDIR); \
-	if [ -f Makefile ]; then \
-	  $(MAKE) distclean ; \
-	else \
-	  echo "Removing object files from srcdir..."; \
-	  rm -fr `find . -type d \( -name .deps -print -o -name CVS \
-	          -o -exec test ! -d {}/CVS \; \) -prune \
-	          -o \( -name '*.[ao]' -o -name '*.so' \) -type f -print`; \
-	fi; \
 	rm -f config-defs.h \
 	      config.cache \
 	      config.log \
@@ -411,6 +358,3 @@ cleansrcdir:
 	      .opconfig.out \
 	      .opconfig.mk \
 	;
-
-
-.PHONY: checkout real_checkout depend build export libs alldep install clean realclean distclean cleansrcdir everything configure
