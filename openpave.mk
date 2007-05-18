@@ -70,10 +70,6 @@ BOOTSTRAP_core :=                                \
   openpave/Makefile.in                           \
   $(NULL)
 
-ifndef RUN_AUTOCONF
-BOOTSTRAP_core += openpave/configure
-endif
-
 MODULES_core :=                                  \
   openpave/build                                 \
   openpave/include                               \
@@ -185,6 +181,10 @@ OPCONFIG_CONFIG += $(foreach project,$(OP_PROJECT_LIST),$(BOOTSTRAP_$(project)))
 # Using $(sort) here because it also removes duplicate entries.
 OP_MODULE_LIST := $(sort $(OP_MODULE_LIST))
 OPCONFIG_CONFIG := $(sort $(OPCONFIG_CONFIG))
+
+ifndef RUN_AUTOCONF
+OPCONFIG += openpave/configure
+endif
 
 # OP_CVS_FLAGS - Basic CVS flags
 ifeq "$(origin OP_CVS_FLAGS)" "undefined"
