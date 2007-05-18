@@ -63,14 +63,14 @@
 #
 ################################################################################
 
-CFLAGS		:= $(VISIBILITY_FLAGS) $(OS_CFLAGS) $(DEFINES) $(INCLUDES)
-CXXFLAGS	:= $(VISIBILITY_FLAGS) $(OS_CFLAGS) $(DEFINES) $(INCLUDES)
-LDFLAGS		:= $(OS_LDFLAGS) $(LIBS) $(OS_LIBS)
+CFLAGS		= $(VISIBILITY_FLAGS) $(OS_CFLAGS) $(DEFINES) $(INCLUDES)
+CXXFLAGS	= $(VISIBILITY_FLAGS) $(OS_CFLAGS) $(DEFINES) $(INCLUDES)
 
 ifeq (,$(filter-out WINNT,$(OS_ARCH)))
-LDFLAGS 	:= $(LDFLAGS:-l%=lib%.$(LIB_SUFFIX))
-LDFLAGS		:= $(LDFLAGS:-L=/LIBPATH:)
-MKSHLIB		:= $(LD) $(OS_DLLFLAGS) $(DLLFLAGS)
+LDFLAGS		= $(OS_LDFLAGS) $($(LIBS:-L=/LIBPATH:):-l%=lib%.$(LIB_SUFFIX)) $(OS_LIBS)
+MKSHLIB		= $(LD) $(OS_DLLFLAGS) $(DLLFLAGS)
+else
+LDFLAGS		= $(OS_LDFLAGS) $(LIBS) $(OS_LIBS)
 endif
 
 ifeq ($(OS_ARCH),Darwin)
