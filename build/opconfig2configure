@@ -115,7 +115,7 @@ do
   ac_options="$ac_options \"$_opt\""
 done
 
-OPCONFIG=`$_AUTOCONF_TOOLS_DIR/opconfig-find $topsrcdir`
+OPCONFIG=`$topsrcdir/build/opconfig-find $topsrcdir`
 if [ "$OPCONFIG" ]; then
   . "$OPCONFIG"
 fi

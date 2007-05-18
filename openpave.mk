@@ -68,10 +68,10 @@ BOOTSTRAP_core :=                                \
   openpave/COPYING-ADDL-1.0                      \
   openpave/configure.in                          \
   openpave/Makefile.in                           \
+  openpave/build                                 \
   $(NULL)
 
 MODULES_core :=                                  \
-  openpave/build                                 \
   openpave/include                               \
   openpave/src                                   \
   $(NULL)
@@ -175,20 +175,19 @@ include $(TOPSRCDIR)/.opconfig.mk
 # Options that may come from opconfig
 
 OP_PROJECT_LIST := $(subst $(comma), ,$(OP_PROJECTS))
-OP_PROJECT_LIST += $(foreach project,$(OP_PROJECT_LIST),$(REQUIRES_$(project)))
-
-ifneq (,$(filter-out $(AVAILABLE_PROJECTS),$(OP_PROJECT_LIST)))
-$(error OP_PROJECTS contains an unrecognized project.)
-endif
-
 ifeq (all,$(filter all,$(OP_PROJECT_LIST)))
   OP_PROJECT_LIST := $(AVAILABLE_PROJECTS)
 endif
+ifneq (,$(filter-out $(AVAILABLE_PROJECTS),$(OP_PROJECT_LIST)))
+$(error OP_PROJECTS contains an unrecognized project.  Options are $(strip $(AVAILABLE_PROJECTS)))
+endif
+OP_PROJECT_LIST += $(foreach project,$(OP_PROJECT_LIST),$(REQUIRES_$(project)))
+OP_PROJECT_LIST := $(sort $(OP_PROJECT_LIST))
 
-OP_MODULE_LIST := $(subst $(comma), ,$(OP_CO_MODULE)) $(foreach project,$(OP_PROJECT_LIST),$(MODULES_$(project)))
-OP_BOOTSTRAP_LIST += $(foreach project,$(OP_PROJECT_LIST),$(BOOTSTRAP_$(project)))
+OP_MODULE_LIST := $(foreach project,$(OP_PROJECT_LIST),$(MODULES_$(project)))
+OP_BOOTSTRAP_LIST := $(foreach project,$(OP_PROJECT_LIST),$(BOOTSTRAP_$(project)))
 
-ifndef RUN_AUTOCONF
+ifndef OP_AUTOCONF
 OP_BOOTSTRAP_LIST += openpave/configure
 endif
 
@@ -202,16 +201,6 @@ ifdef OP_OBJDIR
 else
   OBJDIR := $(TOPSRCDIR)
   OP_MAKE := $(MAKE) $(OP_MAKE_FLAGS)
-endif
-
-###################################
-# Checkout main modules
-#
-
-ifeq (,$(strip $(OP_MODULE_LIST)))
-CHECKOUT_MODULES   = $(error No modules or projects were specified. Use OP_PROJECTS to specify a project for checkout.)
-else
-CHECKOUT_MODULES   := cvs_co $(CVSCO) $(OP_MODULE_LIST);
 endif
 
 #######################################################################
@@ -239,35 +228,37 @@ everything: checkout clean build
 #
 .PHONY: checkout
 checkout::
-#	@: Backup the last checkout log.
-	@if test -f $(CVSCO_LOGFILE) ; then \
-	  mv $(CVSCO_LOGFILE) $(CVSCO_LOGFILE).old; \
-	else true; \
-	fi
-	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE)
-	@echo '$(CVSCO) openpave/openpave.mk $(OP_BOOTSTRAP_LIST)'; \
+	@echo "*** CVS checkout started: "`date` | tee $(CVSCO_LOGFILE)
+	@echo '*** Checking out bootstrap files...'; \
         cd $(ROOTDIR) && \
-	$(CVSCO) openpave/openpave.mk $(OP_BOOTSTRAP_LIST)
-	@cd $(ROOTDIR) && $(MAKE) -f openpave/openpave.mk real_checkout
+			$(CVSCO) openpave/openpave.mk $(OP_BOOTSTRAP_LIST)
+	@cd $(ROOTDIR) && \
+		$(MAKE) $(OP_MAKE_FLAGS) -f openpave/openpave.mk real_checkout
 
 #	Start the checkout. Split the output to the tty and a log file.
 
+###################################
+# Checkout main modules
+#
+
 .PHONY: real_checkout
+ifeq (,$(strip $(OP_MODULE_LIST)))
 real_checkout:
-	@set -e; \
-	cvs_co() { set -e; echo "$$@" ; \
-	  "$$@" 2>&1 | tee -a $(CVSCO_LOGFILE); }; \
-	$(CHECKOUT_MODULES)
-	@echo "checkout finish: "`date` | tee -a $(CVSCO_LOGFILE)
-#	@: Check the log for conflicts. ;
+	$(error No modules or projects were specified. Use OP_PROJECTS to specify a project for checkout.)
+else
+real_checkout:
+	@echo '*** Checking out project files...'; \
+	  $(CVSCO) $(OP_MODULE_LIST) 2>&1 | tee -a $(CVSCO_LOGFILE)
+	@echo "*** CVS checkout finished: "`date` | tee -a $(CVSCO_LOGFILE)
 	@conflicts=`egrep "^C " $(CVSCO_LOGFILE)` ;\
 	if test "$$conflicts" ; then \
-	  echo "$(MAKE): *** Conflicts during checkout." ;\
+	  echo "*** Conflicts during checkout." ;\
 	  echo "$$conflicts" ;\
-	  echo "$(MAKE): Refer to $(CVSCO_LOGFILE) for full log." ;\
+	  echo "*** Refer to $(CVSCO_LOGFILE) for full log." ;\
 	  false; \
 	else true; \
 	fi
+endif
 
 #####################################################
 # First Checkout
@@ -276,7 +267,8 @@ ifdef _IS_FIRST_CHECKOUT
 # First time, do build target in a new process to pick up new files.
 .PHONY build
 build::
-	@cd $(TOPSRCDIR) && $(MAKE) -f openpave.mk build
+	@cd $(TOPSRCDIR) && \
+		$(MAKE) $(OP_MAKE_FLAGS) -f openpave.mk build
 else
 
 #####################################################
@@ -285,13 +277,10 @@ else
 ####################################
 # Configure
 
-CONFIG_STATUS = $(wildcard $(OBJDIR)/config.status)
-CONFIG_CACHE  = $(wildcard $(OBJDIR)/config.cache)
-
 EXTRA_CONFIG_DEPS := \
 	$(NULL)
 
-ifdef RUN_AUTOCONF
+ifdef OP_AUTOCONF
 $(TOPSRCDIR)/configure: $(TOPSRCDIR)/configure.in $(EXTRA_CONFIG_DEPS)
 	@echo Generating $@ using $(AUTOCONF)
 	cd $(TOPSRCDIR); $(AUTOCONF)
@@ -322,25 +311,22 @@ endif
 .PHONY: configure
 configure:: $(CONFIG_STATUS_DEPS)
 	@if test ! -d $(OBJDIR); then $(MKDIR) $(OBJDIR); else true; fi
-	@echo cd $(OBJDIR);
-	@echo $(CONFIGURE) $(CONFIGURE_ARGS)
+	@echo '*** Running Configure...'
 	@cd $(OBJDIR) && $(CONFIGURE_ENV_ARGS) $(CONFIGURE) $(CONFIGURE_ARGS) \
 	  || ( echo "*** Fix above errors and then restart with\
-               \"$(MAKE) -f openpave.mk build\"" && exit 1 )
-	@touch $(OBJDIR)/Makefile
+               \"gmake -f openpave.mk build\"" && exit 1 )
 
 $(CONFIG_STATUS_OUTS): $(CONFIG_STATUS_DEPS)
-	@cd $(TOPSRCDIR) && $(MAKE) -f openpave.mk configure
+	@cd $(TOPSRCDIR) && \
+		$(MAKE) $(OP_MAKE_FLAGS) -f openpave.mk configure
 
 ####################################
 # Build it
 
 .PHONY: build
 build:: $(CONFIG_STATUS_OUTS)
-	$(OP_MAKE)
-
-####################################
-# Other targets
+	@echo '*** Building...' && \
+		$(OP_MAKE)
 
 # Pass these target onto the real build system
 .PHONY: depend install install clean realclean distclean

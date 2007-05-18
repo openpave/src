@@ -49,6 +49,9 @@ AC_INIT(openpave.mk)
 AC_CONFIG_AUX_DIR(${srcdir}/build)
 AC_CANONICAL_SYSTEM
 
+AC_REQUIRE([AC_INIT_BINSH])dnl
+. ${srcdir}/build/opconfig2configure
+
 dnl ========================================================
 dnl = Defaults
 dnl ========================================================
