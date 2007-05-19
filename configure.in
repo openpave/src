@@ -44,13 +44,11 @@ dnl the terms of any one of the MPL, the GPL or the LGPL.
 dnl
 dnl ***** END LICENSE BLOCK *****
 
+
 AC_PREREQ(2.13)
 AC_INIT(openpave.mk)
 AC_CONFIG_AUX_DIR(${srcdir}/build)
 AC_CANONICAL_SYSTEM
-
-AC_REQUIRE([AC_INIT_BINSH])dnl
-. ${srcdir}/build/opconfig2configure
 
 dnl ========================================================
 dnl = Defaults
@@ -64,21 +62,12 @@ _DEBUG_FLAGS=-g
 OP_DEBUG=1
 OP_OPTIMIZE=
 DEFINES='-DBUILD'
-LIBOP='-L$(dist_libdir) -lop$(MOD_MAJOR_VERSION)'
-CYGWIN_WRAPPER=
 MACOS_SDK_DIR=
 NEXT_ROOT=
 
 dnl Link in libraries necessary to resolve all symbols for shared libs
-RESOLVE_LINK_SYMBOLS=
+RESOLVE_SYMS=
 
-dnl ========================================================
-dnl =
-dnl = Dont change the following lines.  Doing so breaks:
-dnl =
-dnl = CFLAGS="-foo" ./configure
-dnl =
-dnl ========================================================
 CFLAGS="${CFLAGS=}"
 CXXFLAGS="${CXXFLAGS=}"
 LDFLAGS="${LDFLAGS=}"
@@ -94,6 +83,7 @@ case "$target" in
         if test $? = 0; then
             _WIN32_MSVC=1
             CXX=$CC
+            CPP=$CC
         else
             AC_MSG_WARN([$(CC) test failed.  Using normal feature tests])
         fi
@@ -115,11 +105,12 @@ if test -n "$_WIN32_MSVC"; then
 fi
 
 AC_ARG_ENABLE(optimize,
-    [  --enable-optimize(=val) Enable code optimizations (val, ie. -O2) ],
+    [  --disable-optimize      Do not perform code optimizations
+  --enable-optimize(=val) Enable code optimizations (val, ie. -O2) ],
     [ if test "$enableval" != "no"; then
         OP_OPTIMIZE=1
         if test -n "$enableval" && test "$enableval" != "yes"; then
-    	    _OPTIMIZE_FLAGS=`echo $enableval | sed -e 's|\\\ | |g'`
+            _OPTIMIZE_FLAGS=`echo $enableval | sed -e 's|\\\ | |g'`
             _SAVE_OPTIMIZE_FLAGS=$_OPTIMIZE_FLAGS
         fi
       else
@@ -129,8 +120,9 @@ AC_ARG_ENABLE(optimize,
 AC_ARG_ENABLE(debug,
     [  --disable-debug         Do not compile in debugging symbols
   --enable-debug(=val)    Enable debugging (debug flags val)],
-    [	if test "$enableval" = "no"; then
-    	    OP_DEBUG=
+    [   AC_MSG_WARN([Well? $enableval])
+	if test "$enableval" = "no"; then
+            OP_DEBUG=
         else
             OP_DEBUG=1
             if test -n "$enableval" && test "$enableval" != "yes"; then
@@ -142,7 +134,7 @@ AC_ARG_ENABLE(debug,
 AC_ARG_ENABLE(debug-rtl,
     [  --enable-debug-rtl      Use the MSVC debug runtime library],
     [ if test "$enableval" = "yes"; then
-	    USE_DEBUG_RTL=1
+        USE_DEBUG_RTL=1
       fi ])
 
 dnl ========================================================
@@ -165,11 +157,9 @@ dnl =
 dnl ========================================================
 if test -z "$CC"; then
     case "$target" in
-
     *-solaris*)
         CC=cc
     ;;
-
     esac
 fi
 
@@ -180,16 +170,14 @@ dnl =
 dnl ========================================================
 if test -z "$CXX"; then
     case "$target" in
-
     *-solaris*)
         CXX=CC
     ;;
-
     esac
 fi
 
 if test -z "$SKIP_PATH_CHECKS"; then
-    AC_PATH_PROG(WHOAMI, $WHOAMI whoami, echo not_whoami)
+    AC_PATH_PROG(WHOAMI, $WHOAMI whoami, :)
 fi
 
 if test -n "$OP_DEBUG"; then
@@ -220,10 +208,10 @@ fi
 AC_PROG_CPP
 AC_PROG_RANLIB
 AC_PATH_PROGS(AS, as, $CC)
-AC_PATH_PROGS(AR, ar, echo not_ar)
-AC_PATH_PROGS(LD, ld link, echo not_ld)
-AC_PATH_PROGS(STRIP, strip, echo not_strip)
-AC_PATH_PROGS(WINDRES, windres, echo not_windres)
+AC_PATH_PROGS(AR, ar, :)
+AC_PATH_PROGS(LD, ld link, :)
+AC_PATH_PROGS(STRIP, strip, :)
+AC_PATH_PROGS(WINDRES, windres, :)
 
 if test "$GCC" = "yes"; then
     GNU_CC=1
@@ -291,7 +279,7 @@ EOF
         rm -f conftest.[cs]
         ])
     if test "$ac_cv_visibility_hidden" = "yes"; then
-        AC_DEFINE(HAVE_VISIBILITY_HIDDEN_ATTRIBUTE)
+        DEFINES="$DEFINES -DHAVE_VISIBILITY_HIDDEN_ATTRIBUTE"
         AC_CACHE_CHECK(for visibility pragma support,
             ac_cv_visibility_pragma,
             [cat > conftest.c <<EOF
@@ -311,22 +299,13 @@ EOF
             rm -f conftest.[cs]
             ])
         if test "$ac_cv_visibility_pragma" = "yes"; then
-            AC_DEFINE(HAVE_VISIBILITY_PRAGMA)
+            DEFINES="$DEFINES -DHAVE_VISIBILITY_PRAGMA"
             VISIBILITY_FLAGS="-fvisibility=hidden"
         fi
     fi
 fi # GNU_CC
 
 fi # SKIP_COMPILER_CHECKS
-
-dnl ========================================================
-dnl Checks for programs.
-dnl ========================================================
-if test -z "$SKIP_PATH_CHECKS"; then
-    AC_PATH_PROGS(PERL, perl5 perl, echo not_perl)
-elif test -z "$PERL"; then
-    PERL=perl
-fi
 
 dnl ========================================================
 dnl Default platform specific options
@@ -336,7 +315,7 @@ OBJ_SUFFIX=o
 LIB_SUFFIX=a
 DLL_SUFFIX=so
 EXE_SUFFIX=
-MKSHLIB='$(LD) $(DSO_LDOPTS) -o $@'
+MKSHLIB='$(CC) $(DSO_LDOPTS) -o $@'
 AR_FLAGS='cr $@'
 AS='$(CC)'
 ASFLAGS='$(CFLAGS)'
@@ -416,10 +395,12 @@ case "$host" in
 *-cygwin*|*-msvc*|*-mks*)
     if test `echo "${PATH}" | grep -c \;` = 0; then
         CYGWIN_WRAPPER='sh $(topsrcdir)/build/cygwin-wrapper'
+        CC="\$(CYGWIN_WRAPPER) $CC"
+        CXX="\$(CYGWIN_WRAPPER) $CXX"
+        RC="\$(CYGWIN_WRAPPER) $RC"
     fi
     ;;
 *)
-    HOST_CFLAGS="$HOST_CFLAGS -DXP_UNIX"
     ;;
 esac
 
@@ -427,49 +408,36 @@ dnl ========================================================
 dnl Override of system specific target options
 dnl ========================================================
 case "$target" in
-
 *-darwin*)
-    AC_DEFINE(XP_UNIX)
-    AC_DEFINE(DARWIN)
-    AC_DEFINE(HAVE_BSD_FLOCK)
-    CFLAGS="$CFLAGS -Wmost -fno-common"
+    DEFINES="$DEFINES -DXP_UNIX -DDARWIN"
+    CPPFLAGS="$CFLAGS -Wmost -fno-common -no-cpp-precomp"
     case "${target_cpu}" in
         i*86*)
-            AC_DEFINE(i386)
             CPU_ARCH=i386
             ;;
         *)
-            AC_DEFINE(ppc)
             CPU_ARCH=ppc
             ;;
     esac
+    DEFINES="$DEFINES -DCPU_ARCH=$CPU_ARCH"
     DSO_CFLAGS=-fPIC
     DSO_LDOPTS='-dynamiclib -compatibility_version 1 -current_version 1 -all_load -install_name @executable_path/$@ -headerpad_max_install_names'
-    # Use the standard preprocessor (cpp)
-    CFLAGS="$CFLAGS -no-cpp-precomp"
-    MKSHLIB='$(CC) $(DSO_LDOPTS) -o $@'
     STRIP="$STRIP -x -S"
     DLL_SUFFIX=dylib
 
     # Add Mac OS X support for loading CFM & CFBundle plugins
     if test -f /System/Library/Frameworks/Carbon.framework/Carbon; then
-        AC_DEFINE(XP_MACOSX)
+        DEFINES="$DEFINES -DXP_MACOSX"
         OS_TARGET=MacOSX
 
         if test -n "$_MACOSX_DEPLOYMENT_TARGET" ; then
-            dnl Use the specified value
             export MACOSX_DEPLOYMENT_TARGET=$_MACOSX_DEPLOYMENT_TARGET
         elif test -z "$MACOSX_DEPLOYMENT_TARGET" ; then
-            dnl No value specified on the command line or in the environment,
-            dnl use the lesser of the library's minimum or the architecture's
-            dnl minimum.
             case "${target_cpu}" in
                 powerpc*)
-                    dnl Architecture minimum 10.2
                     export MACOSX_DEPLOYMENT_TARGET=10.2
                     ;;
                 i*86*)
-                    dnl Architecture minimum 10.4
                     export MACOSX_DEPLOYMENT_TARGET=10.4
                     ;;
             esac
@@ -490,10 +458,10 @@ tools are selected during the Xcode/Developer Tools installation.])
 
             changequote(,)
             CC_VERSION=`$CC -v 2>&1 | grep 'gcc version'`
-            GCC_VERSION_FULL=`echo $CC_VERSION | $PERL -pe 's/^.*gcc version ([^ ]*).*/$1/'`
-            GCC_VERSION=`echo $GCC_VERSION_FULL | $PERL -pe '(split(/\./))[0]>=4&&s/(^\d*\.\d*).*/$1/;'`
+            GCC_VERSION_FULL=`echo $CC_VERSION | perl -pe 's/^.*gcc version ([^ ]*).*/$1/'`
+            GCC_VERSION=`echo $GCC_VERSION_FULL | perl -pe '(split(/\./))[0]>=4&&s/(^\d*\.\d*).*/$1/;'`
             changequote([,])
-            GCC_VERSION_MAJOR=`echo $GCC_VERSION_FULL | $PERL -pe 's/(^\d*).*/$1/;'`
+            GCC_VERSION_MAJOR=`echo $GCC_VERSION_FULL | perl -pe 's/(^\d*).*/$1/;'`
             if test "$GCC_VERSION_MAJOR" -lt "4" ; then
                 SDK_C_FRAMEWORK="-F${MACOS_SDK_DIR}/System/Library/Frameworks"
                 if test -d "${MACOS_SDK_DIR}/Library/Frameworks" ; then
@@ -502,10 +470,7 @@ tools are selected during the Xcode/Developer Tools installation.])
 
                 SDK_C_INCLUDE="-isystem ${MACOS_SDK_DIR}/usr/include/gcc/darwin/${GCC_VERSION} -isystem ${MACOS_SDK_DIR}/usr/include ${SDK_C_FRAMEWORK}"
 
-                CFLAGS="$CFLAGS -nostdinc ${SDK_C_INCLUDE}"
-
-                dnl CPP needs to be set for AC_CHECK_HEADER.
-                CPP="$CPP -nostdinc ${SDK_C_INCLUDE}"
+                CPPFLAGS="$CPPFLAGS -nostdinc ${SDK_C_INCLUDE}"
 
                 dnl ld support for -syslibroot is compiler-agnostic, but only
                 dnl available on Tiger.  Although it's possible to switch on
@@ -522,10 +487,7 @@ tools are selected during the Xcode/Developer Tools installation.])
             else
                 dnl gcc >= 4.0 uses different paths than above, but knows
                 dnl how to find them itself.
-                CFLAGS="$CFLAGS -isysroot ${MACOS_SDK_DIR}"
-
-                dnl CPP needs to be set for AC_CHECK_HEADER.
-                CPP="$CPP -isysroot ${MACOS_SDK_DIR}"
+                CPPFLAGS="$CPPFLAGS -isysroot ${MACOS_SDK_DIR}"
 
                 dnl If gcc >= 4.0.0, we're guaranteed to be on Tiger, which
                 dnl has an ld that supports -syslibroot.  Don't set
@@ -551,28 +513,22 @@ tools are selected during the Xcode/Developer Tools installation.])
     ;;
 
 *-freebsd*)
-    AC_DEFINE(XP_UNIX)
-    AC_DEFINE(FREEBSD)
-    AC_DEFINE(HAVE_BSD_FLOCK)
-    AC_DEFINE(HAVE_SOCKLEN_T)
-    CFLAGS="$CFLAGS -ansi -Wall"
-    MKSHLIB='$(CC) $(DSO_LDOPTS) -o $@'
+    DEFINES="$DEFINES -DXP_UNIX -DFREEBSD"
+    CPPFLAGS="$CPPFLAGS -ansi -Wall"
     DSO_CFLAGS=-fPIC
     DSO_LDOPTS='-shared -Wl,-soname -Wl,$(notdir $@)'
+    _OPTIMIZE_FLAGS=-O2
+    _DEBUG_FLAGS="-g -fno-inline"
     ;;
 
 *-linux*|*-gnu*|*-k*bsd*-gnu)
-    AC_DEFINE(XP_UNIX)
-    AC_DEFINE(_GNU_SOURCE)
-    AC_DEFINE(HAVE_FCNTL_FILE_LOCKING)
+    DEFINES="$DEFINES -DXP_UNIX -D_GNU_SOURCE"
     case "${target_os}" in
     linux*)
-        AC_DEFINE(LINUX)
+        DEFINES="$DEFINES -DLINUX"
         ;;
     esac
-    CFLAGS="$CFLAGS -Wall"
-    CXXFLAGS="$CXXFLAGS -Wall"
-    MKSHLIB='$(CC) $(DSO_LDOPTS) -o $@'
+    CPPFLAGS="$CPPFLAGS -Wall"
     DSO_CFLAGS=-fPIC
     DSO_LDOPTS='-shared -Wl,-soname -Wl,$(notdir $@)'
     _OPTIMIZE_FLAGS=-O2
@@ -584,12 +540,12 @@ tools are selected during the Xcode/Developer Tools installation.])
     fi
     case "${target_cpu}" in
     i*86)
-        AC_DEFINE(i386)
+        DEFINES="$DEFINES -Di386"
         ;;
     ia64)
         ;;
     x86_64)
-        AC_DEFINE(i386)
+        DEFINES="$DEFINES -Di386"
         CC="$CC -m32"
         CXX="$CXX -m32"
         ;;
@@ -597,9 +553,9 @@ tools are selected during the Xcode/Developer Tools installation.])
     ;;
 
 *-mingw*|*-cygwin*|*-msvc*|*-mks*)
-    AC_DEFINE(XP_PC)
-    AC_DEFINE(WIN32)
-    RESOLVE_LINK_SYMBOLS=1
+    DEFINES="$DEFINES -DXP_PC"
+    DEFINES="$DEFINES -DWIN32"
+    RESOLVE_SYMS=1
     DLL_SUFFIX=dll
     EXE_SUFFIX=.exe
 
@@ -608,15 +564,15 @@ tools are selected during the Xcode/Developer Tools installation.])
         CXX="$CXX -mno-cygwin"
         MKSHLIB='$(CC) -shared -Wl,--export-all-symbols -Wl,--out-implib -Wl,$(IMPORT_LIBRARY) $(DLLBASE) -o $(SHARED_LIBRARY)'
         RC=$WINDRES
-        # Use temp file for windres (bug 213281)
         RCFLAGS='-O coff --use-temp-file'
     else
-        CC=cl
-        CXX=cl
-        LD=link
-        AR='lib -NOLOGO -OUT:"$@"'
+        CC=cl.exe
+        CXX=cl.exe
+	CPP=cl.exe
+        LD=link.exe
+        AR='lib.exe -NOLOGO -OUT:"$@"'
         AR_FLAGS=
-        RANLIB='echo not_ranlib'
+        RANLIB=
         STRIP='echo not_strip'
         RC=rc.exe
         OBJ_SUFFIX=obj
@@ -627,23 +583,34 @@ tools are selected during the Xcode/Developer Tools installation.])
         _CC_MAJOR_VERSION=`echo $CC_VERSION | awk -F\. '{ print $1 }'`
         _CC_MINOR_VERSION=`echo $CC_VERSION | awk -F\. '{ print $2 }'`
         MSC_VER=${_CC_MAJOR_VERSION}${_CC_MINOR_VERSION}
-        
-        CFLAGS="$CFLAGS -W3 -nologo -GF -Gy"
+        if test "$_CC_MAJOR_VERSION" = "12"; then
+            CXXFLAGS="$CXXFLAGS -Zc:wchar_t-"
+            DEFINES="$DEFINES -D_CRT_SECURE_NO_DEPRECATE"
+            DEFINES="$DEFINES -D_CRT_NONSTDC_NO_DEPRECATE"
+        elif test "$_CC_MAJOR_VERSION" = "15"; then
+            CXXFLAGS="$CXXFLAGS -Zc:wchar_t-"
+            DEFINES="$DEFINES -D_CRT_SECURE_NO_WARNINGS"
+            DEFINES="$DEFINES -D_CRT_NONSTDC_NO_WARNINGS"
+        fi
+        CPPFLAGS="$CPPFLAGS -W3 -nologo -GF -Gy"
         DLLFLAGS='-OUT:"$@"'
         _DEBUG_FLAGS=-Z7
         _OPTIMIZE_FLAGS=-O2
+
         if test -z "$OP_OPTIMIZE"; then
-            CFLAGS="$CFLAGS -Od"
+            CPPFLAGS="$CPPFLAGS -Od"
         fi
 
         if test -n "$USE_DEBUG_RTL"; then
-            CFLAGS="$CFLAGS -MDd"
+            CPPFLAGS="$CPPFLAGS -MDd"
         else
-            CFLAGS="$CFLAGS -MD"
+            CPPFLAGS="$CPPFLAGS -MD"
         fi
 
         if test -n "$OP_DEBUG"; then
             DEFINES="$DEFINES -D_DEBUG"
+            DLLFLAGS="$DLLFLAGS -DEBUG"
+            LDFLAGS="$LDFLAGS -DEBUG"
         else
             DEFINES="$DEFINES -U_DEBUG"
         fi
@@ -661,68 +628,35 @@ tools are selected during the Xcode/Developer Tools installation.])
             fi
         fi
 
-        if test -n "$OP_DEBUG"; then
-            DLLFLAGS="$DLLFLAGS -DEBUG"
-            LDFLAGS="$LDFLAGS -DEBUG"
-        fi
-
         OS_DLLFLAGS="-nologo -DLL -SUBSYSTEM:WINDOWS"
         if test "$MSC_VER" -le "1200" -a -z "$OP_DEBUG_SYMBOLS"; then
             OS_DLLFLAGS="$OS_DLLFLAGS -PDB:NONE"
         fi
-        
-        if test "$OS_ARCH" = "WINNT"; then
-            CFLAGS="$CFLAGS -GT"
-            if test "$CPU_ARCH" = "x86"; then
-                CFLAGS="$CFLAGS -G5"
-            fi
-            LIBOP='$(dist_libdir)/libnspr$(MOD_MAJOR_VERSION).$(LIB_SUFFIX)'
-        else
-            LIBOP='$(dist_libdir)/nspr$(MOD_MAJOR_VERSION).$(LIB_SUFFIX)'
-        fi
-    fi # GNU_CC
 
-    if test -n "$USE_STATIC_TLS"; then
-        AC_DEFINE(_PR_USE_STATIC_TLS)
-    fi
+    fi # GNU_CC
 
     case "$target_cpu" in
     i*86)
-        AC_DEFINE(_X86_)
         ;;
     x86_64)
-	    AC_DEFINE(_AMD64_)
-	    AC_DEFINE(_M_AMD64)
-	    ;;
+        ;;
     *)
-	    AC_DEFINE(_CPU_ARCH_NOT_DEFINED)
-	    ;;
+        ;;
     esac
 
     ;;
 
 *)
-    AC_DEFINE(XP_UNIX)
+    DEFINES="$DEFINES -DXP_UNIX"
     ;;
-   
 esac
+
+AC_PROG_INSTALL(install,,)
 
 if test -z "$SKIP_LIBRARY_CHECKS"; then
 dnl ========================================================
-dnl Check for system libraries
-dnl ========================================================
-AC_CHECK_LIB(m, main)
-
-dnl ========================================================
 dnl Checks for library functions.
 dnl ========================================================
-AC_PROG_GCC_TRADITIONAL
-AC_CHECK_FUNCS(lchown strerror)
-
-dnl ========================================================
-dnl Check options
-dnl ========================================================
-
 fi # SKIP_LIBRARY_CHECKS
 
 dnl If the user passed in arg to --enable-optimize or --enable-debug,
@@ -736,31 +670,19 @@ if test -n "$_SAVE_DEBUG_FLAGS"; then
 fi
 
 if test -n "$OP_OPTIMIZE"; then
-    CFLAGS="$CFLAGS $_OPTIMIZE_FLAGS"
-    CXXFLAGS="$CXXFLAGS $_OPTIMIZE_FLAGS"
+    CPPFLAGS="$CPPFLAGS $_OPTIMIZE_FLAGS"
 fi
 
 if test -n "$OP_DEBUG"; then
-    CFLAGS="$CFLAGS $_DEBUG_FLAGS"
-    CXXFLAGS="$CXXFLAGS $_DEBUG_FLAGS"
+    CPPFLAGS="$CPPFLAGS $_DEBUG_FLAGS"
 fi
-
-dnl ========================================================
-dnl Use cygwin wrapper for win32 builds, except MSYS/MinGW
-dnl ========================================================
-case "$target_os" in
-cygwin*|msvc*|mks*)
-    CC="\$(CYGWIN_WRAPPER) $CC"
-    CXX="\$(CYGWIN_WRAPPER) $CXX"
-    RC="\$(CYGWIN_WRAPPER) $RC"
-    ;;
-esac
 
 dnl ========================================================
 dnl Substitution of found variables.
 dnl ========================================================
 AC_SUBST(CC)
 AC_SUBST(CXX)
+AC_SUBST(CPP)
 AC_SUBST(CFLAGS)
 AC_SUBST(CXXFLAGS)
 AC_SUBST(CPPFLAGS)
@@ -769,8 +691,6 @@ AC_SUBST(GNU_CC)
 AC_SUBST(MSC_VER)
 
 AC_SUBST(OP_OPTIMIZE)
-
-AC_SUBST(LIBOP)
 
 AC_SUBST(MOD_MAJOR_VERSION)
 AC_SUBST(MOD_MINOR_VERSION)
@@ -792,27 +712,24 @@ AC_SUBST(OS_TEST)
 AC_SUBST(MACOSX_DEPLOYMENT_TARGET)
 
 AC_SUBST(DEFINES)
-AC_SUBST(DEFS)
 AC_SUBST(AR)
 AC_SUBST(AR_FLAGS)
 AC_SUBST(AS)
 AC_SUBST(ASFLAGS)
 AC_SUBST(LD)
 AC_SUBST(RANLIB)
-AC_SUBST(PERL)
 AC_SUBST(STRIP)
 AC_SUBST(FILTER)
 AC_SUBST(IMPLIB)
 
 AC_SUBST(OS_LIBS)
-AC_SUBST(RESOLVE_LINK_SYMBOLS)
+AC_SUBST(RESOLVE_SYMS)
 
 AC_SUBST(RC)
 AC_SUBST(RCFLAGS)
 AC_SUBST(DLLFLAGS)
 AC_SUBST(EXEFLAGS)
 AC_SUBST(OS_DLLFLAGS)
-AC_SUBST(CYGWIN_WRAPPER)
 AC_SUBST(VISIBILITY_FLAGS)
 AC_SUBST(MACOS_SDK_DIR)
 AC_SUBST(NEXT_ROOT)

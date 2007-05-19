@@ -66,6 +66,7 @@ AVAILABLE_PROJECTS = \
 BOOTSTRAP_core :=                                \
   openpave/.cvsignore                            \
   openpave/COPYING-ADDL-1.0                      \
+  openpave/aclocal.m4                            \
   openpave/configure.in                          \
   openpave/Makefile.in                           \
   openpave/build                                 \
@@ -132,27 +133,27 @@ endif
 ####################################
 # CVS
 
-# OP_CVS_FLAGS - Basic CVS flags
-ifdef OP_CVS_FLAGS
-  CVS_FLAGS := $(OP_CVS_FLAGS)
+# OP_CVS_ARGS - Basic CVS flags
+ifdef OP_CVS_ARGS
+  CVS_ARGS := $(OP_CVS_ARGS)
 else
-# Add the CVS root to CVS_FLAGS if needed
+# Add the CVS root to CVS_ARGS if needed
 CVS_ROOT_IN_TREE := $(shell cat $(TOPSRCDIR)/CVS/Root 2>/dev/null)
 ifneq ($(CVS_ROOT_IN_TREE),)
-  CVS_FLAGS := -d $(CVS_ROOT_IN_TREE)
+  CVS_ARGS := -d $(CVS_ROOT_IN_TREE)
 endif
-  CVS_FLAGS := $(CVS_FLAGS) -q -z 3 
+  CVS_ARGS := $(CVS_ARGS) -q -z 3 
 endif
 
-# OP_CO_FLAGS - Checkout flags
-ifdef OP_CO_FLAGS
-  CVSCO_FLAGS := $(OP_CO_FLAGS)
+# OP_CO_ARGS - Checkout flags
+ifdef OP_CO_ARGS
+  CVSCO_ARGS := $(OP_CO_ARGS)
 else
-  CVSCO_FLAGS := -P
+  CVSCO_ARGS := -P
 endif
-CVSCO_FLAGS := $(CVSCO_FLAGS) $(if $(OP_CO_DATE),-D "$(OP_CO_DATE)")
-CVSCO_FLAGS := $(CVSCO_FLAGS) $(if $(OP_CO_TAG),-r $(OP_CO_TAG),-A)
-CVSCO = $(CVS) $(CVS_FLAGS) co $(CVSCO_FLAGS)
+CVSCO_ARGS := $(CVSCO_ARGS) $(if $(OP_CO_DATE),-D "$(OP_CO_DATE)")
+CVSCO_ARGS := $(CVSCO_ARGS) $(if $(OP_CO_TAG),-r $(OP_CO_TAG),-A)
+CVSCO = $(CVS) $(CVS_ARGS) co $(CVSCO_ARGS)
 
 CVSCO_LOGFILE := $(ROOTDIR)/op-cvs.log
 CVSCO_LOGFILE := $(shell echo $(CVSCO_LOGFILE) | sed s%//%/%)
@@ -170,6 +171,7 @@ run_for_side_effects := \
      fi; \
      $(OPCONFIG_LOADER) $(TOPSRCDIR) openpave/.opconfig.mk > openpave/.opconfig.out)
 include $(TOPSRCDIR)/.opconfig.mk
+OPCONFIG := $(shell cd $(ROOTDIR) && $(OPCONFIG_FINDER) $(TOPSRCDIR))
 
 ####################################
 # Options that may come from opconfig
@@ -197,10 +199,10 @@ OP_BOOTSTRAP_LIST := $(sort $(OP_BOOTSTRAP_LIST))
 
 ifdef OP_OBJDIR
   OBJDIR = $(OP_OBJDIR)
-  OP_MAKE = $(MAKE) $(OP_MAKE_FLAGS) -C $(OBJDIR)
+  OP_MAKE = $(MAKE) $(OP_MAKE_ARGS) -C $(OBJDIR)
 else
   OBJDIR := $(TOPSRCDIR)
-  OP_MAKE := $(MAKE) $(OP_MAKE_FLAGS)
+  OP_MAKE := $(MAKE) $(OP_MAKE_ARGS)
 endif
 
 #######################################################################
@@ -233,7 +235,7 @@ checkout::
         cd $(ROOTDIR) && \
 			$(CVSCO) openpave/openpave.mk $(OP_BOOTSTRAP_LIST)
 	@cd $(ROOTDIR) && \
-		$(MAKE) $(OP_MAKE_FLAGS) -f openpave/openpave.mk real_checkout
+		$(MAKE) $(OP_MAKE_ARGS) -f openpave/openpave.mk real_checkout
 
 #	Start the checkout. Split the output to the tty and a log file.
 
@@ -268,7 +270,7 @@ ifdef _IS_FIRST_CHECKOUT
 .PHONY build
 build::
 	@cd $(TOPSRCDIR) && \
-		$(MAKE) $(OP_MAKE_FLAGS) -f openpave.mk build
+		$(MAKE) $(OP_MAKE_ARGS) -f openpave.mk build
 else
 
 #####################################################
@@ -278,6 +280,7 @@ else
 # Configure
 
 EXTRA_CONFIG_DEPS := \
+	$(TOPSRCDIR)/aclocal.m4 \
 	$(NULL)
 
 ifdef OP_AUTOCONF
@@ -291,7 +294,7 @@ CONFIG_STATUS_DEPS := \
 	$(TOPSRCDIR)/configure.in \
 	$(TOPSRCDIR)/configure \
 	$(TOPSRCDIR)/.opconfig.mk \
-	$(NULL)
+	$(OPCONFIG)
 
 CONFIG_STATUS_OUTS := \
 	$(OBJDIR)/config.status \
@@ -308,17 +311,32 @@ else
   CONFIGURE = $(TOPSRCDIR)/configure
 endif
 
+# OP_CONFIGURE_ENV - Configure environment
+ifdef OP_CONFIGURE_ENV
+  CONFIGURE_ENV := $(OP_CONFIGURE_ENV)
+else
+  CONFIGURE_ENV := $(NULL)
+endif
+CONFIGURE_ENV	+= OP_PROJECTS="$(OP_PROJECT_LIST)"
+
+# OP_CONFIGURE_ARGS - Configure arguments
+ifdef OP_CONFIGURE_ARGS
+  CONFIGURE_ARGS := $(OP_CONFIGURE_ARGS)
+else
+  CONFIGURE_ARGS := $(NULL)
+endif
+
 .PHONY: configure
 configure:: $(CONFIG_STATUS_DEPS)
-	@if test ! -d $(OBJDIR); then $(MKDIR) $(OBJDIR); else true; fi
-	@echo '*** Running Configure...'
-	@cd $(OBJDIR) && $(CONFIGURE_ENV_ARGS) $(CONFIGURE) $(CONFIGURE_ARGS) \
+	@if test ! -d $(OBJDIR); then $(MKDIR) $(OBJDIR); else true; fi; \
+	echo '*** Running configure...' && \
+	cd $(OBJDIR) && $(CONFIGURE_ENV) $(CONFIGURE) $(CONFIGURE_ARGS) \
 	  || ( echo "*** Fix above errors and then restart with\
                \"gmake -f openpave.mk build\"" && exit 1 )
 
 $(CONFIG_STATUS_OUTS): $(CONFIG_STATUS_DEPS)
 	@cd $(TOPSRCDIR) && \
-		$(MAKE) $(OP_MAKE_FLAGS) -f openpave.mk configure
+		$(MAKE) $(OP_MAKE_ARGS) -f openpave.mk configure
 
 ####################################
 # Build it

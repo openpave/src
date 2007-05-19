@@ -73,9 +73,7 @@ else
 LDFLAGS		= $(OS_LDFLAGS) $(LIBS) $(OS_LIBS)
 endif
 
-ifeq ($(OS_ARCH),Darwin)
 PWD := $(shell pwd)
-endif
 
 ifeq (,$(CROSS_COMPILE)$(filter-out WINNT,$(OS_ARCH)))
 INSTALL		= $(NSINSTALL)
@@ -153,10 +151,6 @@ endif
 
 ALL_TRASH	= $(TARGETS) $(OBJS) $(RES) $(GARBAGE)
 
-ifndef RELEASE_LIBS_DEST
-RELEASE_LIBS_DEST	= $(RELEASE_LIB_DIR)
-endif
-
 ifdef DIRS
 LOOP_OVER_DIRS		=					\
 	@for d in $(DIRS); do					\
@@ -173,23 +167,29 @@ endif
 
 ################################################################################
 
+.PHONY: all
+.DEFAULT: all
 all:: $(MOD_DEPTH)/config.status Makefile
-	+$(LOOP_OVER_DIRS)
-
-clean:: Makefile
-	rm -rf $(OBJS) $(RES) $(GARBAGE)
-	+$(LOOP_OVER_DIRS)
-
-realclean:: Makefile
-	rm -rf $(ALL_TRASH)
-	+$(LOOP_OVER_DIRS)
-
-distclean:: Makefile
-	rm -rf $(ALL_TRASH) $(DIST_GARBAGE)
 	+$(LOOP_OVER_DIRS)
 
 all:: $(TARGETS)
 
+.PHONY: clean
+clean:: Makefile
+	rm -rf $(OBJS) $(RES) $(GARBAGE)
+	+$(LOOP_OVER_DIRS)
+
+.PHONY: realclean
+realclean:: Makefile
+	rm -rf $(ALL_TRASH)
+	+$(LOOP_OVER_DIRS)
+
+.PHONY: distclean
+distclean:: Makefile
+	rm -rf $(ALL_TRASH) $(DIST_GARBAGE)
+	+$(LOOP_OVER_DIRS)
+
+.PHONY: install
 install:: $(RELEASE_BINS) $(RELEASE_HEADERS) $(RELEASE_LIBS)
 ifdef RELEASE_BINS
 	$(INSTALL) -t -m 0755 $(RELEASE_BINS) $(DESTDIR)$(bindir)
@@ -202,15 +202,10 @@ ifdef RELEASE_LIBS
 endif
 	+$(LOOP_OVER_DIRS)
 
+.PHONY: release
 release:: all
 ifdef RELEASE_BINS
 	@echo "Copying executable programs and scripts to release directory"
-	@if test -z "$(BUILD_NUMBER)"; then \
-		echo "BUILD_NUMBER must be defined"; \
-		false; \
-	else \
-		true; \
-	fi
 	@if test ! -d $(RELEASE_BIN_DIR); then \
 		rm -rf $(RELEASE_BIN_DIR); \
 		$(INSTALL) -D $(RELEASE_BIN_DIR);\
@@ -221,28 +216,16 @@ ifdef RELEASE_BINS
 endif
 ifdef RELEASE_LIBS
 	@echo "Copying libraries to release directory"
-	@if test -z "$(BUILD_NUMBER)"; then \
-		echo "BUILD_NUMBER must be defined"; \
-		false; \
+	@if test ! -d $(RELEASE_LIB_DIR); then \
+		rm -rf $(RELEASE_LIB_DIR); \
+		$(INSTALL) -D $(RELEASE_LIB_DIR);\
 	else \
 		true; \
 	fi
-	@if test ! -d $(RELEASE_LIBS_DEST); then \
-		rm -rf $(RELEASE_LIBS_DEST); \
-		$(INSTALL) -D $(RELEASE_LIBS_DEST);\
-	else \
-		true; \
-	fi
-	cp $(RELEASE_LIBS) $(RELEASE_LIBS_DEST)
+	cp $(RELEASE_LIBS) $(RELEASE_LIB_DIR)
 endif
 ifdef RELEASE_HEADERS
 	@echo "Copying header files to release directory"
-	@if test -z "$(BUILD_NUMBER)"; then \
-		echo "BUILD_NUMBER must be defined"; \
-		false; \
-	else \
-		true; \
-	fi
 	@if test ! -d $(RELEASE_HEADERS_DEST); then \
 		rm -rf $(RELEASE_HEADERS_DEST); \
 		$(INSTALL) -D $(RELEASE_HEADERS_DEST);\
@@ -257,7 +240,7 @@ Makefile: $(srcdir)/Makefile.in $(MOD_DEPTH)/config.status
 	$(MAKE) -C $(topsrcdir) -f openpave.mk configure
 
 $(PROGRAM): $(OBJS)
-ifeq ($(USING_GCC)_$(OS_ARCH),_WINNT)
+ifdef MSC_VER
 	$(CC) $(OBJS) -Fe$@ -link $(LDFLAGS)
 else
 ifdef CPPSRCS
@@ -273,11 +256,13 @@ endif
 $(LIBRARY): $(OBJS)
 	rm -f $@
 	$(AR) $(AR_FLAGS) $(OBJS) $(AR_EXTRA_ARGS)
+ifdef RANLIB
 	$(RANLIB) $@
+endif
 
 $(SHARED_LIBRARY): $(OBJS) $(RES) $(MAPFILE)
 	rm -f $@
-ifeq ($(USING_GCC)_$(OS_ARCH),_WINNT)
+ifdef MSC_VER
 	$(MKSHLIB) -MAP $(DLLBASE) $(DLL_LIBS) $(OBJS) $(RES)
 else
 	$(MKSHLIB) $(OBJS) $(RES)
@@ -289,12 +274,11 @@ endif
 ifeq ($(OS_ARCH),WINNT)
 $(RES): $(RESNAME)
 # The resource compiler does not understand the -U option.
-ifdef USING_GCC
-	$(RC) $(RCFLAGS) $(filter-out -U%,$(DEFINES)) $(INCLUDES:-I%=--include-dir %) -o $@ $<
-else
+ifdef MSC_VER
 	$(RC) $(RCFLAGS) $(filter-out -U%,$(DEFINES)) $(INCLUDES) -Fo$@ $<
-endif # GCC
-	@echo $(RES) finished
+else
+	$(RC) $(RCFLAGS) $(filter-out -U%,$(DEFINES)) $(INCLUDES:-I%=--include-dir %) -o $@ $<
+endif
 endif
 
 #
@@ -302,20 +286,19 @@ endif
 # debuggers under Windows to find source files automatically.
 #
 
-ifeq ($(USING_GCC)_$(OS_ARCH),_WINNT)
-PWD := $(shell pwd)
+ifdef MSC_VER
 abspath = $(if $(findstring :,$(1)),$(1),$(if $(filter /%,$(1)),$(1),$(PWD)/$(1)))
 endif
 
 %.$(OBJ_SUFFIX): %.cpp
-ifeq ($(USING_GCC)_$(OS_ARCH),_WINNT)
+ifdef MSC_VER
 	$(CXX) -Fo$@ -c $(CXXFLAGS) $(call abspath,$<)
 else
 	$(CXX) -o $@ -c $(CXXFLAGS) $<
 endif
 
 %.$(OBJ_SUFFIX): %.c
-ifeq ($(USING_GCC)_$(OS_ARCH),_WINNT)
+ifdef MSC_VER
 	$(CC) -Fo$@ -c $(CFLAGS) $(call abspath,$<)
 else
 	$(CC) -o $@ -c $(CFLAGS) $<
@@ -327,19 +310,5 @@ endif
 %.i: %.c
 	$(CC) -C -E $(CFLAGS) $< > $*.i
 
-################################################################################
-# Special gmake rules.
-################################################################################
-
-#
-# Re-define the list of default suffixes, so gmake won't have to churn through
-# hundreds of built-in suffix rules for stuff we don't need.
-#
 .SUFFIXES:
 .SUFFIXES: .$(LIB_SUFFIX) .$(DLL_SUFFIX) .$(OBJ_SUFFIX) .c .cpp .$(ASM_SUFFIX) .h .i
-
-#
-# Fake targets.  Always run these rules, even if a file/directory with that
-# name already exists.
-#
-.PHONY: all clean install libs realclean release

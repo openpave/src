@@ -78,14 +78,6 @@ ac_add_options() {
   done
 }
 
-ac_add_app_options() {
-  APP=$1
-  shift;
-  if [ "$APP" = "$OP_BUILD_APP" ]; then
-      ac_add_options "$*";
-  fi
-}
-
 mk_add_options() {
   # These options are for openpave.mk
   # configure can safely ignore them.
