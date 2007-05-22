@@ -1945,7 +1945,6 @@ if test "$ac_cv_search_sqrt" != "no"; then
 else :
   
 fi
-else
 fi # SKIP_LIBRARY_CHECKS
 
 if test -n "$_SAVE_OPTIMIZE_FLAGS"; then

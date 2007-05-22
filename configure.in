@@ -514,7 +514,6 @@ dnl ========================================================
 dnl Checks for library functions.
 dnl ========================================================
 AC_SEARCH_LIBS(sqrt,m,OS_LIBS="$OS_LIBS -lm")
-else
 fi # SKIP_LIBRARY_CHECKS
 
 dnl If the user passed in arg to --enable-optimize or --enable-debug,
