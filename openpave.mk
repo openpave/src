@@ -141,6 +141,9 @@ else
 CVS_ROOT_IN_TREE := $(shell cat $(TOPSRCDIR)/CVS/Root 2>/dev/null)
 ifneq ($(CVS_ROOT_IN_TREE),)
   CVS_ARGS := -d $(CVS_ROOT_IN_TREE)
+  ifneq ($(subst :ext:,,$(CVS_ROOT_IN_TREE)),$(CVS_ROOT_IN_TREE))
+    OP_CVS_USER := $(subst @cvs.openpave.org:/home/cvs,,$(subst :ext:,,$(CVS_ROOT_IN_TREE)))
+  endif
 endif
   CVS_ARGS := $(CVS_ARGS) -q -z 3 
 endif
@@ -318,6 +321,9 @@ else
   CONFIGURE_ENV := $(NULL)
 endif
 CONFIGURE_ENV	+= OP_PROJECTS="$(OP_PROJECT_LIST)"
+ifdef OP_CVS_USER
+  CONFIGURE_ENV += OP_CVS_USER="$(OP_CVS_USER)"
+endif
 
 # OP_CONFIGURE_ARGS - Configure arguments
 ifdef OP_CONFIGURE_ARGS
@@ -362,3 +368,5 @@ distclean::
 	      .opconfig.out \
 	      .opconfig.mk \
 	;
+
+.SUFFIXES:

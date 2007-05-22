@@ -90,7 +90,7 @@ decmp_lu(const int n, double * A, int * idx, int & d)
 			for (k = 0; k < i; k++)
 				A[i*n+j] -= A[i*n+k]*A[k*n+j];
 		}
-		double tmp, max = 0.0;
+		double tmp = 0.0, max = 0.0;
 		for (i = j, idx[j] = -1; i < n; i++) {
 			for (k = 0; k < j; k++)
 				A[i*n+j] -= A[i*n+k]*A[k*n+j];

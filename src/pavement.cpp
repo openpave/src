@@ -1121,7 +1121,7 @@ LEsystem::calculate(resulttype result, double * Q)
 		bm.sort();
 
 		// Account for big r's by adding extra integration intervals...
-		x2 = 0.0;
+		x1 = 0.0, x2 = 0.0;
 		for (ir = r.length()-1; ir >= 0 && r[ir]/a[ia] > ngqp-6; ir--) {
 			for (int k1 = ngqp-6; k1 <= nbz; k1 += ngqp-6) {
 				if ((x1 = j1r[k1]/r[ir]) < x2)
@@ -1137,7 +1137,7 @@ LEsystem::calculate(resulttype result, double * Q)
 		// Account for big z's.  We drop approximately three orders of
 		// magnitude for exp(-7).  Add 5 intervals, so we drop 15 orders
 		// of magnitude.
-		x2 = 0.0;
+		x1 = 0.0, x2 = 0.0;
 		for (iz = z.length()-1; iz >= 0; iz--) {
 			for (int k1 = 1; k1 <= 5 && k1*7*a[ia] < j0r[0]*z[iz]; k1++)
 				if ((x1 = k1*7*a[ia]/z[iz]) < x2)
@@ -1820,7 +1820,7 @@ LEbackcalc::seed(int nl, double * P)
  */
 double
 LEbackcalc::deflgrad(int nl, double * P, double * Q, calctype cl) {
-	double step, dgg = 0.0, gg = 0.0, dd = 0.0;
+	double step = 0.0, dgg = 0.0, gg = 0.0, dd = 0.0;
 	int i, j, k, dl = defl.length();
 
 	// Initial setup.
@@ -1924,7 +1924,7 @@ double
 LEbackcalc::gaussnewton(int nl, double * P, calctype cl)
 {
 	int i, j, k, dl = defl.length();
-	double step;
+	double step = 0.0;
 
 	// Initial setup.
 	double * H = new double[dl*nl];
@@ -1978,7 +1978,7 @@ abort:
  */
 double LEbackcalc::kalman(int nl, double * P) {
 	int i, j, k, dl = defl.length();
-	double step;
+	double step = 0.0;
 
 	// Initial setup.
 	double * H = new double[dl*nl];

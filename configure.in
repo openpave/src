@@ -51,19 +51,18 @@ AC_CONFIG_AUX_DIR(${srcdir}/build)
 AC_CANONICAL_SYSTEM
 
 dnl ========================================================
+dnl = Version for libraries
+dnl ========================================================
+LIBRARY_VERSION=1
+
+dnl ========================================================
 dnl = Defaults
 dnl ========================================================
-MOD_MAJOR_VERSION=1
-MOD_MINOR_VERSION=0
-MOD_PATCH_VERSION=0
-_MACOSX_DEPLOYMENT_TARGET=
 _OPTIMIZE_FLAGS=-O
 _DEBUG_FLAGS=-g
 OP_DEBUG=1
 OP_OPTIMIZE=
 DEFINES='-DBUILD'
-MACOS_SDK_DIR=
-NEXT_ROOT=
 
 dnl Link in libraries necessary to resolve all symbols for shared libs
 RESOLVE_SYMS=
@@ -120,8 +119,7 @@ AC_ARG_ENABLE(optimize,
 AC_ARG_ENABLE(debug,
     [  --disable-debug         Do not compile in debugging symbols
   --enable-debug(=val)    Enable debugging (debug flags val)],
-    [   AC_MSG_WARN([Well? $enableval])
-	if test "$enableval" = "no"; then
+    [   if test "$enableval" = "no"; then
             OP_DEBUG=
         else
             OP_DEBUG=1
@@ -137,60 +135,25 @@ AC_ARG_ENABLE(debug-rtl,
         USE_DEBUG_RTL=1
       fi ])
 
-dnl ========================================================
-dnl = Mac OS X SDK support
-dnl ========================================================
-AC_ARG_WITH(macos-sdk,
-    [  --with-macos-sdk=dir    Location of platform SDK to use (Mac OS X only)],
-    MACOS_SDK_DIR=$withval)
-
-AC_ARG_ENABLE(macos-target,
-             [  --enable-macos-target=VER
-                          Set the minimum MacOS version needed at runtime
-                          [10.2 for ppc, 10.4 for x86]],
-             [_MACOSX_DEPLOYMENT_TARGET=$enableval])
-
-dnl ========================================================
-dnl =
-dnl = Set the default C compiler
-dnl =
-dnl ========================================================
-if test -z "$CC"; then
-    case "$target" in
-    *-solaris*)
-        CC=cc
-    ;;
-    esac
-fi
-
-dnl ========================================================
-dnl =
-dnl = Set the default C++ compiler
-dnl =
-dnl ========================================================
-if test -z "$CXX"; then
-    case "$target" in
-    *-solaris*)
-        CXX=CC
-    ;;
-    esac
-fi
-
 if test -z "$SKIP_PATH_CHECKS"; then
+    AC_PROG_INSTALL(install,,)
     AC_PATH_PROG(WHOAMI, $WHOAMI whoami, :)
 fi
 
 if test -n "$OP_DEBUG"; then
     DEFINES="$DEFINES -DDEBUG -UNDEBUG"
 
-    case "${target_os}" in
-    msvc*|mks*|cygwin*|mingw*)
-        DEFINES="$DEFINES -DDEBUG_`echo ${USERNAME} | sed -e 's| |_|g'`"
-        ;;
-    *) 
-        DEFINES="$DEFINES -DDEBUG_`$WHOAMI`"
-        ;;
-    esac
+    if test -n "$OP_CVS_USER"; then
+        DEFINES="$DEFINES -DDEBUG_$OP_CVS_USER"
+    else
+        case "${target_os}" in
+        msvc*|mks*|cygwin*|mingw*)
+            ;;
+        *)
+            DEFINES="$DEFINES -DDEBUG_`$WHOAMI`"
+            ;;
+        esac
+    fi
 else
     DEFINES="$DEFINES -DNDEBUG -UDEBUG"
 fi
@@ -209,9 +172,7 @@ AC_PROG_CPP
 AC_PROG_RANLIB
 AC_PATH_PROGS(AS, as, $CC)
 AC_PATH_PROGS(AR, ar, :)
-AC_PATH_PROGS(LD, ld link, :)
 AC_PATH_PROGS(STRIP, strip, :)
-AC_PATH_PROGS(WINDRES, windres, :)
 
 if test "$GCC" = "yes"; then
     GNU_CC=1
@@ -315,29 +276,25 @@ OBJ_SUFFIX=o
 LIB_SUFFIX=a
 DLL_SUFFIX=so
 EXE_SUFFIX=
-MKSHLIB='$(CC) $(DSO_LDOPTS) -o $@'
-AR_FLAGS='cr $@'
+ARFLAGS='cr $@'
 AS='$(CC)'
 ASFLAGS='$(CFLAGS)'
 
 OS_ARCH=`uname -s | sed -e 's|/|_|g'`
 OS_RELEASE=`uname -r`
-OS_TEST=`uname -m`
-
-if test "$OS_ARCH" = "FreeBSD"; then
-    OS_RELEASE=`echo $OS_RELEASE | sed 's/-.*//'`
-fi
-
-if test "$OS_ARCH" = "Linux"; then
-    OS_RELEASE=`echo $OS_RELEASE | sed 's/-.*//'`
-    OS_RELEASE=`echo $OS_RELEASE | awk -F\. '{ print $1 "." $2 }'`
-fi
-
-#######################################################################
-# Master "Core Components" macros for getting the OS target           #
-#######################################################################
 
 case "$OS_ARCH" in
+FreeBSD)
+    OS_RELEASE=`echo $OS_RELEASE | sed 's/-.*//'`
+    ;;
+Linux)
+    OS_RELEASE=`echo $OS_RELEASE | sed 's/-.*//'`
+    OS_RELEASE=`echo $OS_RELEASE | awk -F\. '{ print $1 "." $2 }'`
+    CPU_ARCH=`uname -m`
+    if echo "$CPU_ARCH" | grep -c 86 >/dev/null; then
+        CPU_ARCH=x86
+    fi
+    ;;
 WINNT)
     CPU_ARCH=`uname -p`
     if test "$CPU_ARCH" = "I386"; then
@@ -409,8 +366,6 @@ dnl Override of system specific target options
 dnl ========================================================
 case "$target" in
 *-darwin*)
-    DEFINES="$DEFINES -DXP_UNIX -DDARWIN"
-    CPPFLAGS="$CFLAGS -Wmost -fno-common -no-cpp-precomp"
     case "${target_cpu}" in
         i*86*)
             CPU_ARCH=i386
@@ -419,104 +374,19 @@ case "$target" in
             CPU_ARCH=ppc
             ;;
     esac
-    DEFINES="$DEFINES -DCPU_ARCH=$CPU_ARCH"
+    CPPFLAGS="$CPPFLAGS -Wmost -fno-common -no-cpp-precomp"
+    DEFINES="$DEFINES -DXP_UNIX -DDARWIN -DCPU_ARCH=$CPU_ARCH"
     DSO_CFLAGS=-fPIC
-    DSO_LDOPTS='-dynamiclib -compatibility_version 1 -current_version 1 -all_load -install_name @executable_path/$@ -headerpad_max_install_names'
+    DSO_LDFLAGS='-dynamiclib -compatibility_version 1 -current_version 1 -all_load -install_name @executable_path/$@ -headerpad_max_install_names'
     STRIP="$STRIP -x -S"
     DLL_SUFFIX=dylib
-
-    # Add Mac OS X support for loading CFM & CFBundle plugins
-    if test -f /System/Library/Frameworks/Carbon.framework/Carbon; then
-        DEFINES="$DEFINES -DXP_MACOSX"
-        OS_TARGET=MacOSX
-
-        if test -n "$_MACOSX_DEPLOYMENT_TARGET" ; then
-            export MACOSX_DEPLOYMENT_TARGET=$_MACOSX_DEPLOYMENT_TARGET
-        elif test -z "$MACOSX_DEPLOYMENT_TARGET" ; then
-            case "${target_cpu}" in
-                powerpc*)
-                    export MACOSX_DEPLOYMENT_TARGET=10.2
-                    ;;
-                i*86*)
-                    export MACOSX_DEPLOYMENT_TARGET=10.4
-                    ;;
-            esac
-        fi
-
-        dnl MACOS_SDK_DIR will be set to the SDK location whenever one is
-        dnl in use.  NEXT_ROOT will be set and exported if it's needed for
-        dnl ld.
-
-        if test "$MACOS_SDK_DIR"; then
-            dnl Sync this section with the one in Mozilla's top level.
-
-            if test ! -d "$MACOS_SDK_DIR"; then
-                AC_MSG_ERROR([SDK not found.  When using --with-macos-sdk, you must
-specify a valid SDK.  SDKs are installed when the optional cross-development
-tools are selected during the Xcode/Developer Tools installation.])
-            fi
-
-            changequote(,)
-            CC_VERSION=`$CC -v 2>&1 | grep 'gcc version'`
-            GCC_VERSION_FULL=`echo $CC_VERSION | perl -pe 's/^.*gcc version ([^ ]*).*/$1/'`
-            GCC_VERSION=`echo $GCC_VERSION_FULL | perl -pe '(split(/\./))[0]>=4&&s/(^\d*\.\d*).*/$1/;'`
-            changequote([,])
-            GCC_VERSION_MAJOR=`echo $GCC_VERSION_FULL | perl -pe 's/(^\d*).*/$1/;'`
-            if test "$GCC_VERSION_MAJOR" -lt "4" ; then
-                SDK_C_FRAMEWORK="-F${MACOS_SDK_DIR}/System/Library/Frameworks"
-                if test -d "${MACOS_SDK_DIR}/Library/Frameworks" ; then
-                    SDK_C_FRAMEWORK="$SDK_C_FRAMEWORK -F${MACOS_SDK_DIR}/Library/Frameworks"
-                fi
-
-                SDK_C_INCLUDE="-isystem ${MACOS_SDK_DIR}/usr/include/gcc/darwin/${GCC_VERSION} -isystem ${MACOS_SDK_DIR}/usr/include ${SDK_C_FRAMEWORK}"
-
-                CPPFLAGS="$CPPFLAGS -nostdinc ${SDK_C_INCLUDE}"
-
-                dnl ld support for -syslibroot is compiler-agnostic, but only
-                dnl available on Tiger.  Although it's possible to switch on
-                dnl the build host's OS release to use ld -syslibroot when
-                dnl available, ld -syslibroot cause warnings as long as
-                dnl NEXT_ROOT is set.  NEXT_ROOT should be set because both
-                dnl both the compiler and linker use it.
-                dnl
-                MACOS_SDK_LIBS="-L${MACOS_SDK_DIR}/usr/lib/gcc/darwin -L${MACOS_SDK_DIR}/usr/lib/gcc/darwin/${GCC_VERSION_FULL} -L${MACOS_SDK_DIR}/usr/lib ${SDK_C_FRAMEWORK}"
-                LDFLAGS="${MACOS_SDK_LIBS} $LDFLAGS"
-                DSO_LDOPTS="${MACOS_SDK_LIBS} $DSO_LDOPTS"
-                export NEXT_ROOT=$MACOS_SDK_DIR
-
-            else
-                dnl gcc >= 4.0 uses different paths than above, but knows
-                dnl how to find them itself.
-                CPPFLAGS="$CPPFLAGS -isysroot ${MACOS_SDK_DIR}"
-
-                dnl If gcc >= 4.0.0, we're guaranteed to be on Tiger, which
-                dnl has an ld that supports -syslibroot.  Don't set
-                dnl NEXT_ROOT because it will be ignored and cause
-                dnl warnings when -syslibroot is specified.
-                dnl
-                dnl Both LDFLAGS and DSO_LDOPTS are set here, see the
-                dnl gcc < 4.0 case for the explanation.
-                if test "$GCC_VERSION_FULL" != "4.0.0" ; then
-                    dnl gcc > 4.0.0 will pass -syslibroot to ld automatically
-                    dnl based on the -isysroot it receives.
-                    LDFLAGS="$LDFLAGS -isysroot ${MACOS_SDK_DIR}"
-                    DSO_LDOPTS="$DSO_LDOPTS -isysroot ${MACOS_SDK_DIR}"
-                else
-                    dnl gcc 4.0.0 doesn't pass -syslibroot to ld, it needs
-                    dnl to be explicit.
-                    LDFLAGS="$LDFLAGS -Wl,-syslibroot,${MACOS_SDK_DIR}"
-                    DSO_LDOPTS="$DSO_LDOPTS -Wl,-syslibroot,${MACOS_SDK_DIR}"
-                fi
-            fi
-        fi
-    fi
     ;;
 
 *-freebsd*)
     DEFINES="$DEFINES -DXP_UNIX -DFREEBSD"
     CPPFLAGS="$CPPFLAGS -ansi -Wall"
     DSO_CFLAGS=-fPIC
-    DSO_LDOPTS='-shared -Wl,-soname -Wl,$(notdir $@)'
+    DSO_LDFLAGS='-shared -Wl,-soname -Wl,$(notdir $@)'
     _OPTIMIZE_FLAGS=-O2
     _DEBUG_FLAGS="-g -fno-inline"
     ;;
@@ -530,22 +400,11 @@ tools are selected during the Xcode/Developer Tools installation.])
     esac
     CPPFLAGS="$CPPFLAGS -Wall"
     DSO_CFLAGS=-fPIC
-    DSO_LDOPTS='-shared -Wl,-soname -Wl,$(notdir $@)'
+    DSO_LDFLAGS='-shared -Wl,-soname -Wl,$(notdir $@)'
     _OPTIMIZE_FLAGS=-O2
     _DEBUG_FLAGS="-g -fno-inline"
-    if echo "$OS_TEST" | grep -c 86 >/dev/null; then
-        CPU_ARCH=x86
-    else
-        CPU_ARCH=$OS_TEST
-    fi
     case "${target_cpu}" in
-    i*86)
-        DEFINES="$DEFINES -Di386"
-        ;;
-    ia64)
-        ;;
     x86_64)
-        DEFINES="$DEFINES -Di386"
         CC="$CC -m32"
         CXX="$CXX -m32"
         ;;
@@ -553,8 +412,7 @@ tools are selected during the Xcode/Developer Tools installation.])
     ;;
 
 *-mingw*|*-cygwin*|*-msvc*|*-mks*)
-    DEFINES="$DEFINES -DXP_PC"
-    DEFINES="$DEFINES -DWIN32"
+    DEFINES="$DEFINES -DXP_PC -DWIN32"
     RESOLVE_SYMS=1
     DLL_SUFFIX=dll
     EXE_SUFFIX=.exe
@@ -562,16 +420,17 @@ tools are selected during the Xcode/Developer Tools installation.])
     if test -n "$GNU_CC"; then
         CC="$CC -mno-cygwin"
         CXX="$CXX -mno-cygwin"
-        MKSHLIB='$(CC) -shared -Wl,--export-all-symbols -Wl,--out-implib -Wl,$(IMPORT_LIBRARY) $(DLLBASE) -o $(SHARED_LIBRARY)'
+        DSO_LDFLAGS='-shared -Wl,--export-all-symbols -Wl,--out-implib -Wl,$(IMPORT_LIBRARY)'
+	AC_PATH_PROGS(WINDRES, windres, :)
         RC=$WINDRES
         RCFLAGS='-O coff --use-temp-file'
     else
         CC=cl.exe
         CXX=cl.exe
-	CPP=cl.exe
-        LD=link.exe
-        AR='lib.exe -NOLOGO -OUT:"$@"'
-        AR_FLAGS=
+	CPP='cl.exe -E'
+        LINK=link.exe
+        AR='lib.exe -NOLOGO'
+        ARFLAGS='-OUT:"$@"'
         RANLIB=
         STRIP='echo not_strip'
         RC=rc.exe
@@ -593,7 +452,6 @@ tools are selected during the Xcode/Developer Tools installation.])
             DEFINES="$DEFINES -D_CRT_NONSTDC_NO_WARNINGS"
         fi
         CPPFLAGS="$CPPFLAGS -W3 -nologo -GF -Gy"
-        DLLFLAGS='-OUT:"$@"'
         _DEBUG_FLAGS=-Z7
         _OPTIMIZE_FLAGS=-O2
 
@@ -609,7 +467,7 @@ tools are selected during the Xcode/Developer Tools installation.])
 
         if test -n "$OP_DEBUG"; then
             DEFINES="$DEFINES -D_DEBUG"
-            DLLFLAGS="$DLLFLAGS -DEBUG"
+            DSO_LDFLAGS="$DSO_LDFLAGS -DEBUG"
             LDFLAGS="$LDFLAGS -DEBUG"
         else
             DEFINES="$DEFINES -U_DEBUG"
@@ -623,14 +481,14 @@ tools are selected during the Xcode/Developer Tools installation.])
                 _OPTIMIZE_FLAGS="$_OPTIMIZE_FLAGS -Zi"
             fi
             if test -n "$OP_PROFILE" -o -n "$OP_DEBUG_SYMBOLS"; then
-                DLLFLAGS="$DLLFLAGS -DEBUG -OPT:REF"
+                DSO_LDFLAGS="$DSO_LDFLAGS -DEBUG -OPT:REF"
                 LDFLAGS="$LDFLAGS -DEBUG -OPT:REF"
             fi
         fi
 
-        OS_DLLFLAGS="-nologo -DLL -SUBSYSTEM:WINDOWS"
+        DSO_LDFLAGS="$DSO_LDFLAGS -nologo -DLL -SUBSYSTEM:WINDOWS"
         if test "$MSC_VER" -le "1200" -a -z "$OP_DEBUG_SYMBOLS"; then
-            OS_DLLFLAGS="$OS_DLLFLAGS -PDB:NONE"
+            DSO_LDFLAGS="$DSO_LDFLAGS -PDB:NONE"
         fi
 
     fi # GNU_CC
@@ -651,12 +509,12 @@ tools are selected during the Xcode/Developer Tools installation.])
     ;;
 esac
 
-AC_PROG_INSTALL(install,,)
-
 if test -z "$SKIP_LIBRARY_CHECKS"; then
 dnl ========================================================
 dnl Checks for library functions.
 dnl ========================================================
+AC_SEARCH_LIBS(sqrt,m,OS_LIBS="$OS_LIBS -lm")
+else
 fi # SKIP_LIBRARY_CHECKS
 
 dnl If the user passed in arg to --enable-optimize or --enable-debug,
@@ -689,63 +547,61 @@ AC_SUBST(CPPFLAGS)
 AC_SUBST(LDFLAGS)
 AC_SUBST(GNU_CC)
 AC_SUBST(MSC_VER)
-
-AC_SUBST(OP_OPTIMIZE)
-
-AC_SUBST(MOD_MAJOR_VERSION)
-AC_SUBST(MOD_MINOR_VERSION)
-AC_SUBST(MOD_PATCH_VERSION)
-AC_SUBST(CPU_ARCH)
-
-AC_SUBST(ASM_SUFFIX)
-AC_SUBST(OBJ_SUFFIX)
-AC_SUBST(LIB_SUFFIX)
-AC_SUBST(DLL_SUFFIX)
-AC_SUBST(EXE_SUFFIX)
-AC_SUBST(MKSHLIB)
-AC_SUBST(DSO_CFLAGS)
-AC_SUBST(DSO_LDOPTS)
-
-AC_SUBST(OS_ARCH)
-AC_SUBST(OS_RELEASE)
-AC_SUBST(OS_TEST)
-AC_SUBST(MACOSX_DEPLOYMENT_TARGET)
-
-AC_SUBST(DEFINES)
 AC_SUBST(AR)
-AC_SUBST(AR_FLAGS)
+AC_SUBST(ARFLAGS)
 AC_SUBST(AS)
 AC_SUBST(ASFLAGS)
-AC_SUBST(LD)
+AC_SUBST(LINK)
 AC_SUBST(RANLIB)
 AC_SUBST(STRIP)
 AC_SUBST(FILTER)
-AC_SUBST(IMPLIB)
+AC_SUBST(DSO_CFLAGS)
+AC_SUBST(DSO_LDFLAGS)
 
 AC_SUBST(OS_LIBS)
 AC_SUBST(RESOLVE_SYMS)
 
 AC_SUBST(RC)
 AC_SUBST(RCFLAGS)
-AC_SUBST(DLLFLAGS)
-AC_SUBST(EXEFLAGS)
-AC_SUBST(OS_DLLFLAGS)
 AC_SUBST(VISIBILITY_FLAGS)
-AC_SUBST(MACOS_SDK_DIR)
-AC_SUBST(NEXT_ROOT)
+
+AC_SUBST(OP_OPTIMIZE)
+
+AC_SUBST(LIBRARY_VERSION)
+AC_SUBST(LIBRARY_MINOR)
+
+AC_SUBST(ASM_SUFFIX)
+AC_SUBST(OBJ_SUFFIX)
+AC_SUBST(LIB_SUFFIX)
+AC_SUBST(DLL_SUFFIX)
+AC_SUBST(EXE_SUFFIX)
+
+AC_SUBST(OS_ARCH)
+AC_SUBST(OS_RELEASE)
+AC_SUBST(CPU_ARCH)
+
+AC_SUBST(DEFINES)
+
+for p in $OP_PROJECTS; do
+    eval "OP_PROJECT_${p}=1";
+done;
 
 dnl ========================================================
 dnl Generate output files.
 dnl ========================================================
+
+if test -z "$OP_PROJECT_core"; then
+    AC_ERROR([The core project must be built!])
+fi
 MAKEFILES="
-Makefile
 build/autoconf.mk
+Makefile
 include/Makefile
 src/Makefile
-test/Makefile
 "
-dnl if test -n "$OP_MODULE_test"; then
-dnl     MAKEFILES="$MAKEFILES test/Makefile"
-dnl fi
+
+if test -n "$OP_PROJECT_test"; then
+    MAKEFILES="$MAKEFILES test/Makefile"
+fi
 
 AC_OUTPUT([$MAKEFILES])
