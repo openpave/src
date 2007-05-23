@@ -407,17 +407,16 @@ case "$target" in
             DEFINES="$DEFINES -D_CRT_SECURE_NO_WARNINGS"
             DEFINES="$DEFINES -D_CRT_NONSTDC_NO_WARNINGS"
         fi
-        CYGWIN_WRAPPER='sh $(topsrcdir)/build/cygwin-wrapper'
-        CC="$CYGWIN_WRAPPER $CC -nologo"
+        CC="$CC -nologo"
         CXX=$CC
         CPP="$CC -E"
-        RC="$CYGWIN_WRAPPER rc.exe"
-        LINK="$CYGWIN_WRAPPER link.exe -nologo"
-        AR="$CYGWIN_WRAPPER lib.exe -nologo"
+        RC="rc.exe"
+        LINK="link.exe -nologo"
+        AR="lib.exe -nologo"
         ARFLAGS='-OUT:"$@"'
         RANLIB=
         STRIP=
-	ASM_SUFFIX=asm
+        ASM_SUFFIX=asm
         OBJ_SUFFIX=obj
         LIB_SUFFIX=lib
         CPPFLAGS="$CPPFLAGS -W3 -GF -Gy"

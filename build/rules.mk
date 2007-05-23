@@ -140,10 +140,7 @@ ifdef DIRS
 LOOP_OVER_DIRS		=					\
 	@for d in $(DIRS); do					\
 		if test -d $$d; then				\
-			set -e;					\
-			echo "cd $$d; $(MAKE) $@";		\
 			$(MAKE) -C $$d $@;			\
-			set +e;					\
 		else						\
 			echo "Skipping non-directory $$d...";	\
 		fi;						\
@@ -155,7 +152,7 @@ endif
 CONFIG_DEPS = \
 	$(topsrcdir)/build/rules.mk		\
 	$(MOD_DEPTH)/config.status		\
-	$(MOD_DEPTH)/build/autoconf.mk	\
+	$(MOD_DEPTH)/build/autoconf.mk		\
 	Makefile
 
 .DEFAULT: all
@@ -241,7 +238,8 @@ Makefile: $(srcdir)/Makefile.in
 
 $(PROGRAM): $(OBJS)
 ifdef MSC_VER
-	$(CC) $(OBJS) -Fe$@ -link $(LDFLAGS)
+	@sh $(topsrcdir)/build/cygwin-wrapper \
+		$(CC) $(OBJS) -Fe$@ -link $(LDFLAGS)
 else
 ifdef CPPSRCS
 	$(CXX) -o $@ $(OBJS) $(LDFLAGS)
@@ -255,15 +253,21 @@ endif
 
 $(LIBRARY): $(OBJS)
 	rm -f $@
+ifdef MSC_VER
+	@sh $(topsrcdir)/build/cygwin-wrapper \
+		$(AR) $(ARFLAGS) -OUT:"$@" $(OBJS) $(AR_EXTRA_ARGS)
+else
 	$(AR) $(ARFLAGS) $(OBJS) $(AR_EXTRA_ARGS)
 ifdef RANLIB
 	$(RANLIB) $@
+endif
 endif
 
 $(SHARED_LIBRARY): $(OBJS) $(RES)
 	rm -f $@
 ifdef MSC_VER
-	$(LINK) $(DSO_LDFLAGS) -OUT:"$@" $(OBJS) $(RES)
+	@sh $(topsrcdir)/build/cygwin-wrapper \
+		$(LINK) $(DSO_LDFLAGS) -OUT:"$@" $(OBJS) $(RES)
 else
 	$(CC) $(DSO_LDFLAGS) -o $@ $(OBJS) $(RES)
 ifdef BUILD_OPT
@@ -275,7 +279,8 @@ ifeq ($(OS_ARCH),WINNT)
 $(RES): $(RESNAME)
 # The resource compiler does not understand the -U option.
 ifdef MSC_VER
-	$(RC) $(RCFLAGS) $(filter-out -U%,$(DEFINES)) $(INCLUDES) -Fo$@ $<
+	@sh $(topsrcdir)/build/cygwin-wrapper \
+		$(RC) $(RCFLAGS) $(filter-out -U%,$(DEFINES)) $(INCLUDES) -Fo$@ $<
 else
 	$(RC) $(RCFLAGS) $(filter-out -U%,$(DEFINES)) $(INCLUDES:-I%=--include-dir %) -o $@ $<
 endif
@@ -292,14 +297,16 @@ endif
 
 %.$(OBJ_SUFFIX): %.cpp
 ifdef MSC_VER
-	$(CXX) -Fo$@ -c $(CXXFLAGS) $(call abspath,$<)
+	@sh $(topsrcdir)/build/cygwin-wrapper \
+		$(CXX) -Fo$@ -c $(CXXFLAGS) $(call abspath,$<)
 else
 	$(CXX) -o $@ -c $(CXXFLAGS) $<
 endif
 
 %.$(OBJ_SUFFIX): %.c
 ifdef MSC_VER
-	$(CC) -Fo$@ -c $(CFLAGS) $(call abspath,$<)
+	@sh $(topsrcdir)/build/cygwin-wrapper \
+		$(CC) -Fo$@ -c $(CFLAGS) $(call abspath,$<)
 else
 	$(CC) -o $@ -c $(CFLAGS) $<
 endif
@@ -308,7 +315,7 @@ endif
 	$(AS) -o $@ $(ASFLAGS) -c $<
 
 %.i: %.c
-	$(CC) -C -E $(CFLAGS) $< > $*.i
+	$(CPP) -C $(CFLAGS) $< > $@
 
 .SUFFIXES:
 .SUFFIXES: .$(LIB_SUFFIX) .$(DLL_SUFFIX) .$(OBJ_SUFFIX) .c .cpp .$(ASM_SUFFIX) .h .i

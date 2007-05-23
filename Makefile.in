@@ -24,6 +24,6 @@ else
 	./config.status --recheck && ./config.status
 endif
 
-# Delete config/autoconf.mk last because it is included by every makefile.
+# Delete build/autoconf.mk last because it is included by every makefile.
 distclean::
-	rm -f config/autoconf.mk
+	rm -f build/autoconf.mk
