@@ -409,7 +409,7 @@ case "$target" in
         fi
         CYGWIN_WRAPPER='sh $(topsrcdir)/build/cygwin-wrapper'
         CC="$CYGWIN_WRAPPER $CC -nologo"
-        CXX=$CXX
+        CXX=$CC
         CPP="$CC -E"
         RC="$CYGWIN_WRAPPER rc.exe"
         LINK="$CYGWIN_WRAPPER link.exe -nologo"
