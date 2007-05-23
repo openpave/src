@@ -409,8 +409,8 @@ case "$target" in
         fi
         CYGWIN_WRAPPER='sh $(topsrcdir)/build/cygwin-wrapper'
         CC="$CYGWIN_WRAPPER $CC -nologo"
-        CXX="$CYGWIN_WRAPPER $CC -nologo"
-        CPP="$CYGWIN_WRAPPER $CC -nologo -E"
+        CXX=$CXX
+        CPP="$CC -E"
         RC="$CYGWIN_WRAPPER rc.exe"
         LINK="$CYGWIN_WRAPPER link.exe -nologo"
         AR="$CYGWIN_WRAPPER lib.exe -nologo"
