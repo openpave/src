@@ -1,41 +1,3 @@
-#! gmake
-# 
-# ***** BEGIN LICENSE BLOCK *****
-# Version: MPL 1.1/GPL 2.0/LGPL 2.1
-#
-# The contents of this file are subject to the Mozilla Public License Version
-# 1.1 (the "License"); you may not use this file except in compliance with
-# the License. You may obtain a copy of the License at
-# http://www.mozilla.org/MPL/
-#
-# Software distributed under the License is distributed on an "AS IS" basis,
-# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
-# for the specific language governing rights and limitations under the
-# License.
-#
-# The Original Code is the Netscape Portable Runtime (NSPR).
-#
-# The Initial Developer of the Original Code is
-# Netscape Communications Corporation.
-# Portions created by the Initial Developer are Copyright (C) 1998-2000
-# the Initial Developer. All Rights Reserved.
-#
-# Contributor(s):
-#
-# Alternatively, the contents of this file may be used under the terms of
-# either the GNU General Public License Version 2 or later (the "GPL"), or
-# the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
-# in which case the provisions of the GPL or the LGPL are applicable instead
-# of those above. If you wish to allow use of your version of this file only
-# under the terms of either the GPL or the LGPL, and not to allow others to
-# use your version of this file under the terms of the MPL, indicate your
-# decision by deleting the provisions above and replace them with the notice
-# and other provisions required by the GPL or the LGPL. If you do not delete
-# the provisions above, a recipient may use your version of this file under
-# the terms of any one of the MPL, the GPL or the LGPL.
-#
-# ***** END LICENSE BLOCK *****
-
 ################################################################################
 #
 # $OpenPave$
@@ -62,15 +24,6 @@
 #	LIBRARY	-- the target library name to create from $OBJS
 #
 ################################################################################
-
-CFLAGS		= $(VISIBILITY_FLAGS) $(OS_CFLAGS) $(DEFINES) $(INCLUDES)
-CXXFLAGS	= $(VISIBILITY_FLAGS) $(OS_CFLAGS) $(DEFINES) $(INCLUDES)
-
-ifeq (,$(filter-out WINNT,$(OS_ARCH)))
-LDFLAGS		= $(OS_LDFLAGS) $(patsubst -l%,lib%.$(LIB_SUFFIX),$(subst -L,/LIBPATH:,$(LIBS))) $(OS_LIBS)
-else
-LDFLAGS		= $(OS_LDFLAGS) $(LIBS) $(OS_LIBS)
-endif
 
 PWD := $(shell pwd)
 
@@ -129,25 +82,20 @@ endif
 #
 
 ifndef OBJS
-OBJS		= $(CSRCS:.c=.$(OBJ_SUFFIX)) \
-		  $(CPPSRCS:.cpp=.$(OBJ_SUFFIX)) \
-		  $(ASFILES:.$(ASM_SUFFIX)=.$(OBJ_SUFFIX))
+OBJS	= $(strip \
+	$(CSRCS:.c=.$(OBJ_SUFFIX)) \
+	$(CPPSRCS:.cpp=.$(OBJ_SUFFIX)) \
+	$(ASFILES:.$(ASM_SUFFIX)=.$(OBJ_SUFFIX)))
 endif
 
 ALL_TRASH	= $(TARGETS) $(OBJS) $(RES) $(GARBAGE)
 
 ifdef DIRS
-LOOP_OVER_DIRS		=					\
-	@for d in $(DIRS); do					\
-		if test -d $$d; then				\
-			$(MAKE) -C $$d $@;			\
-		else						\
-			echo "Skipping non-directory $$d...";	\
-		fi;						\
+LOOP_OVER_DIRS = \
+	@for d in $(DIRS); do \
+		$(MAKE) -C $$d $@; \
 	done
 endif
-
-################################################################################
 
 CONFIG_DEPS = \
 	$(topsrcdir)/build/rules.mk		\
@@ -239,12 +187,14 @@ Makefile: $(srcdir)/Makefile.in
 $(PROGRAM): $(OBJS)
 ifdef MSC_VER
 	@sh $(topsrcdir)/build/cygwin-wrapper \
-		$(CC) $(OBJS) -Fe$@ -link $(LDFLAGS)
+		$(CC) $(OBJS) -Fe$@ -link $(OS_LDFLAGS) \
+		$(patsubst -l%,lib%.$(LIB_SUFFIX),$(subst -L,/LIBPATH:,$(LIBS))) \
+		$(OS_LIBS)
 else
 ifdef CPPSRCS
-	$(CXX) -o $@ $(OBJS) $(LDFLAGS)
+	$(CXX) $(OS_LDFLAGS) $(OBJS) $(LIBS) $(OS_LIBS) -o $@
 else
-	$(CC) -o $@ $(OBJS) $(LDFLAGS)
+	$(CC) $(OS_LDFLAGS) $(OBJS) $(LIBS) $(OS_LIBS) -o $@
 endif
 ifdef BUILD_OPT
 	$(STRIP) $@
@@ -267,9 +217,9 @@ $(SHARED_LIBRARY): $(OBJS) $(RES)
 	rm -f $@
 ifdef MSC_VER
 	@sh $(topsrcdir)/build/cygwin-wrapper \
-		$(LINK) $(DSO_LDFLAGS) -OUT:"$@" $(OBJS) $(RES)
+		$(LD) $(DSO_LDFLAGS) -OUT:"$@" $(OBJS) $(RES)
 else
-	$(CC) $(DSO_LDFLAGS) -o $@ $(OBJS) $(RES)
+	$(CC) $(DSO_LDFLAGS) $(OBJS) $(RES) -o $@
 ifdef BUILD_OPT
 	$(STRIP) $@
 endif
@@ -298,24 +248,24 @@ endif
 %.$(OBJ_SUFFIX): %.cpp
 ifdef MSC_VER
 	@sh $(topsrcdir)/build/cygwin-wrapper \
-		$(CXX) -Fo$@ -c $(CXXFLAGS) $(call abspath,$<)
+		$(CXX) -Fo$@ -c $(OS_CXXFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<)
 else
-	$(CXX) -o $@ -c $(CXXFLAGS) $<
+	$(CXX) -c $(OS_CXXFLAGS) $(DEFINES) $(INCLUDES) $< -o $@ 
 endif
 
 %.$(OBJ_SUFFIX): %.c
 ifdef MSC_VER
 	@sh $(topsrcdir)/build/cygwin-wrapper \
-		$(CC) -Fo$@ -c $(CFLAGS) $(call abspath,$<)
+		$(CC) -Fo$@ -c $(OS_CFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<)
 else
-	$(CC) -o $@ -c $(CFLAGS) $<
+	$(CC) -c $(OS_CFLAGS) $(DEFINES) $(INCLUDES) $< -o $@ 
 endif
 
 %.$(OBJ_SUFFIX): %.$(ASM_SUFFIX)
-	$(AS) -o $@ $(ASFLAGS) -c $<
+	$(AS) -c $(ASFLAGS) $<-o $@ 
 
 %.i: %.c
-	$(CPP) -C $(CFLAGS) $< > $@
+	$(CPP) -C $(OS_CPPFLAGS) $(DEFINES) $(INCLUDES) $< > $@
 
 .SUFFIXES:
 .SUFFIXES: .$(LIB_SUFFIX) .$(DLL_SUFFIX) .$(OBJ_SUFFIX) .c .cpp .$(ASM_SUFFIX) .h .i

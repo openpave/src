@@ -44,6 +44,8 @@
 #ifndef __RELIABILITY_H
 #define __RELIABILITY_H
 
+#include "config.h"
+
 double stdnormal_rnd();
 double stdnormal_pdf(double);
 double quad8_stdnormal_pdf(double, double, double);

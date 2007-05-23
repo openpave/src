@@ -11,8 +11,9 @@
 
 *************************************************************************/
 
+#include "config.h"
 #include "traffic.h"
-#include "../include/set.h"
+#include "set.h"
 #include <ctype.h>
 #if defined(_MSC_VER)
 #include <direct.h>

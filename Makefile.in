@@ -7,11 +7,15 @@ topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
 VPATH		= @srcdir@
 
+OP_PROJECTS	= @OP_PROJECTS@
+
 include $(MOD_DEPTH)/build/autoconf.mk
 
 DIRS = include src
 
+ifneq (,$(findstring test,$(OP_PROJECTS)))
 DIRS += test
+endif
 
 DIST_GARBAGE = config.cache config.log config.status
 

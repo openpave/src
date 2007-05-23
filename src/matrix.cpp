@@ -11,7 +11,8 @@
 
 *************************************************************************/
 
-#include "../include/matrix.h"
+#include "config.h"
+#include "matrix.h"
 #include <stdio.h>
 
 /*

@@ -11,9 +11,9 @@
 
 #define _EVENT_IMP
 #define _PROGRESS_IMP
-#include "../src/pavement.h"
-#include "../src/traffic.h"
-#include "../src/reliability.h"
+#include "pavement.h"
+#include "traffic.h"
+#include "reliability.h"
 #include <stdlib.h>
 #include <time.h>
 

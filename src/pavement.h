@@ -29,12 +29,13 @@
 #ifndef __PAVEMENT_H
 #define __PAVEMENT_H
 
+#include "config.h"
 #include <memory.h>
-#include "../include/mathplus.h"
-#include "../include/event.h"
-#include "../include/set.h"
-#include "../include/list.h"
-#include "../include/fixed.h"
+#include "mathplus.h"
+#include "event.h"
+#include "set.h"
+#include "list.h"
+#include "fixed.h"
 
 struct LElayer;
 struct paveload;

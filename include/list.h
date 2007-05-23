@@ -52,6 +52,8 @@
 #ifndef __LIST_H
 #define __LIST_H
 
+#include "config.h"
+
 // Forward declare some classes...
 template <class T>
 class list_double;

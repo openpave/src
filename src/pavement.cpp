@@ -11,8 +11,9 @@
 
 *************************************************************************/
 
+#include "config.h"
 #include "pavement.h"
-#include "../include/matrix.h"
+#include "matrix.h"
 #include <time.h>
 #include <stdio.h>
 

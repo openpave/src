@@ -63,6 +63,7 @@
 #ifndef __SET_H
 #define __SET_H
 
+#include "config.h"
 #include "event.h"
 #include "mathplus.h"
 

@@ -16,6 +16,7 @@ DIRS =                                 \
 	$(NULL)
 
 INCLUDES =                             \
+	-I$(MOD_DEPTH)/include 	       \
 	-I$(srcdir)/../include         \
 	-I$(srcdir)/../src             \
 	$(NULL)

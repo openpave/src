@@ -39,6 +39,8 @@
 #ifndef __MATHPLUS_H
 #define __MATHPLUS_H
 
+#include "config.h"
+
 #include <float.h>
 #include <limits.h>
 #include <math.h>

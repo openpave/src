@@ -45,6 +45,8 @@
 #ifndef __EVENT_H
 #define __EVENT_H
 
+#include "config.h"
+
 /* Error levels */
 #define	EVENT_FATAL	0		/* Fatal error condition */
 #define	EVENT_ERROR	1		/* Non-fatal error */

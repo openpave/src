@@ -13,21 +13,22 @@ include $(MOD_DEPTH)/build/autoconf.mk
 LIBRARY_NAME	= openpave
 ONLY_STATIC_LIB	= 1
 
-DIRS =                      \
+DIRS = \
 	$(NULL)
 
-LOCAL_INCLUDES =            \
+INCLUDES = \
+	-I$(MOD_DEPTH)/include \
 	-I$(srcdir)/../include \
 	$(NULL)
 
-CPPSRCS =                   \
+CPPSRCS = \
 	traffic.cpp         \
 	matrix.cpp          \
 	pavement.cpp        \
 	reliability.cpp     \
 	$(NULL)
 
-EXPORTS =                   \
+EXPORTS = \
 	pavement.h          \
 	$(NULL)
 

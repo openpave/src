@@ -53,7 +53,9 @@ AC_CANONICAL_SYSTEM
 dnl ========================================================
 dnl = Version for libraries
 dnl ========================================================
-LIBRARY_VERSION=1
+OP_VERSION_MAJOR=1
+OP_VERSION_MINOR=0
+OP_VERSION_MICRO=0
 
 dnl ========================================================
 dnl = Defaults
@@ -62,7 +64,8 @@ _OPTIMIZE_FLAGS=-O
 _DEBUG_FLAGS=-g
 OP_DEBUG=1
 OP_OPTIMIZE=
-DEFINES='-DBUILD'
+DEFINES=
+VISIBILITY=
 
 dnl Link in libraries necessary to resolve all symbols for shared libs
 RESOLVE_SYMS=
@@ -133,21 +136,21 @@ if test -z "$_WIN32_MSVC"; then
 fi
 
 if test -n "$OP_DEBUG"; then
-    DEFINES="$DEFINES -DDEBUG -UNDEBUG"
+    _DEBUG_DEFINES="-DDEBUG -UNDEBUG"
 
     if test -n "$OP_CVS_USER"; then
-        DEFINES="$DEFINES -DDEBUG_$OP_CVS_USER"
+        _DEBUG_DEFINES="$_DEBUG_DEFINES -DDEBUG_$OP_CVS_USER"
     else
         case "${target_os}" in
         msvc*|mks*|cygwin*|mingw*)
             ;;
         *)
-            DEFINES="$DEFINES -DDEBUG_`$WHOAMI`"
+            _DEBUG_DEFINES="$_DEBUG_DEFINES -DDEBUG_`$WHOAMI`"
             ;;
         esac
     fi
 else
-    DEFINES="$DEFINES -DNDEBUG -UDEBUG"
+    _DEBUG_DEFINES="-DNDEBUG -UDEBUG"
 fi
 
 if test -z "$_WIN32_MSVC"; then
@@ -228,29 +231,7 @@ EOF
         rm -f conftest.[cs]
         ])
     if test "$ac_cv_visibility_hidden" = "yes"; then
-        DEFINES="$DEFINES -DHAVE_VISIBILITY_HIDDEN_ATTRIBUTE"
-        AC_CACHE_CHECK(for visibility pragma support,
-            ac_cv_visibility_pragma,
-            [cat > conftest.c <<EOF
-#pragma GCC visibility push(hidden)
-            int foo_hidden = 1;
-#pragma GCC visibility push(default)
-            int foo_default = 1;
-EOF
-            ac_cv_visibility_pragma=no
-            if ${CC-cc} -Werror -S conftest.c -o conftest.s >/dev/null 2>&1; then
-                if grep '\.hidden.*foo_hidden' conftest.s >/dev/null; then
-                    if ! grep '\.hidden.*foo_default' conftest.s > /dev/null; then
-                        ac_cv_visibility_pragma=yes
-                    fi
-                fi
-            fi
-            rm -f conftest.[cs]
-            ])
-        if test "$ac_cv_visibility_pragma" = "yes"; then
-            DEFINES="$DEFINES -DHAVE_VISIBILITY_PRAGMA"
-            VISIBILITY_FLAGS="-fvisibility=hidden"
-        fi
+        VISIBILITY=1
     fi
 fi # GNU_CC
 
@@ -394,7 +375,7 @@ case "$target" in
         RCFLAGS='-O coff --use-temp-file'
     else
         # Determine compiler version
-        CC_VERSION=`cl.exe -v 2>&1 | grep Version | sed -e 's|.* Version ||' -e 's| .*||'`
+        CC_VERSION=`"${CC}" -v 2>&1 | grep Version | sed -e 's|.* Version ||' -e 's| .*||'`
         _CC_MAJOR_VERSION=`echo $CC_VERSION | awk -F\. '{ print $1 }'`
         _CC_MINOR_VERSION=`echo $CC_VERSION | awk -F\. '{ print $2 }'`
         MSC_VER=${_CC_MAJOR_VERSION}${_CC_MINOR_VERSION}
@@ -410,10 +391,10 @@ case "$target" in
         CC="$CC -nologo"
         CXX=$CC
         CPP="$CC -E"
-        RC="rc.exe"
-        LINK="link.exe -nologo"
+        RC="rc.exe -nologo"
+        LD="link.exe -nologo"
         AR="lib.exe -nologo"
-        ARFLAGS='-OUT:"$@"'
+        ARFLAGS=
         RANLIB=
         STRIP=
         ASM_SUFFIX=asm
@@ -426,21 +407,18 @@ case "$target" in
         if test -z "$OP_OPTIMIZE"; then
             CPPFLAGS="$CPPFLAGS -Od"
         fi
-
         if test -n "$USE_DEBUG_RTL"; then
             CPPFLAGS="$CPPFLAGS -MDd"
         else
             CPPFLAGS="$CPPFLAGS -MD"
         fi
-
         if test -n "$OP_DEBUG"; then
-            DEFINES="$DEFINES -D_DEBUG"
+            _DEBUG_DEFINES="$_DEBUG_DEFINES -D_DEBUG"
             DSO_LDFLAGS="$DSO_LDFLAGS -DEBUG"
             LDFLAGS="$LDFLAGS -DEBUG"
         else
-            DEFINES="$DEFINES -U_DEBUG"
+            _DEBUG_DEFINES="$_DEBUG_DEFINES -U_DEBUG"
         fi
-
         if test -n "$OP_OPTIMIZE"; then
             if test -n "$OP_PROFILE"; then
                 _OPTIMIZE_FLAGS="$_OPTIMIZE_FLAGS -Z7"
@@ -453,12 +431,10 @@ case "$target" in
                 LDFLAGS="$LDFLAGS -DEBUG -OPT:REF"
             fi
         fi
-
         DSO_LDFLAGS="$DSO_LDFLAGS -DLL -SUBSYSTEM:WINDOWS"
         if test "$MSC_VER" -le "1200" -a -z "$OP_DEBUG_SYMBOLS"; then
             DSO_LDFLAGS="$DSO_LDFLAGS -PDB:NONE"
         fi
-
     fi # GNU_CC
     ;;
 *)
@@ -490,6 +466,7 @@ fi
 if test -n "$OP_DEBUG"; then
     CPPFLAGS="$CPPFLAGS $_DEBUG_FLAGS"
 fi
+CPPFLAGS="$CPPFLAGS $_DEBUG_DEFINES"
 
 dnl ========================================================
 dnl Substitution of found variables.
@@ -507,10 +484,9 @@ AC_SUBST(AR)
 AC_SUBST(ARFLAGS)
 AC_SUBST(AS)
 AC_SUBST(ASFLAGS)
-AC_SUBST(LINK)
+AC_SUBST(LD)
 AC_SUBST(RANLIB)
 AC_SUBST(STRIP)
-AC_SUBST(FILTER)
 AC_SUBST(DSO_CFLAGS)
 AC_SUBST(DSO_LDFLAGS)
 
@@ -519,12 +495,12 @@ AC_SUBST(RESOLVE_SYMS)
 
 AC_SUBST(RC)
 AC_SUBST(RCFLAGS)
-AC_SUBST(VISIBILITY_FLAGS)
 
 AC_SUBST(OP_OPTIMIZE)
 
-AC_SUBST(LIBRARY_VERSION)
-AC_SUBST(LIBRARY_MINOR)
+AC_SUBST(OP_VERSION_MAJOR)
+AC_SUBST(OP_VERSION_MINOR)
+AC_SUBST(OP_VERSION_MICRO)
 
 AC_SUBST(ASM_SUFFIX)
 AC_SUBST(OBJ_SUFFIX)
@@ -541,6 +517,8 @@ AC_SUBST(DEFINES)
 for p in $OP_PROJECTS; do
     eval "OP_PROJECT_${p}=1";
 done;
+
+AC_SUBST(OP_PROJECTS)
 
 dnl ========================================================
 dnl Generate output files.
@@ -559,5 +537,69 @@ src/Makefile
 if test -n "$OP_PROJECT_test"; then
     MAKEFILES="$MAKEFILES test/Makefile"
 fi
+
+AC_OUTPUT_COMMANDS([
+	configfile=include/config.h
+	outfile=$configfile.tmp
+	cat > $outfile <<_EOF
+/* Generated by configure.  Do not edit */
+#ifndef CONFIG_H
+#define CONFIG_H
+
+#ifdef  __cplusplus
+# define BEGIN_C_DECLS  extern "C" {
+# define END_C_DECLS    }
+#else
+# define BEGIN_C_DECLS
+# define END_C_DECLS
+#endif
+
+#define OP_VERSION_MAJOR $OP_VERSION_MAJOR
+#define OP_VERSION_MINOR $OP_VERSION_MINOR
+#define OP_VERSION_MICRO $OP_VERSION_MICRO
+
+#define OP_VERSION_STRING "$OP_VERSION_MAJOR.$OP_VERSION_MINOR.$OP_VERSION_MICRO"
+
+#define OP_VERSION_ENCODE(major, minor, micro) (((major)*10000)+((minor)*100)+(micro))
+
+#define OP_VERSION OP_VERSION_ENCODE(OP_VERSION_MAJOR,OP_VERSION_MINOR,OP_VERSION_MICRO)
+
+#define BUILD		1
+#define GCC_VISIBILITY	$VISIBILITY
+
+#if defined(WIN32) || defined(_MSC_VER) || defined(__CYGWIN__)
+#ifdef BUILD_DLL
+#define OP_EXPORT 	__declspec(dllexport)
+#else
+#define OP_EXPORT	__declspec(dllimport)
+#endif
+#define OP_HIDDEN
+#else
+#if (GCC_VISIBILITY == 1) && !defined(__sun)
+#define OP_EXPORT	__attribute__ ((visibility("default")))
+#define OP_HIDDEN	__attribute__ ((visibility("hidden")))
+#elif defined(__SUNPRO_C) && (__SUNPRO_C >= 0x550)
+#define OP_EXPORT
+#define OP_HIDDEN	__hidden
+#else
+#define OP_EXPORT
+#define OP_HIDDEN
+#endif
+#endif
+_EOF
+	echo '' >> $outfile
+	echo '#endif' >> $outfile
+
+	if cmp -s $outfile $configfile; then
+	  rm -f $outfile
+	else
+	  mv $outfile $configfile
+	fi
+],[
+	OP_VERSION_MAJOR=$OP_VERSION_MAJOR
+	OP_VERSION_MINOR=$OP_VERSION_MINOR
+	OP_VERSION_MICRO=$OP_VERSION_MICRO
+	VISIBILITY=$VISIBILITY
+])
 
 AC_OUTPUT([$MAKEFILES])

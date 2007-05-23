@@ -12,7 +12,8 @@
 **************************************************************************/
 
 #include <stdlib.h>
-#include "../include/mathplus.h"
+#include "config.h"
+#include "mathplus.h"
 #include "reliability.h"
 
 /*

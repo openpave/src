@@ -22,8 +22,9 @@
 #ifndef __MATRIX_H
 #define __MATRIX_H
 
-#include "../include/mathplus.h"
-#include "../include/event.h"
+#include "config.h"
+#include "mathplus.h"
+#include "event.h"
 #include <memory.h>
 
 /*
