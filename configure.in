@@ -71,23 +71,18 @@ CFLAGS="${CFLAGS=}"
 CXXFLAGS="${CXXFLAGS=}"
 LDFLAGS="${LDFLAGS=}"
 
+_WIN32_MSVC=
 case "$host" in
 *-cygwin*|*-mingw*)
     # Check to see if we are really running in a msvc environemnt
-    _WIN32_MSVC=
     AC_CHECK_PROGS(CC, cl.exe)
     if test "$CC" = "cl.exe"; then
         echo 'main() { return 0; }' > dummy.c
         ${CC} -o dummy dummy.c >/dev/null 2>&1
         if test $? = 0; then
             _WIN32_MSVC=1
-            CC='cl.exe -nologo'
-            CXX=$CC
-            CPP="$CC -E"
-            RC='rc.exe -nologo'
         else
             AC_MSG_WARN([$(CC) test failed.  Using normal feature tests])
-            AC_PATH_PROGS(RC, windres, :)
         fi
         rm -f dummy dummy.o dummy.obj dummy.exe dummy.c
     fi
@@ -99,12 +94,6 @@ case "$host" in
     _WIN32_MSVC=1
     ;;
 esac
-
-if test -n "$_WIN32_MSVC"; then
-    SKIP_PATH_CHECKS=1
-    SKIP_COMPILER_CHECKS=1
-    SKIP_LIBRARY_CHECKS=1
-fi
 
 AC_ARG_ENABLE(optimize,
     [  --disable-optimize      Do not perform code optimizations
@@ -138,7 +127,7 @@ AC_ARG_ENABLE(debug-rtl,
         USE_DEBUG_RTL=1
       fi ])
 
-if test -z "$SKIP_PATH_CHECKS"; then
+if test -z "$_WIN32_MSVC"; then
     AC_PROG_INSTALL(install,,)
     AC_PATH_PROG(WHOAMI, $WHOAMI whoami, :)
 fi
@@ -161,7 +150,7 @@ else
     DEFINES="$DEFINES -DNDEBUG -UDEBUG"
 fi
 
-if test -z "$SKIP_COMPILER_CHECKS"; then
+if test -z "$_WIN32_MSVC"; then
 dnl ========================================================
 dnl Checks for compilers.
 dnl ========================================================
@@ -265,7 +254,7 @@ EOF
     fi
 fi # GNU_CC
 
-fi # SKIP_COMPILER_CHECKS
+fi # WIN32_MSVC
 
 dnl ========================================================
 dnl Default platform specific options
@@ -342,23 +331,6 @@ CYGWIN_NT*|MINGW*_NT*)
 esac
 
 dnl ========================================================
-dnl Override of system specific host options
-dnl ========================================================
-case "$host" in
-*-cygwin*|*-msvc*|*-mks*)
-    if test `echo "${PATH}" | grep -c \;` = 0; then
-        CYGWIN_WRAPPER='sh $(topsrcdir)/build/cygwin-wrapper'
-        CC="$CYGWIN_WRAPPER $CC"
-        CXX="$CYGWIN_WRAPPER $CXX"
-        CPP="$CYGWIN_WRAPPER $CPP"
-        RC="$CYGWIN_WRAPPER $RC"
-    fi
-    ;;
-*)
-    ;;
-esac
-
-dnl ========================================================
 dnl Override of system specific target options
 dnl ========================================================
 case "$target" in
@@ -418,18 +390,11 @@ case "$target" in
         CC="$CC -mno-cygwin"
         CXX="$CXX -mno-cygwin"
         DSO_LDFLAGS='-shared -Wl,--export-all-symbols -Wl,--out-implib -Wl,$(IMPORT_LIBRARY)'
+        AC_PATH_PROGS(RC, windres, :)
         RCFLAGS='-O coff --use-temp-file'
     else
-        LINK='link.exe -nologo'
-        AR='lib.exe -nologo'
-        ARFLAGS='-OUT:"$@"'
-        RANLIB=
-        STRIP='echo not_strip'
-        OBJ_SUFFIX=obj
-        LIB_SUFFIX=lib
-
         # Determine compiler version
-        CC_VERSION=`"${CC}" -v 2>&1 | grep Version | sed -e 's|.* Version ||' -e 's| .*||'`
+        CC_VERSION=`cl.exe -v 2>&1 | grep Version | sed -e 's|.* Version ||' -e 's| .*||'`
         _CC_MAJOR_VERSION=`echo $CC_VERSION | awk -F\. '{ print $1 }'`
         _CC_MINOR_VERSION=`echo $CC_VERSION | awk -F\. '{ print $2 }'`
         MSC_VER=${_CC_MAJOR_VERSION}${_CC_MINOR_VERSION}
@@ -442,6 +407,18 @@ case "$target" in
             DEFINES="$DEFINES -D_CRT_SECURE_NO_WARNINGS"
             DEFINES="$DEFINES -D_CRT_NONSTDC_NO_WARNINGS"
         fi
+        CYGWIN_WRAPPER='sh $(topsrcdir)/build/cygwin-wrapper'
+        CC="$CYGWIN_WRAPPER $CC -nologo"
+        CXX="$CYGWIN_WRAPPER $CC -nologo"
+        CPP="$CYGWIN_WRAPPER $CC -nologo -E"
+        RC="$CYGWIN_WRAPPER rc.exe"
+        LINK="$CYGWIN_WRAPPER link.exe -nologo"
+        AR="$CYGWIN_WRAPPER lib.exe -nologo"
+        ARFLAGS='-OUT:"$@"'
+        RANLIB=
+        STRIP=
+        OBJ_SUFFIX=obj
+        LIB_SUFFIX=lib
         CPPFLAGS="$CPPFLAGS -W3 -GF -Gy"
         _DEBUG_FLAGS=-Z7
         _OPTIMIZE_FLAGS=-O2
@@ -489,12 +466,12 @@ case "$target" in
     ;;
 esac
 
-if test -z "$SKIP_LIBRARY_CHECKS"; then
+if test -z "$_WIN32_MSVC"; then
 dnl ========================================================
 dnl Checks for library functions.
 dnl ========================================================
 AC_SEARCH_LIBS(sqrt,m,OS_LIBS="$OS_LIBS -lm")
-fi # SKIP_LIBRARY_CHECKS
+fi
 
 dnl If the user passed in arg to --enable-optimize or --enable-debug,
 dnl make sure that we use it.

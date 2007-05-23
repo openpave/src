@@ -248,9 +248,9 @@ ifdef CPPSRCS
 else
 	$(CC) -o $@ $(OBJS) $(LDFLAGS)
 endif
-endif
-ifdef ENABLE_STRIP
+ifdef BUILD_OPT
 	$(STRIP) $@
+endif
 endif
 
 $(LIBRARY): $(OBJS)
@@ -266,9 +266,9 @@ ifdef MSC_VER
 	$(LINK) $(DSO_LDFLAGS) -OUT:"$@" $(OBJS) $(RES)
 else
 	$(CC) $(DSO_LDFLAGS) -o $@ $(OBJS) $(RES)
-endif
-ifdef ENABLE_STRIP
+ifdef BUILD_OPT
 	$(STRIP) $@
+endif
 endif
 
 ifeq ($(OS_ARCH),WINNT)
