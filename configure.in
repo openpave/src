@@ -398,7 +398,7 @@ case "$target" in
         _CC_MAJOR_VERSION=`echo $CC_VERSION | awk -F\. '{ print $1 }'`
         _CC_MINOR_VERSION=`echo $CC_VERSION | awk -F\. '{ print $2 }'`
         MSC_VER=${_CC_MAJOR_VERSION}${_CC_MINOR_VERSION}
-        if test "$_CC_MAJOR_VERSION" = "12"; then
+        if test "$_CC_MAJOR_VERSION" = "14"; then
             CXXFLAGS="$CXXFLAGS -Zc:wchar_t-"
             DEFINES="$DEFINES -D_CRT_SECURE_NO_DEPRECATE"
             DEFINES="$DEFINES -D_CRT_NONSTDC_NO_DEPRECATE"
@@ -417,6 +417,7 @@ case "$target" in
         ARFLAGS='-OUT:"$@"'
         RANLIB=
         STRIP=
+	ASM_SUFFIX=asm
         OBJ_SUFFIX=obj
         LIB_SUFFIX=lib
         CPPFLAGS="$CPPFLAGS -W3 -GF -Gy"

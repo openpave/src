@@ -72,4 +72,5 @@ do
     fi
 done
 
+echo $prog $args
 exec $prog $args
