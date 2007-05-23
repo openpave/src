@@ -71,20 +71,22 @@ CFLAGS="${CFLAGS=}"
 CXXFLAGS="${CXXFLAGS=}"
 LDFLAGS="${LDFLAGS=}"
 
-case "$target" in
+case "$host" in
 *-cygwin*|*-mingw*)
     # Check to see if we are really running in a msvc environemnt
     _WIN32_MSVC=
-    AC_CHECK_PROGS(CC, cl)
-    if test "$CC" = "cl"; then
+    AC_CHECK_PROGS(CC, cl.exe)
+    if test "$CC" = "cl.exe"; then
         echo 'main() { return 0; }' > dummy.c
         ${CC} -o dummy dummy.c >/dev/null 2>&1
         if test $? = 0; then
             _WIN32_MSVC=1
             CXX=$CC
-            CPP=$CC
+            CPP="$CC -E"
+            RC=rc.exe
         else
             AC_MSG_WARN([$(CC) test failed.  Using normal feature tests])
+            AC_PATH_PROGS(RC, windres, :)
         fi
         rm -f dummy dummy.o dummy.obj dummy.exe dummy.c
     fi
@@ -162,12 +164,8 @@ if test -z "$SKIP_COMPILER_CHECKS"; then
 dnl ========================================================
 dnl Checks for compilers.
 dnl ========================================================
+AC_PROG_CC
 AC_PROG_CXX
-if test "$CXX" = "cl" -a -z "$CC"; then
-    CC=$CXX
-else        
-    AC_PROG_CC
-fi
 AC_PROG_CPP
 AC_PROG_RANLIB
 AC_PATH_PROGS(AS, as, $CC)
@@ -277,7 +275,6 @@ LIB_SUFFIX=a
 DLL_SUFFIX=so
 EXE_SUFFIX=
 ARFLAGS='cr $@'
-AS='$(CC)'
 ASFLAGS='$(CFLAGS)'
 
 OS_ARCH=`uname -s | sed -e 's|/|_|g'`
@@ -347,13 +344,12 @@ dnl ========================================================
 dnl Override of system specific host options
 dnl ========================================================
 case "$host" in
-*-mingw*)
-    ;;
 *-cygwin*|*-msvc*|*-mks*)
     if test `echo "${PATH}" | grep -c \;` = 0; then
         CYGWIN_WRAPPER='sh $(topsrcdir)/build/cygwin-wrapper'
         CC="\$(CYGWIN_WRAPPER) $CC"
         CXX="\$(CYGWIN_WRAPPER) $CXX"
+        CPP="\$(CYGWIN_WRAPPER) $CPP"
         RC="\$(CYGWIN_WRAPPER) $RC"
     fi
     ;;
@@ -421,19 +417,13 @@ case "$target" in
         CC="$CC -mno-cygwin"
         CXX="$CXX -mno-cygwin"
         DSO_LDFLAGS='-shared -Wl,--export-all-symbols -Wl,--out-implib -Wl,$(IMPORT_LIBRARY)'
-	AC_PATH_PROGS(WINDRES, windres, :)
-        RC=$WINDRES
         RCFLAGS='-O coff --use-temp-file'
     else
-        CC=cl.exe
-        CXX=cl.exe
-	CPP='cl.exe -E'
-        LINK=link.exe
-        AR='lib.exe -NOLOGO'
+        LINK='link.exe -nologo'
+        AR='lib.exe -nologo'
         ARFLAGS='-OUT:"$@"'
         RANLIB=
         STRIP='echo not_strip'
-        RC=rc.exe
         OBJ_SUFFIX=obj
         LIB_SUFFIX=lib
 
@@ -492,18 +482,7 @@ case "$target" in
         fi
 
     fi # GNU_CC
-
-    case "$target_cpu" in
-    i*86)
-        ;;
-    x86_64)
-        ;;
-    *)
-        ;;
-    esac
-
     ;;
-
 *)
     DEFINES="$DEFINES -DXP_UNIX"
     ;;
