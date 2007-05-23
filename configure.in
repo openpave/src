@@ -81,9 +81,10 @@ case "$host" in
         ${CC} -o dummy dummy.c >/dev/null 2>&1
         if test $? = 0; then
             _WIN32_MSVC=1
+            CC='cl.exe -nologo'
             CXX=$CC
             CPP="$CC -E"
-            RC=rc.exe
+            RC='rc.exe -nologo'
         else
             AC_MSG_WARN([$(CC) test failed.  Using normal feature tests])
             AC_PATH_PROGS(RC, windres, :)
@@ -347,10 +348,10 @@ case "$host" in
 *-cygwin*|*-msvc*|*-mks*)
     if test `echo "${PATH}" | grep -c \;` = 0; then
         CYGWIN_WRAPPER='sh $(topsrcdir)/build/cygwin-wrapper'
-        CC="\$(CYGWIN_WRAPPER) $CC"
-        CXX="\$(CYGWIN_WRAPPER) $CXX"
-        CPP="\$(CYGWIN_WRAPPER) $CPP"
-        RC="\$(CYGWIN_WRAPPER) $RC"
+        CC="$CYGWIN_WRAPPER $CC"
+        CXX="$CYGWIN_WRAPPER $CXX"
+        CPP="$CYGWIN_WRAPPER $CPP"
+        RC="$CYGWIN_WRAPPER $RC"
     fi
     ;;
 *)
@@ -441,7 +442,7 @@ case "$target" in
             DEFINES="$DEFINES -D_CRT_SECURE_NO_WARNINGS"
             DEFINES="$DEFINES -D_CRT_NONSTDC_NO_WARNINGS"
         fi
-        CPPFLAGS="$CPPFLAGS -W3 -nologo -GF -Gy"
+        CPPFLAGS="$CPPFLAGS -W3 -GF -Gy"
         _DEBUG_FLAGS=-Z7
         _OPTIMIZE_FLAGS=-O2
 
@@ -476,7 +477,7 @@ case "$target" in
             fi
         fi
 
-        DSO_LDFLAGS="$DSO_LDFLAGS -nologo -DLL -SUBSYSTEM:WINDOWS"
+        DSO_LDFLAGS="$DSO_LDFLAGS -DLL -SUBSYSTEM:WINDOWS"
         if test "$MSC_VER" -le "1200" -a -z "$OP_DEBUG_SYMBOLS"; then
             DSO_LDFLAGS="$DSO_LDFLAGS -PDB:NONE"
         fi
