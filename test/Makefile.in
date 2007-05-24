@@ -22,9 +22,7 @@ INCLUDES =                             \
 	$(NULL)
 
 LIBS =                                 \
-	-L$(MOD_DEPTH)/src             \
-	-lopenpave                     \
-	$(NULL)
+	src                            \
 
 CPPSRCS =                              \
 	test.cpp                       \

@@ -27,6 +27,8 @@
 
 PWD := $(shell pwd)
 
+.DEFAULT_GOAL := all
+
 ifeq ($(NSDISTMODE),copy)
 # copy files, but preserve source mtime
 INSTALL		= $(INSTALL) -t
@@ -52,7 +54,7 @@ DIST_GARBAGE	+= Makefile
 ifdef LIBRARY_NAME
 LIBRARY		= lib$(LIBRARY_NAME).$(LIB_SUFFIX)
 ifndef ONLY_STATIC_LIB
-ifeq (,$(filter-out WINNT,$(OS_ARCH)))
+ifdef MSC_VER
 LIBRARY		= lib$(LIBRARY_NAME)_s.$(LIB_SUFFIX)
 SHARED_LIBRARY	= lib$(LIBRARY_NAME).$(DLL_SUFFIX)
 IMPORT_LIBRARY	= lib$(LIBRARY_NAME).$(LIB_SUFFIX)
@@ -60,6 +62,30 @@ else
 SHARED_LIBRARY	= lib$(LIBRARY_NAME).$(DLL_SUFFIX)
 endif
 endif
+
+echo-library:
+ifdef ONLY_STATIC_LIB
+	@echo $(LIBRARY)
+else
+ifdef MSC_VER
+	@echo $(IMPORT_LIBARY)
+else
+	@echo $(SHARED_LIBARY)
+endif
+endif
+
+echo-libs:
+	@echo -n "-l$(LIBRARY_NAME) ";
+endif
+
+ifdef LIBS
+_LIBS = $(shell \
+	for l in $(LIBS); do \
+		echo -n "-L$(MOD_DEPTH)/$$l ";\
+	done; \
+	for l in $(LIBS); do \
+		$(MAKE) -s --no-print-directory -C $(MOD_DEPTH)/$$l echo-libs; \
+	done;)
 endif
 
 ifdef PROGRAM_NAME
@@ -94,7 +120,7 @@ ifdef DIRS
 LOOP_OVER_DIRS = \
 	@for d in $(DIRS); do \
 		$(MAKE) -C $$d $@; \
-	done
+	done;
 endif
 
 CONFIG_DEPS = \
@@ -102,8 +128,6 @@ CONFIG_DEPS = \
 	$(MOD_DEPTH)/config.status		\
 	$(MOD_DEPTH)/build/autoconf.mk		\
 	Makefile
-
-.DEFAULT: all
 
 .PHONY: all
 all:: $(CONFIG_DEPS)
@@ -188,13 +212,13 @@ $(PROGRAM): $(OBJS)
 ifdef MSC_VER
 	@sh $(topsrcdir)/build/cygwin-wrapper \
 		$(CC) $(OBJS) -Fe$@ -link $(OS_LDFLAGS) \
-		$(patsubst -l%,lib%.$(LIB_SUFFIX),$(subst -L,/LIBPATH:,$(LIBS))) \
+		$(patsubst -l%,lib%.$(LIB_SUFFIX),$(subst -L,/LIBPATH:,$(_LIBS))) \
 		$(OS_LIBS)
 else
 ifdef CPPSRCS
-	$(CXX) $(OS_LDFLAGS) $(OBJS) $(LIBS) $(OS_LIBS) -o $@
+	$(CXX) $(OS_LDFLAGS) $(OBJS) $(_LIBS) $(OS_LIBS) -o $@
 else
-	$(CC) $(OS_LDFLAGS) $(OBJS) $(LIBS) $(OS_LIBS) -o $@
+	$(CC) $(OS_LDFLAGS) $(OBJS) $(_LIBS) $(OS_LIBS) -o $@
 endif
 ifdef BUILD_OPT
 	$(STRIP) $@
@@ -225,7 +249,7 @@ ifdef BUILD_OPT
 endif
 endif
 
-ifeq ($(OS_ARCH),WINNT)
+ifdef RC
 $(RES): $(RESNAME)
 # The resource compiler does not understand the -U option.
 ifdef MSC_VER

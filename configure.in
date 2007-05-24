@@ -248,84 +248,13 @@ EXE_SUFFIX=
 ARFLAGS='cr $@'
 ASFLAGS='$(CFLAGS)'
 
-OS_ARCH=`uname -s | sed -e 's|/|_|g'`
-OS_RELEASE=`uname -r`
-
-case "$OS_ARCH" in
-FreeBSD)
-    OS_RELEASE=`echo $OS_RELEASE | sed 's/-.*//'`
-    ;;
-Linux)
-    OS_RELEASE=`echo $OS_RELEASE | sed 's/-.*//'`
-    OS_RELEASE=`echo $OS_RELEASE | awk -F\. '{ print $1 "." $2 }'`
-    CPU_ARCH=`uname -m`
-    if echo "$CPU_ARCH" | grep -c 86 >/dev/null; then
-        CPU_ARCH=x86
-    fi
-    ;;
-WINNT)
-    CPU_ARCH=`uname -p`
-    if test "$CPU_ARCH" = "I386"; then
-        CPU_ARCH=x86
-    fi
-    ;;
-Windows_NT)
-#
-# If uname -s returns "Windows_NT", we assume that we are using
-# the uname.exe in MKS toolkit.
-#
-# The -r option of MKS uname only returns the major version number.
-# So we need to use its -v option to get the minor version number.
-# Moreover, it doesn't have the -p option, so we need to use uname -m.
-#
-    OS_ARCH=WINNT
-    OS_MINOR_RELEASE=`uname -v`
-    if test "$OS_MINOR_RELEASE" = "00"; then
-        OS_MINOR_RELEASE=0
-    fi
-    OS_RELEASE="${OS_RELEASE}.${OS_MINOR_RELEASE}"
-    CPU_ARCH=`uname -m`
-    #
-    # MKS's uname -m returns "586" on a Pentium machine.
-    #
-    if echo "$CPU_ARCH" | grep -c 86 >/dev/null; then
-        CPU_ARCH=x86
-    fi
-    ;;
-CYGWIN_NT*|MINGW*_NT*)
-#
-# If uname -s returns "CYGWIN_NT-4.0", we assume that we are using
-# the uname.exe in the Cygwin tools.
-# If uname -s returns MINGW32_NT-5.1, we assume that we are using
-# the uname.exe in the MSYS tools.
-#
-    OS_RELEASE=`expr $OS_ARCH : '.*NT-\(.*\)'`
-    OS_ARCH=WINNT
-    CPU_ARCH=`uname -m`
-    #
-    # Cygwin's uname -m returns "i686" on a Pentium Pro machine.
-    #
-    if echo "$CPU_ARCH" | grep -c 86 >/dev/null; then
-        CPU_ARCH=x86
-    fi
-    ;;
-esac
-
 dnl ========================================================
 dnl Override of system specific target options
 dnl ========================================================
 case "$target" in
 *-darwin*)
-    case "${target_cpu}" in
-        i*86*)
-            CPU_ARCH=i386
-            ;;
-        *)
-            CPU_ARCH=ppc
-            ;;
-    esac
     CPPFLAGS="$CPPFLAGS -Wmost -fno-common -no-cpp-precomp"
-    DEFINES="$DEFINES -DXP_UNIX -DDARWIN -DCPU_ARCH=$CPU_ARCH"
+    DEFINES="$DEFINES XP_UNIX DARWIN"
     DSO_CFLAGS=-fPIC
     DSO_LDFLAGS='-dynamiclib -compatibility_version 1 -current_version 1 -all_load -install_name @executable_path/$@ -headerpad_max_install_names'
     STRIP="$STRIP -x -S"
@@ -333,7 +262,7 @@ case "$target" in
     ;;
 
 *-freebsd*)
-    DEFINES="$DEFINES -DXP_UNIX -DFREEBSD"
+    DEFINES="$DEFINES XP_UNIX FREEBSD"
     CPPFLAGS="$CPPFLAGS -ansi -Wall"
     DSO_CFLAGS=-fPIC
     DSO_LDFLAGS='-shared -Wl,-soname -Wl,$(notdir $@)'
@@ -342,10 +271,10 @@ case "$target" in
     ;;
 
 *-linux*|*-gnu*|*-k*bsd*-gnu)
-    DEFINES="$DEFINES -DXP_UNIX -D_GNU_SOURCE"
+    DEFINES="$DEFINES XP_UNIX _GNU_SOURCE"
     case "${target_os}" in
     linux*)
-        DEFINES="$DEFINES -DLINUX"
+        DEFINES="$DEFINES LINUX"
         ;;
     esac
     CPPFLAGS="$CPPFLAGS -Wall"
@@ -362,7 +291,7 @@ case "$target" in
     ;;
 
 *-mingw*|*-cygwin*|*-msvc*|*-mks*)
-    DEFINES="$DEFINES -DXP_PC -DWIN32"
+    DEFINES="$DEFINES XP_PC WIN32"
     RESOLVE_SYMS=1
     DLL_SUFFIX=dll
     EXE_SUFFIX=.exe
@@ -381,12 +310,12 @@ case "$target" in
         MSC_VER=${_CC_MAJOR_VERSION}${_CC_MINOR_VERSION}
         if test "$_CC_MAJOR_VERSION" = "14"; then
             CXXFLAGS="$CXXFLAGS -Zc:wchar_t-"
-            DEFINES="$DEFINES -D_CRT_SECURE_NO_DEPRECATE"
-            DEFINES="$DEFINES -D_CRT_NONSTDC_NO_DEPRECATE"
+            DEFINES="$DEFINES _CRT_SECURE_NO_DEPRECATE"
+            DEFINES="$DEFINES _CRT_NONSTDC_NO_DEPRECATE"
         elif test "$_CC_MAJOR_VERSION" = "15"; then
             CXXFLAGS="$CXXFLAGS -Zc:wchar_t-"
-            DEFINES="$DEFINES -D_CRT_SECURE_NO_WARNINGS"
-            DEFINES="$DEFINES -D_CRT_NONSTDC_NO_WARNINGS"
+            DEFINES="$DEFINES _CRT_SECURE_NO_WARNINGS"
+            DEFINES="$DEFINES _CRT_NONSTDC_NO_WARNINGS"
         fi
         CC="$CC -nologo"
         CXX=$CC
@@ -438,7 +367,7 @@ case "$target" in
     fi # GNU_CC
     ;;
 *)
-    DEFINES="$DEFINES -DXP_UNIX"
+    DEFINES="$DEFINES XP_UNIX"
     ;;
 esac
 
@@ -446,7 +375,7 @@ if test -z "$_WIN32_MSVC"; then
 dnl ========================================================
 dnl Checks for library functions.
 dnl ========================================================
-AC_SEARCH_LIBS(sqrt,m,OS_LIBS="$OS_LIBS -lm")
+AC_SEARCH_LIBS(sqrt,m,OS_LIBS="-lm")
 fi
 
 dnl If the user passed in arg to --enable-optimize or --enable-debug,
@@ -508,12 +437,6 @@ AC_SUBST(LIB_SUFFIX)
 AC_SUBST(DLL_SUFFIX)
 AC_SUBST(EXE_SUFFIX)
 
-AC_SUBST(OS_ARCH)
-AC_SUBST(OS_RELEASE)
-AC_SUBST(CPU_ARCH)
-
-AC_SUBST(DEFINES)
-
 for p in $OP_PROJECTS; do
     eval "OP_PROJECT_${p}=1";
 done;
@@ -538,13 +461,14 @@ if test -n "$OP_PROJECT_test"; then
     MAKEFILES="$MAKEFILES test/Makefile"
 fi
 
+AC_MSG_CHECKING([if config.h needs rebuilding])
 AC_OUTPUT_COMMANDS([
 	configfile=include/config.h
 	outfile=$configfile.tmp
 	cat > $outfile <<_EOF
 /* Generated by configure.  Do not edit */
-#ifndef CONFIG_H
-#define CONFIG_H
+#ifndef __CONFIG_H
+#define __CONFIG_H
 
 #ifdef  __cplusplus
 # define BEGIN_C_DECLS  extern "C" {
@@ -564,8 +488,16 @@ AC_OUTPUT_COMMANDS([
 
 #define OP_VERSION OP_VERSION_ENCODE(OP_VERSION_MAJOR,OP_VERSION_MINOR,OP_VERSION_MICRO)
 
-#define BUILD		1
-#define GCC_VISIBILITY	$VISIBILITY
+#define BUILD
+
+_EOF
+	for D in $OP_DEFINES; do
+		echo "#define $D" >> $outfile
+	done
+	if test -n "$VISIBILITY"; then
+		echo "#define GCC_VISIBILITY" >> $outfile
+	fi
+	cat >> $outfile <<_EOF
 
 #if defined(WIN32) || defined(_MSC_VER) || defined(__CYGWIN__)
 #ifdef BUILD_DLL
@@ -575,7 +507,7 @@ AC_OUTPUT_COMMANDS([
 #endif
 #define OP_HIDDEN
 #else
-#if (GCC_VISIBILITY == 1) && !defined(__sun)
+#if defined(GCC_VISIBILITY) && !defined(__sun)
 #define OP_EXPORT	__attribute__ ((visibility("default")))
 #define OP_HIDDEN	__attribute__ ((visibility("hidden")))
 #elif defined(__SUNPRO_C) && (__SUNPRO_C >= 0x550)
@@ -586,20 +518,21 @@ AC_OUTPUT_COMMANDS([
 #define OP_HIDDEN
 #endif
 #endif
-_EOF
-	echo '' >> $outfile
-	echo '#endif' >> $outfile
 
+#endif // CONFIG_H
+_EOF
 	if cmp -s $outfile $configfile; then
 	  rm -f $outfile
 	else
 	  mv $outfile $configfile
 	fi
 ],[
+	OP_DEFINES='$DEFINES'
 	OP_VERSION_MAJOR=$OP_VERSION_MAJOR
 	OP_VERSION_MINOR=$OP_VERSION_MINOR
 	OP_VERSION_MICRO=$OP_VERSION_MICRO
 	VISIBILITY=$VISIBILITY
 ])
+AC_MSG_RESULT([done])
 
 AC_OUTPUT([$MAKEFILES])

@@ -21,13 +21,6 @@ DIST_GARBAGE = config.cache config.log config.status
 
 include $(topsrcdir)/build/rules.mk
 
-config.status:: configure
-ifeq ($(OS_ARCH),WINNT)
-	sh $(srcdir)/configure --no-create --no-recursion
-else
-	./config.status --recheck && ./config.status
-endif
-
 # Delete build/autoconf.mk last because it is included by every makefile.
 distclean::
 	rm -f build/autoconf.mk

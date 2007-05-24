@@ -220,8 +220,9 @@ all build checkout clean depend distclean install realclean::
 	else true; \
 	fi
 
+.DEFAULT_GOAL := all
+
 .PHONY: all
-.DEFAULT: all
 all:: checkout build
 
 # Do everything from scratch

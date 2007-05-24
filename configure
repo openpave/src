@@ -1581,81 +1581,10 @@ EXE_SUFFIX=
 ARFLAGS='cr $@'
 ASFLAGS='$(CFLAGS)'
 
-OS_ARCH=`uname -s | sed -e 's|/|_|g'`
-OS_RELEASE=`uname -r`
-
-case "$OS_ARCH" in
-FreeBSD)
-    OS_RELEASE=`echo $OS_RELEASE | sed 's/-.*//'`
-    ;;
-Linux)
-    OS_RELEASE=`echo $OS_RELEASE | sed 's/-.*//'`
-    OS_RELEASE=`echo $OS_RELEASE | awk -F\. '{ print $1 "." $2 }'`
-    CPU_ARCH=`uname -m`
-    if echo "$CPU_ARCH" | grep -c 86 >/dev/null; then
-        CPU_ARCH=x86
-    fi
-    ;;
-WINNT)
-    CPU_ARCH=`uname -p`
-    if test "$CPU_ARCH" = "I386"; then
-        CPU_ARCH=x86
-    fi
-    ;;
-Windows_NT)
-#
-# If uname -s returns "Windows_NT", we assume that we are using
-# the uname.exe in MKS toolkit.
-#
-# The -r option of MKS uname only returns the major version number.
-# So we need to use its -v option to get the minor version number.
-# Moreover, it doesn't have the -p option, so we need to use uname -m.
-#
-    OS_ARCH=WINNT
-    OS_MINOR_RELEASE=`uname -v`
-    if test "$OS_MINOR_RELEASE" = "00"; then
-        OS_MINOR_RELEASE=0
-    fi
-    OS_RELEASE="${OS_RELEASE}.${OS_MINOR_RELEASE}"
-    CPU_ARCH=`uname -m`
-    #
-    # MKS's uname -m returns "586" on a Pentium machine.
-    #
-    if echo "$CPU_ARCH" | grep -c 86 >/dev/null; then
-        CPU_ARCH=x86
-    fi
-    ;;
-CYGWIN_NT*|MINGW*_NT*)
-#
-# If uname -s returns "CYGWIN_NT-4.0", we assume that we are using
-# the uname.exe in the Cygwin tools.
-# If uname -s returns MINGW32_NT-5.1, we assume that we are using
-# the uname.exe in the MSYS tools.
-#
-    OS_RELEASE=`expr $OS_ARCH : '.*NT-\(.*\)'`
-    OS_ARCH=WINNT
-    CPU_ARCH=`uname -m`
-    #
-    # Cygwin's uname -m returns "i686" on a Pentium Pro machine.
-    #
-    if echo "$CPU_ARCH" | grep -c 86 >/dev/null; then
-        CPU_ARCH=x86
-    fi
-    ;;
-esac
-
 case "$target" in
 *-darwin*)
-    case "${target_cpu}" in
-        i*86*)
-            CPU_ARCH=i386
-            ;;
-        *)
-            CPU_ARCH=ppc
-            ;;
-    esac
     CPPFLAGS="$CPPFLAGS -Wmost -fno-common -no-cpp-precomp"
-    DEFINES="$DEFINES -DXP_UNIX -DDARWIN -DCPU_ARCH=$CPU_ARCH"
+    DEFINES="$DEFINES XP_UNIX DARWIN"
     DSO_CFLAGS=-fPIC
     DSO_LDFLAGS='-dynamiclib -compatibility_version 1 -current_version 1 -all_load -install_name @executable_path/$@ -headerpad_max_install_names'
     STRIP="$STRIP -x -S"
@@ -1663,7 +1592,7 @@ case "$target" in
     ;;
 
 *-freebsd*)
-    DEFINES="$DEFINES -DXP_UNIX -DFREEBSD"
+    DEFINES="$DEFINES XP_UNIX FREEBSD"
     CPPFLAGS="$CPPFLAGS -ansi -Wall"
     DSO_CFLAGS=-fPIC
     DSO_LDFLAGS='-shared -Wl,-soname -Wl,$(notdir $@)'
@@ -1672,10 +1601,10 @@ case "$target" in
     ;;
 
 *-linux*|*-gnu*|*-k*bsd*-gnu)
-    DEFINES="$DEFINES -DXP_UNIX -D_GNU_SOURCE"
+    DEFINES="$DEFINES XP_UNIX _GNU_SOURCE"
     case "${target_os}" in
     linux*)
-        DEFINES="$DEFINES -DLINUX"
+        DEFINES="$DEFINES LINUX"
         ;;
     esac
     CPPFLAGS="$CPPFLAGS -Wall"
@@ -1692,7 +1621,7 @@ case "$target" in
     ;;
 
 *-mingw*|*-cygwin*|*-msvc*|*-mks*)
-    DEFINES="$DEFINES -DXP_PC -DWIN32"
+    DEFINES="$DEFINES XP_PC WIN32"
     RESOLVE_SYMS=1
     DLL_SUFFIX=dll
     EXE_SUFFIX=.exe
@@ -1706,7 +1635,7 @@ do
 # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2
 echo $ac_n "checking for $ac_word""... $ac_c" 1>&6
-echo "configure:1710: checking for $ac_word" >&5
+echo "configure:1639: checking for $ac_word" >&5
 if eval "test \"`echo '$''{'ac_cv_path_RC'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
@@ -1751,12 +1680,12 @@ test -n "$RC" || RC=":"
         MSC_VER=${_CC_MAJOR_VERSION}${_CC_MINOR_VERSION}
         if test "$_CC_MAJOR_VERSION" = "14"; then
             CXXFLAGS="$CXXFLAGS -Zc:wchar_t-"
-            DEFINES="$DEFINES -D_CRT_SECURE_NO_DEPRECATE"
-            DEFINES="$DEFINES -D_CRT_NONSTDC_NO_DEPRECATE"
+            DEFINES="$DEFINES _CRT_SECURE_NO_DEPRECATE"
+            DEFINES="$DEFINES _CRT_NONSTDC_NO_DEPRECATE"
         elif test "$_CC_MAJOR_VERSION" = "15"; then
             CXXFLAGS="$CXXFLAGS -Zc:wchar_t-"
-            DEFINES="$DEFINES -D_CRT_SECURE_NO_WARNINGS"
-            DEFINES="$DEFINES -D_CRT_NONSTDC_NO_WARNINGS"
+            DEFINES="$DEFINES _CRT_SECURE_NO_WARNINGS"
+            DEFINES="$DEFINES _CRT_NONSTDC_NO_WARNINGS"
         fi
         CC="$CC -nologo"
         CXX=$CC
@@ -1808,21 +1737,21 @@ test -n "$RC" || RC=":"
     fi # GNU_CC
     ;;
 *)
-    DEFINES="$DEFINES -DXP_UNIX"
+    DEFINES="$DEFINES XP_UNIX"
     ;;
 esac
 
 if test -z "$_WIN32_MSVC"; then
 
 echo $ac_n "checking for library containing sqrt""... $ac_c" 1>&6
-echo "configure:1819: checking for library containing sqrt" >&5
+echo "configure:1748: checking for library containing sqrt" >&5
 if eval "test \"`echo '$''{'ac_cv_search_sqrt'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   ac_func_search_save_LIBS="$LIBS"
 ac_cv_search_sqrt="no"
 cat > conftest.$ac_ext <<EOF
-#line 1826 "configure"
+#line 1755 "configure"
 #include "confdefs.h"
 /* Override any gcc2 internal prototype to avoid an error.  */
 /* We use char because int might match the return type of a gcc2
@@ -1833,7 +1762,7 @@ int main() {
 sqrt()
 ; return 0; }
 EOF
-if { (eval echo configure:1837: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+if { (eval echo configure:1766: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
   rm -rf conftest*
   ac_cv_search_sqrt="none required"
 else
@@ -1844,7 +1773,7 @@ rm -f conftest*
 test "$ac_cv_search_sqrt" = "no" && for i in m; do
 LIBS="-l$i  $ac_func_search_save_LIBS"
 cat > conftest.$ac_ext <<EOF
-#line 1848 "configure"
+#line 1777 "configure"
 #include "confdefs.h"
 /* Override any gcc2 internal prototype to avoid an error.  */
 /* We use char because int might match the return type of a gcc2
@@ -1855,7 +1784,7 @@ int main() {
 sqrt()
 ; return 0; }
 EOF
-if { (eval echo configure:1859: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+if { (eval echo configure:1788: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
   rm -rf conftest*
   ac_cv_search_sqrt="-l$i"
 break
@@ -1871,7 +1800,7 @@ fi
 echo "$ac_t""$ac_cv_search_sqrt" 1>&6
 if test "$ac_cv_search_sqrt" != "no"; then
   test "$ac_cv_search_sqrt" = "none required" || LIBS="$ac_cv_search_sqrt $LIBS"
-  OS_LIBS="$OS_LIBS -lm"
+  OS_LIBS="-lm"
 else :
   
 fi
@@ -1931,12 +1860,6 @@ CPPFLAGS="$CPPFLAGS $_DEBUG_DEFINES"
 
 
 
-
-
-
-
-
-
 for p in $OP_PROJECTS; do
     eval "OP_PROJECT_${p}=1";
 done;
@@ -1958,7 +1881,10 @@ if test -n "$OP_PROJECT_test"; then
     MAKEFILES="$MAKEFILES test/Makefile"
 fi
 
+echo $ac_n "checking if config.h needs rebuilding""... $ac_c" 1>&6
+echo "configure:1886: checking if config.h needs rebuilding" >&5
 
+echo "$ac_t""done" 1>&6
 
 trap '' 1 2 15
 cat > confcache <<\EOF
@@ -2151,10 +2077,6 @@ s%@OBJ_SUFFIX@%$OBJ_SUFFIX%g
 s%@LIB_SUFFIX@%$LIB_SUFFIX%g
 s%@DLL_SUFFIX@%$DLL_SUFFIX%g
 s%@EXE_SUFFIX@%$EXE_SUFFIX%g
-s%@OS_ARCH@%$OS_ARCH%g
-s%@OS_RELEASE@%$OS_RELEASE%g
-s%@CPU_ARCH@%$CPU_ARCH%g
-s%@DEFINES@%$DEFINES%g
 s%@OP_PROJECTS@%$OP_PROJECTS%g
 
 CEOF
@@ -2259,6 +2181,7 @@ rm -f conftest.s*
 EOF
 cat >> $CONFIG_STATUS <<EOF
 
+	OP_DEFINES='$DEFINES'
 	OP_VERSION_MAJOR=$OP_VERSION_MAJOR
 	OP_VERSION_MINOR=$OP_VERSION_MINOR
 	OP_VERSION_MICRO=$OP_VERSION_MICRO
@@ -2272,8 +2195,8 @@ cat >> $CONFIG_STATUS <<\EOF
 	outfile=$configfile.tmp
 	cat > $outfile <<_EOF
 /* Generated by configure.  Do not edit */
-#ifndef CONFIG_H
-#define CONFIG_H
+#ifndef __CONFIG_H
+#define __CONFIG_H
 
 #ifdef  __cplusplus
 # define BEGIN_C_DECLS  extern "C" {
@@ -2294,7 +2217,15 @@ cat >> $CONFIG_STATUS <<\EOF
 #define OP_VERSION OP_VERSION_ENCODE(OP_VERSION_MAJOR,OP_VERSION_MINOR,OP_VERSION_MICRO)
 
 #define BUILD		1
-#define GCC_VISIBILITY	$VISIBILITY
+
+_EOF
+	for D in $OP_DEFINES; do
+		echo "#define $D" >> $outfile
+	done
+	if test -n "$VISIBILITY"; then
+		echo "#define GCC_VISIBILITY" >> $outfile
+	fi
+	cat >> $outfile <<_EOF
 
 #if defined(WIN32) || defined(_MSC_VER) || defined(__CYGWIN__)
 #ifdef BUILD_DLL
@@ -2304,7 +2235,7 @@ cat >> $CONFIG_STATUS <<\EOF
 #endif
 #define OP_HIDDEN
 #else
-#if (GCC_VISIBILITY == 1) && !defined(__sun)
+#if defined(GCC_VISIBILITY) && !defined(__sun)
 #define OP_EXPORT	__attribute__ ((visibility("default")))
 #define OP_HIDDEN	__attribute__ ((visibility("hidden")))
 #elif defined(__SUNPRO_C) && (__SUNPRO_C >= 0x550)
@@ -2315,10 +2246,9 @@ cat >> $CONFIG_STATUS <<\EOF
 #define OP_HIDDEN
 #endif
 #endif
-_EOF
-	echo '' >> $outfile
-	echo '#endif' >> $outfile
 
+#endif // CONFIG_H
+_EOF
 	if cmp -s $outfile $configfile; then
 	  rm -f $outfile
 	else
