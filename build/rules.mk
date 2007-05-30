@@ -63,14 +63,14 @@ SHARED_LIBRARY	= lib$(LIBRARY_NAME).$(DLL_SUFFIX)
 endif
 endif
 
-echo-library:
+echo-lib-deps:
 ifdef ONLY_STATIC_LIB
-	@echo $(LIBRARY)
+	@echo $(LIB_PATH)/$(LIBRARY)
 else
 ifdef MSC_VER
-	@echo $(IMPORT_LIBARY)
+	@echo $(LIB_PATH)/$(IMPORT_LIBARY)
 else
-	@echo $(SHARED_LIBARY)
+	@echo $(LIB_PATH)/$(SHARED_LIBARY)
 endif
 endif
 
@@ -85,6 +85,12 @@ _LIBS = $(shell \
 	done; \
 	for l in $(LIBS); do \
 		$(MAKE) -s --no-print-directory -C $(MOD_DEPTH)/$$l echo-libs; \
+	done;)
+
+_LIB_DEPS = $(shell \
+	for l in $(LIBS); do \
+		$(MAKE) -s --no-print-directory -C $(MOD_DEPTH)/$$l \
+			LIB_PATH=$(MOD_DEPTH)/$$l echo-lib-deps; \
 	done;)
 endif
 
@@ -110,7 +116,7 @@ endif
 ifndef OBJS
 OBJS	= $(strip \
 	$(CSRCS:.c=.$(OBJ_SUFFIX)) \
-	$(CPPSRCS:.cpp=.$(OBJ_SUFFIX)) \
+	$(CXXSRCS:.cpp=.$(OBJ_SUFFIX)) \
 	$(ASFILES:.$(ASM_SUFFIX)=.$(OBJ_SUFFIX)))
 endif
 
@@ -208,14 +214,14 @@ endif
 Makefile: $(srcdir)/Makefile.in
 	$(MAKE) -C $(topsrcdir) -f openpave.mk configure
 
-$(PROGRAM): $(OBJS)
+$(PROGRAM): $(OBJS) $(_LIB_DEPS)
 ifdef MSC_VER
 	@sh $(topsrcdir)/build/cygwin-wrapper \
 		$(CC) $(OBJS) -Fe$@ -link $(OS_LDFLAGS) \
 		$(patsubst -l%,lib%.$(LIB_SUFFIX),$(subst -L,/LIBPATH:,$(_LIBS))) \
 		$(OS_LIBS)
 else
-ifdef CPPSRCS
+ifdef CXXSRCS
 	$(CXX) $(OS_LDFLAGS) $(OBJS) $(_LIBS) $(OS_LIBS) -o $@
 else
 	$(CC) $(OS_LDFLAGS) $(OBJS) $(_LIBS) $(OS_LIBS) -o $@
@@ -274,7 +280,7 @@ ifdef MSC_VER
 	@sh $(topsrcdir)/build/cygwin-wrapper \
 		$(CXX) -Fo$@ -c $(OS_CXXFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<)
 else
-	$(CXX) -c $(OS_CXXFLAGS) $(DEFINES) $(INCLUDES) $< -o $@ 
+	$(CXX) -c -MMD -MP $(OS_CXXFLAGS) $(DEFINES) $(INCLUDES) $< -o $@ 
 endif
 
 %.$(OBJ_SUFFIX): %.c
@@ -282,7 +288,7 @@ ifdef MSC_VER
 	@sh $(topsrcdir)/build/cygwin-wrapper \
 		$(CC) -Fo$@ -c $(OS_CFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<)
 else
-	$(CC) -c $(OS_CFLAGS) $(DEFINES) $(INCLUDES) $< -o $@ 
+	$(CC) -c -MMD -MP $(OS_CFLAGS) $(DEFINES) $(INCLUDES) $< -o $@ 
 endif
 
 %.$(OBJ_SUFFIX): %.$(ASM_SUFFIX)
@@ -290,6 +296,8 @@ endif
 
 %.i: %.c
 	$(CPP) -C $(OS_CPPFLAGS) $(DEFINES) $(INCLUDES) $< > $@
+
+-include $(OBJS:.$(OBJ_SUFFIX)=.d)
 
 .SUFFIXES:
 .SUFFIXES: .$(LIB_SUFFIX) .$(DLL_SUFFIX) .$(OBJ_SUFFIX) .c .cpp .$(ASM_SUFFIX) .h .i
