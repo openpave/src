@@ -417,7 +417,7 @@ public:
 
 	// Sort then compact the set.
 	void sort() {
-		qsort(1,this->size);
+		this->qsort(1,this->size);
 		compact();
 	};
 

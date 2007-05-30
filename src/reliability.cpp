@@ -24,7 +24,7 @@
 double stdnormal_rnd() {
 	static int i = 1;
 	static double u[2] = {0.0, 0.0};
-	register double r[2];
+	double r[2];
 
 	if (i == 1) {
 		r[0] = sqrt(-2*log((double)(rand()+1)/(double)(RAND_MAX+1)));

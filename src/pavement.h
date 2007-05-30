@@ -332,7 +332,7 @@ public:
 		: list_owned<LEsystem,LElayer>(), data(), load() {
 		callcount = 0;
 	};
-	LEsystem::LEsystem(LEsystem & p)
+	LEsystem(LEsystem & p)
 		: list_owned<LEsystem,LElayer>(p), data(p.data), load(p.load) {
 		callcount = 0;
 	};
@@ -394,7 +394,7 @@ public:
 	LEbackcalc() {
 		setup(0.0,0.0,1e-6,5);
 	};
-	LEbackcalc::LEbackcalc(LEbackcalc & b)
+	LEbackcalc(LEbackcalc & b)
 		: LEsystem(b), defl(b.defl) {
 		setup(b.precision,b.noise,b.tolerance,b.maxsteps);
 	};

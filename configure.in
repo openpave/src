@@ -263,7 +263,7 @@ case "$target" in
 
 *-freebsd*)
     DEFINES="$DEFINES XP_UNIX FREEBSD"
-    CPPFLAGS="$CPPFLAGS -ansi -Wall"
+    CPPFLAGS="$CPPFLAGS -ansi -Wall -Wextra"
     DSO_CFLAGS=-fPIC
     DSO_LDFLAGS='-shared -Wl,-soname -Wl,$(notdir $@)'
     _OPTIMIZE_FLAGS=-O2

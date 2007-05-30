@@ -1593,7 +1593,7 @@ case "$target" in
 
 *-freebsd*)
     DEFINES="$DEFINES XP_UNIX FREEBSD"
-    CPPFLAGS="$CPPFLAGS -ansi -Wall"
+    CPPFLAGS="$CPPFLAGS -ansi -Wall -Wextra"
     DSO_CFLAGS=-fPIC
     DSO_LDFLAGS='-shared -Wl,-soname -Wl,$(notdir $@)'
     _OPTIMIZE_FLAGS=-O2
@@ -2216,7 +2216,7 @@ cat >> $CONFIG_STATUS <<\EOF
 
 #define OP_VERSION OP_VERSION_ENCODE(OP_VERSION_MAJOR,OP_VERSION_MINOR,OP_VERSION_MICRO)
 
-#define BUILD		1
+#define BUILD
 
 _EOF
 	for D in $OP_DEFINES; do

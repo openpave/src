@@ -1140,7 +1140,7 @@ LEsystem::calculate(resulttype result, double * Q)
 		// of magnitude.
 		x1 = 0.0, x2 = 0.0;
 		for (iz = z.length()-1; iz >= 0; iz--) {
-			for (int k1 = 1; k1 <= 5 && k1*7*a[ia] < j0r[0]*z[iz]; k1++)
+			for (int k1 = 1; k1 <= 5 && k1*7*a[ia] < j0r[0]*z[iz]; k1++) {
 				if ((x1 = k1*7*a[ia]/z[iz]) < x2)
 					continue;
 				for (ib = 1; ib < bm.length() && bm[ib] < x1; ib++)
@@ -1149,6 +1149,7 @@ LEsystem::calculate(resulttype result, double * Q)
 					continue;
 				if (!bm.add(ib+1,x2 = x1))
 					goto abort;
+			}
 		}
 		bm.sort();
 
