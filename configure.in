@@ -44,7 +44,6 @@ dnl the terms of any one of the MPL, the GPL or the LGPL.
 dnl
 dnl ***** END LICENSE BLOCK *****
 
-
 AC_PREREQ(2.13)
 AC_INIT(openpave.mk)
 AC_CONFIG_AUX_DIR(${srcdir}/build)
@@ -56,6 +55,50 @@ dnl ========================================================
 OP_VERSION_MAJOR=1
 OP_VERSION_MINOR=0
 OP_VERSION_MICRO=0
+
+dnl ===========================================================================
+dnl check compiler flags
+AC_DEFUN([CC_TRY_FLAG], [
+  AC_MSG_CHECKING([whether $CC supports $1])
+  _SAVE_CFLAGS=$CFLAGS
+  CFLAGS="$CFLAGS $1"
+  AC_LANG_SAVE
+  AC_LANG_C
+  AC_TRY_COMPILE( [ #include <stdio.h> ],
+    [printf("Hello World\n");],
+    [cc_flag="yes"],
+    [cc_flag="no"] )
+  AC_LANG_RESTORE
+  CFLAGS=$_SAVE_CFLAGS
+  if test "x$cc_flag" = "xyes"; then
+    ifelse([$2], , :, [$2])
+  else
+    ifelse([$3], , :, [$3])
+  fi
+  AC_MSG_RESULT([$cc_flag])
+])
+
+dnl ===========================================================================
+dnl check compiler flags
+AC_DEFUN([CXX_TRY_FLAG], [
+  AC_MSG_CHECKING([whether $CXX supports $1])
+  _SAVE_CXXFLAGS=$CXXFLAGS
+  CXXFLAGS="$CXXFLAGS $1"
+  AC_LANG_SAVE
+  AC_LANG_CPLUSPLUS
+  AC_TRY_COMPILE( [ #include <stdio.h> ],
+    [printf("Hello World\n");],
+    [cc_flag="yes"],
+    [cc_flag="no"] )
+  AC_LANG_RESTORE
+  CXXFLAGS=$_SAVE_CXXFLAGS
+  if test "x$cc_flag" = "xyes"; then
+    ifelse([$2], , :, [$2])
+  else
+    ifelse([$3], , :, [$3])
+  fi
+  AC_MSG_RESULT([$cc_flag])
+])
 
 dnl ========================================================
 dnl = Defaults
@@ -73,6 +116,8 @@ RESOLVE_SYMS=
 CFLAGS="${CFLAGS=}"
 CXXFLAGS="${CXXFLAGS=}"
 LDFLAGS="${LDFLAGS=}"
+WARN_CFLAGS=""
+WARN_CXXFLAGS=""
 
 _WIN32_MSVC=
 case "$host" in
@@ -233,6 +278,93 @@ EOF
     if test "$ac_cv_visibility_hidden" = "yes"; then
         VISIBILITY=1
     fi
+
+dnl ===============================================================
+dnl Use lots of warning flags with with gcc and compatible compilers
+dnl ===============================================================
+dnl Some warning options are not supported by all versions of
+dnl gcc, so test all desired options against the current
+dnl compiler.  Borrowed from Cairo's configure.in.
+dnl
+dnl There are some order dependencies here. Specifically, an option that
+dnl disables a warning will have no net effect if a later option then
+dnl enables that warnings, (perhaps implicitly). So we put some grouped
+dnl options (-Wall and -Wextra) up front and the -Wno options last.
+dnl
+dnl Note: if you change the following variable, the cache is automatically
+dnl skipped and all flags rechecked.  So there's no need to do anything
+dnl else.  If for any reason you need to force a recheck, just change
+dnl MAYBE_WARN in an ignorable way (like adding whitespace)
+
+MAYBE_WARN="-Wall -Wextra \
+-Wconversion \
+-Winit-self \
+-Wmissing-format-attribute \
+-Wpacked \
+-Wpointer-arith \
+-Wshadow \
+-Wsign-compare \
+-Wstrict-aliasing=2 \
+-Wswitch-enum \
+-Wunsafe-loop-optimizations \
+-Wwrite-strings \
+-Wno-attributes \
+-Wno-missing-field-initializers \
+-Wno-unused-parameter \
+"
+
+MAYBE_WARN_C="$MAYBE_WARN \
+-Wdeclaration-after-statement \
+-Werror-implicit-function-declaration \
+-Wmissing-declarations \
+-Wmissing-prototypes \
+-Wnested-externs \
+-Wold-style-definition \
+-Wstrict-prototypes \
+-Wtraditional \
+-Wunsafe-loop-optimizations \
+-Wwrite-strings \
+"
+
+MAYBE_WARN_CXX="$MAYBE_WARN \
+-Wabi \
+-Wctor-dtor-privacy \
+-Wold-style-cast \
+-Woverloaded-virtual \
+-Wsign-promo \
+-Wnon-template-friend \
+"
+
+# invalidate cached value if MAYBE_WARN has changed
+if test "x$cv_warn_maybe_c" != "x$MAYBE_WARN_C"; then
+  unset cv_warn_cflags
+fi
+AC_CACHE_CHECK([for supported warning flags], cv_warn_cflags, [
+  echo
+  WARN_CFLAGS=""
+  for W in $MAYBE_WARN_C; do
+    CC_TRY_FLAG([$W], [WARN_CFLAGS="$WARN_CFLAGS $W"])
+  done
+  cv_warn_cflags=$WARN_CFLAGS
+  cv_warn_maybe=$MAYBE_WARN
+  AC_MSG_CHECKING([which warning flags were supported])
+])
+if test "x$cv_warn_maybe_cxx" != "x$MAYBE_WARN_CXX"; then
+  unset cv_warn_cxxflags
+fi
+AC_CACHE_CHECK([for supported warning flags], cv_warn_cxxflags, [
+  echo
+  WARN_CXXFLAGS=""
+  for W in $MAYBE_WARN_CXX; do
+    CXX_TRY_FLAG([$W], [WARN_CXXFLAGS="$WARN_CXXFLAGS $W"])
+  done
+  cv_warn_cxxflags=$WARN_CXXFLAGS
+  cv_warn_maybe_cxx=$MAYBE_WARN_CXX
+  AC_MSG_CHECKING([which warning flags were supported])
+])
+WARN_CFLAGS="$cv_warn_cflags"
+WARN_CXXFLAGS="$cv_warn_cxxflags"
+
 fi # GNU_CC
 
 fi # WIN32_MSVC
@@ -263,7 +395,7 @@ case "$target" in
 
 *-freebsd*)
     DEFINES="$DEFINES XP_UNIX FREEBSD"
-    CPPFLAGS="$CPPFLAGS -ansi -Wall -Wextra"
+    CPPFLAGS="$CPPFLAGS -ansi"
     DSO_CFLAGS=-fPIC
     DSO_LDFLAGS='-shared -Wl,-soname -Wl,$(notdir $@)'
     _OPTIMIZE_FLAGS=-O2
@@ -277,7 +409,6 @@ case "$target" in
         DEFINES="$DEFINES LINUX"
         ;;
     esac
-    CPPFLAGS="$CPPFLAGS -Wall"
     DSO_CFLAGS=-fPIC
     DSO_LDFLAGS='-shared -Wl,-soname -Wl,$(notdir $@)'
     _OPTIMIZE_FLAGS=-O2
@@ -389,12 +520,17 @@ if test -n "$_SAVE_DEBUG_FLAGS"; then
 fi
 
 if test -n "$OP_OPTIMIZE"; then
-    CPPFLAGS="$CPPFLAGS $_OPTIMIZE_FLAGS"
+    CFLAGS="$CFLAGS $_OPTIMIZE_FLAGS"
+    CXXFLAGS="$CXXFLAGS $_OPTIMIZE_FLAGS"
 fi
 
 if test -n "$OP_DEBUG"; then
-    CPPFLAGS="$CPPFLAGS $_DEBUG_FLAGS"
+    CFLAGS="$CFLAGS $_DEBUG_FLAGS"
+    CXXFLAGS="$CXXFLAGS $_DEBUG_FLAGS"
 fi
+
+CFLAGS="$CFLAGS $WARN_CFLAGS"
+CXXFLAGS="$CXXFLAGS $WARN_CXXFLAGS"
 CPPFLAGS="$CPPFLAGS $_DEBUG_DEFINES"
 
 dnl ========================================================
@@ -463,9 +599,9 @@ fi
 
 AC_MSG_CHECKING([if config.h needs rebuilding])
 AC_OUTPUT_COMMANDS([
-	configfile=include/config.h
-	outfile=$configfile.tmp
-	cat > $outfile <<_EOF
+  configfile=include/config.h
+  outfile=$configfile.tmp
+  cat > $outfile <<_EOF
 /* Generated by configure.  Do not edit */
 #ifndef __CONFIG_H
 #define __CONFIG_H
@@ -491,13 +627,19 @@ AC_OUTPUT_COMMANDS([
 #define BUILD
 
 _EOF
-	for D in $OP_DEFINES; do
-		echo "#define $D" >> $outfile
-	done
-	if test -n "$VISIBILITY"; then
-		echo "#define GCC_VISIBILITY" >> $outfile
-	fi
-	cat >> $outfile <<_EOF
+  for D in $OP_DEFINES; do
+    echo "#define $D" >> $outfile
+  done
+  if test -n "$VISIBILITY"; then
+    echo "#define GCC_VISIBILITY" >> $outfile
+  fi
+  cat >> $outfile <<_EOF
+
+#if !defined(__GNUC__)
+#defined __attribute__(x)
+#endif
+
+#define OP_PRINTF(n,m)	__attribute__ ((__format__(__printf__,n,m)))
 
 #if defined(WIN32) || defined(_MSC_VER) || defined(__CYGWIN__)
 #ifdef BUILD_DLL
@@ -521,17 +663,17 @@ _EOF
 
 #endif // CONFIG_H
 _EOF
-	if cmp -s $outfile $configfile; then
-	  rm -f $outfile
-	else
-	  mv $outfile $configfile
-	fi
+  if cmp -s $outfile $configfile; then
+    rm -f $outfile
+  else
+    mv $outfile $configfile
+  fi
 ],[
-	OP_DEFINES='$DEFINES'
-	OP_VERSION_MAJOR=$OP_VERSION_MAJOR
-	OP_VERSION_MINOR=$OP_VERSION_MINOR
-	OP_VERSION_MICRO=$OP_VERSION_MICRO
-	VISIBILITY=$VISIBILITY
+  OP_DEFINES='$DEFINES'
+  OP_VERSION_MAJOR=$OP_VERSION_MAJOR
+  OP_VERSION_MINOR=$OP_VERSION_MINOR
+  OP_VERSION_MICRO=$OP_VERSION_MICRO
+  VISIBILITY=$VISIBILITY
 ])
 AC_MSG_RESULT([done])
 

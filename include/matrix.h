@@ -37,16 +37,16 @@ struct vector {
 	inline vector() {
 		N = 0, data = 0;
 	};
-	inline vector(const int n) {
-		resize(n);
+	inline vector(const int _n) {
+		resize(_n);
 	};
-	inline vector(const int n, const double d) {
-		resize(n);
+	inline vector(const int _n, const double d) {
+		resize(_n);
 		for (int i = 0; i < N; i++)
 			data[i] = d;
 	};
-	inline vector(const int n, const double * v) {
-		resize(n);
+	inline vector(const int _n, const double * v) {
+		resize(_n);
 		memcpy(data,v,sizeof(double)*N);
 	};
 	inline vector(const vector & v) {
@@ -79,10 +79,10 @@ struct vector {
 protected:
 	int	N;							// The size.
 	double * data;					// The data.
-	inline void resize(const int n) {
+	inline void resize(const int _n) {
 		if (data != 0)
 			delete [] data;
-		N = n;
+		N = _n;
 		data = new double[N];
 		if (data == 0)
 			event_msg(EVENT_ERROR,"Out of memory for struct vector!");
@@ -160,16 +160,16 @@ public:
 	inline matrix() {
 		M = N = 0, data = 0;
 	};
-	inline matrix(const int m, const int n) {
-		resize(m,n);
+	inline matrix(const int _m, const int _n) {
+		resize(_m,_n);
 	};
-	inline matrix(const int m, const int n, const double d) {
-		resize(m,n);
+	inline matrix(const int _m, const int _n, const double d) {
+		resize(_m,_n);
 		for (int i = 0; i < M*N; i++)
 			data[i] = d;
 	};
-	inline matrix(const int m, const int n, const double * v) {
-		resize(m,n);
+	inline matrix(const int _m, const int _n, const double * v) {
+		resize(_m,_n);
 		memcpy(data,v,sizeof(double)*M*N);
 	};
 	inline matrix(const matrix & A) {
@@ -183,10 +183,10 @@ public:
 	};
 
 	// Assignment operator...
-	matrix & operator = (const matrix & m) {
-		if (M != m.M || N != m.N)
-			resize(m.M,m.N);
-		memcpy(data,m.data,sizeof(double)*M*N);
+	matrix & operator = (const matrix & _m) {
+		if (M != _m.M || N != _m.N)
+			resize(_m.M,_m.N);
+		memcpy(data,_m.data,sizeof(double)*M*N);
 		return *this;
 	};
 	inline int m() const {
@@ -203,10 +203,10 @@ protected:
 	int M;						// The rows
 	int N;						// The cols
 	double * data;				// The data
-	void resize(const int m, const int n) {
+	void resize(const int _m, const int _n) {
 		if (data != 0)
 			delete [] data;
-		M = m, N = n;
+		M = _m, N = _n;
 		data = new double[M*N];
 		if (data == 0)
 			event_msg(EVENT_ERROR,"Out of memory for struct matrix!");
@@ -287,11 +287,11 @@ public:
 	inline sqrmat() {
 		N = 0, data = 0;
 	};
-	inline sqrmat(const int n) {
-		resize(n);
+	inline sqrmat(const int _n) {
+		resize(_n);
 	};
-	inline sqrmat(const int n, const double d, const bool eye = false) {
-		resize(n);
+	inline sqrmat(const int _n, const double d, const bool eye = false) {
+		resize(_n);
 		if (eye) {
 			memset(data,0,sizeof(double)*N*N);
 			for (int i = 0; i < N; i++)
@@ -301,8 +301,8 @@ public:
 				data[i] = d;
 		}
 	};
-	inline sqrmat(const int n, const double * v) {
-		resize(n);
+	inline sqrmat(const int _n, const double * v) {
+		resize(_n);
 		memcpy(data,v,sizeof(double)*N*N);
 	};
 	inline sqrmat(const sqrmat & A) {
@@ -316,10 +316,10 @@ public:
 	};
 
 	// Assignment operator...
-	sqrmat & operator = (const sqrmat & m) {
-		if (N != m.N)
-			resize(m.N);
-		memcpy(data,m.data,sizeof(double)*N*N);
+	sqrmat & operator = (const sqrmat & _m) {
+		if (N != _m.N)
+			resize(_m.N);
+		memcpy(data,_m.data,sizeof(double)*N*N);
 		return *this;
 	};
 	inline int n() const {
@@ -332,10 +332,10 @@ public:
 protected:
 	int N;						// The size
 	double * data;				// The data
-	void resize(const int n) {
+	void resize(const int _n) {
 		if (data != 0)
 			delete [] data;
-		N = n;
+		N = _n;
 		data = new double[N*N];
 		if (data == 0)
 			event_msg(EVENT_ERROR,"Out of memory for struct sqrmat!");
@@ -416,16 +416,16 @@ public:
 	inline dlgmat() {
 		N = 0, data = 0;
 	};
-	inline dlgmat(const int n) {
-		resize(n);
+	inline dlgmat(const int _n) {
+		resize(_n);
 	};
-	inline dlgmat(const int n, const double d) {
-		resize(n);
+	inline dlgmat(const int _n, const double d) {
+		resize(_n);
 		for (int i = 0; i < N; i++)
 				data[i] = d;
 	};
-	inline dlgmat(const int n, const double * v) {
-		resize(n);
+	inline dlgmat(const int _n, const double * v) {
+		resize(_n);
 		memcpy(data,v,sizeof(double)*N);
 	};
 	inline dlgmat(const dlgmat & A) {
@@ -439,10 +439,10 @@ public:
 	};
 
 	// Assignment operator...
-	dlgmat & operator = (const dlgmat & m) {
-		if (N != m.N)
-			resize(m.N);
-		memcpy(data,m.data,sizeof(double)*N);
+	dlgmat & operator = (const dlgmat & _m) {
+		if (N != _m.N)
+			resize(_m.N);
+		memcpy(data,_m.data,sizeof(double)*N);
 		return *this;
 	};
 	inline int n() const {
@@ -455,10 +455,10 @@ public:
 protected:
 	int N;						// The size
 	double * data;				// The data
-	void resize(const int n) {
+	void resize(const int _n) {
 		if (data != 0)
 			delete [] data;
-		N = n;
+		N = _n;
 		data = new double[N];
 		if (data == 0)
 			event_msg(EVENT_ERROR,"Out of memory for struct dlgmat!");

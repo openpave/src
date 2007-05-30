@@ -130,7 +130,7 @@ struct point3d : public point2d {
 			return -1;
 		if ((x*x+y*y+z*z) > (p.x*p.x+p.y*p.y+p.z*p.z))
 			return 1;
-		return point2d::compare((const point2d &)p);
+		return point2d::compare(static_cast<const point2d &>(p));
 	};
 	bool operator == (const point3d & p) const {
 		return (x == p.x && y == p.y && z == p.z ? true : false);
@@ -271,19 +271,26 @@ struct pavedata : point3d {
 	enum direction {xx, yy, zz, xy, xz, yz, p1, p2, p3, s1, s2, s3};
 	double result(type t, direction d) const;
 
-	pavedata() : point3d() {
+	pavedata() : point3d(), deflgrad(0), count(0) {
 	};
-	pavedata(const point3d & p) : point3d(p) {
+	pavedata(const point3d & p) : point3d(p), deflgrad(0), count(0) {
 		memset(data,0,sizeof(data));
 	};
-	pavedata(const pavedata & pd) : point3d(pd), deflgrad(pd.deflgrad) {
+	pavedata(const pavedata & pd) : point3d(pd) {
 		memcpy(data, pd.data, sizeof(data));
+		count = pd.count;
+		if (count > 0)
+			memcpy(deflgrad, pd.deflgrad, count*sizeof(double));
+		else
+			deflgrad = 0;
 	};
 	virtual ~pavedata() {
+		delete [] deflgrad;
 	};
 //private:
 	double data[9][3];
-	sset<double> deflgrad;
+	double * deflgrad;
+	int count;
 	friend class LEsystem;
 	friend class LEbackcalc;
 	void principle(double v, double E);
@@ -314,11 +321,23 @@ public:
 	bool removepoint(const point3d & p);
 
 	bool check();
-	enum resulttype {all, fast, disp, fastdisp, dispgrad, fastgrad};
-	bool accurate();
+	enum resulttype {
+		all	     = 0x0000,
+		fast     = 0x0001,
+		accurate = 0x0002,
+		odemark  = 0x0003,
+		fastnum  = 0x0004,
+		mask     = 0x00FF,
+		disp     = 0x0100,
+		grad     = 0x0200,
+		dispgrad = 0x0300,
+		fastdisp = 0x0101,
+		fastgrad = 0x0301,
+	};
+	bool calc_accurate();
 	bool calculate(resulttype result = all, double * Q = 0);
-	bool odemark();
-	bool fastnum();
+	bool calc_odemark();
+	bool calc_fastnum();
 
 	const pavedata & result(const point3d & p) const {
 		return data[p];

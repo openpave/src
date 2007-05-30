@@ -129,14 +129,15 @@ template <class V>
 class fset : public set {
 public:
 	// Nice simple constructor...
-	fset(const int s, const int b = DFLT_BLK, const V * v = 0) : set(s,b) {
+	fset(const int s, const int b = DFLT_BLK, const V * v = 0)
+			: set(s,b), value(0) {
 		if (!allocate(size))
 			return;
 		for (int i = 1; v && i <= size; i++)
 			value[i] = v[i-1];
 	};
 	// Copy constructor.
-	fset(const fset<V> & v) : set(v.size,v.block) {
+	fset(const fset<V> & v) : set(v.size,v.block), value(0) {
 		if (!allocate(size))
 			return;
 		for (int i=0; i<=size; i++)
@@ -195,7 +196,7 @@ protected:
 		return true;
 	};
 	// Also hide the null constructor.
-	inline fset() : set() {
+	inline fset() : set(), value(0) {
 		// If it fails it fails...
 		allocate(size);
 	};
@@ -246,7 +247,7 @@ public:
 	};
 	// Add an array at position p. (Actually do the work too).
 	bool add(const int p, const V * v, const int s = 1) {
-		int i;
+		int i, j;
 		if (p < 1 || s < 1)
 			return false;
 		if (p > this->size) {
@@ -254,7 +255,7 @@ public:
 				V * temp = this->value;
 				if (!this->allocate(p+s-1))
 					return false;
-				for (int i = 0; i <= this->size; i++)
+				for (i = 0; i <= this->size; i++)
 					this->value[i] = temp[i];
 				delete [] temp;
 			}
@@ -269,12 +270,12 @@ public:
 				if (!this->allocate(this->size+s))
 					return false;
 				this->size += s;
-				for (int i = 0, j = i; i <= this->size; i++)
+				for (i = 0, j = i; i <= this->size; i++)
 					this->value[i] = (i >= p && i < p+s ? v[i-p] : temp[j++]);
 				delete [] temp;
 			} else {
 				this->size += s;
-				for (int i = this->size, j = i - 1; i >= p ; i--)
+				for (i = this->size, j = i - 1; i >= p ; i--)
 					this->value[i] = (i >= p && i < p+s ? v[i-p] : this->value[j--]);
 			}
 		}
@@ -462,7 +463,7 @@ public:
 		}
 	};
 	// Copy constuctor.
-	kfset(const kfset<K,V> & v) : set(v.size,v.block) {
+	kfset(const kfset<K,V> & v) : set(v.size,v.block), value(0) {
 		if (!allocate(this->size))
 			return;
 		for (int i = 0; i <= this->size; i++)
@@ -478,7 +479,7 @@ public:
 	// Do a key lookup, and return zero if the key is not found.
 	int haskey(const K & k) const {
 		for (int i = 1; i <= this->size; i++) {
-			if ((K &)(this->value[i]) == k)
+			if (static_cast<K &>(this->value[i]) == k)
 				return i;
 		}
 		return 0;
@@ -534,7 +535,7 @@ protected:
 		return true;
 	};
 	// And the null constructor.
-	kfset() : set() {
+	kfset() : set(), value(0) {
 		allocate(this->size);
 	};
 };

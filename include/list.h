@@ -73,23 +73,21 @@ protected:
 	T *prev;							// The previous element.
 
 	// Create a new list element, with an optional previous element.
-	// We force the consumer to use NULL so that they have to think.
-	listelement_d(T *p) {
-		prev = p;
-		next = NULL;
-		if (prev != NULL) {
-			if (prev->next != NULL) {
+	// We force the consumer to use 0 so that they have to think.
+	listelement_d(T *p): next(0), prev(p) {
+		if (prev != 0) {
+			if (prev->next != 0) {
 				next = prev->next;
-				next->prev = (T *)this;
+				next->prev = static_cast<T *>(this);
 			}
-			prev->next = (T *)this;
+			prev->next = static_cast<T *>(this);
 		}
 	};
 	// Unlink ourselves from the list before we die...
 	virtual ~listelement_d() {
-		if (prev != NULL)
+		if (prev != 0)
 			prev->next = next;
-		if (next != NULL)
+		if (next != 0)
 			next->prev = prev;
 	};
 	// These are so the other classes can access our points.
@@ -109,26 +107,25 @@ protected:
 	O *owner;							// Our owner.
 
 	// Create an element.
-	listelement_o(O *o, T *p) : listelement_d<T>(p) {
-		owner = o;
-		if (owner != NULL) {
-			if (this->prev == NULL) {
+	listelement_o(O *o, T *p) : listelement_d<T>(p), owner(o) {
+		if (owner != 0) {
+			if (this->prev == 0) {
 				this->prev = owner->last;
-				if (this->prev != NULL)
-					this->prev->next = (T *)this;
+				if (this->prev != 0)
+					this->prev->next = static_cast<T *>(this);
 				else
-					owner->first = (T *)this;
+					owner->first = static_cast<T *>(this);
 			}
-			if (this->next == NULL)
-				owner->last = (T *)this;
+			if (this->next == 0)
+				owner->last = static_cast<T *>(this);
 		}
 	};
 	// Also manage our owner's pointers.
 	virtual ~listelement_o() {
-		if (owner != NULL) {
-			if (this->prev == NULL)
+		if (owner != 0) {
+			if (this->prev == 0)
 				owner->first = this->next;
-			if (this->next == NULL)
+			if (this->next == 0)
 				owner->last = this->prev;
 		}
 	};
@@ -150,9 +147,7 @@ protected:
 	T *last;							// The tail of the list.
 
 	// All lists start empty...
-	list_double() {
-		first = NULL;
-		last = NULL;
+	list_double(): first(0), last(0) {
 	};
 	virtual ~list_double() {
 		empty();
@@ -160,13 +155,13 @@ protected:
 
 	// Check in the list is empty.
 	bool inline isempty() const {
-		return (first == NULL ? true : false);
+		return (first == 0 ? true : false);
 	};
 	// Figure out the length of the list.
 	int length() const {
 		int s = 0;
 		T *t = first;
-		while (t != NULL) {
+		while (t != 0) {
 			t = t->next;
 			s++;
 		}
@@ -174,13 +169,13 @@ protected:
 	};
 	// Sometimes you just need to start a new list.
 	void empty() {
-		if (first != NULL) {
-			while (first->next != NULL)
+		if (first != 0) {
+			while (first->next != 0)
 				delete first->next;
 			delete first;
 		}
-		first = NULL;
-		last = NULL;
+		first = 0;
+		last = 0;
 	};
 };
 

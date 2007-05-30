@@ -41,6 +41,9 @@ pavedata::result(type t, direction d) const
 		switch (d) {
 		case xx: case yy: case zz:
 			return data[4][d-xx];
+		case xy: case xz: case yz:
+		case p1: case p2: case p3:
+		case s1: case s2: case s3:
 		default:
 			return 0.0;
 		}
@@ -819,7 +822,7 @@ buildabcd(const double m, const int nl, const double * h, const double * v,
  * is exposed so that people can use it if they really want.
  */
 bool
-LEsystem::accurate()
+LEsystem::calc_accurate()
 {
     int ixy, ild, ib, igp, il;
 	const LElayer * pl;
@@ -1001,7 +1004,7 @@ abort:
  * This used to be ELSYM5M, now it's a NxNxN layered elastic code...
  */
 bool
-LEsystem::calculate(resulttype result, double * Q)
+LEsystem::calculate(resulttype res, double * Q)
 {
     int ixy, ir, iz, ild, ia, ib, igp, il;
 	const LElayer * pl;
@@ -1012,17 +1015,15 @@ LEsystem::calculate(resulttype result, double * Q)
 	if (!check())
 		return false;
 	int ngqp = NGQP, nbz = NBZ, gl = -1, nl = layers();
-	if (result == fast || result == fastdisp || result == fastgrad) {
+	if (res & mask == fast) {
 		ngqp = MIN(MAX(8,NGQP),8);
 		nbz = MIN(NBZ,128);
-		result = (result == fast ? all :
-						result == fastdisp ? disp : dispgrad);
 	} else {
 		ngqp = MIN(MAX(8,NGQP),12);
 		nbz = MIN(NBZ,512);
 	}
 	callcount++;
-	if (result == dispgrad)
+	if (res & grad)
 		callcount += nl;
 
 	// The integration constants, per layer.
@@ -1064,14 +1065,13 @@ LEsystem::calculate(resulttype result, double * Q)
 		memset(data[ixy].data,0,sizeof(data[ixy].data));
 		// If we're collecting displacement gradient results
 		// resize the array as needed then zero it.
-		// We don't use memset since it's not a real array.
-		if (result == dispgrad) {
-			if (data[ixy].deflgrad.length() != nl) {
-				data[ixy].deflgrad.empty();
-				data[ixy].deflgrad.add(1,h,nl);
+		if (res & grad) {
+			if (data[ixy].count != nl) {
+				delete [] data[ixy].deflgrad;
+				data[ixy].deflgrad = new double[nl];
+				data[ixy].count = nl;
 			}
-			for (il = 0; il < nl; il++)
-				data[ixy].deflgrad[il] = 0.0;
+			memset(data[ixy].deflgrad,0,nl*sizeof(double));
 		}
 		z[ixy] = data[ixy].z;
 	}
@@ -1185,14 +1185,14 @@ gradloop:
 										 (m*tz<MAX_EXP?exp(m*tz):DBL_MAX);
 						t6 = ABCD[il][1]*(m*tz<MAX_EXP?exp(m*tz):DBL_MAX);
 						if (m < m0[ir]) {
-							if (result == all) {
+							if (!(res & disp)) {
 								s.vse += t1*m*((1-2*v[il])*(t4+t6)+(t3-t5));
 								s.rse += t1*m*((1+2*v[il])*(t4+t6)-(t3-t5));
 								s.tse += t1*m*(2*v[il])*(t4+t6);
 							}
 							s.vdp += t1*((2-4*v[il])*(t6-t4)-(t3+t5));
 						}
-						if (m < m1[ir] && result == all) {
+						if (m < m1[ir] && !(res & disp)) {
 							s.sse += t2*m*((2*v[il])*(t6-t4)+(t3+t5));
 							s.rdp += t2*((t4+t6)-(t3-t5));
 						}
@@ -1206,7 +1206,7 @@ gradloop:
 			for (iz = 0; iz < z.length(); iz++) {
 				axialdata & s = ax[ir*z.length()+iz];
 				il = zl[iz];
-				if (result == all) {
+				if (!(res & disp)) {
 					if (r[ir] > 0.0) {
 						s.rse -= s.rdp/r[ir];
 						s.tse += s.rdp/r[ir];
@@ -1233,12 +1233,12 @@ gradloop:
 					;
 				axialdata & s = ax[ir*z.length()+iz];
 				double p = load[ild].pressure();
-				if (r[ir] == 0.0 && result == all) {
+				if (r[ir] == 0.0 && !(res & disp)) {
 					d.data[0][0] += p*(s.rse+s.tse)/2;
 					d.data[0][1] += p*(s.rse+s.tse)/2;
 					d.data[0][2] += p*s.vse;
 					d.data[1][1] += p*s.sse;
-				} else if (result == all) {
+				} else if (!(res & disp)) {
 					double cost, sint;
 					sint = (d.y-load[ild].y)/r[ir];
 					cost = (d.x-load[ild].x)/r[ir];
@@ -1257,7 +1257,7 @@ gradloop:
 					d.data[4][2] += p*s.vdp;
 			}
 		}
-		if (result == dispgrad) {
+		if (res & grad) {
 			if (++gl != nl) {
 				// Deflection gradients are calculated in a log(E) space.
 				for (pl = first, il = 0; pl != 0; pl = pl->next, il++) {
@@ -1275,13 +1275,13 @@ gradloop:
 	// After everything, loop through the answers, and calculate the
 	// derived results (principal stresses and strains).
 	for (ixy = 0; ixy < data.length(); ixy++) {
-		if (result == all) {
+		if (!(res & disp)) {
 			for (iz = 0; z[iz] != data[ixy].z; iz++)
 				;
 			il = zl[iz];
 			data[ixy].principle(v[il],E[il]);
 		}
-		if (result == dispgrad) {
+		if (res & grad) {
 			if (Q == 0) {
 				for (il = 0; il < nl; il++)
 					data[ixy].deflgrad[il] = (data[ixy].deflgrad[il]
@@ -1326,25 +1326,14 @@ abort:
  * used for very fast approximations.
  */
 bool
-LEsystem::odemark()
+LEsystem::calc_odemark()
 {
-	int ixy, ild, il;
+	int ixy, ild;
 	LElayer * pl;
-	bool rv = true;
 	double de = 0.0;
 
 	if (!check())
 		return false;
-	int nl = layers();
-	double * h = new double[nl];
-	double * v = new double[nl];
-	double * E = new double[nl];
-	if (h == 0 || v == 0 || E == 0) {
-		rv = false;
-		goto abort;
-	}
-	for (pl = first, il = 0; pl != 0; pl = pl->next, il++)
-		h[il] = pl->bottom(), v[il] = pl->poissons(), E[il] = pl->emod();
 
 	for (ixy = 0; ixy < data.length(); ixy++)
 		memset(data[ixy].data,0,sizeof(data[ixy].data));
@@ -1447,13 +1436,7 @@ LEsystem::odemark()
 		}
 		data[ixy].principle(pl->poissons(),pl->emod());
     }
-abort:
-	if (rv == false)
-		event_msg(EVENT_ERROR,"Out of memory in LEsystem::odemark()!");
-	delete [] h;
-	delete [] v;
-	delete [] E;
-	return rv;
+    return true;
 };
 
 /*
@@ -1544,7 +1527,7 @@ quad8_vdp(double r, double z, double s, double v, double a = 0.0,
  * done to derive more integration functions above.  But these are long...
  */
 bool
-LEsystem::fastnum()
+LEsystem::calc_fastnum()
 {
 	int ixy, ild, il;
 	LElayer * pl;

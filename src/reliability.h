@@ -107,7 +107,7 @@ protected:
 	// The reliability class does most of the work for us...
 	friend class reliability;
 
-	gfunction(reliability * /* owner */, gfunction * /* prev */);
+	gfunction(reliability * owner, gfunction * prev);
 	virtual ~gfunction();
 
 private:
@@ -128,9 +128,9 @@ private:
 	gfunction * gf_head;		// The list of rv's.
 
 public:
-	randomvar * NewRV(randomvar::distribution /* type */,
-		double /* mean */ = 0.0, double /* stddev */ = 1.0);
-	void AddGFunc(gfunction * /* gfunction */);
+	randomvar * NewRV(randomvar::distribution type,
+		double mean = 0.0, double stddev = 1.0);
+	void AddGFunc(gfunction * gfunction);
 
 	reliability();
 	~reliability();

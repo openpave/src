@@ -60,11 +60,11 @@
 #define EVENT_PROGRESS_UPDATE	1	/* Update progress */
 #define EVENT_PROGRESS_STOP		2	/* Finish a progress bar */
 
-extern void event_msg(const int level, const char *fmt,...);
+extern void event_msg(const int level, const char *fmt,...) OP_PRINTF(2,3);
 extern void event_progress_bar(const int level, const double p,
-							   const char *fmt,...);
+							   const char *fmt,...) OP_PRINTF(3,4);
 extern void event_progress(const int type, const int marker,
-						   const char *fmt,...);
+						   const char *fmt,...) OP_PRINTF(3,4);
 
 #ifdef _EVENT_IMP
 
@@ -139,8 +139,8 @@ void event_progress(const int type, const int marker,
 			double p = 0.0, m = 1.0;
 			mark[level] = marker;
 			for (int i = 0; i <= level; i++) {
-				p += m*(double)(mark[i])/(double)(max[i]);
-				m *= 1.0/(double)(max[i]);
+				p += m*double(mark[i])/double(max[i]);
+				m *= 1.0/double(max[i]);
 			}
 			event_progress_bar(level,p,fmt,args);
 		}
@@ -150,7 +150,7 @@ void event_progress(const int type, const int marker,
 		if (level < 3)
 			max[level] = 0, mark[level] = 0;
 		if (level == 0)
-			event_msg(EVENT_NOTE,"\n",args);
+			event_msg(EVENT_NOTE,"\n");
 		break;
 		level--;
 	default:

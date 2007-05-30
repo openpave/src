@@ -46,7 +46,8 @@ class fixed {
 		value = i << P;
 	};
 	inline fixed(const double d) {
-		value = (d >= 0 ? (int)(d*(1 << P)+0.5) : -((int)(0.5-d*(1 << P))) );
+		value = (d >= 0 ? int(d*(1 << P) + 0.5)
+			 : -int(0.5 - d*(1 << P)) );
 	};
 	inline ~fixed() {
 	};
@@ -79,14 +80,15 @@ class fixed {
 		return *this;
 	};
 	inline fixed<P> & operator = (const double d) {
-		value = (d >= 0 ? (int)(d*(1 << P)+0.5) : -((int)(0.5-d*(1 << P))) );
+		value = (d >= 0 ? int(d*(1 << P) + 0.5)
+			 : -int(0.5 - d*(1 << P)) );
 		return *this;
 	};
 	inline operator int () const {
 		return value >> P;
 	};
 	inline operator double () const {
-		return ((double)(value))/(1 << P);
+		return (double(value))/(1 << P);
 	};
   
 	// Comparison operators...

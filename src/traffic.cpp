@@ -123,9 +123,9 @@ time_t WIMday::GetRSADate(const char * fname)
 	struct tm d;
 
 	if (fname == NULL)
-		return (time_t)-1;
+		return time_t(-1);
 	if ((fp = fopen(fname, "r")) == NULL)
-		return (time_t)-1;
+		return time_t(-1);
 	while (!feof(fp)) {
 		fgetln(buf,256,fp);
 		if (!strncmp(buf,"H9",2))
@@ -138,7 +138,7 @@ time_t WIMday::GetRSADate(const char * fname)
 	}
 	if (feof(fp)) {
 		fclose(fp);
-		return (time_t)-1;
+		return time_t(-1);
 	}
 	fclose(fp);
 	return str2time(&buf[5],&d);
@@ -258,7 +258,7 @@ WIMday & WIMday::operator += (const WIMday & daily)
 /*
  * Process a .RSA file, reading the vehicles into day
  */
-bool WIMsurvey::ProcessRSAFile(const char * fname, FILE * bp, WIMday * day)
+bool WIMsurvey::ProcessRSAFile(const char * fname, FILE * bp, WIMday * d)
 {
 	char buf[256];
 	time_t current;
@@ -283,13 +283,13 @@ bool WIMsurvey::ProcessRSAFile(const char * fname, FILE * bp, WIMday * day)
 		if (!strncmp(buf,"13",2)) {
 			current = str2time(&buf[5],NULL);
 			// New day.  Save away the old data and clear.
-			if (current != day->day) {
-				day->Write(bp);
-				if (start <= day->day && end >= day->day)
-					*this += *day;
-				day->Clear(current);
+			if (current != d->day) {
+				d->Write(bp);
+				if (start <= d->day && end >= d->day)
+					*this += *d;
+				d->Clear(current);
 			}
-			day->AddRSAVehicle(buf);
+			d->AddRSAVehicle(buf);
 		}
 	}
     fclose(fp);
@@ -302,14 +302,14 @@ bool WIMsurvey::ProcessRSAFile(const char * fname, FILE * bp, WIMday * day)
 bool WIMsurvey::Read(const char * bname)
 {
 	FILE * bp;
-	WIMday day;
+	WIMday d;
 	
 	if ((bp = fopen(bname, "rb")) == NULL)
 		return false;
 	while (!feof(bp)) {
-		day.Read(bp);
-		if (start <= day.day && end >= day.day)
-			*this += day;
+		d.Read(bp);
+		if (start <= d.day && end >= d.day)
+			*this += d;
 	}
     fclose(bp);
 	return true;
@@ -328,7 +328,7 @@ bool WIMsurvey::ProcessRSADir(const char * dir, const char * bname)
 #endif
 	FILE * bp;
 	aoset<char *,time_t> RSAfiles;
-	WIMday day;
+	WIMday d;
 
 	if (getcwd(pwd,FILENAME_MAX) == NULL) {
 		event_msg(EVENT_ERROR,"Unable to get current working directory!");
@@ -371,15 +371,15 @@ bool WIMsurvey::ProcessRSADir(const char * dir, const char * bname)
 #endif
 	RSAfiles.sort();
 	bp = fopen(bname,"wb");
-	day.day = RSAfiles.getvalue(1);
+	d.day = RSAfiles.getvalue(1);
 	for (i = 0; i < RSAfiles.length(); i++) {
 		fname = RSAfiles.getkey(i+1);
-		WIMsurvey::ProcessRSAFile(fname,bp,&day);
+		WIMsurvey::ProcessRSAFile(fname,bp,&d);
 		free(fname);
 	}
-	day.Write(bp);
-	if (start <= day.day && end >= day.day)
-		*this += day;
+	d.Write(bp);
+	if (start <= d.day && end >= d.day)
+		*this += d;
 	fclose(bp);
 	chdir(pwd);
 	return true;

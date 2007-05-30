@@ -21,7 +21,7 @@ INCLUDES = \
 	-I$(srcdir)/../include \
 	$(NULL)
 
-CPPSRCS = \
+CXXSRCS = \
 	traffic.cpp         \
 	matrix.cpp          \
 	pavement.cpp        \
