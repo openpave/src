@@ -1015,7 +1015,7 @@ LEsystem::calculate(resulttype res, double * Q)
 	if (!check())
 		return false;
 	int ngqp = NGQP, nbz = NBZ, gl = -1, nl = layers();
-	if (res & mask == fast) {
+	if ((res & mask) == fast) {
 		ngqp = MIN(MAX(8,NGQP),8);
 		nbz = MIN(NBZ,128);
 	} else {
