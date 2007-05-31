@@ -636,7 +636,7 @@ _EOF
   cat >> $outfile <<_EOF
 
 #if !defined(__GNUC__)
-#defined __attribute__(x)
+#define __attribute__(x)
 #endif
 
 #define OP_PRINTF(n,m)	__attribute__ ((__format__(__printf__,n,m)))

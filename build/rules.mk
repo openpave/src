@@ -297,7 +297,9 @@ endif
 %.i: %.c
 	$(CPP) -C $(OS_CPPFLAGS) $(DEFINES) $(INCLUDES) $< > $@
 
+ifneq (,$(OBJS))
 -include $(OBJS:.$(OBJ_SUFFIX)=.d)
+endif
 
 .SUFFIXES:
 .SUFFIXES: .$(LIB_SUFFIX) .$(DLL_SUFFIX) .$(OBJ_SUFFIX) .c .cpp .$(ASM_SUFFIX) .h .i

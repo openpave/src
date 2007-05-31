@@ -91,7 +91,9 @@ protected:
 			next->prev = prev;
 	};
 	// These are so the other classes can access our points.
-	//friend class listelement_d<T>;
+#if defined(_MSC_VER) && (_MSC_VER <= 1200)
+	friend class listelement_d<T>;
+#endif
 	friend class list_double<T>;
 };
 
