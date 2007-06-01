@@ -271,7 +271,7 @@ endif
 
 ifdef _IS_FIRST_CHECKOUT
 # First time, do build target in a new process to pick up new files.
-.PHONY build
+.PHONY: build
 build::
 	@cd $(TOPSRCDIR) && \
 		$(MAKE) $(OP_MAKE_ARGS) -f openpave.mk build

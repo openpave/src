@@ -394,7 +394,7 @@ case "$target" in
     ;;
 
 *-freebsd*)
-    DEFINES="$DEFINES XP_UNIX FREEBSD"
+    DEFINES="$DEFINES XP_UNIX"
     CPPFLAGS="$CPPFLAGS -ansi"
     DSO_CFLAGS=-fPIC
     DSO_LDFLAGS='-shared -Wl,-soname -Wl,$(notdir $@)'
@@ -403,12 +403,7 @@ case "$target" in
     ;;
 
 *-linux*|*-gnu*|*-k*bsd*-gnu)
-    DEFINES="$DEFINES XP_UNIX _GNU_SOURCE"
-    case "${target_os}" in
-    linux*)
-        DEFINES="$DEFINES LINUX"
-        ;;
-    esac
+    DEFINES="$DEFINES XP_UNIX"
     DSO_CFLAGS=-fPIC
     DSO_LDFLAGS='-shared -Wl,-soname -Wl,$(notdir $@)'
     _OPTIMIZE_FLAGS=-O2
