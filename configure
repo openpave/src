@@ -1617,12 +1617,12 @@ MAYBE_WARN_CXX="$MAYBE_WARN \
 "
 
 # invalidate cached value if MAYBE_WARN has changed
-if test "x$cv_warn_maybe_c" != "x$MAYBE_WARN_C"; then
-  unset cv_warn_cflags
+if test "x$ac_cv_warn_maybe_c" != "x$MAYBE_WARN_C"; then
+  unset ac_cv_warn_cflags
 fi
 echo $ac_n "checking for supported warning flags""... $ac_c" 1>&6
 echo "configure:1625: checking for supported warning flags" >&5
-if eval "test \"`echo '$''{'cv_warn_cflags'+set}'`\" = set"; then
+if eval "test \"`echo '$''{'ac_cv_warn_cflags'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   
@@ -1676,20 +1676,20 @@ cross_compiling=$ac_cv_prog_cc_cross
   echo "$ac_t""$cc_flag" 1>&6
 
   done
-  cv_warn_cflags=$WARN_CFLAGS
-  cv_warn_maybe=$MAYBE_WARN
+  ac_cv_warn_cflags=$WARN_CFLAGS
+  ac_cv_warn_maybe_c=$MAYBE_WARN_C
   echo $ac_n "checking which warning flags were supported""... $ac_c" 1>&6
 echo "configure:1683: checking which warning flags were supported" >&5
 
 fi
 
-echo "$ac_t""$cv_warn_cflags" 1>&6
-if test "x$cv_warn_maybe_cxx" != "x$MAYBE_WARN_CXX"; then
-  unset cv_warn_cxxflags
+echo "$ac_t""$ac_cv_warn_cflags" 1>&6
+if test "x$ac_cv_warn_maybe_cxx" != "x$MAYBE_WARN_CXX"; then
+  unset ac_cv_warn_cxxflags
 fi
 echo $ac_n "checking for supported warning flags""... $ac_c" 1>&6
 echo "configure:1692: checking for supported warning flags" >&5
-if eval "test \"`echo '$''{'cv_warn_cxxflags'+set}'`\" = set"; then
+if eval "test \"`echo '$''{'ac_cv_warn_cxxflags'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   
@@ -1743,16 +1743,16 @@ cross_compiling=$ac_cv_prog_cc_cross
   echo "$ac_t""$cc_flag" 1>&6
 
   done
-  cv_warn_cxxflags=$WARN_CXXFLAGS
-  cv_warn_maybe_cxx=$MAYBE_WARN_CXX
+  ac_cv_warn_cxxflags=$WARN_CXXFLAGS
+  ac_cv_warn_maybe_cxx=$MAYBE_WARN_CXX
   echo $ac_n "checking which warning flags were supported""... $ac_c" 1>&6
 echo "configure:1750: checking which warning flags were supported" >&5
 
 fi
 
-echo "$ac_t""$cv_warn_cxxflags" 1>&6
-WARN_CFLAGS="$cv_warn_cflags"
-WARN_CXXFLAGS="$cv_warn_cxxflags"
+echo "$ac_t""$ac_cv_warn_cxxflags" 1>&6
+WARN_CFLAGS="$ac_cv_warn_cflags"
+WARN_CXXFLAGS="$ac_cv_warn_cxxflags"
 
 fi # GNU_CC
 
@@ -2417,7 +2417,7 @@ _EOF
   cat >> $outfile <<_EOF
 
 #if !defined(__GNUC__)
-#defined __attribute__(x)
+#define __attribute__(x)
 #endif
 
 #define OP_PRINTF(n,m)	__attribute__ ((__format__(__printf__,n,m)))

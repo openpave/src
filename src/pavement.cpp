@@ -89,10 +89,10 @@ pavedata::principle(double v, double E)
 		if (data[3][1] != 0.0) {
 			t1 = data[2][2]-data[2][0];
 			t2 = (t1 < 0.0 ? -2 : 2)*data[3][1];
-			t1 = t2/(fabs(t1) + pythag(t1,t2));
+			t1 = t2/(fabs(t1) + hypot(t1,t2));
 			data[2][0] -= t1*data[3][1];
 			data[2][2] += t1*data[3][1];
-			t2 = pythag(t1,1.0);
+			t2 = hypot(t1,1.0);
 			data[3][2] /= t2;
 			t2 = data[3][0] /= t2;
 			data[3][0] -= t1*data[3][2];
@@ -102,20 +102,20 @@ pavedata::principle(double v, double E)
 		if (data[3][0] != 0.0) {
 			t1 = data[2][1]-data[2][0];
 			t2 = (t1 < 0.0 ? -2 : 2)*data[3][0];
-			t1 = t2/(fabs(t1) + pythag(t1,t2));
+			t1 = t2/(fabs(t1) + hypot(t1,t2));
 			data[2][0] -= t1*data[3][0];
 			data[2][1] += t1*data[3][0];
-			data[3][2] /= pythag(t1,1.0);
+			data[3][2] /= hypot(t1,1.0);
 			data[3][1] = -t1*data[3][2];
 			data[3][0] = 0.0;
 		}
 		if (data[3][2] != 0.0) {
 			t1 = data[2][2]-data[2][1];
 			t2 = (t1 < 0.0 ? -2 : 2)*data[3][2];
-			t1 = t2/(fabs(t1) + pythag(t1,t2));
+			t1 = t2/(fabs(t1) + hypot(t1,t2));
 			data[2][1] -= t1*data[3][2];
 			data[2][2] += t1*data[3][2];
-			data[3][1] /= pythag(t1,1.0);
+			data[3][1] /= hypot(t1,1.0);
 			data[3][0] = -t1*data[3][1];
 			data[3][2] = 0.0;
 		}
@@ -335,12 +335,19 @@ LEsystem::check()
  * stored in the ax set, indexed by the radius and depth.
  */
 struct axialdata {
+	bool   active;
 	double rse;
 	double tse;
 	double vse;
 	double sse;
 	double rdp;
 	double vdp;
+	double rse2;
+	double tse2;
+	double vse2;
+	double sse2;
+	double rdp2;
+	double vdp2;
 };
 #define GRADSTEP 1e-8
 
@@ -767,8 +774,7 @@ buildabcd(const double m, const int nl, const double * h, const double * v,
 			F[2][2] = r2;   F[2][3] = r2*r4/m;
 			F[3][0] = -s*m; F[3][1] = -s*r3;
 			F[3][2] = -s*m; F[3][3] = -s*r4;
-		} else
-			memset(F,0,4*4*sizeof(double));
+		}
 		for (k1 = 0; k1 < 2; k1++) {
 			for (k2 = 0; k2 < 2; k2++) {
 				D[k1][k2] = D[k1+2][k2+2] = 1.0;
@@ -1016,10 +1022,10 @@ LEsystem::calculate(resulttype res, double * Q)
 		return false;
 	int ngqp = NGQP, nbz = NBZ, gl = -1, nl = layers();
 	if ((res & mask) == fast) {
-		ngqp = MIN(MAX(8,NGQP),8);
-		nbz = MIN(NBZ,128);
+		ngqp = MIN(NGQP,6);
+		nbz = MIN(NBZ,32);
 	} else {
-		ngqp = MIN(MAX(8,NGQP),12);
+		ngqp = MIN(NGQP,12);
 		nbz = MIN(NBZ,512);
 	}
 	callcount++;
@@ -1035,10 +1041,12 @@ LEsystem::calculate(resulttype res, double * Q)
 	double * v = new double[nl];
 	double * E = new double[nl];
 	// Some place to store our data...
-	cset<double> * _z = new cset<double>(data.length());
-	cset<double> * _a = new cset<double>(load.length());
+	cset<double> * _z = new cset<double>(0,data.length());
+	cset<double> * _a = new cset<double>(0,load.length());
 	cset<double> & z = *_z;
 	cset<double> & a = *_a;
+	double * al = new double[load.length()];
+	double * rl = new double[load.length()*data.length()];
 	int * zl = new int[data.length()];
 	cset<double> * _r = new cset<double>(0,data.length());
 	cset<double> * _bm = new cset<double>(0,4*nbz);
@@ -1049,8 +1057,8 @@ LEsystem::calculate(resulttype res, double * Q)
 	double * m0 = new double[data.length()];
 	double * m1 = new double[data.length()];
 	if (R == 0 || ABCD == 0 || h == 0 || f == 0 || v == 0 || E == 0
-	 || _z == 0 || _a == 0 || zl == 0 || _r == 0 || _bm == 0
-	 || ax == 0 || m0 == 0 || m1 == 0)
+	 || _z == 0 || _a == 0 || al == 0 || rl == 0 || zl == 0 || _r == 0
+	 || _bm == 0 || ax == 0 || m0 == 0 || m1 == 0)
 		goto abort;
 	for (pl = first, il = 0; pl != 0; pl = pl->next, il++) {
 		h[il] = pl->bottom();
@@ -1073,7 +1081,7 @@ LEsystem::calculate(resulttype res, double * Q)
 			}
 			memset(data[ixy].deflgrad,0,nl*sizeof(double));
 		}
-		z[ixy] = data[ixy].z;
+		z.add(data[ixy].z);
 	}
 	z.sort();
 	// Map z values to layers.
@@ -1085,8 +1093,11 @@ LEsystem::calculate(resulttype res, double * Q)
 	}
 
 	// Gerenate a list of load radii, then sort them and map from loads.
-	for (ild = 0; ild < load.length(); ild++)
-		a[ild] = load[ild].radius();
+	for (ild = 0; ild < load.length(); ild++) {
+		a.add(al[ild] = load[ild].radius());
+		for (ixy = 0; ixy < data.length(); ixy++)
+			rl[ild*data.length()+ixy] = load[ild].distance(data[ixy]);
+	}
 	a.sort();
 
 	// Now loop through the list of load radii, calculating only for
@@ -1095,10 +1106,10 @@ LEsystem::calculate(resulttype res, double * Q)
 		// Gerenate a list of radii, then sort them.
 		r.empty();
 		for (ild = 0; ild < load.length(); ild++) {
-			if (load[ild].radius() != a[ia])
+			if (al[ild] != a[ia]) // load[ild].radius()
 				continue;
 			for (ixy = 0; ixy < data.length(); ixy++) {
-				if (!r.add(load[ild].distance(data[ixy])))
+				if (!r.add(rl[ild*data.length()+ixy])) // load[ild].distance(data[ixy])
 					goto abort;
 			}
 		}
@@ -1108,7 +1119,7 @@ LEsystem::calculate(resulttype res, double * Q)
 		bm.empty();
 		if (!bm.add(0.0))
 			goto abort;
-		for (ib = 0; ib <= nbz; ib++) {
+		for (ib = 0; nbz > 0 && ib <= nbz; ib++) {
 			if (!bm.add(j0r[ib]/a[ia]))
 				goto abort;
 		}
@@ -1123,13 +1134,13 @@ LEsystem::calculate(resulttype res, double * Q)
 
 		// Account for big r's by adding extra integration intervals...
 		x1 = 0.0, x2 = 0.0;
-		for (ir = r.length()-1; ir >= 0 && r[ir]/a[ia] > ngqp-6; ir--) {
-			for (int k1 = ngqp-6; k1 <= nbz; k1 += ngqp-6) {
+		for (ir = r.length()-1; ir >= 0 && r[ir]/a[ia] > MAX(4,ngqp-6); ir--) {
+			for (int k1 = MAX(4,ngqp-6); k1 <= nbz; k1 += MAX(4,ngqp-6)) {
 				if ((x1 = j1r[k1]/r[ir]) < x2)
 					continue;
 				for (ib = 1; ib < bm.length() && bm[ib] < x1; ib++)
 					;
-				if (MIN(x1-bm[ib-1],bm[ib]-x1) < (ngqp-6)*M_PI_4/r[ir])
+				if (MIN(x1-bm[ib-1],bm[ib]-x1) < MAX(4,ngqp-6)*M_PI_4/r[ir])
 					continue;
 				if (!bm.add(ib+1,x2 = x1))
 					goto abort;
@@ -1139,8 +1150,8 @@ LEsystem::calculate(resulttype res, double * Q)
 		// magnitude for exp(-7).  Add 5 intervals, so we drop 15 orders
 		// of magnitude.
 		x1 = 0.0, x2 = 0.0;
-		for (iz = z.length()-1; iz >= 0; iz--) {
-			for (int k1 = 1; k1 <= 5 && k1*7*a[ia] < j0r[0]*z[iz]; k1++) {
+		for (iz = z.length()-1; iz >= 0 && z[iz] > 0.0; iz--) {
+			for (int k1 = 1; k1 <= 5 && k1*7*a[ia]/z[iz] < j0r[0]; k1++) {
 				if ((x1 = k1*7*a[ia]/z[iz]) < x2)
 					continue;
 				for (ib = 1; ib < bm.length() && bm[ib] < x1; ib++)
@@ -1155,6 +1166,20 @@ LEsystem::calculate(resulttype res, double * Q)
 
 gradloop:
 		memset(ax,0,sizeof(axialdata)*r.length()*z.length());
+		// Compute the active set.
+		for (ixy = 0; ixy < data.length(); ixy++) {
+			pavedata & d = data[ixy];
+			for (iz = 0; z[iz] != d.z; iz++)
+				;
+			for (ild = 0; ild < load.length(); ++ild) {
+				if (al[ild] != a[ia])
+					continue;
+				for (ir = 0; r[ir] != rl[ild*data.length()+ixy]; ir++)
+					;
+				ax[ir*z.length()+iz].active = true;
+			}
+		}
+		
 		// Now that we know the radii, get down to work.
 		// We loop through all of our roots and gauss points.
 		for (ib = 1; ib < bm.length(); ib++) {
@@ -1177,6 +1202,8 @@ gradloop:
 					t2 *= j1(m*r[ir]);
 					for (iz = 0; iz < z.length(); iz++) {
 						axialdata & s = ax[ir*z.length()+iz];
+						if (!s.active)
+							continue;
 						double & tz = z[iz];
 						il = zl[iz];
 						t3 = m*(ABCD[il][2] + ABCD[il][3]*tz)*exp(-m*tz);
@@ -1186,17 +1213,42 @@ gradloop:
 						t6 = ABCD[il][1]*(m*tz<MAX_EXP?exp(m*tz):DBL_MAX);
 						if (m < m0[ir]) {
 							if (!(res & disp)) {
-								s.vse += t1*m*((1-2*v[il])*(t4+t6)+(t3-t5));
-								s.rse += t1*m*((1+2*v[il])*(t4+t6)-(t3-t5));
-								s.tse += t1*m*(2*v[il])*(t4+t6);
+								s.vse2 += t1*m*((1-2*v[il])*(t4+t6)+(t3-t5));
+								s.rse2 += t1*m*((1+2*v[il])*(t4+t6)-(t3-t5));
+								s.tse2 += t1*m*(2*v[il])*(t4+t6);
 							}
-							s.vdp += t1*((2-4*v[il])*(t6-t4)-(t3+t5));
+							s.vdp2 += t1*((2-4*v[il])*(t6-t4)-(t3+t5));
 						}
 						if (m < m1[ir] && !(res & disp)) {
-							s.sse += t2*m*((2*v[il])*(t6-t4)+(t3+t5));
-							s.rdp += t2*((t4+t6)-(t3-t5));
+							s.sse2 += t2*m*((2*v[il])*(t6-t4)+(t3+t5));
+							s.rdp2 += t2*((t4+t6)-(t3-t5));
 						}
 					}
+				}
+			}
+			for (ir = 0; ir < r.length(); ir++) {
+				for (iz = 0; iz < z.length(); iz++) {
+					axialdata & s = ax[ir*z.length()+iz];
+					if (!s.active)
+						continue;
+					bool active = false;
+					if (!(res & disp)) {
+						s.vse += s.vse2;
+						active |= (fabs(s.vse2) > 1e-12*fabs(s.vse));
+						s.rse += s.rse2;
+						active |= (fabs(s.rse2) > 1e-12*fabs(s.rse));
+						s.tse += s.tse2;
+						active |= (fabs(s.tse2) > 1e-12*fabs(s.tse));
+						s.sse += s.sse2;
+						active |= (fabs(s.sse2) > 1e-12*fabs(s.sse));
+						s.rdp += s.rdp2;
+						active |= (fabs(s.rdp2) > 1e-12*fabs(s.rdp));
+						s.vse2 = 0.0; s.rse2 = 0.0; s.tse2 = 0.0;
+						s.sse2 = 0.0; s.rdp2 = 0.0;
+					}
+					s.vdp += s.vdp2;
+					active |= (fabs(s.vdp2) > 1e-12*fabs(s.vdp));
+					s.vdp2 = 0.0;
 				}
 			}
 		}
@@ -1227,9 +1279,9 @@ gradloop:
 			for (iz = 0; z[iz] != d.z; iz++)
 				;
 			for (ild = 0; ild < load.length(); ++ild) {
-				if (load[ild].radius() != a[ia])
+				if (al[ild] != a[ia]) // load[ild].radius()
 					continue;
-				for (ir = 0; r[ir] != load[ild].distance(d); ir++)
+				for (ir = 0; r[ir] != rl[ild*data.length()+ixy]; ir++) // load[ild].distance(d)
 					;
 				axialdata & s = ax[ir*z.length()+iz];
 				double p = load[ild].pressure();
@@ -1311,6 +1363,8 @@ abort:
 	delete [] E;
 	delete _z;
 	delete _a;
+	delete [] al;
+	delete [] rl;
 	delete [] zl;
 	delete _r;
 	delete _bm;
@@ -1359,7 +1413,7 @@ LEsystem::calc_odemark()
 					// We're below, but we still need the vertical
 					// deflection contributions from this layer...
 					z = de;
-					R = pythag(r,z);
+					R = hypot(r,z);
 					if (R > 0.0)
 						d.data[4][2] += p*((1+v)/(M_2PI*R*E))*
 													(2*(1-v) + z*z/R/R);
@@ -1367,7 +1421,7 @@ LEsystem::calc_odemark()
 						d.data[4][2] += p*2*(1-v*v)/E/M_PI/a;
 					if (pl->bottom() != 0.0) {
 						z = de+pl->thickness();
-						R = pythag(r,z);
+						R = hypot(r,z);
 						if (R > 0.0)
 							d.data[4][2] -= p*((1+v)/(M_2PI*R*E))*
 													(2*(1-v) + z*z/R/R);
@@ -1378,7 +1432,7 @@ LEsystem::calc_odemark()
 				}
 				z = de+(d.z-pl->top())*(pl->bottom() != 0.0 ?
 											he/pl->thickness() : 1.0);
-				R = pythag(r,z);
+				R = hypot(r,z);
 				axialdata s;
 				if (R > 0.0) {
 					s.vse = -3*z*z*z/pow(R,5)/M_2PI;
@@ -1395,7 +1449,7 @@ LEsystem::calc_odemark()
 				}
 				if (pl->bottom() != 0.0) {
 					z = de+he;
-					R = pythag(r,z);
+					R = hypot(r,z);
 					if (R > 0.0)
 						s.vdp -= ((1+v)/(M_2PI*R*E))*(2*(1-v) + z*z/R/R);
 					else
@@ -1465,8 +1519,8 @@ quad8_vdp(double r, double z, double s, double v, double a = 0.0,
 	if (s == 0.0)
 		return 0.0;
 	if (r == 0.0)
-		return (2*(v*v-1)*(z-pythag(z,s))
-						+(v+1)*(z-z*z/pythag(z,s)));
+		return (2*(v*v-1)*(z-hypot(z,s))
+						+(v+1)*(z-z*z/hypot(z,s)));
 	level++;
 	h = (b-a)/16.0;
 	for (i = 0; i < 9; i++) {
@@ -1479,11 +1533,11 @@ quad8_vdp(double r, double z, double s, double v, double a = 0.0,
 		else
 			Q1 += h*w[i]/dw*(t*t == r*r+z*z ? 2*(v*v-1)*s :
 				2*(v*v-1)*
-					(t*(log(pythag(z,r)-t)
+					(t*(log(hypot(z,r)-t)
 					   -log(s-t+sqrt(z*z-2*s*t+s*s+r*r)))
-					 -sqrt(z*z-2*s*t+s*s+r*r)+pythag(z,r))
+					 -sqrt(z*z-2*s*t+s*s+r*r)+hypot(z,r))
 				 +(v+1)*z*z*((z*z+r*r-t*s)/sqrt(z*z-2*s*t+s*s+r*r)
-					 -pythag(z,r))/(t*t-z*z-r*r)
+					 -hypot(z,r))/(t*t-z*z-r*r)
 			);
 		t = cos(a+(i+8)*h)*r;
 		if (z == 0.0)
@@ -1494,11 +1548,11 @@ quad8_vdp(double r, double z, double s, double v, double a = 0.0,
 		else
 			Q2 += h*w[i]/dw*(t*t == r*r+z*z ? 2*(v*v-1)*s :
 				2*(v*v-1)*
-					(t*(log(pythag(z,r)-t)
+					(t*(log(hypot(z,r)-t)
 					   -log(s-t+sqrt(z*z-2*s*t+s*s+r*r)))
-					 -sqrt(z*z-2*s*t+s*s+r*r)+pythag(z,r))
+					 -sqrt(z*z-2*s*t+s*s+r*r)+hypot(z,r))
 				 +(v+1)*z*z*((z*z+r*r-t*s)/sqrt(z*z-2*s*t+s*s+r*r)
-					 -pythag(z,r))/(t*t-z*z-r*r)
+					 -hypot(z,r))/(t*t-z*z-r*r)
 			);
 	};
 	// This is the adaptive recursive bit.  We only recurse if we
@@ -1842,7 +1896,7 @@ LEbackcalc::deflgrad(int nl, double * P, double * Q, calctype cl) {
 	}
 	for (j = 0; j < dl; j++)
 		DG[j] *= (dl*dl)/(gg*gg);
-	for (k = 0; k <= nl; k++) {
+	for (k = 0; nl > 0 && k <= nl; k++) {
 		if (dgg != 0.0) {
 			// Calculate our step, which we know exactly, because
 			// we're quadratic.

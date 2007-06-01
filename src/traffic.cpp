@@ -21,7 +21,9 @@
 #define strdup		_strdup
 #define chdir 		_chdir
 #define getcwd		_getcwd
+#if _MSC_VER > 1200
 #define stat		_stat
+#endif
 #define S_IFREG		_S_IFREG
 #else
 #include <unistd.h>

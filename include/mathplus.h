@@ -138,6 +138,7 @@
 #if defined(_MSC_VER)
 #define	j0(x)		_j0(x)
 #define j1(x)		_j1(x)
+#define hypot(a,b)	_hypot((a),(b))
 #define isnan(x) 	_isnan(x)
 #define isfinite(x)	_finite(x)
 #if _MSC_VER > 1200
@@ -159,15 +160,6 @@ void inline swap(T &a, T &b) {
 	b = a;
 	a = temp;
 };
-
-/*
- * Computes sqrt(a^2+b^2) without destructive underflow or overflow
- */
-inline double pythag(const double a, const double b) {
-	double aa = fabs(a), ab = fabs(b);
-	return (aa > ab ? aa*sqrt(1.0+(ab/aa)*(ab/aa)) :
-		ab == 0.0 ? 0.0 : ab*sqrt(1.0+(aa/ab)*(aa/ab)));
-}
 
 /*
  * Computes n choose k

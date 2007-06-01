@@ -722,7 +722,7 @@ main()
 };
 #endif
 
-#ifdef NOBUILD
+#ifdef BUILD
 int
 main(int argc, char* argv[])
 {
@@ -730,26 +730,28 @@ main(int argc, char* argv[])
 	double t;
 
 	LEsystem Test;
-	LEsystem Fast;
+	//LEsystem Fast;
 
 	//srand((unsigned)time(NULL));
 redo:
 	Test.removelayers();
-	Fast.removelayers();
-	for (i = 0; i < 1; i++) {
+	//Fast.removelayers();
+	for (i = 0; i < 4; i++) {
 		t = 25.0+50.0*(i+1)*((double)(rand())/(double)(RAND_MAX));
 		Test.addlayer( t,1000.0,0.5);
-		Fast.addlayer( t,1000.0,0.5);
-		printf("%0.4g\n",t);
+		//Fast.addlayer( t,1000.0,0.5);
+		//printf("%0.4g\n",t);
 	}
 	Test.addlayer( 0.0,1000.0,0.5);
-	Fast.addlayer( 0.0,1000.0,0.5);
+	//Fast.addlayer( 0.0,1000.0,0.5);
 	//printf("0.0\n");
 
 	Test.removeloads();
-	Fast.removeloads();
+	//Fast.removeloads();
 	Test.addload(point2d(0.0,  0.0),20*1e6,520);
-	Fast.addload(point2d(0.0,  0.0),20*1e6,520);
+	Test.addload(point2d(0.0,305.0),20*1e6,520);
+	//Fast.addload(point2d(0.0,  0.0),20*1e6,520);
+	//Fast.addload(point2d(0.0,305.0),20*1e6,520);
 	//Test.addload(point2d(0.0,350.0),20*1e6,520);
 
 	double T[5];
@@ -758,16 +760,18 @@ redo:
 		while (i > 0 && (T[i] > 20*T[i-1] || T[i] < T[i-1]/20.0))
 			T[i] = pow(10,4.0+3.0*(double)(rand())/(double)(RAND_MAX));
 		Test.layer(i).emod(T[i]);
-		Fast.layer(i).emod(T[i]);
-		printf("%0.4e\t%g\n",log10(T[i]),T[i]);
+		//Fast.layer(i).emod(T[i]);
+		//printf("%0.4e\t%g\n",log10(T[i]),T[i]);
 	}
 
 	Test.removepoints();
-	Fast.removepoints();
-	for (i = 0; i < 256; i++) {
+	//Fast.removepoints();
+	for (i = 0; i < 10; i++) {
 		//Test.addpoint(point3d(   26.5*(i-100),175.0,  0.0));
-		Test.addpoint(point3d(   0.0,200.0, i*2.0));
-		Fast.addpoint(point3d(   0.0,200.0, i*2.0));
+		Test.addpoint(point3d(   0.0,200.0, i*25.0));
+		//Fast.addpoint(point3d(   0.0,200.0, i*25.0));
+		Test.addpoint(point3d(   0.0,95.0, i*25.0));
+		//Fast.addpoint(point3d(   0.0,95.0, i*25.0));
 	}
 	//Test.addpoint(point3d(0.0,0.0,0.0));
 	//Test.addpoint(point3d(0.0,0.0,t));
@@ -789,37 +793,37 @@ redo:
 	//Test.addpoint(point3d(   0.0,  0.0,300.0));
 	//Test.addpoint(point3d(   0.0,  0.0,500.0));
 
-	printf("\n");
-	Test.calculate(LEsystem::all);
-	Fast.odemark(LEsystem::all);
-	Fast.fastnum();
+	//printf("\n");
+	Test.calculate(LEsystem::fast);
+	//Fast.calc_odemark();
+	//Fast.calc_fastnum();
 	for (i = 0; i < Test.data.length(); i++) {
 		point3d & p = Test.data[i];
 		const pavedata & d = Test.result(p);
-		printf("%7.2f\t%7.2f\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t", d.y, d.z,
-		d.result(pavedata::stress, pavedata::xx),
-		d.result(pavedata::stress, pavedata::yy),
-		d.result(pavedata::stress, pavedata::zz),
-		d.result(pavedata::stress, pavedata::p1),
-		d.result(pavedata::stress, pavedata::p3),
-		d.result(pavedata::stress, pavedata::s1),
-		d.result(pavedata::stress, pavedata::s3),
-		d.result(pavedata::deflct, pavedata::yy),
-		d.result(pavedata::deflct, pavedata::zz));
-		const pavedata & f = Fast.result(p);
-		printf("%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\n",
-		f.result(pavedata::stress, pavedata::xx),
-		f.result(pavedata::stress, pavedata::yy),
-		f.result(pavedata::stress, pavedata::zz),
-		f.result(pavedata::stress, pavedata::p1),
-		f.result(pavedata::stress, pavedata::p3),
-		f.result(pavedata::stress, pavedata::s1),
-		f.result(pavedata::stress, pavedata::s3),
-		f.result(pavedata::deflct, pavedata::yy),
-		f.result(pavedata::deflct, pavedata::zz));
+		//printf("%7.2f\t%7.2f\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t", d.y, d.z,
+		//d.result(pavedata::stress, pavedata::xx),
+		//d.result(pavedata::stress, pavedata::yy),
+		//d.result(pavedata::stress, pavedata::zz),
+		//d.result(pavedata::stress, pavedata::p1),
+		//d.result(pavedata::stress, pavedata::p3),
+		//d.result(pavedata::stress, pavedata::s1),
+		//d.result(pavedata::stress, pavedata::s3),
+		//d.result(pavedata::deflct, pavedata::yy),
+		//d.result(pavedata::deflct, pavedata::zz));
+		//const pavedata & f = Fast.result(p);
+		//printf("%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\n",
+		//f.result(pavedata::stress, pavedata::xx),
+		//f.result(pavedata::stress, pavedata::yy),
+		//f.result(pavedata::stress, pavedata::zz),
+		//f.result(pavedata::stress, pavedata::p1),
+		//f.result(pavedata::stress, pavedata::p3),
+		//f.result(pavedata::stress, pavedata::s1),
+		//f.result(pavedata::stress, pavedata::s3),
+		//f.result(pavedata::deflct, pavedata::yy),
+		//f.result(pavedata::deflct, pavedata::zz));
 	}
-	printf("\n");
-	//goto redo;
+	printf(".");
+	goto redo;
 	return 0;
 }
 #endif
@@ -1394,7 +1398,7 @@ main()
 }
 #endif
 
-#ifdef BUILD
+#ifdef NOBUILD
 int
 main()
 {

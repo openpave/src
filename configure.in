@@ -336,34 +336,34 @@ MAYBE_WARN_CXX="$MAYBE_WARN \
 "
 
 # invalidate cached value if MAYBE_WARN has changed
-if test "x$cv_warn_maybe_c" != "x$MAYBE_WARN_C"; then
-  unset cv_warn_cflags
+if test "x$ac_cv_warn_maybe_c" != "x$MAYBE_WARN_C"; then
+  unset ac_cv_warn_cflags
 fi
-AC_CACHE_CHECK([for supported warning flags], cv_warn_cflags, [
+AC_CACHE_CHECK([for supported warning flags], ac_cv_warn_cflags, [
   echo
   WARN_CFLAGS=""
   for W in $MAYBE_WARN_C; do
     CC_TRY_FLAG([$W], [WARN_CFLAGS="$WARN_CFLAGS $W"])
   done
-  cv_warn_cflags=$WARN_CFLAGS
-  cv_warn_maybe=$MAYBE_WARN
+  ac_cv_warn_cflags=$WARN_CFLAGS
+  ac_cv_warn_maybe_c=$MAYBE_WARN_C
   AC_MSG_CHECKING([which warning flags were supported])
 ])
-if test "x$cv_warn_maybe_cxx" != "x$MAYBE_WARN_CXX"; then
-  unset cv_warn_cxxflags
+if test "x$ac_cv_warn_maybe_cxx" != "x$MAYBE_WARN_CXX"; then
+  unset ac_cv_warn_cxxflags
 fi
-AC_CACHE_CHECK([for supported warning flags], cv_warn_cxxflags, [
+AC_CACHE_CHECK([for supported warning flags], ac_cv_warn_cxxflags, [
   echo
   WARN_CXXFLAGS=""
   for W in $MAYBE_WARN_CXX; do
     CXX_TRY_FLAG([$W], [WARN_CXXFLAGS="$WARN_CXXFLAGS $W"])
   done
-  cv_warn_cxxflags=$WARN_CXXFLAGS
-  cv_warn_maybe_cxx=$MAYBE_WARN_CXX
+  ac_cv_warn_cxxflags=$WARN_CXXFLAGS
+  ac_cv_warn_maybe_cxx=$MAYBE_WARN_CXX
   AC_MSG_CHECKING([which warning flags were supported])
 ])
-WARN_CFLAGS="$cv_warn_cflags"
-WARN_CXXFLAGS="$cv_warn_cxxflags"
+WARN_CFLAGS="$ac_cv_warn_cflags"
+WARN_CXXFLAGS="$ac_cv_warn_cxxflags"
 
 fi # GNU_CC
 

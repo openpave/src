@@ -130,7 +130,7 @@ bksub_lu(const int n, const double * A, const int * idx,
 {
 	int i, j, k;
 
-	for (i = k = 0; i < n; i++) {
+	for (i = 0, k = 0; i < n; i++) {
 		j = idx[i];
 		double sum = b[j*m+c];
 		b[j*m+c] = b[i*m+c];
@@ -710,7 +710,7 @@ decmp_svd(const int m, const int n, double * A, double * W, double * V)
 					F = S*rv1[k];
 					if ((fabs(F) + anorm) != anorm) {
 						G = W[k];
-						W[k] = pythag(F,G);
+						W[k] = hypot(F,G);
 						C = G/W[k]; S = -F/W[k];
 						for (j = 0; j < m; j++) {
 							G = A[j*n+q-1];
@@ -731,13 +731,13 @@ decmp_svd(const int m, const int n, double * A, double * W, double * V)
 			}
 			F = ((W[i-1]-W[i])*(W[i-1]+W[i]) + (rv1[i-1]-rv1[i])*(rv1[i-1]+rv1[i]))
 					/ (2.0*rv1[i]*W[i-1]);
-			G = (F < 0.0 ? -1 : 1)*pythag(F,1.0);
+			G = (F < 0.0 ? -1 : 1)*hypot(F,1.0);
 			F = ((W[q]-W[i])*(W[q]+W[i]) + rv1[i]*((W[i-1]/(F+G))-rv1[i])) / W[q];
 			// Next QR transformation.
 			X = W[q]; C = 1.0; S = 1.0;
 			for (j = q; j <= i-1; j++) {
 				H = S*rv1[j+1], G = C*rv1[j+1];
-				rv1[j] = pythag(F,H);
+				rv1[j] = hypot(F,H);
 				C = F/rv1[j], S = H/rv1[j];
 				F = G*S+X*C,  G = G*C-X*S;
 				H = W[j+1]*S, Y = W[j+1]*C;
@@ -746,7 +746,7 @@ decmp_svd(const int m, const int n, double * A, double * W, double * V)
 					V[k*n+j]   = V[k*n+j+1]*S+X*C;
 					V[k*n+j+1] = V[k*n+j+1]*C-X*S;
 				}
-				W[j] = pythag(F,H);
+				W[j] = hypot(F,H);
 				if (W[j] != 0.0)
 					C = F/W[j], S = H/W[j];
 				F = S*Y+C*G, X = C*Y-S*G;
@@ -1043,9 +1043,9 @@ eig_tri_ql(const int n, double * d, double * e, double * A)
 			r = (g > 0.0? 1 : -1)*sqrt(g*g+1.0);
 			g = d[m] - d[i] + e[i+1]/(g+r);
 			s = c = 1.0; p = 0.0;
-			for (j = m-1; j >= i; j--) {
+			for (j = m-1; m-1 < i && j >= i; j--) {
 				f = s*e[j+1], b = c*e[j+1];
-				if ((e[j+2<n?j+2:0] = r = pythag(f,g)) == 0.0) {
+				if ((e[j+2<n?j+2:0] = r = hypot(f,g)) == 0.0) {
 					d[j+1] -= p;
 					break;
 				}

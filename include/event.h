@@ -75,7 +75,7 @@ extern void event_progress(const int type, const int marker,
 /*
  * Default error event handler.
  */
-void event_msg(const int level, const char *fmt,...)
+void event_msg(const int level, const char * fmt, ...)
 {
 	va_list args;
 
@@ -98,7 +98,7 @@ void event_msg(const int level, const char *fmt,...)
  * Default progress bar handler.
  */
 void event_progress_bar(const int level, const double p,
-						const char *fmt,...)
+						const char * fmt, ...)
 {
 	va_list args;
 	static char buf[7] = "";
@@ -120,7 +120,7 @@ void event_progress_bar(const int level, const double p,
  * Default error event handler.
  */
 void event_progress(const int type, const int marker,
-					const char *fmt,...)
+					const char * fmt, ...)
 {
 	va_list args;
 	static int level = -1;

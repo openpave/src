@@ -133,14 +133,14 @@ public:
 			: set(s,b), value(0) {
 		if (!allocate(size))
 			return;
-		for (int i = 1; v && i <= size; i++)
-			value[i] = v[i-1];
+		for (int i = 0; v && i < size; i++)
+			value[i+1] = v[i];
 	};
 	// Copy constructor.
 	fset(const fset<V> & v) : set(v.size,v.block), value(0) {
 		if (!allocate(size))
 			return;
-		for (int i=0; i<=size; i++)
+		for (int i = 0; i <= size; i++)
 			value[i] = v.value[i];
 	};
 	// Wow, a destructor...
@@ -275,8 +275,8 @@ public:
 				delete [] temp;
 			} else {
 				this->size += s;
-				for (i = this->size, j = i - 1; i >= p ; i--)
-					this->value[i] = (i >= p && i < p+s ? v[i-p] : this->value[j--]);
+				for (i = this->size, j = i - 1; i >= p; i--)
+					this->value[i] = (i < p+s ? v[i-p] : this->value[j--]);
 			}
 		}
 		return true;
@@ -384,7 +384,7 @@ protected:
 	};
 	// Insertion sort for if the set looks sorted already.
 	void isort(const int l, const int r) {
-		for (int i = l+1; i <= r; i++) {
+		for (int i = l+1; l+1 < r && i <= r; i++) {
 			for (int j = i; j > l && this->value[j] <= this->value[j-1]; j--)
 				swap(this->value[j],this->value[j-1]);
 		}
@@ -425,7 +425,9 @@ public:
 protected:
 	void compact() {
 		int i, j;
-		for (i = 2, j = 1; i <= this->size; i++) {
+		if (this->size < 2)
+			return;
+		for (i = 2, j = 1; this->size > 1 && i <= this->size; i++) {
 			if (this->value[j] != this->value[i] && ++j != i)
 				this->value[j] = this->value[i];
 		}
@@ -451,14 +453,14 @@ public:
 	// Simple constructor.
 	kfset(const int s, const int b = DFLT_BLK, const V * v = 0)
 		: set(s,b) {
+		int i, p;
 		if (!allocate(this->size))
 			return;
-		for (int i = 0, j = i; v && i < s; i++) {
-			if (int p = haskey(v[i])) {
-				this->size--;
+		for (i = 0, this->size = 0; v && i < s; i++) {
+			if (p = haskey(v[i])) {
 				this->value[p] = v[i];
 			} else {
-				this->value[++j] = v[i];
+				this->value[++(this->size)] = v[i];
 			}
 		}
 	};
@@ -478,7 +480,7 @@ public:
 
 	// Do a key lookup, and return zero if the key is not found.
 	int haskey(const K & k) const {
-		for (int i = 1; i <= this->size; i++) {
+		for (int i = 1; this->size >= 1 && i <= this->size; i++) {
 			if (static_cast<K &>(this->value[i]) == k)
 				return i;
 		}
@@ -584,8 +586,7 @@ public:
 			if (int p = haskey(v[i])) {
 				this->value[p] = v[i];
 			} else {
-				this->size++;
-				this->value[this->size] = v[i];
+				this->value[++(this->size)] = v[i];
 			}
 		}
 		return true;
@@ -597,7 +598,7 @@ public:
 				V * tempval = this->value;
 				if (!allocate(this->size))
 					return false;
-				for (int i = 0,j = i; j <= this->size; i++) {
+				for (int i = 0, j = 0; j <= this->size; i++) {
 					if (i != p)
 						this->value[j++] = tempval[i];
 				}
@@ -706,17 +707,17 @@ public:
 	// Make one...
 	afset(const int s, const int b, const K * k, const V * v = 0)
 		: set(s,b) {
+		int i, p;
 		if (!allocate(size))
 			return;
-		for (int i = 0, j = 0; k && i < s; i++) {
-			if (int p = haskey(k[i])) {
-				size--;
+		for (i = 0, size = 0; k && i < s; i++) {
+			if (p = haskey(k[i])) {
 				if (v != 0)
 					value[p] = v[i];
 			} else {
-				key[++j] = k[i];
+				key[++size] = k[i];
 				if (v != 0)
-					value[j] = v[i];
+					value[size] = v[i];
 			}
 		}
 	};
@@ -741,9 +742,10 @@ public:
 
 	// Return an index for a key.
 	int haskey(const K & k) const {
-		for (int i = 1; i <= size; i++)
-			if (key[i] == k)
-				return i;
+		for (int i = 0; i < size; i++) {
+			if (key[i+1] == k)
+				return i+1;
+		}
 		return 0;
 	};
 	// Assignement operator.
@@ -978,7 +980,7 @@ protected:
 		}
 	};
 	void isort(const int l, const int r) {
-		for (int i = l+1; i <= r; i++) {
+		for (int i = l+1; l+1 < r && i <= r; i++) {
 			for (int j = i; j > l && this->value[j-1] > this->value[j]; j--) {
 				swap(this->key[j],this->key[j-1]);
 				swap(this->value[j],this->value[j-1]);
