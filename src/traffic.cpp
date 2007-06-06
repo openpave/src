@@ -32,8 +32,6 @@
 
 *************************************************************************/
 
-#include "traffic.h"
-#include "set.h"
 #include <ctype.h>
 #if defined(_MSC_VER)
 #include <direct.h>
@@ -52,6 +50,8 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include "set.h"
+#include "traffic.h"
 
 /*
  * Make an integer from a fixed width string.
