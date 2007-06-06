@@ -234,11 +234,12 @@ everything: checkout clean build
 #
 .PHONY: checkout
 checkout::
-	@echo "*** CVS checkout started: "`date` | tee $(CVSCO_LOGFILE)
-	@echo '*** Checking out bootstrap files...'; \
+	@set -e; \
+	echo "*** CVS checkout started: "`date` | tee $(CVSCO_LOGFILE); \
+	echo '*** Checking out bootstrap files...'; \
         cd $(ROOTDIR) && \
-			$(CVSCO) openpave/openpave.mk $(OP_BOOTSTRAP_LIST)
-	@cd $(ROOTDIR) && \
+			$(CVSCO) openpave/openpave.mk $(OP_BOOTSTRAP_LIST); \
+	cd $(ROOTDIR) && \
 		$(MAKE) $(OP_MAKE_ARGS) -f openpave/openpave.mk real_checkout
 
 #	Start the checkout. Split the output to the tty and a log file.
@@ -254,13 +255,13 @@ real_checkout:
 else
 real_checkout:
 	@echo '*** Checking out project files...'; \
-	  $(CVSCO) $(OP_MODULE_LIST) 2>&1 | tee -a $(CVSCO_LOGFILE)
-	@echo "*** CVS checkout finished: "`date` | tee -a $(CVSCO_LOGFILE)
-	@conflicts=`egrep "^C " $(CVSCO_LOGFILE)` ;\
-	if test "$$conflicts" ; then \
-	  echo "*** Conflicts during checkout." ;\
-	  echo "$$conflicts" ;\
-	  echo "*** Refer to $(CVSCO_LOGFILE) for full log." ;\
+	    $(CVSCO) $(OP_MODULE_LIST) 2>&1 | tee -a $(CVSCO_LOGFILE); \
+	echo "*** CVS checkout finished: "`date` | tee -a $(CVSCO_LOGFILE); \
+	conflicts=`egrep "^C " $(CVSCO_LOGFILE)`; \
+	if test "$$conflicts"; then \
+	  echo "*** Conflicts during checkout."; \
+	  echo "$$conflicts"; \
+	  echo "*** Refer to $(CVSCO_LOGFILE) for full log."; \
 	  false; \
 	else true; \
 	fi
@@ -361,7 +362,7 @@ depend install clean realclean distclean:: $(CONFIG_STATUS_OUTS)
 endif # (! IS_FIRST_CHECKOUT)
 
 distclean::
-	@cd $(TOPSRCDIR); \
+	@cd $(TOPSRCDIR) && \
 	rm -f config-defs.h \
 	      config.cache \
 	      config.log \

@@ -124,7 +124,8 @@ ALL_TRASH	= $(TARGETS) $(OBJS) $(RES) $(GARBAGE)
 
 ifdef DIRS
 LOOP_OVER_DIRS = \
-	@for d in $(DIRS); do \
+	@set -e; \
+	for d in $(DIRS); do \
 		$(MAKE) -C $$d $@; \
 	done;
 endif
@@ -232,7 +233,7 @@ endif
 endif
 
 $(LIBRARY): $(OBJS)
-	rm -f $@
+	@rm -f $@
 ifdef MSC_VER
 	@sh $(topsrcdir)/build/cygwin-wrapper \
 		$(AR) $(ARFLAGS) -OUT:"$@" $(OBJS) $(AR_EXTRA_ARGS)
@@ -244,7 +245,7 @@ endif
 endif
 
 $(SHARED_LIBRARY): $(OBJS) $(RES)
-	rm -f $@
+	@rm -f $@
 ifdef MSC_VER
 	@sh $(topsrcdir)/build/cygwin-wrapper \
 		$(LD) $(DSO_LDFLAGS) -OUT:"$@" $(OBJS) $(RES)
