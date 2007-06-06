@@ -11,7 +11,6 @@
 
 *************************************************************************/
 
-#include "config.h"
 #include "pavement.h"
 #include "matrix.h"
 #include <time.h>
@@ -352,7 +351,7 @@ struct axialdata {
 #define GRADSTEP 1e-8
 
 #define NBZ		8192						// Number of zeros in bessels.
-static double j0r[NBZ+1], j1r[NBZ+1], j0p[NBZ+1], j0m[NBZ+1];
+static double j0r[NBZ+1], j1r[NBZ+1], j0p[NBZ+1], j0m[NBZ+1], j0max;
 #define j0pj1(x)	(j0(x)+j1(x))
 #define j0mj1(x)	(j0(x)-j1(x))
 #define j1d(x)		(j0(x)-j1(x)/x)
@@ -410,7 +409,7 @@ initarrays() {
 	memset(j1r,0,sizeof(double)*(NBZ+1));
 	memset(j0p,0,sizeof(double)*(NBZ+1));
 	memset(j0m,0,sizeof(double)*(NBZ+1));
-	for (ib = 0; ib <= NBZ; ib++) {
+	for (ib = 0, j0max = 0.0; ib <= NBZ; ib++) {
 		double x1, x2, y1, y2, xi;
 		x1 = (ib == 0 ? M_PI_2 : j0r[ib-1] + M_PI), x2 = x1 + 0.1;
 		while (fabs(j0(x2)) > 1e-30 && x1 != x2) {
@@ -419,6 +418,8 @@ initarrays() {
 			x1 = x2, x2 = xi;
 		}
 		j0r[ib] = x2;
+		if (fabs(j0(x2)) > j0max)
+			j0max = fabs(j0(x2));
 		x1 = x2 + M_PI_2, x2 = x1 + 0.1;
 		while (fabs(j1(x2)) > 1e-30 && x1 != x2) {
 			y1 = j1(x1), y2 = j1(x2);
@@ -1022,11 +1023,11 @@ LEsystem::calculate(resulttype res, double * Q)
 		return false;
 	int ngqp = NGQP, nbz = NBZ, gl = -1, nl = layers();
 	if ((res & mask) == fast) {
-		ngqp = MIN(NGQP,6);
-		nbz = MIN(NBZ,32);
+		ngqp = MIN(NGQP,8);
+		nbz = MIN(NBZ,64);
 	} else {
 		ngqp = MIN(NGQP,12);
-		nbz = MIN(NBZ,512);
+		nbz = MIN(NBZ,256);
 	}
 	callcount++;
 	if (res & grad)
@@ -1183,6 +1184,7 @@ gradloop:
 		// Now that we know the radii, get down to work.
 		// We loop through all of our roots and gauss points.
 		for (ib = 1; ib < bm.length(); ib++) {
+			bool alldone = true;
 			for (igp = 0; igp < ngqp; igp++) {
 				// Calculate the gauss point and weight.
 				double m = (bm[ib]+bm[ib-1])/2
@@ -1204,6 +1206,7 @@ gradloop:
 						axialdata & s = ax[ir*z.length()+iz];
 						if (!s.active)
 							continue;
+						alldone = false;
 						double & tz = z[iz];
 						il = zl[iz];
 						t3 = m*(ABCD[il][2] + ABCD[il][3]*tz)*exp(-m*tz);
@@ -1226,6 +1229,11 @@ gradloop:
 					}
 				}
 			}
+			if (alldone)
+				break;
+			bool fullp = (fabs(j0(bm[ib-1]*a[ia])) <= j0max
+				 && fabs(j0(bm[ib]*a[ia])) <= j0max);
+			double eps = ((res & mask) == fast ? 1e-8 : FLT_EPSILON);
 			for (ir = 0; ir < r.length(); ir++) {
 				for (iz = 0; iz < z.length(); iz++) {
 					axialdata & s = ax[ir*z.length()+iz];
@@ -1234,21 +1242,23 @@ gradloop:
 					bool active = false;
 					if (!(res & disp)) {
 						s.vse += s.vse2;
-						active |= (fabs(s.vse2) > 1e-12*fabs(s.vse));
+						active |= (fabs(s.vse2) > eps*fabs(s.vse));
 						s.rse += s.rse2;
-						active |= (fabs(s.rse2) > 1e-12*fabs(s.rse));
+						active |= (fabs(s.rse2) > eps*fabs(s.rse));
 						s.tse += s.tse2;
-						active |= (fabs(s.tse2) > 1e-12*fabs(s.tse));
+						active |= (fabs(s.tse2) > eps*fabs(s.tse));
 						s.sse += s.sse2;
-						active |= (fabs(s.sse2) > 1e-12*fabs(s.sse));
+						active |= (fabs(s.sse2) > eps*fabs(s.sse));
 						s.rdp += s.rdp2;
-						active |= (fabs(s.rdp2) > 1e-12*fabs(s.rdp));
+						active |= (fabs(s.rdp2) > eps*fabs(s.rdp));
 						s.vse2 = 0.0; s.rse2 = 0.0; s.tse2 = 0.0;
 						s.sse2 = 0.0; s.rdp2 = 0.0;
 					}
 					s.vdp += s.vdp2;
-					active |= (fabs(s.vdp2) > 1e-12*fabs(s.vdp));
+					active |= (fabs(s.vdp2) > eps*fabs(s.vdp));
 					s.vdp2 = 0.0;
+					if (fullp && !active)
+						s.active = false;
 				}
 			}
 		}
