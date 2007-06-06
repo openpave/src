@@ -11,7 +11,6 @@
 
 *************************************************************************/
 
-#include "config.h"
 #include "traffic.h"
 #include "set.h"
 #include <ctype.h>

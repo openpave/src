@@ -29,7 +29,6 @@
 #ifndef __PAVEMENT_H
 #define __PAVEMENT_H
 
-#include "config.h"
 #include <memory.h>
 #include "mathplus.h"
 #include "event.h"

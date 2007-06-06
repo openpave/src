@@ -105,6 +105,7 @@ dnl = Defaults
 dnl ========================================================
 _OPTIMIZE_FLAGS=-O
 _DEBUG_FLAGS=-g
+_CONFIG_H="-include config.h"
 OP_DEBUG=1
 OP_OPTIMIZE=
 DEFINES=
@@ -458,6 +459,7 @@ case "$target" in
         CPPFLAGS="$CPPFLAGS -W3 -GF -Gy"
         _DEBUG_FLAGS=-Z7
         _OPTIMIZE_FLAGS=-O2
+	_CONFIG_H="/Ficonfig.h"
 
         if test -z "$OP_OPTIMIZE"; then
             CPPFLAGS="$CPPFLAGS -Od"
@@ -526,7 +528,7 @@ fi
 
 CFLAGS="$CFLAGS $WARN_CFLAGS"
 CXXFLAGS="$CXXFLAGS $WARN_CXXFLAGS"
-CPPFLAGS="$CPPFLAGS $_DEBUG_DEFINES"
+CPPFLAGS="$_CONFIG_H $CPPFLAGS $_DEBUG_DEFINES"
 
 dnl ========================================================
 dnl Substitution of found variables.

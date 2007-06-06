@@ -24,8 +24,6 @@
 #ifndef __TRAFFIC_H
 #define __TRAFFIC_H
 
-#include "config.h"
-
 #include <stdio.h>
 #include <string.h>
 #include <time.h>

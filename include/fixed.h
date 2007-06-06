@@ -25,8 +25,6 @@
 #ifndef __FIXED_H
 #define __FIXED_H
 
-#include "config.h"
-
 /*
  * class fixed - A fixed point type.
  *
