@@ -1063,7 +1063,7 @@ eig_tri_ql(const int n, double * d, double * e, double * A)
 			r = (g > 0.0? 1 : -1)*sqrt(g*g+1.0);
 			g = d[m] - d[i] + e[i+1]/(g+r);
 			s = c = 1.0; p = 0.0;
-			for (j = m-1; m-1 < i && j >= i; j--) {
+			for (j = m-1; m-1 >= i && j >= i; j--) {
 				f = s*e[j+1], b = c*e[j+1];
 				if ((e[j+2<n?j+2:0] = r = hypot(f,g)) == 0.0) {
 					d[j+1] -= p;

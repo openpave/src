@@ -1801,7 +1801,7 @@ case "$target" in
     ;;
 
 *-mingw*|*-cygwin*|*-msvc*|*-mks*)
-    DEFINES="$DEFINES XP_PC WIN32"
+    DEFINES="$DEFINES XP_PC"
     RESOLVE_SYMS=1
     DLL_SUFFIX=dll
     EXE_SUFFIX=.exe
