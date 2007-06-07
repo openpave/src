@@ -426,7 +426,6 @@ case "$target" in
     if test -n "$GNU_CC"; then
         CC="$CC -mno-cygwin"
         CXX="$CXX -mno-cygwin"
-	CPPFLAGS="$CPPFLAGS -I/usr/include"
         DSO_LDFLAGS='-shared -Wl,--export-all-symbols -Wl,--out-implib -Wl,$(IMPORT_LIBRARY)'
         AC_PATH_PROGS(RC, windres, :)
         RCFLAGS='-O coff --use-temp-file'

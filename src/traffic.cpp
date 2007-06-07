@@ -33,7 +33,7 @@
 *************************************************************************/
 
 #include <ctype.h>
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) || defined(__MINGW32__)
 #include <direct.h>
 #include <io.h>
 #define strdup		_strdup
@@ -341,7 +341,7 @@ bool WIMsurvey::ProcessRSADir(const char * dir, const char * bname)
 {
 	int i;
 	char pwd[FILENAME_MAX], * fname;
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) || defined(__MINGW32__)
     _finddata_t found_file;
     long fn;
 #else
@@ -360,7 +360,7 @@ bool WIMsurvey::ProcessRSADir(const char * dir, const char * bname)
 		event_msg(EVENT_ERROR,"Unable to change to directory '%s'!",dir);
 		return false;
 	}
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) || defined(__MINGW32__)
 	if ((fn = _findfirst("*.RSA",&found_file)) == -1L) {
 		event_msg(EVENT_ERROR,"No .RSA files found in direcory '%s'!\n",dir);
 		return false;
