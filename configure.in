@@ -594,6 +594,10 @@ if test -n "$OP_PROJECT_test"; then
     MAKEFILES="$MAKEFILES test/Makefile"
 fi
 
+if test -n "$OP_PROJECT_opdll"; then
+    MAKEFILES="$MAKEFILES opdll/Makefile"
+fi
+
 AC_MSG_CHECKING([if config.h needs rebuilding])
 AC_OUTPUT_COMMANDS([
   configfile=include/config.h
@@ -640,9 +644,9 @@ _EOF
 
 #if defined(WIN32) || defined(_MSC_VER) || defined(__CYGWIN__)
 #ifdef BUILD_DLL
-#define OP_EXPORT 	__declspec(dllexport)
+#define OP_EXPORT 	__declspec(dllexport) __stdcall
 #else
-#define OP_EXPORT	__declspec(dllimport)
+#define OP_EXPORT	__declspec(dllimport) __stdcall
 #endif
 #define OP_HIDDEN
 #else

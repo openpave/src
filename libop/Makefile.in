@@ -1,0 +1,32 @@
+#!gmake
+#
+# $OpenPave$
+#
+
+MOD_DEPTH	= ..
+topsrcdir	= @top_srcdir@
+srcdir		= @srcdir@
+VPATH		= @srcdir@
+
+include $(MOD_DEPTH)/build/autoconf.mk
+
+LIBRARY_NAME	= opdll
+
+DIRS = \
+	$(NULL)
+
+INCLUDES = \
+	-I$(MOD_DEPTH)/include \
+	-I$(srcdir)/../include \
+	-I$(srcdir)/../src     \
+	$(NULL)
+
+CXXSRCS = \
+	opdll.cpp              \
+	$(NULL)
+
+EXPORTS = \
+	opdll.h                \
+	$(NULL)
+
+include $(topsrcdir)/build/rules.mk

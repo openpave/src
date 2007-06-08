@@ -59,8 +59,9 @@
 #
 
 AVAILABLE_PROJECTS = \
-  core \
-  test \
+  core  \
+  test  \
+  opdll \
   $(NULL)
 
 BOOTSTRAP_core :=                                \
@@ -83,6 +84,14 @@ REQUIRES_test :=                                 \
 
 MODULES_test :=                                  \
   openpave/test                                  \
+  $(NULL)
+
+REQUIRES_opdll :=                                \
+  core                                           \
+  $(NULL)
+
+MODULES_opdll :=                                 \
+  openpave/opdll                                 \
   $(NULL)
 
 #######################################################################

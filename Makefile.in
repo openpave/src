@@ -17,6 +17,10 @@ ifneq (,$(findstring test,$(OP_PROJECTS)))
 DIRS += test
 endif
 
+ifneq (,$(findstring opdll,$(OP_PROJECTS)))
+DIRS += opdll
+endif
+
 DIST_GARBAGE = config.cache config.log config.status
 
 include $(topsrcdir)/build/rules.mk
