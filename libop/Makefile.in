@@ -21,6 +21,10 @@ INCLUDES = \
 	-I$(srcdir)/../src     \
 	$(NULL)
 
+LIBS =                         \
+	src                    \
+	$(NULL)
+
 CXXSRCS = \
 	opdll.cpp              \
 	$(NULL)

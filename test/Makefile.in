@@ -23,6 +23,7 @@ INCLUDES =                             \
 
 LIBS =                                 \
 	src                            \
+	$(NULL)
 
 CXXSRCS =                              \
 	test.cpp                       \

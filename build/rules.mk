@@ -245,13 +245,14 @@ ifdef RANLIB
 endif
 endif
 
-$(SHARED_LIBRARY): $(OBJS) $(RES)
+$(SHARED_LIBRARY): $(_LIB_DEPS) $(OBJS) $(RES)
 	@rm -f $@
 ifdef MSC_VER
 	@sh $(topsrcdir)/build/cygwin-wrapper \
-		$(LD) $(DSO_LDFLAGS) -OUT:"$@" $(OBJS) $(RES)
+		$(LD) $(DSO_LDFLAGS) $(patsubst -l%,lib%.$(LIB_SUFFIX),$(subst -L,/LIBPATH:,$(_LIBS))) \
+	      -OUT:"$@" $(OBJS) $(RES)
 else
-	$(CC) $(DSO_LDFLAGS) $(OBJS) $(RES) -o $@
+	$(CC) $(DSO_LDFLAGS) $(_LIBS) $(OBJS) $(RES) -o $@
 ifdef BUILD_OPT
 	$(STRIP) $@
 endif
