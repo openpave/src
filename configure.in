@@ -594,8 +594,8 @@ if test -n "$OP_PROJECT_test"; then
     MAKEFILES="$MAKEFILES test/Makefile"
 fi
 
-if test -n "$OP_PROJECT_opdll"; then
-    MAKEFILES="$MAKEFILES opdll/Makefile"
+if test -n "$OP_PROJECT_libop"; then
+    MAKEFILES="$MAKEFILES libop/Makefile"
 fi
 
 AC_MSG_CHECKING([if config.h needs rebuilding])

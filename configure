@@ -2067,8 +2067,8 @@ if test -n "$OP_PROJECT_test"; then
     MAKEFILES="$MAKEFILES test/Makefile"
 fi
 
-if test -n "$OP_PROJECT_opdll"; then
-    MAKEFILES="$MAKEFILES opdll/Makefile"
+if test -n "$OP_PROJECT_libop"; then
+    MAKEFILES="$MAKEFILES libop/Makefile"
 fi
 
 echo $ac_n "checking if config.h needs rebuilding""... $ac_c" 1>&6

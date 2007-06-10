@@ -1,6 +1,6 @@
 /*************************************************************************
 
-	OPDLL.CPP - DLL wrapper for OpenPave classes.
+	LIBOP.CPP - DLL wrapper for OpenPave classes.
 
 	$OpenPave$
 
@@ -25,7 +25,7 @@
 
 	Contributor(s): Jeremy Lea <reg@openpave.org>.
 
-	See OPDLL.H.
+	See LIBOP.H.
 
 	History:
 		2007/06/07 - Created by Jeremy Lea <reg@openpave.org>
@@ -56,7 +56,7 @@ DllMain(HANDLE hModule, DWORD fdwReason, LPVOID lpReserved)
 #define _PROGRESS_IMP
 #include "event.h"
 #include "pavement.h"
-#include "opdll.h"
+#include "libop.h"
 
 int OP_EXPORT
 OP_LE_Calc(const int nl, const double * h, const double * E,

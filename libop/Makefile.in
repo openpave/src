@@ -10,7 +10,7 @@ VPATH		= @srcdir@
 
 include $(MOD_DEPTH)/build/autoconf.mk
 
-LIBRARY_NAME	= opdll
+LIBRARY_NAME	= op
 
 DIRS = \
 	$(NULL)
@@ -26,11 +26,11 @@ LIBS =                         \
 	$(NULL)
 
 CXXSRCS = \
-	opdll.cpp              \
+	libop.cpp              \
 	$(NULL)
 
 EXPORTS = \
-	opdll.h                \
+	libop.h                \
 	$(NULL)
 
 include $(topsrcdir)/build/rules.mk

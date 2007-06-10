@@ -17,8 +17,8 @@ ifneq (,$(findstring test,$(OP_PROJECTS)))
 DIRS += test
 endif
 
-ifneq (,$(findstring opdll,$(OP_PROJECTS)))
-DIRS += opdll
+ifneq (,$(findstring libop,$(OP_PROJECTS)))
+DIRS += libop
 endif
 
 DIST_GARBAGE = config.cache config.log config.status

@@ -1,6 +1,6 @@
 /*************************************************************************
 
-	OPDLL.CPP - DLL wrapper for OpenPave classes.
+	LIBOP.CPP - DLL wrapper for OpenPave classes.
 
 	$OpenPave$
 
@@ -26,7 +26,7 @@
 	Contributor(s): Jeremy Lea <reg@openpave.org>.
 
 	Purpose:
-		OPDLL consists of various thin C wrappers around the OpenPave
+		LIBOP consists of various thin C wrappers around the OpenPave
 		classes, which allow them to be used in from C, C++ or Visual
 		Basic, or any other language for that matter.
 
@@ -50,7 +50,7 @@ BEGIN_C_DECLS
  *  22-27: ep1, ep2, ep3, es1, es2, es3
  * 
  * For Visual Basic use:
-Declare Function OP_LE_Calc Lib "opdll.dll" Alias "_OP_LE_Calc@56" ( _
+Declare Function OP_LE_Calc Lib "libop.dll" Alias "_OP_LE_Calc@56" ( _
     ByVal nl As Long, h As Double, E As Double, v As Double, _
     ByVal na As Long, Ax As Double, Ay As Double, Al As Double, Ap As Double, _
     ByVal np As Long, Px As Double, Py As Double, Pz As Double, Res As Double) _

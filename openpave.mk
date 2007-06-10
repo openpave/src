@@ -61,7 +61,7 @@
 AVAILABLE_PROJECTS = \
   core  \
   test  \
-  opdll \
+  libop \
   $(NULL)
 
 BOOTSTRAP_core :=                                \
@@ -86,12 +86,12 @@ MODULES_test :=                                  \
   openpave/test                                  \
   $(NULL)
 
-REQUIRES_opdll :=                                \
+REQUIRES_libop :=                                \
   core                                           \
   $(NULL)
 
-MODULES_opdll :=                                 \
-  openpave/opdll                                 \
+MODULES_libop :=                                 \
+  openpave/libop                                 \
   $(NULL)
 
 #######################################################################
