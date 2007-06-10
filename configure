@@ -1912,9 +1912,6 @@ test -n "$RC" || RC=":"
             fi
         fi
         DSO_LDFLAGS="$DSO_LDFLAGS -DLL -SUBSYSTEM:WINDOWS -INCREMENTAL:NO"
-        if test "$_CC_MAJOR_VERSION" = "14"; then
-            DSO_LDFLAGS="$DSO_LDFLAGS -LTCG"
-        fi
         if test "$MSC_VER" -le "1200" -a -z "$OP_DEBUG_SYMBOLS"; then
             DSO_LDFLAGS="$DSO_LDFLAGS -PDB:NONE"
         fi
@@ -1928,14 +1925,14 @@ esac
 if test -z "$_WIN32_MSVC"; then
 
 echo $ac_n "checking for library containing sqrt""... $ac_c" 1>&6
-echo "configure:1932: checking for library containing sqrt" >&5
+echo "configure:1929: checking for library containing sqrt" >&5
 if eval "test \"`echo '$''{'ac_cv_search_sqrt'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   ac_func_search_save_LIBS="$LIBS"
 ac_cv_search_sqrt="no"
 cat > conftest.$ac_ext <<EOF
-#line 1939 "configure"
+#line 1936 "configure"
 #include "confdefs.h"
 /* Override any gcc2 internal prototype to avoid an error.  */
 /* We use char because int might match the return type of a gcc2
@@ -1946,7 +1943,7 @@ int main() {
 sqrt()
 ; return 0; }
 EOF
-if { (eval echo configure:1950: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+if { (eval echo configure:1947: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
   rm -rf conftest*
   ac_cv_search_sqrt="none required"
 else
@@ -1957,7 +1954,7 @@ rm -f conftest*
 test "$ac_cv_search_sqrt" = "no" && for i in m; do
 LIBS="-l$i  $ac_func_search_save_LIBS"
 cat > conftest.$ac_ext <<EOF
-#line 1961 "configure"
+#line 1958 "configure"
 #include "confdefs.h"
 /* Override any gcc2 internal prototype to avoid an error.  */
 /* We use char because int might match the return type of a gcc2
@@ -1968,7 +1965,7 @@ int main() {
 sqrt()
 ; return 0; }
 EOF
-if { (eval echo configure:1972: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+if { (eval echo configure:1969: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
   rm -rf conftest*
   ac_cv_search_sqrt="-l$i"
 break
@@ -2075,7 +2072,7 @@ if test -n "$OP_PROJECT_opdll"; then
 fi
 
 echo $ac_n "checking if config.h needs rebuilding""... $ac_c" 1>&6
-echo "configure:2079: checking if config.h needs rebuilding" >&5
+echo "configure:2076: checking if config.h needs rebuilding" >&5
 
 echo "$ac_t""done" 1>&6
 

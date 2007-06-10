@@ -252,7 +252,7 @@ ifdef MSC_VER
 		$(LD) $(DSO_LDFLAGS) $(patsubst -l%,lib%.$(LIB_SUFFIX),$(subst -L,-LIBPATH:,$(_LIBS))) \
 	      -OUT:"$@" $(OBJS) $(RES)
 	@sh $(topsrcdir)/build/cygwin-wrapper \
-		$(RANLIB) -MANIFEST:$@.manifest -OUTPUTRESOURCE:"$@;2"
+		$(RANLIB) -MANIFEST $@.manifest -OUTPUTRESOURCE:"$@;2"
 else
 	$(CC) $(DSO_LDFLAGS) $(_LIBS) $(OBJS) $(RES) -o $@
 ifdef BUILD_OPT

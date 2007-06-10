@@ -489,9 +489,6 @@ case "$target" in
             fi
         fi
         DSO_LDFLAGS="$DSO_LDFLAGS -DLL -SUBSYSTEM:WINDOWS -INCREMENTAL:NO"
-        if test "$_CC_MAJOR_VERSION" = "14"; then
-            DSO_LDFLAGS="$DSO_LDFLAGS -LTCG"
-        fi
         if test "$MSC_VER" -le "1200" -a -z "$OP_DEBUG_SYMBOLS"; then
             DSO_LDFLAGS="$DSO_LDFLAGS -PDB:NONE"
         fi
