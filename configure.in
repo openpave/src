@@ -449,6 +449,7 @@ case "$target" in
         CPP="$CC -E"
         RC="rc.exe -nologo"
         LD="link.exe -nologo"
+        RANLIB="mt.exe -nologo"
         AR="lib.exe -nologo"
         ARFLAGS=
         RANLIB=
@@ -488,7 +489,10 @@ case "$target" in
                 LDFLAGS="$LDFLAGS -DEBUG -OPT:REF"
             fi
         fi
-        DSO_LDFLAGS="$DSO_LDFLAGS -DLL -SUBSYSTEM:WINDOWS"
+        DSO_LDFLAGS="$DSO_LDFLAGS -DLL -SUBSYSTEM:WINDOWS -INCREMENTAL:NO"
+        if test "$_CC_MAJOR_VERSION" = "15"; then
+            DSO_LDFLAGS="$DSO_LDFLAGS -LTCG -NOASSEMBLY"
+        fi
         if test "$MSC_VER" -le "1200" -a -z "$OP_DEBUG_SYMBOLS"; then
             DSO_LDFLAGS="$DSO_LDFLAGS -PDB:NONE"
         fi
