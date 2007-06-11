@@ -72,7 +72,7 @@ int OP_EXPORT OP_LE_Calc(
     const double * ay,				// Center Y location
     const double * al,				// Load (0 for auto) 
     const double * ap,				// Pressure (0 for auto)
-    const double * ap,				// Radius (0 for auto)
+    const double * ar,				// Radius (0 for auto)
 	const int np,					// Number of evaluation points
 	const double * px,				// Point X
 	const double * py,				// Point Y
