@@ -59,26 +59,50 @@ DllMain(HANDLE hModule, DWORD fdwReason, LPVOID lpReserved)
 #include "libop.h"
 
 int OP_EXPORT
-OP_LE_Calc(const int nl, const double * h, const double * E,
-             const double * v,
+OP_LE_Calc(const int flags,
+           const int nl, const double * h, const double * E,
+             const double * v, const double * f,
            const int na, const double * ax, const double * ay,
-             const double * al, const double * ap,
+             const double * al, const double * ap, const double * ar,
 		   const int np, const double * px, const double * py,
 		     const double * pz, double (* res)[27])
 {
 	LEsystem pave;
 	int i;
+	bool rv = false;
 
 	for (i = 0; i < nl; i++) {
-		pave.addlayer(h[i],E[i],v[i]);
+		pave.addlayer(h[i],E[i],v[i],f[i]);
 	}
 	for (i = 0; i < na; i++) {
-		pave.addload(point2d(ax[i],ay[i]),al[i],ap[i]);
+		pave.addload(point2d(ax[i],ay[i]),al[i],ap[i],ar[i]);
 	}
 	for (i = 0; i < np; i++) {
 		pave.addpoint(point3d(px[i],py[i],pz[i]));
 	}
-	pave.calculate(LEsystem::fast);
+	switch (flags & 0xFF) {
+	case 0x00:
+		rv = !pave.calculate(flags > 0xFF ? LEsystem::disp : LEsystem::all);
+		break;
+	case 0x01:
+		rv = !pave.calculate(flags > 0xFF ? LEsystem::fastdisp : LEsystem::fast);
+		break;
+	case 0x02:
+		rv = !pave.calculate(LEsystem::dirty);
+		break;
+	case 0x03:
+		rv = !pave.calc_odemark();
+		break;
+	case 0x04:
+		rv = !pave.calc_fastnum();
+		break;
+	case 0xFF:
+		rv = !pave.calc_accurate();
+		break;
+	default:
+		rv = !pave.calculate(flags > 0xFF ? LEsystem::disp : LEsystem::all);
+		break;
+	}
 	for (i = 0; i < np; i++) {
 		point3d p(px[i],py[i],pz[i]);
 		const pavedata & d = pave.result(p);
@@ -113,5 +137,5 @@ OP_LE_Calc(const int nl, const double * h, const double * E,
 #if defined(_MSC_VER) || defined(__MINGW32__)
 	_clearfp();
 #endif
-	return 0;
+	return rv;
 }

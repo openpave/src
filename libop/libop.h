@@ -51,8 +51,9 @@ BEGIN_C_DECLS
  * 
  * For Visual Basic use:
 Declare Function OP_LE_Calc Lib "libop.dll" Alias "_OP_LE_Calc@56" ( _
-    ByVal nl As Long, h As Double, E As Double, v As Double, _
-    ByVal na As Long, Ax As Double, Ay As Double, Al As Double, Ap As Double, _
+	ByVal flags as Long,
+    ByVal nl As Long, h As Double, E As Double, v As Double, f As Double_
+    ByVal na As Long, Ax As Double, Ay As Double, Al As Double, Ap As Double, Ar as Double_
     ByVal np As Long, Px As Double, Py As Double, Pz As Double, Res As Double) _
  As Long
  *
@@ -60,15 +61,18 @@ Declare Function OP_LE_Calc Lib "libop.dll" Alias "_OP_LE_Calc@56" ( _
  */
 extern "C" {
 int OP_EXPORT OP_LE_Calc(
+	const int flags,				// Flags to choose method
 	const int nl, 					// Number of layers
 	const double * h,				// Layer thickness (0 for semi-inf)
 	const double * E,				// Elastic modulus
 	const double * v,				// Poisson's ratio
+	const double * f,				// Friction (0.0 to 1.0)
     const int na,					// Number of loads
     const double * ax,				// Center X location
     const double * ay,				// Center Y location
-    const double * al,				// Load
-    const double * ap,				// Pressure
+    const double * al,				// Load (0 for auto) 
+    const double * ap,				// Pressure (0 for auto)
+    const double * ap,				// Radius (0 for auto)
 	const int np,					// Number of evaluation points
 	const double * px,				// Point X
 	const double * py,				// Point Y

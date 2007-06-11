@@ -740,7 +740,7 @@ main()
 };
 #endif
 
-#ifdef BUILD
+#ifdef NOBUILD
 int
 main(int argc, char* argv[])
 {
@@ -748,29 +748,28 @@ main(int argc, char* argv[])
 	double t;
 
 	LEsystem Test;
-	//LEsystem Fast;
+	LEsystem Fast;
 
 	//srand((unsigned)time(NULL));
 redo:
 	Test.removelayers();
-	//Fast.removelayers();
+	Fast.removelayers();
 	for (i = 0; i < 4; i++) {
 		t = 25.0+50.0*(i+1)*((double)(rand())/(double)(RAND_MAX));
 		Test.addlayer( t,1000.0,0.5);
-		//Fast.addlayer( t,1000.0,0.5);
+		Fast.addlayer( t,1000.0,0.5);
 		//printf("%0.4g\n",t);
 	}
-	Test.addlayer( 0.0,1000.0,0.5);
-	//Fast.addlayer( 0.0,1000.0,0.5);
+	Test.addlayer( 0.0,1000.0,0.35);
+	Fast.addlayer( 0.0,1000.0,0.35);
 	//printf("0.0\n");
 
 	Test.removeloads();
-	//Fast.removeloads();
-	Test.addload(point2d(0.0,  0.0),20*1e6,520);
+	Fast.removeloads();
+	Test.addload(point2d(0.0,  0.0),20*1e6,690);
 	Test.addload(point2d(0.0,305.0),20*1e6,520);
-	//Fast.addload(point2d(0.0,  0.0),20*1e6,520);
-	//Fast.addload(point2d(0.0,305.0),20*1e6,520);
-	//Test.addload(point2d(0.0,350.0),20*1e6,520);
+	Fast.addload(point2d(0.0,  0.0),20*1e6,690);
+	Fast.addload(point2d(0.0,305.0),20*1e6,520);
 
 	double T[5];
 	for (i = 0; i < Test.layers(); i++) {
@@ -778,69 +777,69 @@ redo:
 		while (i > 0 && (T[i] > 20*T[i-1] || T[i] < T[i-1]/20.0))
 			T[i] = pow(10,4.0+3.0*(double)(rand())/(double)(RAND_MAX));
 		Test.layer(i).emod(T[i]);
-		//Fast.layer(i).emod(T[i]);
+		Fast.layer(i).emod(T[i]);
 		//printf("%0.4e\t%g\n",log10(T[i]),T[i]);
 	}
 
 	Test.removepoints();
-	//Fast.removepoints();
+	Fast.removepoints();
 	for (i = 0; i < 10; i++) {
 		//Test.addpoint(point3d(   26.5*(i-100),175.0,  0.0));
 		Test.addpoint(point3d(   0.0,200.0, i*25.0));
-		//Fast.addpoint(point3d(   0.0,200.0, i*25.0));
+		Fast.addpoint(point3d(   0.0,200.0, i*25.0));
 		Test.addpoint(point3d(   0.0,95.0, i*25.0));
-		//Fast.addpoint(point3d(   0.0,95.0, i*25.0));
+		Fast.addpoint(point3d(   0.0,95.0, i*25.0));
 	}
-	//Test.addpoint(point3d(0.0,0.0,0.0));
+	Fast.addpoint(point3d(0.0,0.0,0.0));
 	//Test.addpoint(point3d(0.0,0.0,t));
-	//Test.addpoint(point3d(   0.0,175.0,  0.0));
-	//Test.addpoint(point3d( 100.0,175.0,  0.0));
-	//Test.addpoint(point3d( 200.0,175.0,  0.0));
-	//Test.addpoint(point3d( 400.0,175.0,  0.0));
-	//Test.addpoint(point3d( 600.0,175.0,  0.0));
-	//Test.addpoint(point3d( 900.0,175.0,  0.0));
-	//Test.addpoint(point3d(1200.0,175.0,  0.0));
-	//Test.addpoint(point3d(   0.0,175.0,  0.0));
-	//Test.addpoint(point3d(   0.0,175.0, 50.0));
-	//Test.addpoint(point3d(   0.0,175.0,150.0));
-	//Test.addpoint(point3d(   0.0,175.0,300.0));
-	//Test.addpoint(point3d(   0.0,175.0,500.0));
-	//Test.addpoint(point3d(   0.0,  0.0,  0.0));
-	//Test.addpoint(point3d(   0.0,  0.0, 50.0));
-	//Test.addpoint(point3d(   0.0,  0.0,150.0));
-	//Test.addpoint(point3d(   0.0,  0.0,300.0));
-	//Test.addpoint(point3d(   0.0,  0.0,500.0));
+	Fast.addpoint(point3d(   0.0,175.0,  0.0));
+	Fast.addpoint(point3d( 100.0,175.0,  0.0));
+	Fast.addpoint(point3d( 200.0,175.0,  0.0));
+	Fast.addpoint(point3d( 400.0,175.0,  0.0));
+	Fast.addpoint(point3d( 600.0,175.0,  0.0));
+	Fast.addpoint(point3d( 900.0,175.0,  0.0));
+	Fast.addpoint(point3d(1200.0,175.0,  0.0));
+	Fast.addpoint(point3d(   0.0,175.0,  0.0));
+	Fast.addpoint(point3d(   0.0,175.0, 50.0));
+	Fast.addpoint(point3d(   0.0,175.0,150.0));
+	Fast.addpoint(point3d(   0.0,175.0,300.0));
+	Fast.addpoint(point3d(   0.0,175.0,500.0));
+	Fast.addpoint(point3d(   0.0,  0.0,  0.0));
+	Fast.addpoint(point3d(   0.0,  0.0, 50.0));
+	Fast.addpoint(point3d(   0.0,  0.0,150.0));
+	Fast.addpoint(point3d(   0.0,  0.0,300.0));
+	Fast.addpoint(point3d(   0.0,  0.0,500.0));
 
 	//printf("\n");
-	Test.calculate(LEsystem::fast);
+	Test.calculate();
 	//Fast.calc_odemark();
-	//Fast.calc_fastnum();
+	Fast.calculate(LEsystem::fast);
 	for (i = 0; i < Test.data.length(); i++) {
 		point3d & p = Test.data[i];
 		const pavedata & d = Test.result(p);
-		//printf("%7.2f\t%7.2f\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t", d.y, d.z,
-		//d.result(pavedata::stress, pavedata::xx),
-		//d.result(pavedata::stress, pavedata::yy),
-		//d.result(pavedata::stress, pavedata::zz),
-		//d.result(pavedata::stress, pavedata::p1),
-		//d.result(pavedata::stress, pavedata::p3),
-		//d.result(pavedata::stress, pavedata::s1),
-		//d.result(pavedata::stress, pavedata::s3),
-		//d.result(pavedata::deflct, pavedata::yy),
-		//d.result(pavedata::deflct, pavedata::zz));
-		//const pavedata & f = Fast.result(p);
-		//printf("%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\n",
-		//f.result(pavedata::stress, pavedata::xx),
-		//f.result(pavedata::stress, pavedata::yy),
-		//f.result(pavedata::stress, pavedata::zz),
-		//f.result(pavedata::stress, pavedata::p1),
-		//f.result(pavedata::stress, pavedata::p3),
-		//f.result(pavedata::stress, pavedata::s1),
-		//f.result(pavedata::stress, pavedata::s3),
-		//f.result(pavedata::deflct, pavedata::yy),
-		//f.result(pavedata::deflct, pavedata::zz));
+		printf("%7.2f\t%7.2f\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\n", d.y, d.z,
+		d.result(pavedata::stress, pavedata::xx),
+		d.result(pavedata::stress, pavedata::yy),
+		d.result(pavedata::stress, pavedata::zz),
+		d.result(pavedata::stress, pavedata::p1),
+		d.result(pavedata::stress, pavedata::p3),
+		d.result(pavedata::stress, pavedata::s1),
+		d.result(pavedata::stress, pavedata::s3),
+		d.result(pavedata::deflct, pavedata::yy),
+		d.result(pavedata::deflct, pavedata::zz));
+		const pavedata & f = Fast.result(p);
+		printf("%7.2f\t%7.2f\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\n", d.y, d.z,
+		f.result(pavedata::stress, pavedata::xx),
+		f.result(pavedata::stress, pavedata::yy),
+		f.result(pavedata::stress, pavedata::zz),
+		f.result(pavedata::stress, pavedata::p1),
+		f.result(pavedata::stress, pavedata::p3),
+		f.result(pavedata::stress, pavedata::s1),
+		f.result(pavedata::stress, pavedata::s3),
+		f.result(pavedata::deflct, pavedata::yy),
+		f.result(pavedata::deflct, pavedata::zz));
 	}
-	printf(".");
+	printf("\n");
 	goto redo;
 	return 0;
 }
@@ -1340,21 +1339,31 @@ main()
 };
 #endif
 
-#ifdef NOBUILD
+#ifdef BUILD
 int
 main()
 {
 	LEsystem Pavement;
 
-	Pavement.addlayer(1.0,1.0,0.5,0.001);
+	Pavement.addlayer(10.0,1.0,0.5,0.0001);
 	Pavement.addlayer(0.0,1.0,0.5);
 	Pavement.addload(point2d(0.0,0.0),1.0,0.0,1.0);
 	Pavement.addpoint(point3d(0.0,0.0,0.0));
-	//Pavement.addpoint(point3d(1.0,0.0,0.999999999999999));
-	Pavement.addpoint(point3d(1.0,0.0,1.0));
+	Pavement.addpoint(point3d(10.0,0.0,9.99999999999999));
+	Pavement.addpoint(point3d(10.0,0.0,10.0));
 	Pavement.calculate();
-	const pavedata & d1 = Pavement.result(point3d(0.0,0.0,0.0));
-	//const pavedata & d1 = Pavement.result(point3d(1.0,0.0,0.999999999999999));
+	const pavedata & d0 = Pavement.result(point3d(0.0,0.0,0.0));
+	printf("%0.16f\n",d0.result(pavedata::deflct,pavedata::zz));
+	printf("%0.16f\n",d0.result(pavedata::deflct,pavedata::yy));
+	printf("%0.16f\n",d0.result(pavedata::deflct,pavedata::xx));
+	printf("%0.16f\n",d0.result(pavedata::stress,pavedata::zz));
+	printf("%0.16f\n",d0.result(pavedata::stress,pavedata::yy));
+	printf("%0.16f\n",d0.result(pavedata::stress,pavedata::xx));
+	printf("%0.16f\n",d0.result(pavedata::stress,pavedata::xy));
+	printf("%0.16f\n",d0.result(pavedata::stress,pavedata::xz));
+	printf("%0.16f\n",d0.result(pavedata::stress,pavedata::yz));
+	printf("\n");
+	const pavedata & d1 = Pavement.result(point3d(10.0,0.0,9.99999999999999));
 	printf("%0.16f\n",d1.result(pavedata::deflct,pavedata::zz));
 	printf("%0.16f\n",d1.result(pavedata::deflct,pavedata::yy));
 	printf("%0.16f\n",d1.result(pavedata::deflct,pavedata::xx));
@@ -1365,7 +1374,7 @@ main()
 	printf("%0.16f\n",d1.result(pavedata::stress,pavedata::xz));
 	printf("%0.16f\n",d1.result(pavedata::stress,pavedata::yz));
 	printf("\n");
-	const pavedata & d2 = Pavement.result(point3d(1.0,0.0,1.0));
+	const pavedata & d2 = Pavement.result(point3d(10.0,0.0,10.0));
 	printf("%0.16f\n",d2.result(pavedata::deflct,pavedata::zz));
 	printf("%0.16f\n",d2.result(pavedata::deflct,pavedata::yy));
 	printf("%0.16f\n",d2.result(pavedata::deflct,pavedata::xx));

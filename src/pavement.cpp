@@ -812,8 +812,10 @@ buildabcd(const double m, const int nl, const double * h, const double * v,
 					R[il-1][k1][0] += D[k1][k2]*(X[k1][k2]*R[il][k2][0])/t3;
 					R[il-1][k1][1] += D[k1][k2]*(X[k1][k2]*R[il][k2][1])/t3;
 				} else {
-					R[il-1][k1][0] += D[k1][k2]*(f[il-1]*X[k1][k2]*R[il][k2][0]/m+F[k1][k2]*R[il][k2][0])/t3/f[il-1];
-					R[il-1][k1][1] += D[k1][k2]*(f[il-1]*X[k1][k2]*R[il][k2][1]/m+F[k1][k2]*R[il][k2][1])/t3/f[il-1];
+					R[il-1][k1][0] += D[k1][k2]*(f[il-1]*X[k1][k2]*R[il][k2][0]
+						+ F[k1][k2]*R[il][k2][0])/t3/f[il-1];
+					R[il-1][k1][1] += D[k1][k2]*(f[il-1]*X[k1][k2]*R[il][k2][1]
+						+ F[k1][k2]*R[il][k2][1])/t3/f[il-1];
 				}
 			}
 		}
@@ -1043,7 +1045,10 @@ LEsystem::calculate(resulttype res, double * Q)
 	if (!check())
 		return false;
 	int ngqp = NGQP, nbz = NBZ, gl = -1, nl = layers();
-	if ((res & mask) == fast) {
+	if ((res & mask) == dirty) {
+		ngqp = MIN(NGQP,7);
+		nbz = MIN(NBZ,32);
+	} else if ((res & mask) == fast) {
 		ngqp = MIN(NGQP,8);
 		nbz = MIN(NBZ,64);
 	} else {
@@ -1254,7 +1259,8 @@ gradloop:
 				break;
 			bool fullp = (fabs(j0(bm[ib-1]*a[ia])) <= j0max
 				 && fabs(j0(bm[ib]*a[ia])) <= j0max);
-			double eps = ((res & mask) == fast ? 1e-8 : FLT_EPSILON);
+			double eps = ((res & mask) == dirty ? 1e-6 : 
+			               ((res & mask) == fast ? 1e-8 : 0.0));
 			for (ir = 0; ir < r.length(); ir++) {
 				for (iz = 0; iz < z.length(); iz++) {
 					axialdata & s = ax[ir*z.length()+iz];
@@ -1341,6 +1347,7 @@ gradloop:
 			}
 		}
 		if (res & grad) {
+			res = LEsystem::resulttype(res | disp);
 			if (++gl != nl) {
 				// Deflection gradients are calculated in a log(E) space.
 				for (pl = first, il = 0; pl != 0; pl = pl->next, il++) {

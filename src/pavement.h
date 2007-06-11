@@ -344,9 +344,10 @@ public:
 	enum resulttype {
 		all	     = 0x0000,
 		fast     = 0x0001,
-		accurate = 0x0002,
+		dirty    = 0x0002,
 		odemark  = 0x0003,
 		fastnum  = 0x0004,
+		accurate = 0x00FF,
 		mask     = 0x00FF,
 		disp     = 0x0100,
 		grad     = 0x0200,
