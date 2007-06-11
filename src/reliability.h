@@ -53,9 +53,6 @@
 		The current design is limited to doing normal and log normal
 		variables, and to doing adaptive importance sampling.  The
 		analysis cannot be tuned.
-
-		The code is very much geared towards the relibility problem
-		for mePADS.
   
 	History:
 		2002/01/10 - Created by Jeremy Lea <reg@openpave.org>
@@ -156,4 +153,3 @@ public:
 };
 
 #endif // RELIABILITY_H
-

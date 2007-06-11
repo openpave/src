@@ -1,6 +1,6 @@
 /**************************************************************************
 
-	TEST.CPP - A test harness for PADS classes.
+	TEST.CPP - A test harness for OpenPave.org code.
 
 	$OpenPave$
 
@@ -58,9 +58,8 @@ main(int argc, char* argv[])
 	//srand((unsigned)time(NULL));
 	double T[5];
 	double h[5], v[5], mz[7], t, f;
-redo:
-	printf("\nStarting backPADS!\n\n(c) Copyright CSIR Transportek, 2002\n\n");
 
+redo:
 	l = (int)floor(RAND(2,6));
 	//Bowl.setup(0.0,0.0,1e-6,5);
 	Bowl.setup(0.0001,0.0005,1e-4,5);
@@ -188,8 +187,8 @@ double Ebad[17][5] = {
 	double T[5];
 	double mz;
 	int bad = 10;
+
 redo:
-	printf("\nStarting backPADS!\n\n(c) Copyright CSIR Transportek, 2002\n\n");
 	for (i = 0; i < Bowl.layers(); i++) {
 		T[i] = Bowl.layer(i).emod();
 		//do {
@@ -501,8 +500,6 @@ main(int argc, char* argv[])
 {
 	int i;
 	LEbackcalc Bowl;
-
-	printf("\nStarting backPADS!\n\n(c) Copyright CSIR Transportek, 2002\n\n");
 
 	Bowl.setup(0.0001,1e-4,5);
 
