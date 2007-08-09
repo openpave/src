@@ -1080,9 +1080,9 @@ LEsystem::calculate(resulttype res, double * Q)
 	cset<double> & r = *_r;
 	cset<double> & bm = *_bm;
 	// And finally, somewhere to stick the radial data...
-	axialdata * ax = new axialdata[data.length()*data.length()];
-	double * m0 = new double[data.length()];
-	double * m1 = new double[data.length()];
+	axialdata * ax = new axialdata[load.length()*data.length()*data.length()];
+	double * m0 = new double[load.length()*data.length()];
+	double * m1 = new double[load.length()*data.length()];
 	if (R == 0 || ABCD == 0 || h == 0 || f == 0 || v == 0 || E == 0
 	 || _z == 0 || _a == 0 || al == 0 || rl == 0 || zl == 0 || _r == 0
 	 || _bm == 0 || ax == 0 || m0 == 0 || m1 == 0)
