@@ -560,4 +560,6 @@ void eig_ql(const int n, double * A, double * d);
 void equ_eig(const int n, const double * A, const double * b, double * x);
 void inv_eig(const int n, double * A);
 
+bool decmp_chol(const int n, const int w, double * A);
+
 #endif // __MATRIX_H

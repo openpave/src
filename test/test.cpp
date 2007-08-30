@@ -1493,18 +1493,14 @@ again:
 	
 	printf(")");
 	double c1, y1, t1, c2, y2, t2;
-	//printf("\nr = [ ");
 	for (i = 0, dot = 0.0, c1 = 0.0; i < n; i++) {
 		for (j = 0, s = 0.0, c2 = 0.0; j < n; j++) {
 			y2 = B[i*n+j]*x[j] - c2; t2 = s + y2;
 			c2 = t2 - s - y2; s = t2;
-			//printf("%.60e; ...\n",s);
 		}
-		//printf("%.60e; ...\n",s);
 		y1 = (s-b[i])*(s-b[i]) - c1; t1 = dot + y1;
 		c1 = t1 - dot - y1; dot = t1;
 	}
-	//printf("];\n");
 	if (sqrt(dot) > 1e-12) {
 		printf("\nr = [ ");
 		for (i = 0, dot = 0.0, c1 = 0.0; i < n; i++) {
@@ -1514,16 +1510,25 @@ again:
 				printf("%.60e; ...\n",s);
 			}
 			printf("%.60e; ...\n",s);
+			printf("%.60e; ...\n",(s-b[i]));
+			printf("%.60e; ...\n",(s-b[i])*(s-b[i]));
 			y1 = (s-b[i])*(s-b[i]) - c1; t1 = dot + y1;
 			c1 = t1 - dot - y1; dot = t1;
+			printf("%.60e; ...\n",dot);
 		}
 		printf("];\n");
-		//printf("\n%g\nA = [ ",sqrt(dot));
-		//for (i = 0; i < n; i++) {
-		//	for (j = 0; j < n; j++)
-		//		printf("%.60e%s ...\n",B[i*n+j],(j == n-1 ? ";" : ","));
-		//}
-		printf("];\n b = [");
+		printf("\n%g\nA = [ ",sqrt(dot));
+		for (i = 0; i < n; i++) {
+			for (j = 0; j < n; j++)
+				printf("%.60e%s ...\n",B[i*n+j],(j == n-1 ? ";" : ","));
+		}
+		printf("];\n");
+		decmp_chol(n,m,A);
+		for (i = 0; i < n; i++) {
+			for (j = i; j <= i+m && j < n; j++)
+				printf("K(%i,%i) = %.60e;\n",i+1,j+1,A[B_IDX(n,m,i,j)]);
+		}
+		printf(" b = [");
 		for (i = 0; i < n; i++) {
 			printf("%.60e; ...\n",b[i]);
 		}
