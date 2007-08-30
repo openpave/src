@@ -50,7 +50,7 @@ BEGIN_C_DECLS
  *  22-27: ep1, ep2, ep3, es1, es2, es3
  * 
  * For Visual Basic use:
-Declare Function OP_LE_Calc Lib "libop.dll" Alias "_OP_LE_Calc@56" ( _
+Declare Function OP_LE_Calc Lib "libop.dll" Alias "_OP_LE_Calc@68" ( _
 	ByVal flags as Long,
     ByVal nl As Long, h As Double, E As Double, v As Double, f As Double_
     ByVal na As Long, Ax As Double, Ay As Double, Al As Double, Ap As Double, Ar as Double_

@@ -315,13 +315,15 @@ bool
 decmp_chol(const int n, const int w, double * A)
 {
 	int i, j, k;
-	double sum;
+	double sum, c, y, t;
 	
     for (i = 0; i < n; i++) {
         for (j = i; j <= i+w && j < n; j++) {
 			sum = A[B_IDX(n,w,i,j)];
-			for (k = i-1; k >= j-w && k >= 0; k--)
-				sum -=  A[B_IDX(n,w,k,i)]*A[B_IDX(n,w,k,j)];
+			for (k = i-1, c = 0.0; k >= j-w && k >= 0; k--) {
+				y = -A[B_IDX(n,w,k,i)]*A[B_IDX(n,w,k,j)] - c;
+				t = sum + y; c = (t - sum) - y; sum = t;
+			}
 			if (i == j) {
 				if (sum <= 0) {
 					event_msg(EVENT_WARN,"Non-positive definite matrix in inv_chol(%f)!",sum);
@@ -368,15 +370,20 @@ bksub_chol(const int n, const int w, const double * A,
            double * b, const int m = 1, const int c = 0)
 {
 	int i, k;
+	double s, y, t;
 	
     for (i = 0; i < n; i++) {
-		for (k = i-1; k >= i-w && k >= 0; k--)
-            b[i*m+c] -= A[B_IDX(n,w,k,i)]*b[k*m+c];
+		for (k = i-1, s = 0.0; k >= i-w && k >= 0; k--) {
+			y = -A[B_IDX(n,w,k,i)]*b[k*m+c] - s; t = b[i*m+c] + y;
+			s = t - b[i*m+c] - y; b[i*m+c] = t;
+		}
 		b[i*m+c] *= A[B_IDX(n,w,i,i)];
-    }
+	}
 	for (i = n-1; i >= 0; i--) {
-		for (k = i+1; k <= i+w && k < n; k++)
-			b[i*m+c] -= A[B_IDX(n,w,i,k)]*b[k*m+c];
+		for (k = i+1, s = 0.0; k <= i+w && k < n; k++) {
+			y = -A[B_IDX(n,w,i,k)]*b[k*m+c] - s; t = b[i*m+c] + y;
+			s = t - b[i*m+c] - y; b[i*m+c] = t;
+		}
 		b[i*m+c] *= A[B_IDX(n,w,i,i)];
 	}
 }
@@ -436,7 +443,8 @@ bool
 equ_chol(const int n, const int w, const double * A, const double * b, double * x)
 {
 	bool rv = true;
-	//int i, j;
+	int i, j;
+	double c, y, t;
 
 	double * a = new double[B_SIZE(n,w)];
 	double * r = new double[n];
@@ -454,16 +462,20 @@ equ_chol(const int n, const int w, const double * A, const double * b, double * 
 		goto abort;
 	}
 	bksub_chol(n,w,a,x);
-	/*for (i = 0; i < n; i++) {
+	for (i = 0; i < n; i++) {
 		r[i] = -b[i];
-		for (j = MAX(i-w,0); j < i; j++)
-			r[i] += A[B_IDX(n,w,j,i)]*x[j];
-		for (j = i; j <= i+w && j < n; j++)
-			r[i] += A[B_IDX(n,w,i,j)]*x[j];
+		for (j = MAX(i-w,0), c = 0.0; j < i; j++) {
+			y = A[B_IDX(n,w,j,i)]*x[j] - c; t = r[i] + y;
+			c = t - r[i] - y; r[i] = t;
+		}
+		for (j = i; j <= i+w && j < n; j++) {
+			y = A[B_IDX(n,w,i,j)]*x[j] - c; t = r[i] + y;
+			c = t - r[i] - y; r[i] = t;
+		}
 	}
 	bksub_chol(n,w,a,r);
 	for (i = 0; i < n; i++)
-		x[i] -= r[i];*/
+		x[i] -= r[i];
 abort:
 	delete [] r;
 	delete [] a;
@@ -755,7 +767,7 @@ decmp_svd(const int m, const int n, double * A, double * W, double * V)
 			F = ((W[q]-W[i])*(W[q]+W[i]) + rv1[i]*((W[i-1]/(F+G))-rv1[i])) / W[q];
 			// Next QR transformation.
 			X = W[q]; C = 1.0; S = 1.0;
-			for (j = q; j <= i-1; j++) {
+			for (j = q; q <= i-1 && j <= i-1; j++) {
 				H = S*rv1[j+1], G = C*rv1[j+1];
 				rv1[j] = hypot(F,H);
 				C = F/rv1[j], S = H/rv1[j];
@@ -1239,9 +1251,9 @@ abort:
 	delete [] Q;
 }
 
-#ifdef NOBUILD
+#ifdef BUILD
 #define n 10
-#define m 8
+#define m 2
 int
 main()
 {
@@ -1288,27 +1300,46 @@ again:
 	equ_chol(n,m,A,b,x);
 	
 	printf(")");
-	for (i = 0, dot = 0.0; i < n; i++) {
-		for (j = 0, s = 0.0; j < n; j++)
-			s += B[i*n+j]*x[j];
-		dot += (s-b[i])*(s-b[i]);
-	}
-	if (sqrt(dot) > 1e-1) {
-/*		printf("\n%g\nA = [ ",sqrt(dot));
-		for (i = 0; i < n; i++) {
-			for (j = 0; j < n; j++)
-				printf("%.18e\t",B[i*n+j]);
-			printf("; ...\n");
+	double c1, y1, t1, c2, y2, t2;
+	//printf("\nr = [ ");
+	for (i = 0, dot = 0.0, c1 = 0.0; i < n; i++) {
+		for (j = 0, s = 0.0, c2 = 0.0; j < n; j++) {
+			y2 = B[i*n+j]*x[j] - c2; t2 = s + y2;
+			c2 = t2 - s - y2; s = t2;
+			//printf("%.60e; ...\n",s);
 		}
+		//printf("%.60e; ...\n",s);
+		y1 = (s-b[i])*(s-b[i]) - c1; t1 = dot + y1;
+		c1 = t1 - dot - y1; dot = t1;
+	}
+	//printf("];\n");
+	if (sqrt(dot) > 1e-12) {
+		printf("\nr = [ ");
+		for (i = 0, dot = 0.0, c1 = 0.0; i < n; i++) {
+			for (j = 0, s = 0.0, c2 = 0.0; j < n; j++) {
+				y2 = B[i*n+j]*x[j] - c2; t2 = s + y2;
+				c2 = t2 - s - y2; s = t2;
+				printf("%.60e; ...\n",s);
+			}
+			printf("%.60e; ...\n",s);
+			y1 = (s-b[i])*(s-b[i]) - c1; t1 = dot + y1;
+			c1 = t1 - dot - y1; dot = t1;
+		}
+		printf("];\n");
+		//printf("\n%g\nA = [ ",sqrt(dot));
+		//for (i = 0; i < n; i++) {
+		//	for (j = 0; j < n; j++)
+		//		printf("%.60e%s ...\n",B[i*n+j],(j == n-1 ? ";" : ","));
+		//}
 		printf("];\n b = [");
 		for (i = 0; i < n; i++) {
-			printf("%.18e; ...\n",b[i]);
+			printf("%.60e; ...\n",b[i]);
 		}
 		printf("];\n x = [");
 		for (i = 0; i < n; i++) {
-			printf("%.18e; ...\n",x[i]);
+			printf("%.60e; ...\n",x[i]);
 		}
-		printf("];\n");*/
+		printf("];\n");
 		exit(1);
 	}
 	goto again;
