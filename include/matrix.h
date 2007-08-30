@@ -550,6 +550,7 @@ void orth_gs(const int n, double * Q);
 bool equ_lu(const int n, const double * A, const double * b, double * x);
 bool inv_lu(const int n, double * A);
 bool equ_chol(const int n, const double * A, const double * b, double * x);
+bool equ_chol(const int n, const int w, const double * A, const double * b, double * x);
 bool inv_chol(const int n, double * A);
 bool equ_udu(const int n, const double * A, const double * b, double * x);
 void equ_svd(const int n, const double * A, const double * b, double * x);

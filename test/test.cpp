@@ -35,6 +35,7 @@
 #include "pavement.h"
 #include "traffic.h"
 #include "reliability.h"
+#include "matrix.h"
 #include <stdlib.h>
 #include <time.h>
 
@@ -1440,4 +1441,274 @@ main()
 		printf("%0.16e\t%0.16e\t%0.16e\t%0.16e\t%0.16e\t%0.16e\n",u,p0,p1,p2,u0,fabs(p1-p2));
 	}
 }
+#endif
+
+#ifdef BUILD
+#define n 10
+#define m 2
+int
+main()
+{
+	int i, j, k, r = 0;
+	double s, dot = 0.0;
+	double * A = new double[n*n];
+	double * B = new double[n*n];
+	double * b = new double[n];
+	double * x = new double[n];
+	if (A == 0 || B == 0 || b == 0 || x == 0) {
+		event_msg(EVENT_ERROR,"Out of memory!");
+		goto abort;
+	}
+
+again:
+	printf(".");
+	memset(A,0,sizeof(double)*n*n);
+	for (i = 0; i < n; i++) {
+		for (j = i; j <= i+m && j < n; j++)
+			A[i*n+j] = RAND(-1.0,1.0);
+	}
+	for (i = 0; i < n; i++) {
+		for (j = 0; j < n; j++) {
+			B[i*n+j] = 0.0;
+			for (k = 0; k < n; k++)
+				B[i*n+j] += A[i*n+k]*A[j*n+k];
+		}
+	}
+	for (i = 0; i < n; i++)
+		b[i] = RAND(0.0,1.0);
+	printf("(%d",r++);
+	
+	//memcpy(A,B,sizeof(double)*n*n);
+	//equ_lu(n,A,b,x);
+	//equ_chol(n,A,b,x);
+	//equ_ldl(n,A,b,x);
+	//equ_svd(n,A,b,x);
+	//equ_eig(n,A,b,x);
+
+	for (i = 0; i < n; i++) {
+		for (j = i; j <= i+m && j < n; j++)
+			A[B_IDX(n,m,i,j)] = B[i*n+j];
+	}
+	equ_chol(n,m,A,b,x);
+	
+	printf(")");
+	double c1, y1, t1, c2, y2, t2;
+	//printf("\nr = [ ");
+	for (i = 0, dot = 0.0, c1 = 0.0; i < n; i++) {
+		for (j = 0, s = 0.0, c2 = 0.0; j < n; j++) {
+			y2 = B[i*n+j]*x[j] - c2; t2 = s + y2;
+			c2 = t2 - s - y2; s = t2;
+			//printf("%.60e; ...\n",s);
+		}
+		//printf("%.60e; ...\n",s);
+		y1 = (s-b[i])*(s-b[i]) - c1; t1 = dot + y1;
+		c1 = t1 - dot - y1; dot = t1;
+	}
+	//printf("];\n");
+	if (sqrt(dot) > 1e-12) {
+		printf("\nr = [ ");
+		for (i = 0, dot = 0.0, c1 = 0.0; i < n; i++) {
+			for (j = 0, s = 0.0, c2 = 0.0; j < n; j++) {
+				y2 = B[i*n+j]*x[j] - c2; t2 = s + y2;
+				c2 = t2 - s - y2; s = t2;
+				printf("%.60e; ...\n",s);
+			}
+			printf("%.60e; ...\n",s);
+			y1 = (s-b[i])*(s-b[i]) - c1; t1 = dot + y1;
+			c1 = t1 - dot - y1; dot = t1;
+		}
+		printf("];\n");
+		//printf("\n%g\nA = [ ",sqrt(dot));
+		//for (i = 0; i < n; i++) {
+		//	for (j = 0; j < n; j++)
+		//		printf("%.60e%s ...\n",B[i*n+j],(j == n-1 ? ";" : ","));
+		//}
+		printf("];\n b = [");
+		for (i = 0; i < n; i++) {
+			printf("%.60e; ...\n",b[i]);
+		}
+		printf("];\n x = [");
+		for (i = 0; i < n; i++) {
+			printf("%.60e; ...\n",x[i]);
+		}
+		printf("];\n");
+		exit(1);
+	}
+	goto again;
+
+abort:
+	delete [] x;
+	delete [] b;
+	delete [] B;
+	delete [] A;
+};
+#endif
+
+#ifdef NOBUILD
+int
+main()
+{
+	int n, m, i, j, k;
+	int * A;
+
+	for (n = 0; n < 1000; n++) {
+		for (m = 0; m < n; m++) {
+			A = new int[B_SIZE(n,m)];
+			memset(A,0,sizeof(int)*B_SIZE(n,m));
+			for (i = 0; i < n; i++) {
+				for (j = i; j >= i-m && j >= 0; j--) {
+					k = B_IDX(n,m,j,i);
+					if (k < 0 || k >= B_SIZE(n,m)) {
+						printf("%d\t%d\t%d\t%d\t%d\t%d\n",n,m,i,j,B_SIZE(n,m),k);
+						exit(1);
+					}
+					printf("%d\t%d\t%d\t%d\t%d\n",n,m,i,j,k);
+					if (A[k] == 1) {
+						printf("OVERLAP\n");
+						exit(1);
+					}
+					A[k] = 1;
+				}
+			}
+			for (i = 0; i < B_SIZE(n,m); i++) {
+				if (A[i] != 1) {
+					printf("MISSED\n");
+					exit(1);
+				}
+			}
+			delete [] A;
+		}
+	}
+};
+#endif
+
+#ifdef NOBUILD
+#define n 10
+int
+main()
+{
+	bool rv = false;
+	int i, j, k, iter = 0;
+	double * A = new double[n*n];
+	double * B = new double[n*n];
+	double * I = new double[n*n];
+	if (A == 0 || B == 0 || I == 0) {
+		event_msg(EVENT_ERROR,"Out of memory!");
+		goto abort;
+	}
+
+again:
+	printf(".");
+	for (i = 0; i < n*n; i++)
+		B[i] = RAND(0.0,1.0), I[i] = A[i] = 0.0;
+	for (i = 0; i < n; i++) {
+		for (j = 0; j < n; j++) {
+			for (k = 0; k < n; k++)
+				A[i*n+j] += B[i*n+k]*B[j*n+k];
+		}
+	}
+	for (i = 0; i < n*n; i++)
+		B[i] = A[i];
+	printf("(");
+	//inv_lu(n,A);
+	//inv_chol(n,A);
+	//inv_svd(n,A);
+	inv_eig(n,A);
+	printf("%d)",++iter);
+	for (i = 0; i < n; i++) {
+		for (j = 0; j < n; j++) {
+			for (k = 0; k < n; k++)
+				I[i*n+j] += A[i*n+k]*B[k*n+j];
+		}
+	}
+	for (i = 0; i < n; i++) {
+		for (j = 0; j < n; j++) {
+			//printf("%f\t",I[i*n+j]-(i==j?1.0:0.0));
+			if (fabs(I[i*n+j]-(i==j?1.0:0.0)) > 1e-6)
+				rv = true;
+		}
+		//printf("\n");
+	}
+	if (rv)
+		exit(1);
+	goto again;
+
+abort:
+	if (A != 0)
+		delete [] A;
+	if (B != 0)
+		delete [] B;
+	if (I != 0)
+		delete [] I;
+
+};
+#endif
+
+#ifdef NOBUILD
+#define n 5
+int
+main()
+{
+	int i, j, k;
+	double * A = new double[n*n];
+	double * B = new double[n*n];
+	double * I = new double[n*n];
+	double * d = new double[n];
+	double * e = new double[n];
+	if (A == 0 || d == 0 || e == 0) {
+		event_msg(EVENT_ERROR,"Out of memory!");
+		goto abort;
+	}
+
+again:
+	//printf(".");
+	for (i = 0; i < n*n; i++)
+		B[i] = RAND(0.0,1.0), I[i] = A[i] = 0.0;
+	for (i = 0; i < n; i++) {
+		for (j = 0; j < n; j++) {
+			for (k = 0; k < n; k++)
+				A[i*n+j] += B[i*n+k]*B[j*n+k];
+		}
+	}
+	for (i = 0; i < n*n; i++)
+		B[i] = A[i];
+	for (i = 0; i < n; i++) {
+		for (j = 0; j < n; j++)
+			printf("%8.4f%s",A[i*n+j],(j==n-1?"\n":"\t"));
+	}
+	printf("\n");
+	//printf("(");
+	tridiag_hh(n,A,d,e);
+	eig_tri_ql(n,d,e,A);
+	//printf(")");
+	for (i = 0; i < n; i++) {
+		for (j = 0; j < n; j++)
+			printf("%8.4f%s",A[i*n+j],(j==n-1?"\n":"\t"));
+	}
+	printf("\n");
+	for (i = 0; i < n; i++) {
+		for (j = 0; j < n; j++) {
+			if (i == j)
+				printf("%8.4f%s",d[i],(j==n-1?"\n":"\t"));
+			else if (i == j+1)
+				printf("%8.4f%s",e[i],(j==n-1?"\n":"\t"));
+			else if (i == j-1)
+				printf("%8.4f%s",e[i],(j==n-1?"\n":"\t"));
+			else
+				printf("%8.4f%s",0.0,(j==n-1?"\n":"\t"));
+		}
+	}
+	//goto again;
+abort:
+	if (e != 0)
+		delete [] e;
+	if (d != 0)
+		delete [] d;
+	if (B != 0)
+		delete [] B;
+	if (A != 0)
+		delete [] A;
+	if (I != 0)
+		delete [] I;
+};
 #endif
