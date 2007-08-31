@@ -1444,7 +1444,7 @@ main()
 #endif
 
 #ifdef BUILD
-#define n 10
+#define n 100
 #define m 2
 int
 main()
@@ -1489,45 +1489,25 @@ again:
 		for (j = i; j <= i+m && j < n; j++)
 			A[B_IDX(n,m,i,j)] = B[i*n+j];
 	}
-	equ_chol(n,m,A,b,x);
+	equ_chol(n,m,A,b,x,n*n*10e-12);
 	
 	printf(")");
 	double c1, y1, t1, c2, y2, t2;
 	for (i = 0, dot = 0.0, c1 = 0.0; i < n; i++) {
-		for (j = 0, s = 0.0, c2 = 0.0; j < n; j++) {
+		for (j = 0, s = -b[i], c2 = 0.0; j < n; j++) {
 			y2 = B[i*n+j]*x[j] - c2; t2 = s + y2;
 			c2 = t2 - s - y2; s = t2;
 		}
-		y1 = (s-b[i])*(s-b[i]) - c1; t1 = dot + y1;
+		y1 = s*s - c1; t1 = dot + y1;
 		c1 = t1 - dot - y1; dot = t1;
 	}
-	if (sqrt(dot) > 1e-12) {
-		printf("\nr = [ ");
-		for (i = 0, dot = 0.0, c1 = 0.0; i < n; i++) {
-			for (j = 0, s = 0.0, c2 = 0.0; j < n; j++) {
-				y2 = B[i*n+j]*x[j] - c2; t2 = s + y2;
-				c2 = t2 - s - y2; s = t2;
-				printf("%.60e; ...\n",s);
-			}
-			printf("%.60e; ...\n",s);
-			printf("%.60e; ...\n",(s-b[i]));
-			printf("%.60e; ...\n",(s-b[i])*(s-b[i]));
-			y1 = (s-b[i])*(s-b[i]) - c1; t1 = dot + y1;
-			c1 = t1 - dot - y1; dot = t1;
-			printf("%.60e; ...\n",dot);
-		}
-		printf("];\n");
+	if (sqrt(dot) > n*n*1e-12) {
 		printf("\n%g\nA = [ ",sqrt(dot));
 		for (i = 0; i < n; i++) {
 			for (j = 0; j < n; j++)
 				printf("%.60e%s ...\n",B[i*n+j],(j == n-1 ? ";" : ","));
 		}
 		printf("];\n");
-		decmp_chol(n,m,A);
-		for (i = 0; i < n; i++) {
-			for (j = i; j <= i+m && j < n; j++)
-				printf("K(%i,%i) = %.60e;\n",i+1,j+1,A[B_IDX(n,m,i,j)]);
-		}
 		printf(" b = [");
 		for (i = 0; i < n; i++) {
 			printf("%.60e; ...\n",b[i]);

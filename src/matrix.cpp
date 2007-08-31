@@ -36,15 +36,6 @@
 #include <stdio.h>
 
 /*
- * The minimum condition number for SVD and eigenvalue decompositions.
- */
-#define EIG_TOL 10e-18
-/*
- * The miminimum error in the result of an equals operation to trigger a refinement.
- */
-#define ERR_TOL 10e-6
-
-/*
  * Orthonormalize the nxn matrix Q, using the Gramm-Schmidt algorithm.
  */
 void
@@ -176,7 +167,7 @@ bksub_lu(const int n, const double * A, const int * idx,
  * substitution, with a single step refinement.
  */
 bool
-equ_lu(const int n, const double * A, const double * b, double * x)
+equ_lu(const int n, const double * A, const double * b, double * x, const double tol)
 {
 	bool rv = true;
 	int i, j, d;
@@ -386,13 +377,12 @@ bksub_chol(const int n, const int w, const double * A,
 	}
 }
 
-
 /*
  * Solve of Ax = b by Cholesky decomposition followed by forward/back
  * substitution.
  */
 bool
-equ_chol(const int n, const double * A, const double * b, double * x)
+equ_chol(const int n, const double * A, const double * b, double * x, const double tol)
 {
 	bool rv = true;
 	//int i, j;
@@ -430,7 +420,6 @@ abort:
 	return rv;
 }
 
-
 /*
  * This function returns the solution of Ax = b, where A is banded.
  *
@@ -438,11 +427,11 @@ abort:
  * substitution, with a single step refinement.
  */
 bool
-equ_chol(const int n, const int w, const double * A, const double * b, double * x)
+equ_chol(const int n, const int w, const double * A, const double * b, double * x, const double tol)
 {
 	bool rv = true;
-	int i, j;
-	double c, y, t;
+	int i, j, iter = 0;
+	double dot, c1, y1, t1, c, y, t;
 
 	double * a = new double[B_SIZE(n,w)];
 	double * r = new double[n];
@@ -460,20 +449,27 @@ equ_chol(const int n, const int w, const double * A, const double * b, double * 
 		goto abort;
 	}
 	bksub_chol(n,w,a,x);
-	for (i = 0; i < n; i++) {
-		r[i] = -b[i];
-		for (j = MAX(i-w,0), c = 0.0; j < i; j++) {
-			y = A[B_IDX(n,w,j,i)]*x[j] - c; t = r[i] + y;
-			c = t - r[i] - y; r[i] = t;
+	while (1) {
+		dot = 0.0; c1 = 0.0;
+		for (i = 0; i < n; i++) {
+			r[i] = -b[i];
+			for (j = MAX(i-w,0), c = 0.0; j < i; j++) {
+				y = A[B_IDX(n,w,j,i)]*x[j] - c; t = r[i] + y;
+				c = t - r[i] - y; r[i] = t;
+			}
+			for (j = i; j <= i+w && j < n; j++) {
+				y = A[B_IDX(n,w,i,j)]*x[j] - c; t = r[i] + y;
+				c = t - r[i] - y; r[i] = t;
+			}
+			y1 = r[i]*r[i] - c1; t1 = dot + y1;
+			c1 = t1 - dot - y1; dot = t1;
 		}
-		for (j = i; j <= i+w && j < n; j++) {
-			y = A[B_IDX(n,w,i,j)]*x[j] - c; t = r[i] + y;
-			c = t - r[i] - y; r[i] = t;
-		}
-	}
-	bksub_chol(n,w,a,r);
-	for (i = 0; i < n; i++)
-		x[i] -= r[i];
+		if (++iter > ITER_MAX || sqrt(dot) <= tol)
+			break;
+		bksub_chol(n,w,a,r);
+		for (i = 0; i < n; i++)
+			x[i] -= r[i];
+	};
 abort:
 	delete [] r;
 	delete [] a;
@@ -578,7 +574,7 @@ bksub_ldl(const int n, const double * A,
  * substitution, (with a single step refinement).
  */
 bool
-equ_ldl(const int n, const double * A, const double * b, double * x)
+equ_ldl(const int n, const double * A, const double * b, double * x, const double tol)
 {
 	bool rv = true;
 	int i, j;
@@ -830,7 +826,7 @@ abort:
  * substitution, with refinement.
  */
 void
-equ_svd(const int n, const double * A, const double * b, double * x)
+equ_svd(const int n, const double * A, const double * b, double * x, const double tol)
 {
 	double max;
 	int i, j;
@@ -1168,7 +1164,7 @@ abort:
  * substitution, with refinement.
  */
 void
-equ_eig(const int n, const double * A, const double * b, double * x)
+equ_eig(const int n, const double * A, const double * b, double * x, const double tol)
 {
 	double max;
 	int i, j;

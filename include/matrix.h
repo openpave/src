@@ -537,6 +537,19 @@ inline void div(dlgmat & A, const dlgmat & B) {
 };
 
 /*
+ * The minimum condition number for SVD and eigenvalue decompositions.
+ * NOTE: This is recorded here to show the default.  It cannot be changed
+ * without recompiling.
+ */
+#define EIG_TOL 10e-18
+/*
+ * The miminimum error in the result of an equals operation to trigger
+ * a refinement, and the maximum number of refinements.
+ */
+#define ERR_TOL 10e-6
+#define ITER_MAX 0
+
+/*
  * Returns the size of the special banded matrix storage array
  */
 #define B_SIZE(n,m)		((m+1)*n-m*(m+1)/2)
@@ -547,19 +560,17 @@ inline void div(dlgmat & A, const dlgmat & B) {
 #define B_IDX(n,m,i,j)		(j <= m ? j*(j+1)/2+i : (j+1)*m+i-m*(m+1)/2)
 
 void orth_gs(const int n, double * Q);
-bool equ_lu(const int n, const double * A, const double * b, double * x);
+bool equ_lu(const int n, const double * A, const double * b, double * x, const double tol = ERR_TOL);
 bool inv_lu(const int n, double * A);
-bool equ_chol(const int n, const double * A, const double * b, double * x);
-bool equ_chol(const int n, const int w, const double * A, const double * b, double * x);
+bool equ_chol(const int n, const double * A, const double * b, double * x, const double tol = ERR_TOL);
+bool equ_chol(const int n, const int w, const double * A, const double * b, double * x, const double tol = ERR_TOL);
 bool inv_chol(const int n, double * A);
-bool equ_udu(const int n, const double * A, const double * b, double * x);
-void equ_svd(const int n, const double * A, const double * b, double * x);
+bool equ_ldl(const int n, const double * A, const double * b, double * x, const double tol = ERR_TOL);
+void equ_svd(const int n, const double * A, const double * b, double * x, const double tol = ERR_TOL);
 void inv_svd(const int n, double * A);
 void orth_svd(const int n, double * Q);
 void eig_ql(const int n, double * A, double * d);
-void equ_eig(const int n, const double * A, const double * b, double * x);
+void equ_eig(const int n, const double * A, const double * b, double * x, const double tol = ERR_TOL);
 void inv_eig(const int n, double * A);
-
-bool decmp_chol(const int n, const int w, double * A);
 
 #endif // __MATRIX_H
