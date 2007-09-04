@@ -61,6 +61,59 @@ orth_gs(const int n, double * Q)
 }
 
 /*
+ * This function returns the solution of Ax = b
+ *
+ * This function employs Gaussian elimination with full pivoting.
+ */
+bool
+equ_gauss(const int n, const double * A, const double * b, double * x)
+{
+	bool rv = true;
+	int i, j, k;
+
+	double * a = new double[n*n];
+	if (a == 0) {
+		event_msg(EVENT_ERROR,"Out of memory in equ_gauss()!");
+		rv = false;
+		goto abort;
+	}
+	// avoid destroying A, B by copying them to a, x resp.
+	memcpy(a,A,sizeof(double)*n*n);
+	memcpy(x,b,sizeof(double)*n);
+	for (i = 0; i < n; i++) {
+		double pvt = a[i*n+i];
+		if (fabs(pvt) < DBL_EPSILON) {
+			for (j = i+1; j < n; j++) {
+				if (fabs(pvt = a[j*n+i]) >= DBL_EPSILON)
+					break;
+			}
+			if (j == n) {
+				event_msg(EVENT_ERROR,"Singular matrix in equ_gauss()!");
+				rv = false;
+				goto abort;
+			}
+			for (k = 0; k < n; k++)
+				swap(a[j*n+k],a[i*n+k]);
+			swap(x[j],x[i]);
+		}
+		for (k = n-1; k > i; k--) {
+			double tmp = a[k*n+i]/pvt;
+			for (j = n-1; j > i; j--)
+				a[k*n+j] -= tmp*a[i*n+j];
+			x[k] -= tmp*x[i];
+		}
+	}
+	for (i = n-1; i >= 0; i--) {
+		for (j = n-1; j > i; j--)
+			x[i] -= a[i*n+j]*x[j];
+		x[i] /= a[i*n+i];
+	}
+  abort:
+	delete [] a;
+	return rv;
+}
+
+/*
  * Perform LU decompostion of an nxn matrix A.
  *
  * The algorithm comes from the net, based on the implementation in
@@ -180,8 +233,7 @@ equ_lu(const int n, const double * A, const double * b, double * x, const double
 		rv = false;
 		goto abort;
 	}
-
-	/* avoid destroying A, B by copying them to a, x resp. */
+	// avoid destroying A, B by copying them to a, x resp.
 	memcpy(a,A,sizeof(double)*n*n);
 	memcpy(x,b,sizeof(double)*n);
 	if (!decmp_lu(n,a,idx,d)) {
@@ -469,7 +521,7 @@ equ_chol(const int n, const int w, const double * A, const double * b, double * 
 		bksub_chol(n,w,a,r);
 		for (i = 0; i < n; i++)
 			x[i] -= r[i];
-	};
+	}
 abort:
 	delete [] r;
 	delete [] a;
@@ -839,7 +891,7 @@ equ_svd(const int n, const double * A, const double * b, double * x, const doubl
 		event_msg(EVENT_ERROR,"Out of memory in equ_svd()!");
 		goto abort;
 	}
-	/* avoid destroying A, B by copying them to U, x resp. */
+	// avoid destroying A, B by copying them to U, x resp.
 	memcpy(U,A,sizeof(double)*n*n);
 	memcpy(x,b,sizeof(double)*n);
 	decmp_svd(n,n,U,W,V);
