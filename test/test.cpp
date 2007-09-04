@@ -46,7 +46,7 @@ main()
 	WIMsurvey WIM(str2time("000101",NULL),str2time("040101",NULL));
 
 	WIM.ProcessRSADir("C:/Work/SANRAL LEF/NEURAL/2030","C:/Work/SANRAL LEF/NEURAL/2030.WIM");
-};
+}
 #endif
 
 #ifdef NOBUILD
@@ -171,7 +171,7 @@ double Ebad[17][5] = {
 	{ 4232.885833, 2459.175446,  153.045334,  279.037000,   14.379712}, 
 	{ 1240.509997, 2480.000309,  203.603987,  806.573371,   76.893795}, 
 	{  567.332552,  113.212841,  304.356563,   17.424377,   28.011755},
-};
+}
 
 	LEbackcalc Bowl;
 
@@ -654,7 +654,7 @@ main()
 		printf("\n");
 	}
 	delete _p;
-};
+}
 #endif
 
 #ifdef NOBUILD
@@ -738,7 +738,7 @@ main()
 		}
 		printf("\n");
 	} while (++t < 20);
-};
+}
 #endif
 
 #ifdef NOBUILD
@@ -1337,7 +1337,7 @@ main()
 		fprintf(fp,"%0.16f\t%0.16f\n",0.01*i,d);
 	}
 	fclose(fp);
-};
+}
 #endif
 
 #ifdef NOBUILD
@@ -1385,7 +1385,7 @@ main()
 	printf("%0.16f\n",d2.result(pavedata::stress,pavedata::xy));
 	printf("%0.16f\n",d2.result(pavedata::stress,pavedata::xz));
 	printf("%0.16f\n",d2.result(pavedata::stress,pavedata::yz));
-};
+}
 #endif
 
 #ifdef NOBUILD
@@ -1410,7 +1410,7 @@ main()
 	printf((double)(d) > 11.0 ? "true\n" : "false\n");
 	printf("%g\n",(double)(b));
 	printf("%g\n",(double)(e));
-};
+}
 #endif
 
 #ifdef NOBUILD
@@ -1444,8 +1444,8 @@ main()
 #endif
 
 #ifdef BUILD
-#define n 100
-#define m 2
+#define n 10
+#define m 9
 int
 main()
 {
@@ -1477,19 +1477,21 @@ again:
 	for (i = 0; i < n; i++)
 		b[i] = RAND(0.0,1.0);
 	printf("(%d",r++);
+	fflush(NULL);
 	
-	//memcpy(A,B,sizeof(double)*n*n);
+	memcpy(A,B,sizeof(double)*n*n);
+	equ_gauss(n,A,b,x);
 	//equ_lu(n,A,b,x);
 	//equ_chol(n,A,b,x);
 	//equ_ldl(n,A,b,x);
 	//equ_svd(n,A,b,x);
 	//equ_eig(n,A,b,x);
 
-	for (i = 0; i < n; i++) {
-		for (j = i; j <= i+m && j < n; j++)
-			A[B_IDX(n,m,i,j)] = B[i*n+j];
-	}
-	equ_chol(n,m,A,b,x,n*n*10e-12);
+	//for (i = 0; i < n; i++) {
+	//	for (j = i; j <= i+m && j < n; j++)
+	//		A[B_IDX(n,m,i,j)] = B[i*n+j];
+	//}
+	//equ_chol(n,m,A,b,x,n*n*10e-12);
 	
 	printf(")");
 	double c1, y1, t1, c2, y2, t2;
@@ -1526,7 +1528,7 @@ abort:
 	delete [] b;
 	delete [] B;
 	delete [] A;
-};
+}
 #endif
 
 #ifdef NOBUILD
@@ -1564,7 +1566,7 @@ main()
 			delete [] A;
 		}
 	}
-};
+}
 #endif
 
 #ifdef NOBUILD
@@ -1626,7 +1628,7 @@ abort:
 	if (I != 0)
 		delete [] I;
 
-};
+}
 #endif
 
 #ifdef NOBUILD
@@ -1695,5 +1697,5 @@ abort:
 		delete [] A;
 	if (I != 0)
 		delete [] I;
-};
+}
 #endif

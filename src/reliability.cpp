@@ -57,7 +57,7 @@ double stdnormal_rnd() {
 	}
 
 	return u[i];
-};
+}
 
 /*
  * The standard normal PDF, for one random variable.
@@ -65,7 +65,7 @@ double stdnormal_rnd() {
 double stdnormal_pdf(const double u)
 {
 	return exp(-u*u/2)/M_SQRT2PI;
-};
+}
 
 /*
  * An implementation of adaptive, recursive Newton-Cotes integration.
@@ -90,7 +90,7 @@ double quad8_stdnormal_pdf(const double a, const double b, const double Q = 1.0)
 	for (i = 0; i < 9; i++) {
 		Q1 += h*w[i]*stdnormal_pdf(a+i*h)/dw;
 		Q2 += h*w[i]*stdnormal_pdf(a+(i+8)*h)/dw;
-	};
+	}
 	/* This is the adaptive recursive bit.  We only recurse if we can improve... */
 	if (fabs(Q1+Q2-Q) > tol*fabs(Q1+Q2) && level <= LEVMAX) {
 		tol = tol/2;
@@ -168,7 +168,7 @@ double stdnormal_cdf(const double u)
 	z = floor(u*16)/16;
 	y *= exp(-0.5*z*z)*exp(-0.5*(u-z)*(u+z));
 	return (u < 0.0 ? y : 1-y);
-};
+}
 
 /*
  * The inverse standard normal distribution.
@@ -229,7 +229,7 @@ double stdnormal_inv(double p)
 	t *= M_SQRT2PI*exp(u*u/2);			// f(u)/df(u)
 	u -= t/(1+u*t/2);					// Halley's method
 	return (p > 0.5 ? -u : u);
-};
+}
 
 /*
  *	Simple constructor.  We always have an owner, and optionally a previous list member.
@@ -249,7 +249,7 @@ randomvar::randomvar(reliability * o, randomvar * p) {
 	ustdnormal = 0.0;
 	for (int i = 0; i < RV_DIST_PARAM; i++)
 		d[i] = 0.0;
-};
+}
 
 /*
  *	A simple destructor which does a bit of list management...
@@ -261,7 +261,7 @@ randomvar::~randomvar() {
 	if (next != 0) {
 		next->prev = prev;
 	}
-};
+}
 
 /*
  * An implementation of a normally distributed random variable.
@@ -271,16 +271,16 @@ struct rv_normal : public randomvar
 public:
 	virtual distribution type() {
 		return randomvar::NORMAL;
-	};
+	}
 	virtual double x() {
 		return d[0] + d[1]*z();
-	};
+	}
 	virtual double mean() {
 		return d[0];
-	};
+	}
 	virtual double stddev() {
 		return d[1];
-	};
+	}
 
 protected:
 	friend class reliability;
@@ -291,7 +291,7 @@ protected:
 		param(1, s);
 	}
 	virtual ~rv_normal() {
-	};
+	}
 };
 
 /*
@@ -302,16 +302,16 @@ struct rv_lognormal : public randomvar
 public:
 	virtual distribution type() {
 		return randomvar::LOGNORMAL;
-	};
+	}
 	virtual double x() {
 		return exp(d[0] + d[1]*z());
-	};
+	}
 	virtual double mean() {
 		return exp(d[0] + d[1]*d[1]/2);
-	};
+	}
 	virtual double stddev() {
 		return mean()*sqrt(exp(d[1]*d[1])-1);
-	};
+	}
 
 protected:
 	friend class reliability;
@@ -322,7 +322,7 @@ protected:
 		param(0, log(m) - d[1]*d[1]/2);
 	}
 	virtual ~rv_lognormal() {
-	};
+	}
 };
 
 /*
@@ -338,7 +338,7 @@ gfunction::gfunction(reliability * o, gfunction * p) {
 		}
 		prev->next = this;
 	}
-};
+}
 
 /*
  *	A simple destructor which does a bit of list management...
@@ -350,7 +350,7 @@ gfunction::~gfunction() {
 	if (next != 0) {
 		next->prev = prev;
 	}
-};
+}
 
 /*
  *	A simple construcutor for a reliability problem.
@@ -358,7 +358,7 @@ gfunction::~gfunction() {
 reliability::reliability() {
 	rv_head = 0;
 	gf_head = 0;
-};
+}
 
 /*
  *	Simple destuctor.  delete's all of our lists.
@@ -378,7 +378,7 @@ reliability::~reliability() {
 		delete gf_head;
 	}
 	gf_head = 0;
-};
+}
 
 /*
  * Creates a new random variable of the type specified.
@@ -406,4 +406,4 @@ reliability::NewRV(randomvar::distribution t, double m, double s) {
 		rv_head = rv;
 
 	return rv;
-};
+}

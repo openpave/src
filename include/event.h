@@ -81,7 +81,7 @@ void event_msg(const int level, const char * fmt, ...)
 	if (level < EVENT_DEBUG && fmt != NULL)
 		vfprintf(stderr,fmt,args);
 	va_end(args);
-};
+}
 
 #undef _EVENT_IMP
 #endif
@@ -112,7 +112,7 @@ void event_progress_bar(const int level, const double p,
 	sprintf(buf,"(%3.0f%%)",(p<0.0?0.0:(p>1.0?1.0:p))*100);
 	event_msg(EVENT_NOTE,"%s",buf);
 	va_end(args);
-};
+}
 
 /*
  * Default error event handler.
@@ -153,9 +153,9 @@ void event_progress(const int type, const int marker,
 		level--;
 	default:
 		event_msg(EVENT_ERROR,"Invalid progress indication!");
-	};
+	}
 	va_end(args);
-};
+}
 #undef _PROGRESS_IMP
 #endif
 

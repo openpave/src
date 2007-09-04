@@ -157,7 +157,7 @@ void inline swap(T &a, T &b) {
 	T temp = b;
 	b = a;
 	a = temp;
-};
+}
 
 /*
  * Computes n choose k

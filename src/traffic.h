@@ -79,20 +79,20 @@ struct WIMday {
 	// Your basic constructor...
 	inline WIMday(time_t d = -1) {
 		Clear(d);
-	};
+	}
 	// Clear the strucuture
 	inline void Clear(time_t d = -1) {
 		memset(this,0,sizeof(*this));
 		day = d;
-	};
+	}
 	// Write binary file...
 	inline bool Write(FILE * bp) {
 		return (fwrite(this,sizeof(*this),1,bp) == 1);
-	};
+	}
 	// Read binary file...
 	inline bool Read(FILE * bp) {
 		return (fread(this,sizeof(*this),1,bp) == 1);
-	};
+	}
 	static time_t GetRSADate(const char * fname);
 	bool AddRSAVehicle(const char * buf);
 	WIMday & operator += (const WIMday & daily);
@@ -100,46 +100,46 @@ struct WIMday {
 	// The total vehicle count.
 	inline int TV() const {
 		return TLV()+THV();
-	};
+	}
 	// The total light vehicle count.
 	inline int TLV() const {
 		int l, rv;
 		for (l = 0, rv = 0; l < MAX_LANES; l++)
 			rv += LVPL[l];
 		return rv;
-	};
+	}
 	// The total heavy vehicle count.
 	inline int THV() const {
 		int l, rv;
 		for (l = 0, rv = 0; l < MAX_LANES; l++)
 			rv += HVPL[l];
 		return rv;
-	};
+	}
 	// The total vehicle count in lane L.
 	inline int VPL(const int l) const {
 		return LVPL[l]+HVPL[l];
-	};
+	}
 	// The total axle count in lane L.
 	inline int TAC(const int l) const {
 		int t, rv;
 		for (t = 0, rv = 0; t < AXLE_TYPES; t++)
 			rv += AC(l,t);
 		return rv;
-	};
+	}
 	// The total axle count for axle type T.
 	inline int AxC(const int t) const {
 		int l, rv;
 		for (l = 0, rv = 0; l < MAX_LANES; l++)
 			rv += AC(l,t);
 		return rv;
-	};
+	}
 	// The axle count in lane L for axle type T.
 	inline int AC(const int l, const int t) const {
 		int i, rv;
 		for (i = 0, rv = 0; i < LOADS; i++)
 			rv += WG[l][t][i];
 		return rv;
-	};
+	}
 };
 
 /*
@@ -156,7 +156,7 @@ public:
 			end = e;
 		if (fname != 0)
 			Read(fname);
-	};
+	}
 	bool ProcessRSAFile(const char * fname, FILE * bp, WIMday * day);
 	bool ProcessRSADir(const char * dir, const char * bname);
 	bool Read(const char * bname);

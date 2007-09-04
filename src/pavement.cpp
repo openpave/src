@@ -208,25 +208,25 @@ LEsystem::removelayer(const int l)
 		return true;
 	}
 	return false;
-};
+}
 
 bool
 LEsystem::removeloads()
 {
 	return load.empty();
-};
+}
 
 bool
 LEsystem::removeload(const int i)
 {
 	return load.remove(i);
-};
+}
 
 bool
 LEsystem::addpoint(const point3d & p)
 {
 	return data.add(pavedata(p));
-};
+}
 	
 bool
 LEsystem::addgrid(const int nx, const double *xp,
@@ -244,19 +244,19 @@ LEsystem::addgrid(const int nx, const double *xp,
 		}
 	}
 	return data.add(pd,nx*ny*nz);
-};
+}
 
 bool
 LEsystem::removepoints()
 {
 	return data.empty();
-};
+}
 
 bool
 LEsystem::removepoint(const point3d & p)
 {
 	return data.remove(p);
-};
+}
 
 LElayer &
 LEsystem::layer(const int l)
@@ -266,7 +266,7 @@ LEsystem::layer(const int l)
 	while (i++ < l && pl->next != 0)
 		pl = pl->next;
 	return *pl;
-};
+}
 
 /*
  * This checks the structure of the pavement to ensure that is is
@@ -348,7 +348,7 @@ LEsystem::check()
 		}
 	}
 	return true;
-};
+}
 
 /*
  * As simple struct to store the axisymetric data.  These are
@@ -446,7 +446,7 @@ initarrays() {
 			y1 = j1(x1), y2 = j1(x2);
 			xi = x2 - y2*(x2-x1)/(y2-y1);
 			x1 = x2, x2 = xi;
-		};
+		}
 		j1r[ib] = x2;
 		x1 = j0r[ib] - M_PI_4, x2 = x1 + 0.1;
 		while (fabs(j0mj1(x2)) > 1e-30 && x1 != x2) {
@@ -1028,7 +1028,7 @@ abort:
 	delete _bm0;
 	delete _bm1;
 	return rv;
-};
+}
 
 /*
  * This used to be ELSYM5M, now it's a NxNxN layered elastic code...
@@ -1410,7 +1410,7 @@ abort:
 	delete [] m0;
 	delete [] m1;
 	return rv;
-};
+}
 
 /*
  * This is Odemark's method of equivalent thicknesses, with Bosussinesq's
@@ -1529,7 +1529,7 @@ LEsystem::calc_odemark()
 		data[ixy].principle(pl->poissons(),pl->emod());
     }
     return true;
-};
+}
 
 /*
  * The deflection equation is derived from the Boissenq solution,
@@ -1592,7 +1592,7 @@ quad8_vdp(double r, double z, double s, double v, double a = 0.0,
 				 +(v+1)*z*z*((z*z+r*r-t*s)/sqrt(z*z-2*s*t+s*s+r*r)
 					 -hypot(z,r))/(t*t-z*z-r*r)
 			);
-	};
+	}
 	// This is the adaptive recursive bit.  We only recurse if we
 	// can improve...
 	if (fabs(Q1+Q2-Q) > tol*fabs(Q1+Q2) && level <= LEVMAX) {
@@ -1687,7 +1687,7 @@ abort:
 	delete [] v;
 	delete [] E;
 	return rv;
-};
+}
 
 /*
  * The overall backcalculation routine.

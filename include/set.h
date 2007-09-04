@@ -79,19 +79,19 @@ public:
 	// The first element. Nice for loops...
 	inline const int start() const {
 		return 1;
-	};
+	}
 	// The last element. Also nice for loops...
 	inline const int end() const {
 		return size;
-	};
+	}
 	// The length. Nice for lots of things...
 	inline const int length() const {
 		return size;
-	};
+	}
 	// Check if an index is within the set...
 	inline bool inbounds(const int p) const {
 		return (p >= 1 && p <= size ? true : false);
-	};
+	}
 
 protected:
 	int size;							// The size of the set...
@@ -101,9 +101,9 @@ protected:
 	inline set(const int s = 0, const int b = DFLT_BLK) {
 		size = (s > 0 ? s : 0);
 		block = (b > 1 ? b : 1);
-	};
+	}
 	inline ~set() {
-	};
+	}
 
 	// Calculate the buffer size.
 	inline int buffer(const int s) const {
@@ -111,11 +111,11 @@ protected:
 			return (block == 0 ? s+1 : block*(s/block+(s%block?1:0))+1);
 		else
 			return (block == 0 ? 1 : block);
-	};
+	}
 	// Check if we need to reallocate the buffer.
 	inline bool reallocate(const int s) const {
 		return (buffer(size) != buffer(s) ? true : false);
-	};
+	}
 };
 
 /*
@@ -134,20 +134,20 @@ public:
 			return;
 		for (int i = 0; v && i < size; i++)
 			value[i+1] = v[i];
-	};
+	}
 	// Copy constructor.
 	fset(const fset<V> & v) : set(v.size,v.block), value(0) {
 		if (!allocate(size))
 			return;
 		for (int i = 0; i <= size; i++)
 			value[i] = v.value[i];
-	};
+	}
 	// Wow, a destructor...
 	~fset() {
 		if (value != 0)
 			delete [] value;
 		value = 0;
-	};
+	}
 
 	// Assignment operator.
 	fset<V> & operator = (const fset<V> & v) {
@@ -164,19 +164,19 @@ public:
 		for (int i = 0; i <= size; i++)
 			value[i] = v.value[i];
 		return *this;
-	};
+	}
 	// Set the default element if constructor didn't do a good job.
 	void setdefault(const V & d) {
 		value[0] = d;
-	};
+	}
 	// Return an element, or the default. One indexed.
 	V & data(const int p) const {
 		return (inbounds(p) ? value[p] : value[0]);
-	};
+	}
 	// Behave like an array. Zero indexed.
 	V & operator [] (const int p) const {
 		return value[p+1];
-	};
+	}
 
 protected:
 	V * value;							// The buffer.
@@ -191,14 +191,14 @@ protected:
 			value = tmp;
 			event_msg(EVENT_ERROR,"Out of memory in fset::allocate()!");
 			return false;
-		};
+		}
 		return true;
-	};
+	}
 	// Also hide the null constructor.
 	inline fset() : set(), value(0) {
 		// If it fails it fails...
 		allocate(size);
-	};
+	}
 };
 
 /*
@@ -212,38 +212,38 @@ class sset : public fset<V> {
 public:
 	// Provide a null constuctor for empty sets.
 	sset() : fset<V>() {
-	};
+	}
 	// Simple constructor.
 	sset(const int s, const int b = DFLT_BLK, const V * v = 0)
 		: fset<V>(s,b,v) {
-	};
+	}
 	// Copy constructor.
 	sset(const fset<V> & v) : fset<V>(v) {
-	};
+	}
 	// We let someone else clean up...
 	~sset() {
-	};
+	}
 
 	// Add one element, at the end.
 	inline bool add(const V & v) {
 		return add(this->size+1,&v,1);
-	};
+	}
 	// Add a whole set, at the end.
 	inline bool add(const fset<V> & v) {
 		return add(this->size+1,&v.value[1],v.size);
-	};
+	}
 	// Add an array, at the end.
 	inline bool add(const V * v, const int s = 1) {
 		return add(this->size+1,v,s);
-	};
+	}
 	// Insert one element at position p.
 	inline bool add(const int p, const V & v) {
 		return add(p,&v,1);
-	};
+	}
 	// Insert a set at position p.
 	inline bool add(const int p, const fset<V> & v) {
 		return add(p,&v.value[1],v.size);
-	};
+	}
 	// Add an array at position p. (Actually do the work too).
 	bool add(const int p, const V * v, const int s = 1) {
 		int i, j;
@@ -279,11 +279,11 @@ public:
 			}
 		}
 		return true;
-	};
+	}
 	// Remove the last element.
 	inline bool remove() {
 		return remove(this->size,1);
-	};
+	}
 	// Remove s elements, starting at position p.
 	bool remove(const int p, const int s = 1) {
 		if (this->inbounds(p) && s > 0) {
@@ -305,7 +305,7 @@ public:
 			return false;
 		}
 		return true;
-	};
+	}
 	bool empty() {
 		if (this->reallocate(0)) {
 			delete [] this->value;
@@ -315,7 +315,7 @@ public:
 		}
 		this->size = 0;
 		return true;
-	};
+	}
 };
 
 /*
@@ -333,25 +333,25 @@ class oset : public sset<V> {
 public:
 	// Null constructor.
 	oset() : sset<V>() {
-	};
+	}
 	// Simple constructor.
 	oset(const int s, const int b = DFLT_BLK, const V * v = 0)
 		: sset<V>(s,b,v) {
 		if (v)
 			sort();
-	};
+	}
 	// Copy constructor.
 	oset(const fset<V> & v) : sset<V>(v) {
 		sort();
-	};
+	}
 	// Destructor.
 	~oset() {
-	};
+	}
 
 	// Guess what?
 	void sort() {
 		qsort(1,this->size);
-	};
+	}
 
 protected:
 	// A highly optimised quick sort. Don't touch...
@@ -380,14 +380,14 @@ protected:
 				qsort(p+1, r);
 			}	
 		}
-	};
+	}
 	// Insertion sort for if the set looks sorted already.
 	void isort(const int l, const int r) {
 		for (int i = l+1; l+1 < r && i <= r; i++) {
 			for (int j = i; j > l && this->value[j] <= this->value[j-1]; j--)
 				swap(this->value[j],this->value[j-1]);
 		}
-	};
+	}
 };
 
 /*
@@ -403,23 +403,23 @@ class cset : public oset<V> {
 public:
 	// Getting the hang of this yet?
 	cset() : oset<V>() {
-	};
+	}
 	cset(const int s, const int b = DFLT_BLK, const V * v = 0)
 		: oset<V>(s,b,v) {
 		if (v)
 			compact();
-	};
+	}
 	cset(const fset<V> & v) : oset<V>(v) {
 		compact();
-	};
+	}
 	~cset() {
-	};
+	}
 
 	// Sort then compact the set.
 	void sort() {
 		this->qsort(1,this->size);
 		compact();
-	};
+	}
 
 protected:
 	void compact() {
@@ -431,7 +431,7 @@ protected:
 				this->value[j] = this->value[i];
 		}
 		this->size = j;
-	};
+	}
 };
 
 /*
@@ -462,20 +462,20 @@ public:
 				this->value[++(this->size)] = v[i];
 			}
 		}
-	};
+	}
 	// Copy constuctor.
 	kfset(const kfset<K,V> & v) : set(v.size,v.block), value(0) {
 		if (!allocate(this->size))
 			return;
 		for (int i = 0; i <= this->size; i++)
 			this->value[i] = v.value[i];
-	};
+	}
 	// Clean up.
 	~kfset() {
 		if (this->value)
 			delete [] this->value;
 		this->value = 0;
-	};
+	}
 
 	// Do a key lookup, and return zero if the key is not found.
 	int haskey(const K & k) const {
@@ -484,7 +484,7 @@ public:
 				return i;
 		}
 		return 0;
-	};
+	}
 	// Assignment operator.
 	kfset<K,V> & operator = (const kfset<K,V> & v) {
 		if (reallocate(v.size)) {
@@ -500,24 +500,24 @@ public:
 		for (int i = 0; i <= this->size; i++)
 			this->value[i] = v.value[i];
 		return *this;
-	};
+	}
 	// Set our default elelment.
 	void setdefault(const V & v) {
 		this->value[0] = v;
-	};
+	}
 	// Return data based on a key lookup. The default value is
 	// returned if the key is not found.
 	V & data(const K & k) const {
 		return this->value[haskey(k)];
-	};
+	}
 	// Look and feel like an array.
 	V & operator [] (const K & k) const {
 		return data(k);
-	};
+	}
 	// Allow integer keys.
 	V & operator [] (const int p) const {
 		return this->value[p+1];
-	};
+	}
 
 protected:
 	V * value;							// The data.
@@ -532,13 +532,13 @@ protected:
 			this->value = tmp;
 			event_msg(EVENT_ERROR,"Out of memory in kfset::allocate!");
 			return false;
-		};
+		}
 		return true;
-	};
+	}
 	// And the null constructor.
 	kfset() : set(), value(0) {
 		allocate(this->size);
-	};
+	}
 };
 
 /*
@@ -551,23 +551,23 @@ class ksset : public kfset<K,V> {
 public:
 	// C++ sucks...
 	ksset() : kfset<K,V>() {
-	};
+	}
 	ksset(const int s, const int b = DFLT_BLK, const V * v = 0)
 		: kfset<K,V>(s,b,v) {
-	};
+	}
 	ksset(const kfset<K,V> & v) : kfset<K,V>(v) {
-	};
+	}
 	~ksset() {
-	};
+	}
 
 	// Add one value at the end.
 	inline bool add(const V & v) {
 		return add(&v,1);
-	};
+	}
 	// Add a whole set, at the end.
 	inline bool add(const kfset<K,V> & v) {
 		return add(&v.value[1],v.size);
-	};
+	}
 	// Add an array of values... There is no point in
 	// a position based addition. 
 	bool add(const V * v, const int s = 1) {
@@ -589,7 +589,7 @@ public:
 			}
 		}
 		return true;
-	};
+	}
 	// Remove based on key.
 	bool remove(const K & k) {
 		if (int p = haskey(k)) {
@@ -610,7 +610,7 @@ public:
 			return false;
 		}
 		return true;
-	};
+	}
 	// Replace key/value with another.
 	bool replace(const K & ko, const V & v) {
 		if (int p = haskey(ko)) {
@@ -618,7 +618,7 @@ public:
 			return true;
 		}
 		return false;
-	};
+	}
 	bool empty() {
 		if (this->reallocate(0)) {
 			delete [] this->value;
@@ -629,7 +629,7 @@ public:
 		}
 		this->size = 0;
 		return true;
-	};
+	}
 };
 
 /*
@@ -641,18 +641,18 @@ template <class K, class V>
 class koset : public ksset<K,V> {
 public:
 	koset() : ksset<K,V>() {
-	};
+	}
 	koset(const int s, const int b = DFLT_BLK, const V * v = 0)
 		: ksset<K,V>(s,b,v) {
-	};
+	}
 	koset(const kfset<K,V> & v) : ksset<K,V>(v) {
-	};
+	}
 	~koset() {
-	};
+	}
 
 	inline void sort() {
 		qsort(1,this->size);
-	};
+	}
 protected:
 	void qsort(const int l, const int r) {
 		if (r > l) {
@@ -679,14 +679,14 @@ protected:
 				qsort(p+1, r);
 			}
 		}
-	};
+	}
 	void isort(const int l, const int r) {
 		for (int i = l+1; i <= r; i++) {
 			for (int j = i; j > l && this->value[j-1] > this->value[j]; j--) {
 				swap(this->value[j],this->value[j-1]);
 			}
 		}
-	};
+	}
 };
 
 /*
@@ -702,7 +702,7 @@ public:
 	// Make empty one...
 	afset(const int s, const int b = DFLT_BLK) : set(s,b) {
 		allocate(size);
-	};
+	}
 	// Make one...
 	afset(const int s, const int b, const K * k, const V * v = 0)
 		: set(s,b) {
@@ -719,7 +719,7 @@ public:
 					value[size] = v[i];
 			}
 		}
-	};
+	}
 	// Copy one...
 	afset(const afset<K,V> & v) : set(v.size,v.block) {
 		if (!allocate(size))
@@ -728,7 +728,7 @@ public:
 			key[i] = v.key[i];
 			value[i] = v.value[i];
 		}
-	};
+	}
 	// Kill one...
 	~afset() {
 		if (key)
@@ -737,7 +737,7 @@ public:
 			delete [] value;
 		key = 0;
 		value = 0;
-	};
+	}
 
 	// Return an index for a key.
 	int haskey(const K & k) const {
@@ -746,7 +746,7 @@ public:
 				return i+1;
 		}
 		return 0;
-	};
+	}
 	// Assignement operator.
 	afset<K,V> & operator = (const afset<K,V> & v) {
 		if (reallocate(v.size)) {
@@ -765,28 +765,28 @@ public:
 			value[i] = v.value[i];
 		}
 		return *this;
-	};
+	}
 	// Set our defaults.
 	void setdefault(const K & k, const V & v) {
 		key[0] = k;
 		value[0] = v;
-	};
+	}
 	// Return data...
 	inline V & data(const K & k) const {
 		return value[haskey(k)];
-	};
+	}
 	// Behave like an indexed array...
 	inline V & operator [] (const K & k) const {
 		return data(k);
-	};
+	}
 	// Linear access.
 	inline K & getkey(const int p) const {
 		return (inbounds(p) ? key[p] : key[0]);
-	};
+	}
 	// More linear access.
 	inline V & getvalue(const int p) const {
 		return (inbounds(p) ? value[p] : value[0]);
-	};
+	}
 protected:
 	K * key;							// The keys.
 	V * value;							// Take a guess...
@@ -804,14 +804,14 @@ protected:
 			value = vtmp;
 			event_msg(EVENT_ERROR,"Out of memory in afset::allocate()!");
 			return false;
-		};
+		}
 		return true;
 
-	};
+	}
 	// Don't allow yobos to make empty sets...
 	afset() : set() {
 		allocate(size);
-	};
+	}
 };
 
 /*
@@ -822,26 +822,26 @@ class asset : public afset<K,V> {
 public:
 	// Empty sizeable sets are OK.
 	asset() : afset<K,V>() {
-	};
+	}
 	// Simple constructor.
 	asset(const int s, const int b = DFLT_BLK, const K * k = 0,
 		const V * v = 0) : afset<K,V>(s,b,k,v) {
-	};
+	}
 	// Copy constructor.
 	asset(const afset<K,V> & v) : afset<K,V>(v) {
-	};
+	}
 	// Destructor.
 	~asset() {
-	};
+	}
 
 	// Add one...
 	inline bool add(const K & k,const V & v) {
 		return add(&k,&v,1);
-	};
+	}
 	// Add a whole set, at the end.
 	inline bool add(const afset<K,V> & v) {
 		return add(&v.key[1],&v.value[1],v.size);
-	};
+	}
 	// Add a whole bunch...
 	bool add(const K * k, const V * v = 0, const int s = 1) {
 		if (s <= 0)
@@ -854,7 +854,7 @@ public:
 			for (int i = 0; i <= this->size; i++) {
 				this->key[i] = tempkey[i];
 				this->value[i] = tempval[i];
-			};
+			}
 			delete [] tempkey;
 			delete [] tempval;
 		}
@@ -870,7 +870,7 @@ public:
 			}
 		}
 		return true;
-	};
+	}
 	// Now start removing them...
 	bool remove(const K & k) {
 		if (int p = haskey(k)) {
@@ -897,7 +897,7 @@ public:
 			return false;
 		}
 		return true;
-	};
+	}
 	// Or replacing them...
 	bool replace(const K & ko, const K & k, const V & v) {
 		if (int p = haskey(ko)) {
@@ -907,7 +907,7 @@ public:
 		} else {
 			return false;
 		}
-	};
+	}
 	bool empty() {
 		if (this->reallocate(0)) {
 			delete [] this->key;
@@ -920,7 +920,7 @@ public:
 		}
 		this->size = 0;
 		return true;
-	};
+	}
 };
 
 /*
@@ -932,18 +932,18 @@ template <class K, class V>
 class aoset : public asset<K,V> {
 public:
 	aoset() : asset<K,V>() {
-	};
+	}
 	aoset(const int s, const int b = DFLT_BLK, const K * k = 0,
 		const V * v = 0) : asset<K,V>(s,b,k,v) {
-	};
+	}
 	aoset(const afset<K,V> & v) : asset<K,V>(v) {
-	};
+	}
 	~aoset() {
-	};
+	}
 
 	inline void sort() {
 		qsort(1,this->size);
-	};
+	}
 protected:
 	void qsort(const int l, const int r) {
 		if (r > l) {
@@ -977,7 +977,7 @@ protected:
 				qsort(p+1, r);
 			}
 		}
-	};
+	}
 	void isort(const int l, const int r) {
 		for (int i = l+1; l+1 < r && i <= r; i++) {
 			for (int j = i; j > l && this->value[j-1] > this->value[j]; j--) {
@@ -985,7 +985,7 @@ protected:
 				swap(this->value[j],this->value[j-1]);
 			}
 		}
-	};
+	}
 };
 
 #endif // SET_H

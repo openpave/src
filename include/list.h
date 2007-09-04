@@ -80,14 +80,14 @@ protected:
 			}
 			prev->next = static_cast<T *>(this);
 		}
-	};
+	}
 	// Unlink ourselves from the list before we die...
 	virtual ~listelement_d() {
 		if (prev != 0)
 			prev->next = next;
 		if (next != 0)
 			next->prev = prev;
-	};
+	}
 	// These are so the other classes can access our points.
 #if defined(_MSC_VER) && (_MSC_VER <= 1200)
 	friend class listelement_d<T>;
@@ -119,7 +119,7 @@ protected:
 			if (this->next == 0)
 				owner->last = static_cast<T *>(this);
 		}
-	};
+	}
 	// Also manage our owner's pointers.
 	virtual ~listelement_o() {
 		if (owner != 0) {
@@ -128,7 +128,7 @@ protected:
 			if (this->next == 0)
 				owner->last = this->prev;
 		}
-	};
+	}
 	// Be a bit social.
 	//friend class O;
 	friend class list_owned<O,T>;
@@ -148,15 +148,15 @@ protected:
 
 	// All lists start empty...
 	list_double(): first(0), last(0) {
-	};
+	}
 	virtual ~list_double() {
 		empty();
-	};
+	}
 
 	// Check in the list is empty.
 	bool inline isempty() const {
 		return (first == 0 ? true : false);
-	};
+	}
 	// Figure out the length of the list.
 	int length() const {
 		int s = 0;
@@ -166,7 +166,7 @@ protected:
 			s++;
 		}
 		return s;
-	};
+	}
 	// Sometimes you just need to start a new list.
 	void empty() {
 		if (first != 0) {
@@ -176,7 +176,7 @@ protected:
 		}
 		first = 0;
 		last = 0;
-	};
+	}
 };
 
 /*
@@ -188,9 +188,9 @@ template <class O, class T>
 class list_owned : public list_double<T> {
 protected:
 	list_owned() : list_double<T>() {
-	};
+	}
 	virtual ~list_owned() {
-	};
+	}
 
 	friend class listelement_o<O,T>;
 	//friend class O;
