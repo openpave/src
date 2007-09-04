@@ -26,13 +26,30 @@
 	Contributor(s): Jeremy Lea <reg@openpave.org>.
 
 	Purpose:
-		This header implements simple C++ vector and matrix structures.
+		This header implements simple C++ matrix structures and
+		mathmematics.  The idea is to create classes which are as easy to
+		use as MATLAB, but without the overhead of a class based matrix
+		approach.  There are a number of low level functions which can also
+		be called directly.
 
 	Design:
-		The idea is to behave like a vector or a matrix...  Funny that.
+		The design of these classes is based on a COM type model.  There is
+		a matrix class which provides the working interface for consumers,
+		but does not provide storage.  The storage is provided by a number
+		of container classes, which are tailored to special storage
+		requirements, like banded or diagonal matrices.  Then there are
+		operators, which are collected into equations which are evaluated
+		lazily.  This allows the system to minimise the use of temporaries,
+		and to perform optimisations which are not possible with a direct
+		approach.  This also allows for reference counting and copy on write
+		syntax, so that storage is shared.
+		
+		The idea is to provide basic classes, and then to tie into
+		BLAS/LAPACK etc.
 
 	History:
 		1993       - Created by Jeremy Lea <reg@openpave.org>
+		2007/09/04 - Complete redesign (again).
 
 **************************************************************************/
 
@@ -43,177 +60,167 @@
 #include "event.h"
 #include <memory.h>
 
+class matrix_storage_ptr;
+
 /*
- * class vector - A simple vector.
+ * class matrix_storage - Storage for a matrix.
  *
- * A vector of length N.  Has no concept of row or column vectors.
+ * This interface class supports all of the details necessary for
+ * storing and retrieving a matrix.
  */
-struct vector {
-	// Various constuctors.
-	inline vector() {
-		N = 0, data = 0;
-	};
-	inline vector(const int _n) {
-		resize(_n);
-	};
-	inline vector(const int _n, const double d) {
-		resize(_n);
-		for (int i = 0; i < N; i++)
-			data[i] = d;
-	};
-	inline vector(const int _n, const double * v) {
-		resize(_n);
-		memcpy(data,v,sizeof(double)*N);
-	};
-	inline vector(const vector & v) {
-		resize(v.N);
-		memcpy(data,v.data,sizeof(double)*N);
-	};
-
-	// Allow copying.
-	inline vector & operator = (const vector & v) {
-		if (N != v.N)
-			resize(v.N);
-		memcpy(data,v.data,sizeof(double)*N);
-		return *this;
-	};
-	inline int n() const {
-		return N;
-	};
-	inline double & operator [] (const int p) const {
-		return data[p];
-	};
-	inline void zero() {
-		memset(data,0,sizeof(double)*N);
-	}
-	inline ~vector() {
-		if (data != 0)
-			delete [] data;
-		N = 0, data = 0;
-	};
-
+class matrix_storage {
 protected:
-	int	N;							// The size.
-	double * data;					// The data.
-	inline void resize(const int _n) {
-		if (data != 0)
-			delete [] data;
-		N = _n;
-		data = new double[N];
-		if (data == 0)
-			event_msg(EVENT_ERROR,"Out of memory for struct vector!");
-	};
+	explicit matrix_storage() : count(0), flags(is_t(0)) {
+	}
+	virtual ~matrix_storage() {
+		if (count != 0)
+			event_msg(EVENT_ERROR,"Reference counting failed!");
+	}
+
+public:
+	virtual int rows() const = 0;
+	virtual int cols() const = 0;
+	virtual double operator() (const int i, const int j) const = 0;
+
+	bool iszero() const {
+		return (flags & zero);
+	}
+	bool iseye() const {
+		return (flags & eye);
+	}
+	bool isscalar() const {
+		return (flags & scalar);
+	}
+
+private:
+	friend class matrix_storage_ptr;
+	
+	virtual int addref() {
+		return ++count;
+	}
+	virtual int refcount() const {
+		return count;
+	}
+	virtual int release() {
+		return --count;
+	}
+	int count;
+	enum is_t {
+		zero   = 0x0001,
+		eye    = 0x0002,
+		diag   = 0x0004,
+		sym    = 0x0008,
+		banded = 0x0010,
+		posdef = 0x0020,
+		negdef = 0x0040,
+		semi   = 0x0080,
+		scalar = 0x0100
+	} flags;
 };
 
 /*
- * These are some basic math operations for vectors, which try to be
- * as quick as possible.  They are here so they can be inlined.
+ * class matrix_storage_ptr - Smart pointer for matrix storage.
+ *
+ * This class supports all of the details necessary for
+ * storing and retrieving a matrix.
  */
-// Negation.
-inline void neg(vector & v) {
-	for (int i = 0; i < v.n(); i++)
-		v[i] *= -1;
-};
-// Inversion.
-inline void inv(vector & v) {
-	for (int i = 0; i < v.n(); i++)
-		v[i] = 1.0/v[i];
-};
-// Addition.
-inline void add(vector & v, const double d) {
-	for (int i = 0; d != 0.0 && i < v.n(); i++)
-		v[i] += d;
-};
-// Subraction.
-inline void sub(vector & v, const double d) {
-	for (int i = 0; d != 0.0 && i < v.n(); i++)
-		v[i] -= d;
-};
-// Multiplication.
-inline void mul(vector & v, const double d) {
-	for (int i = 0; i < v.n(); i++)
-		v[i] *= d;
-};
-// Division.
-inline void div(vector & v, const double d) {
-	for (int i = 0; i < v.n(); i++)
-		v[i] /= d;
-};
-// Add two vectors.
-inline void add(vector & v, const vector & w) {
-	for (int i = 0; i < v.n(); i++)
-		v[i] += w[i];
-};
-// Subtraction.
-inline void sub(vector & v, const vector & w) {
-	for (int i = 0; i < v.n(); i++)
-		v[i] -= w[i];
-};
-// Multiplication.   Maths buffs are turning in their graves...
-inline void mul(vector & v, const vector & w) {
-	for (int i = 0; i < v.n(); i++)
-		v[i] *= w[i];
-};
-// Division.
-inline void div(vector & v, const vector & w) {
-	for (int i = 0; i < v.n(); i++)
-		v[i] /= w[i];
-};
-// Dot product.
-inline double dot(const vector & a, const vector & b) {
-	double d = 0.0;
-	for (int i = 0; i < a.n(); i++)
-		d += a[i]*b[i];
-	return d;
+class matrix_storage_ptr {
+public:
+	explicit matrix_storage_ptr(matrix_storage * p = 0)
+		: ptr(p) {
+		addref();
+	}
+	virtual ~matrix_storage_ptr() {
+		release();
+		ptr = 0;
+	}
+	virtual int addref() const {
+		if (ptr == 0)
+			return 0;
+		else
+			return ptr->addref();
+	}
+	virtual int refcount() const {
+		return ptr->refcount();
+	}
+	virtual int release() {
+		int count = ptr->release();
+		if (count == 0) {
+			delete ptr;
+			ptr = 0;
+		}
+		return count;
+	}
+    // assignment
+    matrix_storage_ptr & operator= (const matrix_storage_ptr & p) {
+        if (this != &p) {
+			matrix_storage * t = p.ptr;
+            t->addref();
+            release();
+            ptr = t;
+        }
+        return *this;
+    }
+    // access the value to which the pointer refers
+    matrix_storage & operator* () const {
+        return *ptr;
+    }
+    matrix_storage * operator-> () const {
+        return ptr;
+    }
+	
+private:
+	matrix_storage * ptr;
 };
 
 /*
  * struct matrix - A simple MxN matrix.
  */
-struct matrix {
+class matrix_full : public matrix_storage {
 public:
 	// A few constructors, for various uses...
-	inline matrix() {
-		M = N = 0, data = 0;
-	};
-	inline matrix(const int _m, const int _n) {
+	inline matrix_full(const int _m, const int _n)
+	  : matrix_storage() {
 		resize(_m,_n);
-	};
-	inline matrix(const int _m, const int _n, const double d) {
+	}
+	inline matrix_full(const int _m, const int _n, const double d)
+	  : matrix_storage() {
 		resize(_m,_n);
 		for (int i = 0; i < M*N; i++)
 			data[i] = d;
-	};
-	inline matrix(const int _m, const int _n, const double * v) {
+	}
+	inline matrix_full(const int _m, const int _n, const double * v)
+	  : matrix_storage() {
 		resize(_m,_n);
 		memcpy(data,v,sizeof(double)*M*N);
-	};
-	inline matrix(const matrix & A) {
+	}
+	inline matrix_full(const matrix_full & A)
+	  : matrix_storage() {
 		resize(A.M,A.N);
 		memcpy(data,A.data,sizeof(double)*M*N);
-	};
-	inline ~matrix() {
+	}
+	inline ~matrix_full() {
 		if (data != 0)
 			delete [] data;
 		M = N = 0, data = 0;
-	};
+	}
 
 	// Assignment operator...
-	matrix & operator = (const matrix & _m) {
+	matrix_full & operator = (const matrix_full & _m) {
 		if (M != _m.M || N != _m.N)
 			resize(_m.M,_m.N);
 		memcpy(data,_m.data,sizeof(double)*M*N);
 		return *this;
-	};
-	inline int m() const {
+	}
+	virtual int rows() const {
 		return M;
-	};
-	inline int n() const {
+	}
+	virtual int cols() const {
 		return N;
-	};
-	inline double * operator [] (const int r) const {
-		return &data[r*N];
-	};
+	}
+	virtual double operator () (const int i, const int j) const {
+		return data[i*N+j];
+	}
 
 protected:
 	int M;						// The rows
@@ -226,314 +233,93 @@ protected:
 		data = new double[M*N];
 		if (data == 0)
 			event_msg(EVENT_ERROR,"Out of memory for struct matrix!");
-	};
+	}
 };
 
-/*
- * These are some basic math operations for matrices, which try to be
- * as quick as possible.  They are here so they can be inlined.
- */
-// Negation.
-inline void neg(matrix & A) {
-	for (int i = 0; i < A.m(); i++)
-		for (int j = 0; j < A.n(); j++)
-			A[i][j] *= -1;
-};
-// Inversion.
-inline void inv(matrix & A) {
-	for (int i = 0; i < A.m(); i++)
-		for (int j = 0; j < A.n(); j++)
-			A[i][j] = 1.0/A[i][j];
-};
-// Addition.
-inline void add(matrix & A, const double d) {
-	for (int i = 0; d != 0.0 && i < A.m(); i++)
-		for (int j = 0; j < A.n(); j++)
-			A[i][j] += d;
-};
-// Subraction.
-inline void sub(matrix & A, const double d) {
-	for (int i = 0; d != 0.0 && i < A.m(); i++)
-		for (int j = 0; j < A.n(); j++)
-			A[i][j] -= d;
-};
-// Multiplication.
-inline void mul(matrix & A, const double d) {
-	for (int i = 0; i < A.m(); i++)
-		for (int j = 0; j < A.n(); j++)
-			A[i][j] *= d;
-};
-// Division.
-inline void div(matrix & A, const double d) {
-	for (int i = 0; i < A.m(); i++)
-		for (int j = 0; j < A.n(); j++)
-			A[i][j] /= d;
-};
-// Add two matrices.
-inline void add(matrix & A, const matrix & B) {
-	for (int i = 0; i < A.m(); i++)
-		for (int j = 0; j < A.n(); j++)
-			A[i][j] += B[i][j];
-};
-// Subtraction...
-inline void sub(matrix & A, const matrix & B) {
-	for (int i = 0; i < A.m(); i++)
-		for (int j = 0; j < A.n(); j++)
-			A[i][j] -= B[i][j];
-};
-// Multiplication...
-inline void mul(matrix & A, const matrix & B) {
-	for (int i = 0; i < A.m(); i++)
-		for (int j = 0; j < A.n(); j++)
-			A[i][j] *= B[i][j];
-};
-// Division...
-inline void div(matrix & A, const matrix & B) {
-	for (int i = 0; i < A.m(); i++)
-		for (int j = 0; j < A.n(); j++)
-			A[i][j] /= B[i][j];
-};
-
-/*
- * struct sqrmat - A square NxN matrix.
- */
-struct sqrmat {
+class matrix_operator : public matrix_storage {
 public:
-	// A few constructors, for various uses...
-	inline sqrmat() {
-		N = 0, data = 0;
-	};
-	inline sqrmat(const int _n) {
-		resize(_n);
-	};
-	inline sqrmat(const int _n, const double d, const bool eye = false) {
-		resize(_n);
-		if (eye) {
-			memset(data,0,sizeof(double)*N*N);
-			for (int i = 0; i < N; i++)
-				data[i*N+i] = d;
-		} else {
-			for (int i = 0; i < N*N; i++)
-				data[i] = d;
+	inline matrix_operator()
+	  : matrix_storage(), op(null), op1(0), op2(0) {
+	}
+	inline ~matrix_operator() {
+	}
+
+	// Assignment operator...
+	matrix_operator & operator = (const matrix_operator & _m) {
+		return *this;
+	}
+	inline int rows() const {
+		switch (op) {
+		case ref:
+		case unref:
+		case neg:
+			return op1->rows();
+		case trans:
+			return op1->cols();
+		case add:
+		case sub:
+			if (op1->isscalar())
+				return op2->rows();
+			else
+				return op1->rows();
+		case mul:
+			return op1->rows();
+		case inv:
+			return op1->rows();						
+		case null:
+		default:
+			return 0;
 		}
-	};
-	inline sqrmat(const int _n, const double * v) {
-		resize(_n);
-		memcpy(data,v,sizeof(double)*N*N);
-	};
-	inline sqrmat(const sqrmat & A) {
-		resize(A.N);
-		memcpy(data,A.data,sizeof(double)*N*N);
-	};
-	inline ~sqrmat() {
-		if (data != 0)
-			delete [] data;
-		N = 0, data = 0;
-	};
-
-	// Assignment operator...
-	sqrmat & operator = (const sqrmat & _m) {
-		if (N != _m.N)
-			resize(_m.N);
-		memcpy(data,_m.data,sizeof(double)*N*N);
-		return *this;
-	};
-	inline int n() const {
-		return N;
-	};
-	inline double * operator [] (const int r) const {
-		return &data[r*N];
-	};
+	}
+	inline int cols() const {
+		switch (op) {
+		case ref:
+		case unref:
+		case neg:
+			return op1->cols();
+		case trans:
+			return op1->rows();
+		case add:
+		case sub:
+			if (op1->isscalar())
+				return op2->cols();
+			else
+				return op1->cols();
+		case mul:
+			return op2->cols();
+		case inv:
+			return op1->cols();						
+		case null:
+		default:
+			return 0;
+		}
+	}
+	virtual double operator () (const int i, const int j) const {
+		return 0;
+	}
 
 protected:
-	int N;						// The size
-	double * data;				// The data
-	void resize(const int _n) {
-		if (data != 0)
-			delete [] data;
-		N = _n;
-		data = new double[N*N];
-		if (data == 0)
-			event_msg(EVENT_ERROR,"Out of memory for struct sqrmat!");
-	};
+	enum op_t {
+		null, ref, unref, neg, trans, add, sub, mul, inv
+	} op;
+	matrix_storage_ptr op1;
+	matrix_storage_ptr op2; 
 };
 
 /*
- * These are some basic math operations for matrices, which try to be
- * as quick as possible.  They are here so they can be inlined.
+ * class matrix - Matrix interface class.
  */
-// Negation.
-inline void neg(sqrmat & A) {
-	for (int i = 0; i < A.n(); i++)
-		for (int j = 0; j < A.n(); j++)
-			A[i][j] *= -1;
-};
-// Inversion.
-inline void inv(sqrmat & A) {
-	for (int i = 0; i < A.n(); i++)
-		for (int j = 0; j < A.n(); j++)
-			A[i][j] = 1.0/A[i][j];
-};
-// Addition.
-inline void add(sqrmat & A, const double d) {
-	for (int i = 0; d != 0.0 && i < A.n(); i++)
-		for (int j = 0; j < A.n(); j++)
-			A[i][j] += d;
-};
-// Subraction.
-inline void sub(sqrmat & A, const double d) {
-	for (int i = 0; d != 0.0 && i < A.n(); i++)
-		for (int j = 0; j < A.n(); j++)
-			A[i][j] -= d;
-};
-// Multiplication.
-inline void mul(sqrmat & A, const double d) {
-	for (int i = 0; i < A.n(); i++)
-		for (int j = 0; j < A.n(); j++)
-			A[i][j] *= d;
-};
-// Division.
-inline void div(sqrmat & A, const double d) {
-	for (int i = 0; i < A.n(); i++)
-		for (int j = 0; j < A.n(); j++)
-			A[i][j] /= d;
-};
-// Add two matrices.
-inline void add(sqrmat & A, const sqrmat & B) {
-	for (int i = 0; i < A.n(); i++)
-		for (int j = 0; j < A.n(); j++)
-			A[i][j] += B[i][j];
-};
-// Subtraction...
-inline void sub(sqrmat & A, const sqrmat & B) {
-	for (int i = 0; i < A.n(); i++)
-		for (int j = 0; j < A.n(); j++)
-			A[i][j] -= B[i][j];
-};
-// Multiplication...
-inline void mul(sqrmat & A, const sqrmat & B) {
-	for (int i = 0; i < A.n(); i++)
-		for (int j = 0; j < A.n(); j++)
-			A[i][j] *= B[i][j];
-};
-// Division...
-inline void div(sqrmat & A, const sqrmat & B) {
-	for (int i = 0; i < A.n(); i++)
-		for (int j = 0; j < A.n(); j++)
-			A[i][j] /= B[i][j];
-};
-
-/*
- * struct dlgmat - A diagonal NxN matrix.
- */
-struct dlgmat {
+class matrix {
 public:
-	// A few constructors, for various uses...
-	inline dlgmat() {
-		N = 0, data = 0;
-	};
-	inline dlgmat(const int _n) {
-		resize(_n);
-	};
-	inline dlgmat(const int _n, const double d) {
-		resize(_n);
-		for (int i = 0; i < N; i++)
-				data[i] = d;
-	};
-	inline dlgmat(const int _n, const double * v) {
-		resize(_n);
-		memcpy(data,v,sizeof(double)*N);
-	};
-	inline dlgmat(const dlgmat & A) {
-		resize(A.N);
-		memcpy(data,A.data,sizeof(double)*N);
-	};
-	inline ~dlgmat() {
-		if (data != 0)
-			delete [] data;
-		N = 0, data = 0;
-	};
+	explicit matrix()
+		: data(0) {
+	}
+	explicit matrix(const int n, const int m)
+		: data(0) {
+	}
 
-	// Assignment operator...
-	dlgmat & operator = (const dlgmat & _m) {
-		if (N != _m.N)
-			resize(_m.N);
-		memcpy(data,_m.data,sizeof(double)*N);
-		return *this;
-	};
-	inline int n() const {
-		return N;
-	};
-	inline double & operator [] (const int r) const {
-		return data[r];
-	};
-
-protected:
-	int N;						// The size
-	double * data;				// The data
-	void resize(const int _n) {
-		if (data != 0)
-			delete [] data;
-		N = _n;
-		data = new double[N];
-		if (data == 0)
-			event_msg(EVENT_ERROR,"Out of memory for struct dlgmat!");
-	};
-};
-
-/*
- * These are some basic math operations for matrices, which try to be
- * as quick as possible.  They are here so they can be inlined.
- */
-// Negation.
-inline void neg(dlgmat & A) {
-	for (int i = 0; i < A.n(); i++)
-		A[i] *= -1;
-};
-// Inversion.
-inline void inv(dlgmat & A) {
-	for (int i = 0; i < A.n(); i++)
-		A[i] = 1.0/A[i];
-};
-// Addition.
-inline void add(dlgmat & A, const double d) {
-	for (int i = 0; d != 0.0 && i < A.n(); i++)
-		A[i] += d;
-};
-// Subraction.
-inline void sub(dlgmat & A, const double d) {
-	for (int i = 0; d != 0.0 && i < A.n(); i++)
-		A[i] -= d;
-};
-// Multiplication.
-inline void mul(dlgmat & A, const double d) {
-	for (int i = 0; i < A.n(); i++)
-		A[i] *= d;
-};
-// Division.
-inline void div(dlgmat & A, const double d) {
-	for (int i = 0; i < A.n(); i++)
-		A[i] /= d;
-};
-// Add two matrices.
-inline void add(dlgmat & A, const dlgmat & B) {
-	for (int i = 0; i < A.n(); i++)
-		A[i] += B[i];
-};
-// Subtraction...
-inline void sub(dlgmat & A, const dlgmat & B) {
-	for (int i = 0; i < A.n(); i++)
-		A[i] -= B[i];
-};
-// Multiplication...
-inline void mul(dlgmat & A, const dlgmat & B) {
-	for (int i = 0; i < A.n(); i++)
-		A[i] *= B[i];
-};
-// Division...
-inline void div(dlgmat & A, const dlgmat & B) {
-	for (int i = 0; i < A.n(); i++)
-		A[i] /= B[i];
+private:
+	matrix_storage_ptr data;
 };
 
 /*
@@ -560,6 +346,7 @@ inline void div(dlgmat & A, const dlgmat & B) {
 #define B_IDX(n,m,i,j)		(j <= m ? j*(j+1)/2+i : (j+1)*m+i-m*(m+1)/2)
 
 void orth_gs(const int n, double * Q);
+bool equ_gauss(const int n, const double * A, const double * b, double * x);
 bool equ_lu(const int n, const double * A, const double * b, double * x, const double tol = ERR_TOL);
 bool inv_lu(const int n, double * A);
 bool equ_chol(const int n, const double * A, const double * b, double * x, const double tol = ERR_TOL);
