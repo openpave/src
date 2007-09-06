@@ -114,6 +114,7 @@ private:
 		return count;
 	}
 	inline int release() {
+		assert(count > 0);
 		return --count;
 	}
 	int count;
@@ -154,10 +155,9 @@ public:
 		if (ptr == 0)
 			return 0;
 		int count = ptr->release();
-		if (count == 0) {
+		if (count == 0)
 			delete ptr;
-			ptr = 0;
-		}
+		ptr = 0;
 		return count;
 	}
 	// assignment
@@ -253,22 +253,22 @@ class matrix_dense : public matrix_storage {
 public:
 	// A few constructors, for various uses...
 	inline matrix_dense(const int m_, const int n_)
-	  : matrix_storage(is_t(0)) {
+	  : matrix_storage(is_t(0)), data(0) {
 		resize(m_,n_);
 	}
 	inline matrix_dense(const int m_, const int n_, const double d)
-	  : matrix_storage(is_t(0)) {
+	  : matrix_storage(is_t(0)), data(0) {
 		resize(m_,n_);
 		for (int i = 0; i < m*n; i++)
 			data[i] = d;
 	}
 	inline matrix_dense(const int m_, const int n_, const double * v)
-	  : matrix_storage(is_t(0)) {
+	  : matrix_storage(is_t(0)), data(0) {
 		resize(m_,n_);
 		memcpy(data,v,sizeof(double)*m*n);
 	}
 	inline matrix_dense(const matrix_dense & A)
-	  : matrix_storage(A.getflags()) {
+	  : matrix_storage(A.getflags()), data(0) {
 		resize(A.m,A.n);
 		memcpy(data,A.data,sizeof(double)*m*n);
 	}
@@ -466,13 +466,13 @@ public:
 	}
 
 	inline bool iszero() const {
-		return (data->getflags() & matrix_storage::zero);
+		return ((data->getflags() & matrix_storage::zero) != 0);
 	}
 	inline bool iseye() const {
-		return (data->getflags() & matrix_storage::eye);
+		return ((data->getflags() & matrix_storage::eye) != 0);
 	}
 	inline bool isscalar() const {
-		return (data->getflags() & matrix_storage::scalar);
+		return ((data->getflags() & matrix_storage::scalar) != 0);
 	}
 
 	// Assignment operator
