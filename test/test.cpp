@@ -1443,7 +1443,7 @@ main()
 }
 #endif
 
-#ifdef BUILD
+#ifdef NOBUILD
 #define n 10
 #define m 9
 int
@@ -1697,5 +1697,33 @@ abort:
 		delete [] A;
 	if (I != 0)
 		delete [] I;
+}
+#endif
+
+#ifdef BUILD
+#define n 5
+int
+main()
+{
+	int i, j;
+
+	double * A = new double[n*n];
+	if (A == 0) {
+		event_msg(EVENT_ERROR,"Out of memory!");
+		exit(1);
+	}
+	for (i = 0; i < n*n; i++)
+		A[i] = RAND(0.0,1.0);
+
+	matrix_dense *s = new matrix_dense(n,n,A);
+	matrix a(s);
+	matrix b;
+	
+	b = -a;
+	matrix c(!a);
+
+	printf("%g\t%g\t%g\n",a(1,1),b(1,1),c(1,1));
+
+	delete [] A;
 }
 #endif
