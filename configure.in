@@ -456,9 +456,9 @@ case "$target" in
         ASM_SUFFIX=asm
         OBJ_SUFFIX=obj
         LIB_SUFFIX=lib
-        CPPFLAGS="$CPPFLAGS -W3 -GF -Gy"
-        _DEBUG_FLAGS=-Z7
-        _OPTIMIZE_FLAGS=-O2
+        CPPFLAGS="$CPPFLAGS -W3 -GF -Gy -GR- -EHs-c-"
+        _DEBUG_FLAGS="-Z7 -RTCsu -GS"
+        _OPTIMIZE_FLAGS="-Ox -Ob2 -Oi -Ot -fp:precise -GS-"
 	_CONFIG_H="-FIconfig.h"
 
         if test -z "$OP_OPTIMIZE"; then

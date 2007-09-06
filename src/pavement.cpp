@@ -1532,7 +1532,7 @@ LEsystem::calc_odemark()
 }
 
 /*
- * The deflection equation is derived from the Boissenq solution,
+ * The following equations are derived from the Boussinesq solution,
  * integrated and simplified as much as possible.  However, it cannot
  * completely integrated because there is a problem at points where
  * the load is directly over the evaluation point, so...
@@ -1541,9 +1541,10 @@ LEsystem::calc_odemark()
  * Based on the Matlab implementation, but covered in a lot of books...
  */
 #define LEVMAX	12
+
 static double
-quad8_vdp(double r, double z, double s, double v, double a = 0.0,
-          double b = M_PI, double Q = 10.0)
+quad8_vdp(double r, double z, double a, double v, double A = 0.0,
+          double B = M_PI, double Q = 10.0)
 {
 	// The magic Newton-Cotes weights
 	const double w[9] = {3956, 23552, -3712, 41984, -18160, 41984,
@@ -1554,42 +1555,42 @@ quad8_vdp(double r, double z, double s, double v, double a = 0.0,
 	register double h, t, Q1 = 0.0, Q2 = 0.0;
 	register int i;
 
-	if (s == 0.0)
+	if (a == 0.0)
 		return 0.0;
 	if (r == 0.0)
-		return (2*(v*v-1)*(z-hypot(z,s))
-						+(v+1)*(z-z*z/hypot(z,s)));
+		return (2*(v*v-1)*(z-hypot(z,a))
+						+(v+1)*(z-z*z/hypot(z,a)));
 	level++;
-	h = (b-a)/16.0;
+	h = (B-A)/16.0;
 	for (i = 0; i < 9; i++) {
-		t = cos(a+i*h)*r;
+		t = cos(A+i*h)*r;
 		if (z == 0.0)
-			Q1 += h*w[i]/dw*(t == r ? 2*(v*v-1)*(r-sqrt(s*s-2*s*t+r*r)) :
-				2*(v*v-1)*(t*(log(r-t)-log(s-t+sqrt(s*s-2*s*t+r*r)))
-					-sqrt(s*s-2*s*t+r*r)+r)
+			Q1 += h*w[i]/dw*(t == r ? 2*(v*v-1)*(r-sqrt(a*a-2*a*t+r*r)) :
+				2*(v*v-1)*(t*(log(r-t)-log(a-t+sqrt(a*a-2*a*t+r*r)))
+					-sqrt(a*a-2*a*t+r*r)+r)
 			);
 		else
-			Q1 += h*w[i]/dw*(t*t == r*r+z*z ? 2*(v*v-1)*s :
+			Q1 += h*w[i]/dw*(t*t == r*r+z*z ? 2*(v*v-1)*a :
 				2*(v*v-1)*
 					(t*(log(hypot(z,r)-t)
-					   -log(s-t+sqrt(z*z-2*s*t+s*s+r*r)))
-					 -sqrt(z*z-2*s*t+s*s+r*r)+hypot(z,r))
-				 +(v+1)*z*z*((z*z+r*r-t*s)/sqrt(z*z-2*s*t+s*s+r*r)
+					   -log(a-t+sqrt(z*z-2*a*t+a*a+r*r)))
+					 -sqrt(z*z-2*a*t+a*a+r*r)+hypot(z,r))
+				 +(v+1)*z*z*((z*z+r*r-t*a)/sqrt(z*z-2*a*t+a*a+r*r)
 					 -hypot(z,r))/(t*t-z*z-r*r)
 			);
-		t = cos(a+(i+8)*h)*r;
+		t = cos(A+(i+8)*h)*r;
 		if (z == 0.0)
-			Q2 += h*w[i]/dw*(t == r ? 2*(v*v-1)*(r-sqrt(s*s-2*s*t+r*r)) :
-				2*(v*v-1)*(t*(log(r-t)-log(s-t+sqrt(s*s-2*s*t+r*r)))
-					-sqrt(s*s-2*s*t+r*r)+r)
+			Q2 += h*w[i]/dw*(t == r ? 2*(v*v-1)*(r-sqrt(a*a-2*a*t+r*r)) :
+				2*(v*v-1)*(t*(log(r-t)-log(a-t+sqrt(a*a-2*a*t+r*r)))
+					-sqrt(a*a-2*a*t+r*r)+r)
 			);
 		else
-			Q2 += h*w[i]/dw*(t*t == r*r+z*z ? 2*(v*v-1)*s :
+			Q2 += h*w[i]/dw*(t*t == r*r+z*z ? 2*(v*v-1)*a :
 				2*(v*v-1)*
 					(t*(log(hypot(z,r)-t)
-					   -log(s-t+sqrt(z*z-2*s*t+s*s+r*r)))
-					 -sqrt(z*z-2*s*t+s*s+r*r)+hypot(z,r))
-				 +(v+1)*z*z*((z*z+r*r-t*s)/sqrt(z*z-2*s*t+s*s+r*r)
+					   -log(a-t+sqrt(z*z-2*a*t+a*a+r*r)))
+					 -sqrt(z*z-2*a*t+a*a+r*r)+hypot(z,r))
+				 +(v+1)*z*z*((z*z+r*r-t*a)/sqrt(z*z-2*a*t+a*a+r*r)
 					 -hypot(z,r))/(t*t-z*z-r*r)
 			);
 	}
@@ -1597,8 +1598,8 @@ quad8_vdp(double r, double z, double s, double v, double a = 0.0,
 	// can improve...
 	if (fabs(Q1+Q2-Q) > tol*fabs(Q1+Q2) && level <= LEVMAX) {
 		tol = tol/2;
-		Q1 = quad8_vdp(r,z,s,v,a,(a+b)/2,Q1);
-		Q2 = quad8_vdp(r,z,s,v,(a+b)/2,b,Q2);
+		Q1 = quad8_vdp(r,z,a,v,A,(A+B)/2,Q1);
+		Q2 = quad8_vdp(r,z,a,v,(A+B)/2,B,Q2);
 		tol = tol*2;
 	}
 	level--;
@@ -1607,6 +1608,58 @@ quad8_vdp(double r, double z, double s, double v, double a = 0.0,
 	else
 		return (Q1 + Q2);
 }
+
+static double
+quad8_vse(double r, double z, double a, double A = 0.0,
+          double B = M_PI, double Q = 10.0)
+{
+	// The magic Newton-Cotes weights
+	const double w[9] = {3956, 23552, -3712, 41984, -18160, 41984,
+						-3712, 23552, 3956};
+	const double dw = 14175;
+	static int level = -1;
+	static double tol = 1e-6;
+	register double h, t, t1, Q1 = 0.0, Q2 = 0.0;
+	register int i;
+
+	if (a == 0.0)
+		return 0.0;
+	if (z == 0.0)
+		return (r == a ? -0.5 : r < a ? -1.0 : 0.0);
+	if (r == 0.0)
+		return (pow(z/hypot(z,a),3)-1);
+
+	level++;
+	h = (B-A)/16.0;
+	for (i = 0; i < 9; i++) {
+		t = cos(A+i*h);
+		t1 = t*t*r*r + r*r + z*z;
+		Q1 += h*w[i]/dw*(
+			z*z*z*(((r*r+z*z-3*r*a*t)*t1
+					- 2*t*r*a*(a*a-3*a*t*r)) / pow(sqrt(a*a-2*r*a*t+r*r+z*z),3)
+				-t1/hypot(r,z)) / pow((1-t*t)*r*r+z*z,2));
+		t = cos(A+(i+8)*h);
+		t1 = t*t*r*r + r*r + z*z;
+		Q2 += h*w[i]/dw*(
+			z*z*z*(((r*r+z*z-3*r*a*t)*t1
+					- 2*t*r*a*(a*a-3*a*t*r)) / pow(sqrt(a*a-2*r*a*t+r*r+z*z),3)
+				-t1/hypot(r,z)) / pow((1-t*t)*r*r+z*z,2));
+	};
+	// This is the adaptive recursive bit.  We only recurse if we
+	// can improve...
+	if (fabs(Q1+Q2-Q) > tol*fabs(Q1+Q2) && level <= LEVMAX) {
+		tol = tol/2;
+		Q1 = quad8_vse(r,z,a,A,(A+B)/2,Q1);
+		Q2 = quad8_vse(r,z,a,(A+B)/2,B,Q2);
+		tol = tol*2;
+	}
+	level--;
+	if (level == -1)
+		return (Q1 + Q2)/M_PI;
+	else
+		return (Q1 + Q2);
+}
+
 #undef LEVMAX
 
 /*
@@ -1644,7 +1697,8 @@ LEsystem::calc_fastnum()
 		for (ild = 0; ild < load.length(); ild++) {
 			double a = load[ild].radius();
 			double z, r = load[ild].distance(d);
-			double he = 0.0, hc = 1.0, vdp = 0.0;
+			double he = 0.0, hc = 1.0;
+			double vdp = 0.0, vse = 0.0;
 			for (il = 0; il < nl; il++) {
 				if (il > 0) {
 					z = h[il-1]-(il > 1 ? h[il-2] : 0.0);
@@ -1671,12 +1725,14 @@ LEsystem::calc_fastnum()
 					continue;
 				}
 				z = hc*he+d.z-(il > 0 ? h[il-1] : 0.0);
+				vse = quad8_vse(r,z,a);
 				vdp += quad8_vdp(r,z,a,v[il])/E[il];
 				if (h[il] != 0.0) {
 					z = hc*he+h[il]-(il > 0 ? h[il-1] : 0.0);
 					vdp -= quad8_vdp(r,z,a,v[il])/E[il];
 				}
 			}
+			d.data[0][2] += load[ild].pressure()*vse;
 			d.data[4][2] += load[ild].pressure()*vdp;
 		}
 	}
