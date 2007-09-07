@@ -1,0 +1,32 @@
+#! gmake
+#
+# $OpenPave$
+#
+
+MOD_DEPTH	= ..
+topsrcdir	= @top_srcdir@
+srcdir		= @srcdir@
+VPATH		= @srcdir@
+
+include $(MOD_DEPTH)/build/autoconf.mk
+
+PROGRAM_NAME	= fem3d
+
+DIRS =                                 \
+	$(NULL)
+
+INCLUDES =                             \
+	-I$(MOD_DEPTH)/include 	       \
+	-I$(srcdir)/../include         \
+	-I$(srcdir)/../src             \
+	$(NULL)
+
+LIBS =                                 \
+	src                            \
+	$(NULL)
+
+CXXSRCS =                              \
+	fem3d.cpp                      \
+	$(NULL)
+
+include $(topsrcdir)/build/rules.mk

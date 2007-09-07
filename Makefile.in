@@ -21,6 +21,10 @@ ifneq (,$(findstring libop,$(OP_PROJECTS)))
 DIRS += libop
 endif
 
+ifneq (,$(findstring fem3d,$(OP_PROJECTS)))
+DIRS += fem3d
+endif
+
 DIST_GARBAGE = config.cache config.log config.status
 
 include $(topsrcdir)/build/rules.mk

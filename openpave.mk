@@ -62,6 +62,7 @@ AVAILABLE_PROJECTS = \
   core  \
   test  \
   libop \
+  fem3d \
   $(NULL)
 
 BOOTSTRAP_core :=                                \
@@ -92,6 +93,14 @@ REQUIRES_libop :=                                \
 
 MODULES_libop :=                                 \
   openpave/libop                                 \
+  $(NULL)
+
+REQUIRES_fem3d :=                                \
+  core                                           \
+  $(NULL)
+
+MODULES_fem3d :=                                 \
+  openpave/test                                  \
   $(NULL)
 
 #######################################################################

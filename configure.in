@@ -612,6 +612,10 @@ if test -n "$OP_PROJECT_libop"; then
     MAKEFILES="$MAKEFILES libop/Makefile"
 fi
 
+if test -n "$OP_PROJECT_fem3d"; then
+    MAKEFILES="$MAKEFILES fem3d/Makefile"
+fi
+
 AC_MSG_CHECKING([if config.h needs rebuilding])
 AC_OUTPUT_COMMANDS([
   configfile=include/config.h
