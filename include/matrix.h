@@ -541,6 +541,167 @@ inline matrix operator- (const matrix & b) {
 }
 
 /*
+ * class tmatrix - A simple NxM matrix.
+ */
+template <int N, int M>
+class tmatrix {
+public:
+	// A few constructors, for various uses...
+	tmatrix() {
+	}
+	tmatrix(double d, bool eye = false) {
+		for (int i = 0; i < N; i++)
+			for (int j = 0; j < M; j++)
+				data[i][j] = (!eye || i == j ? d : 0.0);
+	}
+	tmatrix(const double * v) {
+		for (int i = 0; i < N; i++)
+			for (int j = 0; j < M; j++)
+				data[i][j] = v[i*M+j];
+	}
+	tmatrix(const tmatrix<N,M> & m) {
+		for (int i = 0; i < N; i++)
+			for (int j = 0; j < M; j++)
+				data[i][j] = m.data[i][j];
+	}
+	~tmatrix() {
+	}
+
+	// Assignment operator...
+	tmatrix<N,M> & operator = (const tmatrix<N,M> & m) {
+		for (int i = 0; i < N; i++)
+			for (int j = 0; j < M; j++)
+				data[i][j] = m.data[i][j];
+		return *this;
+	}
+	inline int rows() const {
+		return N;
+	}
+	inline int cols() const {
+		return M;
+	}
+	inline double operator () (const int r, const int c) const {
+		return data[r][c];
+	}
+	inline double & operator () (const int r, const int c) {
+		return data[r][c];
+	}
+	inline double * operator [] (const int r) {
+		return data[r];
+	}
+
+private:
+	double data[N][M];
+};
+
+template <int N, int M>
+inline tmatrix<N,M> operator - (const tmatrix<N,M> & m) {
+	tmatrix<N,M> t;
+	for (int i = 0; i < N; i++)
+		for (int j = 0; j < M; j++)
+			t(i,j) = -m(i,j);
+	return t;
+}
+
+template <int N, int M>
+inline tmatrix<N,M> operator + (const tmatrix<N,M> & m, const double d) {
+	tmatrix<N,M> t(m);
+	if (d != 0.0) {
+		for (int i = 0; i < N; i++)
+			for (int j = 0; j < M; j++)
+				t(i,j) += d;
+	}
+	return t;
+}
+
+template <int N, int M>
+inline tmatrix<N,M> operator + (const double d, const tmatrix<N,M> & m) {
+	return m + d;
+}
+
+template <int N, int M>
+inline tmatrix<N,M> operator - (const tmatrix<N,M> & m, const double d) {
+	return m + (-d);
+}
+
+template <int N, int M>
+inline tmatrix<N,M> operator - (const double d, const tmatrix<N,M> & m) {
+	tmatrix<N,M> t(0.0);
+	if (d != 0.0) {
+		for (int i = 0; i < N; i++)
+			for (int j = 0; j < M; j++)
+				t(i,j) = d - m(i,j);
+	}
+	return t;
+}
+
+template <int N, int M>
+inline tmatrix<N,M> operator * (const tmatrix<N,M> & m, const double d) {
+	tmatrix<N,M> t(m);
+	for (int i = 0; i < N; i++)
+		for (int j = 0; j < M; j++)
+			t(i,j) *= d;
+	return t;
+}
+
+template <int N, int M>
+inline tmatrix<N,M> operator * (const double d, const tmatrix<N,M> & m) {
+	return m*d;
+}
+
+template <int N, int M>
+inline tmatrix<N,M> operator / (const tmatrix<N,M> & m, const double d) {
+	tmatrix<N,M> t(m);
+	for (int i = 0; i < N; i++)
+		for (int j = 0; j < M; j++)
+			t(i,j) /= d;
+	return t;
+}
+
+template <int N, int M>
+inline tmatrix<N,M> operator / (const double d, const tmatrix<N,M> & m) {
+	tmatrix<N,M> t(0.0);
+	for (int i = 0; i < N; i++)
+		for (int j = 0; j < M; j++)
+			t(i,j) = d/m(i,j);
+	return t;
+}
+
+template <int N, int M>
+inline tmatrix<N,M> operator + (const tmatrix<N,M> & m, const tmatrix<N,M> & n) {
+	tmatrix<N,M> t(m);
+	for (int i = 0; i < N; i++)
+		for (int j = 0; j < M; j++)
+			t(i,j) += n(i,j);
+	return t;
+}
+
+template <int N, int M>
+inline tmatrix<N,M> operator - (const tmatrix<N,M> & m, const tmatrix<N,M> & n) {
+	tmatrix<N,M> t(m);
+	for (int i = 0; i < N; i++)
+		for (int j = 0; j < M; j++)
+			t(i,j) -= n(i,j);
+	return t;
+}
+
+/*
+ * Visual C++ is too stupid to compile the code below.  So, you have to make
+ * your own functions from the code...  Hopefully you have lots of the same size of
+ * tmatrix.
+ *
+ */
+template <int N, int L, int M>
+inline tmatrix<N,M> operator * (const tmatrix<N,L> & m, const tmatrix<L,M> & n) {
+	tmatrix<N,M> t(0.0);
+	for (int i = 0; i < N; i++)
+		for (int j = 0; j < M; j++)
+			for (int k = 0; k < L; k++)
+				t(i,j) += m(i,k)*n(k,j);
+	return t;
+}
+
+/*
  * The minimum condition number for SVD and eigenvalue decompositions.
  * NOTE: This is recorded here to show the default.  It cannot be changed
  * without recompiling.
