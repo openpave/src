@@ -1720,9 +1720,10 @@ main()
 	matrix b;
 	
 	b = -a;
-	matrix c(!a);
+	matrix c(~a);
 
 	printf("%g\t%g\t%g\n",a(1,1),b(1,1),c(1,1));
+	printf("%g\t%g\t%g\n",a(1,5),b(1,5),c(5,1));
 
 	delete [] A;
 }

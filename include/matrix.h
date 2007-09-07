@@ -493,9 +493,14 @@ public:
 		} 
 		return true;
 	}
+	// Comparison operators...
+	inline bool operator != (const matrix & a) const {
+		return !(*this == a);
+	}
 
 private:
 	friend matrix operator! (matrix &);
+	friend matrix operator~ (const matrix &);
 	friend matrix operator- (const matrix &);
 
 	matrix_storage_ptr data;
@@ -513,6 +518,16 @@ inline matrix operator! (matrix & b) {
 	}
 	b.data.release();
 	return matrix(d);
+}
+
+// Matrix transpose...
+inline matrix operator~ (const matrix & b) {
+	matrix_storage * d = new matrix_operator(matrix_operator::trans,b.data);
+	if (d == 0) {
+		event_msg(EVENT_ERROR,"Out of memory for class matrix!");
+		return matrix();
+	} else
+		return matrix(d);
 }
 
 // Some math operators...
