@@ -2104,8 +2104,12 @@ if test -n "$OP_PROJECT_libop"; then
     MAKEFILES="$MAKEFILES libop/Makefile"
 fi
 
+if test -n "$OP_PROJECT_fem3d"; then
+    MAKEFILES="$MAKEFILES fem3d/Makefile"
+fi
+
 echo $ac_n "checking if config.h needs rebuilding""... $ac_c" 1>&6
-echo "configure:2109: checking if config.h needs rebuilding" >&5
+echo "configure:2113: checking if config.h needs rebuilding" >&5
 
 echo "$ac_t""done" 1>&6
 
