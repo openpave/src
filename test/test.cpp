@@ -1726,5 +1726,9 @@ main()
 	printf("%g\t%g\t%g\n",a(1,5),b(1,5),c(5,1));
 
 	delete [] A;
+
+	tmatrix<3,3> t1(1.0,true);
+	tmatrix<3,1> t2(1.0);
+	tmatrix<3,1> t = t1*t2; 
 }
 #endif
