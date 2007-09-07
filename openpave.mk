@@ -100,7 +100,7 @@ REQUIRES_fem3d :=                                \
   $(NULL)
 
 MODULES_fem3d :=                                 \
-  openpave/test                                  \
+  openpave/fem3d                                 \
   $(NULL)
 
 #######################################################################
