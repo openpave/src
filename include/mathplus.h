@@ -148,6 +148,12 @@
 #endif
 #endif
 
+#if defined(NEED_FMA)
+inline double fma(const double a, const double b, const double c) {
+	return (a*b)+c;
+}
+#endif
+
 /*
  * Simple template functions for swapping things. One day
  * someone will make these part of the language...

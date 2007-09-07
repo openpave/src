@@ -506,6 +506,20 @@ dnl ========================================================
 AC_SEARCH_LIBS(sqrt,m,OS_LIBS="-lm")
 fi
 
+AC_CACHE_CHECK(
+    [for fma()],
+    ac_cv_func_fma,
+    [AC_TRY_LINK([
+        #include <math.h>
+        ],
+        [double foo = fma(1.0,1.0,1.0)],
+        [ac_cv_func_fma=yes],
+        [ac_cv_func_fma=no])
+    ])
+if test "$ac_cv_func_fma" = "no"; then
+    DEFINES="$DEFINES NEED_FMA"
+fi
+
 dnl If the user passed in arg to --enable-optimize or --enable-debug,
 dnl make sure that we use it.
 if test -n "$_SAVE_OPTIMIZE_FLAGS"; then
