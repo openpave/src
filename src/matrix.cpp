@@ -362,7 +362,7 @@ decmp_chol(const int n, const int w, double * A)
         for (j = i; j <= i+w && j < n; j++) {
 			sum = A[B_IDX(n,w,i,j)];
 			for (k = i-1, c = 0.0; k >= j-w && k >= 0; k--) {
-				y = -A[B_IDX(n,w,k,i)]*A[B_IDX(n,w,k,j)] - c;
+				y = -fma(A[B_IDX(n,w,k,i)],A[B_IDX(n,w,k,j)],c);
 				t = sum + y; c = (t - sum) - y; sum = t;
 			}
 			if (i == j) {
@@ -415,14 +415,14 @@ bksub_chol(const int n, const int w, const double * A,
 	
     for (i = 0; i < n; i++) {
 		for (k = i-1, s = 0.0; k >= i-w && k >= 0; k--) {
-			y = -A[B_IDX(n,w,k,i)]*b[k*m+c] - s; t = b[i*m+c] + y;
+			y = -fma(A[B_IDX(n,w,k,i)],b[k*m+c],s); t = b[i*m+c] + y;
 			s = t - b[i*m+c] - y; b[i*m+c] = t;
 		}
 		b[i*m+c] /= A[B_IDX(n,w,i,i)];
 	}
 	for (i = n-1; i >= 0; i--) {
 		for (k = i+1, s = 0.0; k <= i+w && k < n; k++) {
-			y = -A[B_IDX(n,w,i,k)]*b[k*m+c] - s; t = b[i*m+c] + y;
+			y = -fma(A[B_IDX(n,w,i,k)],b[k*m+c],s); t = b[i*m+c] + y;
 			s = t - b[i*m+c] - y; b[i*m+c] = t;
 		}
 		b[i*m+c] /= A[B_IDX(n,w,i,i)];
@@ -506,14 +506,14 @@ equ_chol(const int n, const int w, const double * A, const double * b, double * 
 		for (i = 0; i < n; i++) {
 			r[i] = -b[i];
 			for (j = MAX(i-w,0), c = 0.0; j < i; j++) {
-				y = A[B_IDX(n,w,j,i)]*x[j] - c; t = r[i] + y;
+				y = fma(A[B_IDX(n,w,j,i)],x[j],-c); t = r[i] + y;
 				c = t - r[i] - y; r[i] = t;
 			}
 			for (j = i; j <= i+w && j < n; j++) {
-				y = A[B_IDX(n,w,i,j)]*x[j] - c; t = r[i] + y;
+				y = fma(A[B_IDX(n,w,i,j)],x[j],-c); t = r[i] + y;
 				c = t - r[i] - y; r[i] = t;
 			}
-			y1 = r[i]*r[i] - c1; t1 = dot + y1;
+			y1 = fma(r[i],r[i],-c1); t1 = dot + y1;
 			c1 = t1 - dot - y1; dot = t1;
 		}
 		if (++iter > ITER_MAX || sqrt(dot) <= tol)

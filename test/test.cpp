@@ -1497,10 +1497,10 @@ again:
 	double c1, y1, t1, c2, y2, t2;
 	for (i = 0, dot = 0.0, c1 = 0.0; i < n; i++) {
 		for (j = 0, s = -b[i], c2 = 0.0; j < n; j++) {
-			y2 = B[i*n+j]*x[j] - c2; t2 = s + y2;
+			y2 = fma(B[i*n+j],x[j],-c2); t2 = s + y2;
 			c2 = t2 - s - y2; s = t2;
 		}
-		y1 = s*s - c1; t1 = dot + y1;
+		y1 = fma(s,s,-c1); t1 = dot + y1;
 		c1 = t1 - dot - y1; dot = t1;
 	}
 	if (sqrt(dot) > n*n*1e-12) {
