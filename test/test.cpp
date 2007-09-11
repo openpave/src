@@ -1700,7 +1700,7 @@ abort:
 }
 #endif
 
-#ifdef BUILD
+#ifdef NOBUILD
 #define n 5
 int
 main()
@@ -1726,9 +1726,54 @@ main()
 	printf("%g\t%g\t%g\n",a(1,5),b(1,5),c(5,1));
 
 	delete [] A;
+}
+#endif
 
-	tmatrix<3,3> t1(1.0,true);
-	tmatrix<3,1> t2(1.0);
-	tmatrix<3,1> t = t1*t2; 
+#ifdef BUILD
+int
+main()
+{
+	tmatrix<3,2> B;
+	tmatrix<3,3> D;
+
+	B[0][0] = -0.05; B[0][1] =  0;
+	B[1][0] =  0;    B[1][1] =  0.05;
+	B[2][0] =  0.05; B[2][1] = -0.05;
+
+	D[0][0] = 2000; D[0][1] = 1000; D[0][2] = 0;
+	D[1][0] = 1000; D[1][1] = 2000; D[1][2] = 0;
+	D[2][0] = 0;    D[2][1] = 0;    D[2][2] = 500;
+
+	printf("B = "); B.print();
+	printf("D = ");	D.print();
+
+	tmatrix<2,2> BT;
+	BT = ~B*B;
+	printf(" BT = "); BT.print();
+
+	tmatrix<2,2> K;
+	K = ~B*D*B;
+	printf(" K = "); K.print();
+	K = ~B*D*B + ~B*B;
+	printf(" K = "); K.print();
+	K -= BT;
+	printf(" K = "); K.print();
+
+	tmatrix<2,2> I;
+	I[0][0] = 1; I[0][1] = 0;
+	I[1][0] = 0; I[1][1] = 1;
+	printf(" I = "); I.print();
+	I = I + 1;
+	printf(" I = "); I.print();
+	I = I * 2;
+	printf(" I = "); I.print();
+	I = I / 2;
+	printf(" I = "); I.print();
+	I = I - 1;
+	printf(" I = "); I.print();
+	I = I * 0.5;
+	printf(" I = "); I.print();
+	I = 1.0 / I;
+	printf(" I = "); I.print();
 }
 #endif
