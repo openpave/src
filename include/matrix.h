@@ -58,10 +58,12 @@
 
 #include "mathplus.h"
 #include "event.h"
+#include "tmatrix.h"
 #include <memory.h>
 #include <assert.h>
 
 class matrix_storage_ptr;
+class matrix_dense;
 class matrix;
 
 /*
@@ -91,9 +93,11 @@ public:
 	inline is_t setflags(const is_t f) {
 		return flags = f;
 	};
-	virtual int rows() const = 0;
-	virtual int cols() const = 0;
-	virtual double operator() (const int i, const int j) const = 0;
+	virtual unsigned rows() const = 0;
+	virtual unsigned cols() const = 0;
+	virtual double operator() (const unsigned i,
+		const unsigned j) const = 0;
+	virtual matrix_dense getdense() const = 0;
 
 protected:
 	explicit matrix_storage(const is_t f)
@@ -188,32 +192,236 @@ private:
 };
 
 /*
+ * class matrix_dense - A dense MxN matrix.
+ */
+class matrix_dense : public matrix_storage {
+public:
+	// A few constructors, for various uses...
+	inline matrix_dense(const unsigned m, const unsigned n)
+	  : matrix_storage(is_t(0)), data(0) {
+		resize(m,n);
+	}
+	inline matrix_dense(const unsigned m, const unsigned n,
+		const double d, bool mkdiag = true)
+	  : matrix_storage(is_t(0)), data(0) {
+		resize(m,n);
+		if (mkdiag) {
+			memset(data,0,M*N*sizeof(double));
+			for (unsigned i = 0; d != 0.0 && i < MIN(M,N); i++)
+				data[i*N+i] = d;
+		} else {
+			if (d == 0.0)
+				memset(data,0,M*N*sizeof(double));
+			else {
+				for (unsigned i = 0; i < M*N; i++)
+					data[i] = d;
+			}
+		}
+		for (unsigned i = 0; i < M; i++)
+			for (unsigned j = 0; j < N; j++)
+				data[i*N+j] = (!mkdiag || i == j ? d : 0.0);
+	}
+	inline matrix_dense(const unsigned m, const unsigned n,
+		const double * v)
+	  : matrix_storage(is_t(0)), data(0) {
+		resize(m,n);
+		memcpy(data,v,M*N*sizeof(double));
+	}
+	inline matrix_dense(const matrix_dense & A)
+	  : matrix_storage(A.getflags()), data(0) {
+		resize(A.M,A.N);
+		memcpy(data,A.data,M*N*sizeof(double));
+	}
+	virtual ~matrix_dense() {
+		if (data != 0)
+			delete [] data;
+		M = N = 0, data = 0;
+	}
+
+	// Assignment operator...
+	inline matrix_dense & operator= (const matrix_dense & m) {
+		if (M != m.M || N != m.N)
+			resize(m.M,m.N);
+		memcpy(data,m.data,M*N*sizeof(double));
+		return *this;
+	}
+	inline matrix_dense & operator+= (const double & d) {
+		for (unsigned i = 0; d != 0.0 && i < M*N; i++)
+			data[i] += d;
+		return *this;
+	}
+	inline matrix_dense & operator+= (const matrix_dense & m) {
+		assert(rows() == m.rows() && cols() == m.cols());
+		for (unsigned i = 0; i < M*N; i++)
+			data[i] += m.data[i];
+		return *this;
+	}
+	inline matrix_dense & operator-= (const matrix_dense & m) {
+		assert(rows() == m.rows() && cols() == m.cols());
+		for (unsigned i = 0; i < M*N; i++)
+			data[i] -= m.data[i];
+		return *this;
+	}
+	inline matrix_dense & operator*= (const double & d) {
+		if (d == 0.0)
+			memset(data,0,M*N*sizeof(double));
+		else {
+			for (unsigned i = 0; i < M*N; i++)
+				data[i] *= d;
+		}
+		return *this;
+	}
+	virtual unsigned rows() const {
+		return M;
+	}
+	virtual unsigned cols() const {
+		return N;
+	}
+	virtual double operator() (const unsigned i, const unsigned j) const {
+		return data[i*N+j];
+	}
+	inline double & operator() (const unsigned i, const unsigned j) {
+		return data[i*N+j];
+	}
+	virtual matrix_dense getdense() const {
+		return matrix_dense(*this);
+	} 
+
+protected:
+	unsigned M;					// The rows
+	unsigned N;					// The cols
+	double * data;				// The data
+	void resize(const unsigned m, const unsigned n) {
+		if (data != 0)
+			delete [] data;
+		M = m, N = n;
+		data = new double[M*N];
+		if (data == 0)
+			event_msg(EVENT_ERROR,"Out of memory for struct matrix!");
+	}
+};
+
+inline matrix_dense
+operator~ (const matrix_dense & m) {
+	matrix_dense t(m.cols(),m.rows());
+	for (unsigned i = 0; i < t.rows(); i++)
+		for (unsigned j = 0; j < t.cols(); j++)
+			t(i,j) = m(j,i);
+	return t;
+}
+
+inline matrix_dense
+operator- (const matrix_dense & m) {
+	matrix_dense t(m.rows(),m.cols());
+	for (unsigned i = 0; i < t.rows(); i++)
+		for (unsigned j = 0; j < t.cols(); j++)
+			t(i,j) = -m(i,j);
+	return t;
+}
+
+inline matrix_dense
+operator+ (const matrix_dense & m, const double & d) {
+	matrix_dense t(m);
+	return t += d;
+}
+
+inline matrix_dense
+operator+ (const double & d, const matrix_dense & m) {
+	return m + d;
+}
+
+inline matrix_dense
+operator- (const matrix_dense & m, const double & d) {
+	return m + (-d);
+}
+
+inline matrix_dense
+operator- (const double & d, const matrix_dense & m) {
+	matrix_dense t(m.rows(),m.cols());
+	for (unsigned i = 0; i < t.rows(); i++)
+		for (unsigned j = 0; j < t.cols(); j++)
+			t(i,j) = d - m(i,j);
+	return t;
+}
+
+inline matrix_dense
+operator* (const matrix_dense & m, const double & d) {
+	matrix_dense t(m);
+	return t *= d;
+}
+
+inline matrix_dense
+operator* (const double & d, const matrix_dense & m) {
+	return m*d;
+}
+
+inline matrix_dense
+operator/ (const matrix_dense & m, const double & d) {
+	return m*(1.0/d);
+}
+
+inline matrix_dense
+operator/ (const double & d, const matrix_dense & m) {
+	matrix_dense t(m.rows(),m.cols());
+	for (unsigned i = 0; i < t.rows(); i++)
+		for (unsigned j = 0; j < t.cols(); j++)
+			t(i,j) = d/m(i,j);
+	return t;
+}
+
+inline matrix_dense
+operator+ (const matrix_dense & a, const matrix_dense & b) {
+	matrix_dense t(a);
+	return t += b;
+}
+
+inline matrix_dense
+operator- (const matrix_dense & a, const matrix_dense & b) {
+	matrix_dense t(a);
+	return t -= b;
+}
+
+inline matrix_dense
+operator* (const matrix_dense & a, const matrix_dense & b) {
+	assert(a.cols() == b.rows());
+	matrix_dense t(a.rows(),b.cols());
+	for (unsigned i = 0; i < a.rows(); i++)
+		for (unsigned j = 0; j < b.cols(); j++)
+			for (unsigned k = 0; k < a.cols(); k++)
+				t(i,j) += a(i,k)*b(k,j);
+	return t;
+}
+
+/*
  * class matrix_zero - A MxN zero matrix.
  */
 class matrix_zero : public matrix_storage {
 public:
 	// A few constructors, for various uses...
-	inline matrix_zero(const int m_, const int n_)
+	inline matrix_zero(const unsigned m, const unsigned n)
 	  : matrix_storage(zero) {
-		m = m_, n = n_;
+		M = m, N = n;
 	}
 	virtual ~matrix_zero() {
 	}
-	virtual int rows() const {
-		return m;
+	virtual unsigned rows() const {
+		return M;
 	}
-	virtual int cols() const {
-		return n;
+	virtual unsigned cols() const {
+		return N;
 	}
-	virtual double operator () (const int i, const int j) const {
+	virtual double operator() (const unsigned i, const unsigned j) const {
 		return 0.0;
+	}
+	virtual matrix_dense getdense() const {
+		return matrix_dense(M,N,0.0,false);
 	}
 
 protected:
-	int m;						// The rows
-	int n;						// The cols
-	void resize(const int m_, const int n_) {
-		m = m_, n = n_;
+	unsigned M;						// The rows
+	unsigned N;						// The cols
+	void resize(const unsigned m, const unsigned n) {
+		M = m, N = n;
 	}
 };
 
@@ -223,89 +431,29 @@ protected:
 class matrix_eye : public matrix_storage {
 public:
 	// A few constructors, for various uses...
-	inline matrix_eye(const int n_)
+	inline matrix_eye(const unsigned n)
 	  : matrix_storage(eye) {
-		n = n_;
+		N = n;
 	}
 	virtual ~matrix_eye() {
 	}
-	virtual int rows() const {
-		return n;
+	virtual unsigned rows() const {
+		return N;
 	}
-	virtual int cols() const {
-		return n;
+	virtual unsigned cols() const {
+		return N;
 	}
-	virtual double operator () (const int i, const int j) const {
+	virtual double operator() (const unsigned i, const unsigned j) const {
 		return (i == j ? 1.0 : 0.0);
 	}
-
-protected:
-	int n;						// The rows and cols
-	void resize(const int n_) {
-		n = n_;
-	}
-};
-
-/*
- * class matrix_dense - A dense MxN matrix.
- */
-class matrix_dense : public matrix_storage {
-public:
-	// A few constructors, for various uses...
-	inline matrix_dense(const int m_, const int n_)
-	  : matrix_storage(is_t(0)), data(0) {
-		resize(m_,n_);
-	}
-	inline matrix_dense(const int m_, const int n_, const double d)
-	  : matrix_storage(is_t(0)), data(0) {
-		resize(m_,n_);
-		for (int i = 0; i < m*n; i++)
-			data[i] = d;
-	}
-	inline matrix_dense(const int m_, const int n_, const double * v)
-	  : matrix_storage(is_t(0)), data(0) {
-		resize(m_,n_);
-		memcpy(data,v,sizeof(double)*m*n);
-	}
-	inline matrix_dense(const matrix_dense & A)
-	  : matrix_storage(A.getflags()), data(0) {
-		resize(A.m,A.n);
-		memcpy(data,A.data,sizeof(double)*m*n);
-	}
-	virtual ~matrix_dense() {
-		if (data != 0)
-			delete [] data;
-		m = n = 0, data = 0;
-	}
-
-	// Assignment operator...
-	matrix_dense & operator = (const matrix_dense & m_) {
-		if (m != m_.m || n != m_.n)
-			resize(m_.m,m_.n);
-		memcpy(data,m_.data,sizeof(double)*m*n);
-		return *this;
-	}
-	virtual int rows() const {
-		return m;
-	}
-	virtual int cols() const {
-		return n;
-	}
-	virtual double operator () (const int i, const int j) const {
-		return data[i*n+j];
+	virtual matrix_dense getdense() const {
+		return matrix_dense(N,N,1.0,true);
 	}
 
 protected:
-	int m;						// The rows
-	int n;						// The cols
-	double * data;				// The data
-	void resize(const int m_, const int n_) {
-		if (data != 0)
-			delete [] data;
-		m = m_, n = n_;
-		data = new double[m*n];
-		if (data == 0)
-			event_msg(EVENT_ERROR,"Out of memory for struct matrix!");
+	unsigned N;						// The rows and cols
+	void resize(const unsigned n) {
+		N = n;
 	}
 };
 
@@ -333,10 +481,11 @@ public:
 	}
 
 	// Assignment operator...
-	matrix_operator & operator = (const matrix_operator & m_) {
+	matrix_operator & operator= (const matrix_operator & m) {
+		// XXX
 		return *this;
 	}
-	virtual int rows() const {
+	virtual unsigned rows() const {
 		switch (op) {
 		case ref:
 		case unref:
@@ -358,7 +507,7 @@ public:
 			return 0; // XXX
 		}
 	}
-	virtual int cols() const {
+	virtual unsigned cols() const {
 		switch (op) {
 		case ref:
 		case unref:
@@ -380,7 +529,7 @@ public:
 			return 0; // XXX
 		}
 	}
-	virtual double operator () (const int i, const int j) const {
+	virtual double operator() (const unsigned i, const unsigned j) const {
 		switch (op) {
 		case ref:
 		case unref:
@@ -402,6 +551,14 @@ public:
 		default:
 			return 0; // XXX
 		}
+	}
+	virtual matrix_dense getdense() const {
+		const_cast<matrix_operator *>(this)->evaluate();
+		matrix_dense t(rows(),cols());
+		for (unsigned i = 0; i < rows(); i++)
+			for (unsigned j = 0; j < cols(); j++) 
+				t(i,j) = (*op1)(i,j);
+		return t;
 	}
 
 protected:
@@ -440,7 +597,7 @@ public:
 	inline matrix()
 		: data(0) {
 	}
-	inline matrix(const int m, const int n)
+	inline matrix(const unsigned m, const unsigned n)
 		: data(0) {
 		matrix_storage * d = new matrix_zero(m,n);
 		if (d == 0)
@@ -455,13 +612,13 @@ public:
 		: data(matrix_storage_ptr(d)) {
 	}
 
-	inline int rows() const {
+	inline unsigned rows() const {
 		return data->rows();
 	}
-	inline int cols() const {
+	inline unsigned cols() const {
 		return data->cols();
 	}
-	inline double operator() (const int i, const int j) const {
+	inline double operator() (const unsigned i, const unsigned j) const {
 		return (*data)(i,j);
 	}
 
@@ -476,13 +633,13 @@ public:
 	}
 
 	// Assignment operator
-	inline matrix & operator = (const matrix & m) {
+	inline matrix & operator= (const matrix & m) {
 		data = m.data;
 		return *this;
 	}
 	// Comparison operators...
-	inline bool operator == (const matrix & a) const {
-		int m = rows(), n = cols(), i, j;
+	inline bool operator== (const matrix & a) const {
+		unsigned m = rows(), n = cols(), i, j;
 		if (m != a.rows() || n != a.cols())
 			return false;
 		for (i = 0; i < m; i++) {
@@ -494,7 +651,7 @@ public:
 		return true;
 	}
 	// Comparison operators...
-	inline bool operator != (const matrix & a) const {
+	inline bool operator!= (const matrix & a) const {
 		return !(*this == a);
 	}
 
@@ -510,7 +667,8 @@ private:
 // Yes I know.  You're not supposed to overload operators with different
 // syntax to their normal C/C++ meaning.  But this has no meaning
 // for a matrix, so we can put it to a very good use.
-inline matrix operator! (matrix & b) {
+inline matrix
+operator! (matrix & b) {
 	matrix_storage * d = new matrix_operator(matrix_operator::unref,b.data);
 	if (d == 0) {
 		event_msg(EVENT_ERROR,"Out of memory for class matrix!");
@@ -521,7 +679,8 @@ inline matrix operator! (matrix & b) {
 }
 
 // Matrix transpose...
-inline matrix operator~ (const matrix & b) {
+inline matrix
+operator~ (const matrix & b) {
 	matrix_storage * d = new matrix_operator(matrix_operator::trans,b.data);
 	if (d == 0) {
 		event_msg(EVENT_ERROR,"Out of memory for class matrix!");
@@ -531,174 +690,14 @@ inline matrix operator~ (const matrix & b) {
 }
 
 // Some math operators...
-inline matrix operator- (const matrix & b) {
+inline matrix
+operator- (const matrix & b) {
 	matrix_storage * d = new matrix_operator(matrix_operator::neg,b.data);
 	if (d == 0) {
 		event_msg(EVENT_ERROR,"Out of memory for class matrix!");
 		return matrix();
 	} else
 		return matrix(d);
-}
-
-/*
- * class tmatrix - A simple NxM matrix.
- */
-template <int N, int M>
-class tmatrix {
-public:
-	// A few constructors, for various uses...
-	tmatrix() {
-	}
-	tmatrix(double d, bool eye = false) {
-		for (int i = 0; i < N; i++)
-			for (int j = 0; j < M; j++)
-				data[i][j] = (!eye || i == j ? d : 0.0);
-	}
-	tmatrix(const double * v) {
-		for (int i = 0; i < N; i++)
-			for (int j = 0; j < M; j++)
-				data[i][j] = v[i*M+j];
-	}
-	tmatrix(const tmatrix<N,M> & m) {
-		for (int i = 0; i < N; i++)
-			for (int j = 0; j < M; j++)
-				data[i][j] = m.data[i][j];
-	}
-	~tmatrix() {
-	}
-
-	// Assignment operator...
-	tmatrix<N,M> & operator = (const tmatrix<N,M> & m) {
-		for (int i = 0; i < N; i++)
-			for (int j = 0; j < M; j++)
-				data[i][j] = m.data[i][j];
-		return *this;
-	}
-	inline int rows() const {
-		return N;
-	}
-	inline int cols() const {
-		return M;
-	}
-	inline double operator () (const int r, const int c) const {
-		return data[r][c];
-	}
-	inline double & operator () (const int r, const int c) {
-		return data[r][c];
-	}
-	inline double * operator [] (const int r) {
-		return data[r];
-	}
-
-private:
-	double data[N][M];
-};
-
-template <int N, int M>
-inline tmatrix<N,M> operator - (const tmatrix<N,M> & m) {
-	tmatrix<N,M> t;
-	for (int i = 0; i < N; i++)
-		for (int j = 0; j < M; j++)
-			t(i,j) = -m(i,j);
-	return t;
-}
-
-template <int N, int M>
-inline tmatrix<N,M> operator + (const tmatrix<N,M> & m, const double d) {
-	tmatrix<N,M> t(m);
-	if (d != 0.0) {
-		for (int i = 0; i < N; i++)
-			for (int j = 0; j < M; j++)
-				t(i,j) += d;
-	}
-	return t;
-}
-
-template <int N, int M>
-inline tmatrix<N,M> operator + (const double d, const tmatrix<N,M> & m) {
-	return m + d;
-}
-
-template <int N, int M>
-inline tmatrix<N,M> operator - (const tmatrix<N,M> & m, const double d) {
-	return m + (-d);
-}
-
-template <int N, int M>
-inline tmatrix<N,M> operator - (const double d, const tmatrix<N,M> & m) {
-	tmatrix<N,M> t(0.0);
-	if (d != 0.0) {
-		for (int i = 0; i < N; i++)
-			for (int j = 0; j < M; j++)
-				t(i,j) = d - m(i,j);
-	}
-	return t;
-}
-
-template <int N, int M>
-inline tmatrix<N,M> operator * (const tmatrix<N,M> & m, const double d) {
-	tmatrix<N,M> t(m);
-	for (int i = 0; i < N; i++)
-		for (int j = 0; j < M; j++)
-			t(i,j) *= d;
-	return t;
-}
-
-template <int N, int M>
-inline tmatrix<N,M> operator * (const double d, const tmatrix<N,M> & m) {
-	return m*d;
-}
-
-template <int N, int M>
-inline tmatrix<N,M> operator / (const tmatrix<N,M> & m, const double d) {
-	tmatrix<N,M> t(m);
-	for (int i = 0; i < N; i++)
-		for (int j = 0; j < M; j++)
-			t(i,j) /= d;
-	return t;
-}
-
-template <int N, int M>
-inline tmatrix<N,M> operator / (const double d, const tmatrix<N,M> & m) {
-	tmatrix<N,M> t(0.0);
-	for (int i = 0; i < N; i++)
-		for (int j = 0; j < M; j++)
-			t(i,j) = d/m(i,j);
-	return t;
-}
-
-template <int N, int M>
-inline tmatrix<N,M> operator + (const tmatrix<N,M> & m, const tmatrix<N,M> & n) {
-	tmatrix<N,M> t(m);
-	for (int i = 0; i < N; i++)
-		for (int j = 0; j < M; j++)
-			t(i,j) += n(i,j);
-	return t;
-}
-
-template <int N, int M>
-inline tmatrix<N,M> operator - (const tmatrix<N,M> & m, const tmatrix<N,M> & n) {
-	tmatrix<N,M> t(m);
-	for (int i = 0; i < N; i++)
-		for (int j = 0; j < M; j++)
-			t(i,j) -= n(i,j);
-	return t;
-}
-
-/*
- * Visual C++ is too stupid to compile the code below.  So, you have to make
- * your own functions from the code...  Hopefully you have lots of the same size of
- * tmatrix.
- *
- */
-template <int N, int L, int M>
-inline tmatrix<N,M> operator * (const tmatrix<N,L> & m, const tmatrix<L,M> & n) {
-	tmatrix<N,M> t(0.0);
-	for (int i = 0; i < N; i++)
-		for (int j = 0; j < M; j++)
-			for (int k = 0; k < L; k++)
-				t(i,j) += m(i,k)*n(k,j);
-	return t;
 }
 
 /*
@@ -717,12 +716,12 @@ inline tmatrix<N,M> operator * (const tmatrix<N,L> & m, const tmatrix<L,M> & n) 
 /*
  * Returns the size of the special banded matrix storage array
  */
-#define B_SIZE(n,m)		((m+1)*n-m*(m+1)/2)
+#define B_SIZE(n,w)		((w+1)*n-w*(w+1)/2)
 /*
  * Returns the index into the special banded matrix storage array
  * This is in column major format, so loops over i are efficent.
  */
-#define B_IDX(n,m,i,j)		(j <= m ? j*(j+1)/2+i : (j+1)*m+i-m*(m+1)/2)
+#define B_IDX(n,w,i,j)		(j <= w ? j*(j+1)/2+i : (j+1)*w+i-w*(w+1)/2)
 
 void orth_gs(const int n, double * Q);
 bool equ_gauss(const int n, const double * A, const double * b, double * x);
