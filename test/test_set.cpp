@@ -41,6 +41,7 @@ struct key {
 	key(int s) : i(s) {}
 	bool operator== (const key & k) const { return (i==k.i); }  
 	bool operator<= (const key & k) const { return (i<=k.i); }  
+	bool operator> (const key & k) const { return (i>k.i); }  
 };
 struct pair : public key {
 	double d;
