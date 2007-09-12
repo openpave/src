@@ -30,11 +30,11 @@
 
 **************************************************************************/
 
+#include "mathplus.h"
 #include "set.h"
 #include <stdio.h>
 
-#ifdef BUILD
-
+#ifdef NOBUILD
 struct key {
 	int i;
 	key() : i(0) {}
@@ -63,9 +63,18 @@ void fset_print(const fset<T> & t) {
 }
 template<class K, class V>
 void kfset_print(const kfset<K,V> & t) {
-	printf("t = {");
+	printf("k = {");
 	for (int i = 0; i < t.length(); i++) {
 		K & k = t[i];
+		printf("%i:%4.2f%s",k.i,t[k].d,(i == t.length()-1 ? "" : ","));
+	}
+	printf("}\n");
+}
+template<class K, class V>
+void afset_print(const afset<K,V> & t) {
+	printf("a = {");
+	for (int i = 0; i < t.length(); i++) {
+		K & k = t.getkey(i);
 		printf("%i:%4.2f%s",k.i,t[k].d,(i == t.length()-1 ? "" : ","));
 	}
 	printf("}\n");
@@ -86,13 +95,20 @@ main()
 	fset_print(t);
 	t.add(2);
 	t.add(2);
+	t.add(3);
 	fset_print(t);
+	t.sort();
+	t.remove();
+	t.remove(0);
+	fset_print(t);
+	t.add(0,d1,7);
+	fset_print(t);
+	t.remove();
+	t.remove(0);
 	t.sort();
 	fset_print(t);
 
 	koset<key,pair> k(7);
-	kfset_print(k);
-	k.empty();
 	kfset_print(k);
 	k.add(pair(2,1.5));
 	k.add(pair(1,0.5));
@@ -104,6 +120,45 @@ main()
 	k.sort();
 	kfset_print(k);
 
+	aoset<key,value> a(7);
+	afset_print(a);
+	a.add(key(2),value(1.5));
+	a.add(key(1),value(0.5));
+	afset_print(a);
+	a.sort();
+	afset_print(a);
+	a.add(key(1),value(1.5));
+	afset_print(a);
+	a.sort();
+	afset_print(a);
+
+	return 0;
+}
+#endif
+
+#ifdef BUILD
+int
+main()
+{
+	int i, j;
+	oset<double> t;
+again:
+	t.empty();
+	for (i = 0; i < 100; i++)
+		t.add(RAND(-100,100));
+	for (j = 0; j < 100; j++)
+		printf("%4.2f\n",t[j]);
+	t.sort();
+	printf(".");
+	for (i = 1; i < 100; i++) {
+		if (t[i-1] > t[i]) {
+			printf("Failed! (%i)\n",i);
+			for (j = i-2; j <= i+2; j++)
+				printf("%4.2f\n",t[j]);
+			return 1;
+		}
+	}
+	goto again;
 	return 0;
 }
 #endif
