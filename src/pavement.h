@@ -449,11 +449,12 @@ public:
 
 	enum calctype {slow, fast, reuse};
 	bool seed(int nl, double * P);
-	double deflgrad(int nl, double * P, double * Q, calctype cl = slow);
+	double deflgrad(int nl, double * P, double * Q,
+			calctype cl = slow);
 	double gaussnewton(int nl, double * P, calctype cl = slow);
 	double kalman(int nl, double * P);
 	double bowlerror(int nl = 0, double * P = 0,
-					 double s = 0.0, double * D = 0);
+			double s = 0.0, double * D = 0);
 	double brent(int nl, double * P, double *D);
 	double conjgrad(int nl, double * P);
 };

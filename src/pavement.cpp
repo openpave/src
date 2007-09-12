@@ -339,11 +339,12 @@ LEsystem::check()
 	for (ixy = 0; ixy < data.length(); ixy++) {
 		// Ignore evaluation points above the surface
 		// or below the rigid interface.
-		if (data[ixy].z < 0.0 || (last->bottom() > 0.0
-		 && last->bottom() <= data[ixy].z)) {
+		const pavedata & d = data[ixy];
+		if (d.z < 0.0 || (last->bottom() > 0.0
+		 && last->bottom() <= d.z)) {
  			event_msg(EVENT_WARN,
 				"Error: evaluation point %d (%f,%f,%f) not within the pavement!",
-				ixy,data[ixy].x,data[ixy].y,data[ixy].z);
+				ixy,d.x,d.y,d.z);
 			return false;
 		}
 	}
@@ -708,7 +709,7 @@ buildabcd_full(const double m, const int nl, const double * h,
 		}
 	}
 	for (il = nl*4-1; il >= 0; il--) {
-		for (k1 = nl*4 - 1; k1 > il; k1--)
+		for (k1 = nl*4-1; k1 > il; k1--)
 			B[il] -= A[il*(nl*4)+k1]*B[k1];
 		B[il] /= A[il*(nl*4)+il];
 	}
@@ -1161,13 +1162,16 @@ LEsystem::calculate(resulttype res, double * Q)
 
 		// Account for big r's by adding extra integration intervals...
 		x1 = 0.0, x2 = 0.0;
-		for (ir = r.length()-1; ir >= 0 && r[ir]/a[ia] > MAX(4,ngqp-6); ir--) {
-			for (int k1 = MAX(4,ngqp-6); k1 <= nbz; k1 += MAX(4,ngqp-6)) {
+		for (ir = r.length()-1; ir >= 0 &&
+				r[ir]/a[ia] > double(MAX(4,ngqp-6)); ir--) {
+			for (int k1 = MAX(4,ngqp-6);
+					k1 <= nbz; k1 += MAX(4,ngqp-6)) {
 				if ((x1 = j1r[k1]/r[ir]) < x2)
 					continue;
 				for (ib = 1; ib < bm.length() && bm[ib] < x1; ib++)
 					;
-				if (MIN(x1-bm[ib-1],bm[ib]-x1) < MAX(4,ngqp-6)*M_PI_4/r[ir])
+				if (MIN(x1-bm[ib-1],bm[ib]-x1)
+						< MAX(4,ngqp-6)*M_PI_4/r[ir])
 					continue;
 				if (!bm.add(ib+1,x2 = x1))
 					goto abort;
