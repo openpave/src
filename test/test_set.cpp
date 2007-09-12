@@ -34,17 +34,46 @@
 #include <stdio.h>
 
 #ifdef BUILD
+
+struct key {
+	int i;
+	key() : i(0) {}
+};
+struct pair : public key {
+	double d;
+	pair() : key(), d(0.0) {}
+};
+struct value {
+	double d;
+	value() : d(0.0) {}
+};
+
+template<class T>
+void fset_print(const fset<T> & t) {
+	printf("t = {");
+	for (int i = 0; i < t.length(); i++)
+		printf("%i%s",t[i],(i == t.length()-1 ? "" : ","));
+	printf("}\n");
+}
+
 int
 main()
 {
-	const int d[7] = {1,2,2,3,4,4,5};
-	cset<int> t(7,10,d);
-	
-	printf("t = {");
-	for (int i = 0; i < t.length(); i++)
-		printf("%i%s",t[i],(i == t.length()-1 ? "}" : ","));
-	printf("\n");
-
+	const int d1[7] = {1,2,2,3,4,4,5};
+	const int d2[4] = {1,1,1,1};
+	cset<int> t(7,10,d1);
+	fset_print(t);
+	t.empty();
+	fset_print(t);
+	t.add(7,d2);
+	fset_print(t);
+	t.sort();
+	fset_print(t);
+	t.add(2);
+	t.add(2);
+	fset_print(t);
+	t.sort();
+	fset_print(t);
 	return 0;
 }
 #endif
