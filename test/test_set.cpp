@@ -38,14 +38,19 @@
 struct key {
 	int i;
 	key() : i(0) {}
+	key(int s) : i(s) {}
+	bool operator== (const key & k) const { return (i==k.i); }  
+	bool operator<= (const key & k) const { return (i<=k.i); }  
 };
 struct pair : public key {
 	double d;
 	pair() : key(), d(0.0) {}
+	pair(int s, double v) : key(s), d(v) {}
 };
 struct value {
 	double d;
 	value() : d(0.0) {}
+	value(double v) : d(v) {}
 };
 
 template<class T>
@@ -53,6 +58,15 @@ void fset_print(const fset<T> & t) {
 	printf("t = {");
 	for (int i = 0; i < t.length(); i++)
 		printf("%i%s",t[i],(i == t.length()-1 ? "" : ","));
+	printf("}\n");
+}
+template<class K, class V>
+void kfset_print(const kfset<K,V> & t) {
+	printf("t = {");
+	for (int i = 0; i < t.length(); i++) {
+		K & k = t[i];
+		printf("%i:%4.2f%s",k.i,t[k].d,(i == t.length()-1 ? "" : ","));
+	}
 	printf("}\n");
 }
 
@@ -65,7 +79,7 @@ main()
 	fset_print(t);
 	t.empty();
 	fset_print(t);
-	t.add(7,d2);
+	t.add(d2,4);
 	fset_print(t);
 	t.sort();
 	fset_print(t);
@@ -74,6 +88,21 @@ main()
 	fset_print(t);
 	t.sort();
 	fset_print(t);
+
+	koset<key,pair> k(7);
+	kfset_print(k);
+	k.empty();
+	kfset_print(k);
+	k.add(pair(2,1.5));
+	k.add(pair(1,0.5));
+	kfset_print(k);
+	k.sort();
+	kfset_print(k);
+	k.add(pair(1,1.5));
+	kfset_print(k);
+	k.sort();
+	kfset_print(k);
+
 	return 0;
 }
 #endif
