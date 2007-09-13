@@ -375,10 +375,10 @@ protected:
 	}
 	// Insertion sort for if the set looks sorted already.
 	void isort(const int l, const int r) {
-		for (int i = l+1; l+1 <= r && i <= r; i++) {
-			for (int j = i; j > l
-					&& this->value[j-1] > this->value[j]; j--)
-				swap(this->value[j-1],this->value[j]);
+		for (int i = l; l < r && i < r; i++) {
+			for (int j = i; i >= l && j >= l
+					&& this->value[j] > this->value[j+1]; j--)
+				swap(this->value[j],this->value[j+1]);
 		}
 	}
 };
@@ -426,7 +426,7 @@ protected:
 			if (j != i) {
 				do
 					this->value[i].~V();
-				while (++i <= this->size
+				while (i++ < this->size
 				 && this->value[j] == this->value[i]);
 				s = i;
 				while (s < this->size
@@ -684,10 +684,10 @@ protected:
 		}
 	}
 	void isort(const int l, const int r) {
-		for (int i = l+1; l < r && i <= r; i++) {
-			for (int j = i; j > l
-					 && this->value[j-1] > this->value[j]; j--) {
-				swap(this->value[j-1],this->value[j]);
+		for (int i = l; l < r && i < r; i++) {
+			for (int j = i; i >= l && j >= l
+					 && this->value[j] > this->value[j+1]; j--) {
+				swap(this->value[j],this->value[j+1]);
 			}
 		}
 	}
@@ -970,11 +970,11 @@ protected:
 		}
 	}
 	void isort(const int l, const int r) {
-		for (int i = l+1; l < r && i <= r; i++) {
-			for (int j = i; j > l
-					&& this->key[j-1] > this->key[j]; j--) {
-				swap(this->key[j-1],this->key[j]);
-				swap(this->value[j-1],this->value[j]);
+		for (int i = l; l < r && i < r; i++) {
+			for (int j = i; i >= l && j >= l
+					&& this->key[j] > this->key[j+1]; j--) {
+				swap(this->key[j],this->key[j+1]);
+				swap(this->value[j],this->value[j+1]);
 			}
 		}
 	}
@@ -1037,11 +1037,11 @@ protected:
 		}
 	}
 	void isort(const int l, const int r) {
-		for (int i = l+1; l < r && i <= r; i++) {
-			for (int j = i; j > l
-					&& this->value[j-1] > this->value[j]; j--) {
-				swap(this->key[j-1],this->key[j]);
-				swap(this->value[j-1],this->value[j]);
+		for (int i = l; l < r && i < r; i++) {
+			for (int j = i; i >= l && j >= l
+					&& this->value[j] > this->value[j+1]; j--) {
+				swap(this->key[j],this->key[j+1]);
+				swap(this->value[j],this->value[j+1]);
 			}
 		}
 	}
