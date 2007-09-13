@@ -139,8 +139,8 @@ public:
 			size = 0;
 			return;
 		}
-		for (int i = 0; v && i < size; i++)
-			value[i+1] = v[i];
+		for (int i = 0; i < size; i++)
+			init(i+1,v ? &v[i] : 0);
 	}
 	// Copy constructor.
 	inline explicit fset(const fset<V> & v)
@@ -150,7 +150,7 @@ public:
 			return;
 		}
 		for (int i = 0; i <= size; i++)
-			value[i] = v.value[i];
+			init(i,&v.value[i]);
 	}
 	// Wow, a destructor...
 	inline ~fset() {
@@ -164,7 +164,7 @@ public:
 			return *this;
 		size = v.size;
 		for (int i = 0; i <= size; i++)
-			value[i] = v.value[i];
+			init(i,&v.value[i]);
 		return *this;
 	}
 	// Set the default element if constructor didn't do a good job.
@@ -207,6 +207,12 @@ protected:
 			value = 0;
 		}
 		size = 0;
+	}
+	void init(const int i, const V * v) {
+		if (v)
+			new(&value[i]) _V(*v);
+		else
+			new(&value[i]) _V();
 	}
 	// Also hide the null constructor.
 	inline explicit fset()
@@ -271,7 +277,7 @@ public:
 			if (!this->allocate(p+s-1))
 				return false;
 			for (i = this->size+1; i < p; i++)
-				this->value[i] = this->value[0];
+				this->init(i,0);
 			this->size = p+s-1;
 		} else {
 			if (!allocate(this->size+s))
@@ -281,7 +287,7 @@ public:
 			this->size += s;
 		}
 		for (i = 0; i < s; i++)
-			this->value[p+i] = v[i];
+			this->init(p+i,&v[i]);
 		return true;
 	}
 	// Remove the last element.
@@ -472,7 +478,7 @@ public:
 			if ((p = haskey(v[i])) != 0)
 				value[p] = v[i];
 			else
-				value[++size] = v[i];
+				init(++size,&v[i]);
 		}
 		allocate(size);
 	}
@@ -484,7 +490,7 @@ public:
 			return;
 		}
 		for (int i = 0; i <= size; i++)
-			value[i] = v.value[i];
+			init(i,&v.value[i]);
 	}
 	// Clean up.
 	inline ~kfset() {
@@ -506,7 +512,7 @@ public:
 			return *this;
 		size = v.size;
 		for (int i = 0; i <= size; i++)
-			value[i] = v.value[i];
+			init(i,&v.value[i]);
 		return *this;
 	}
 	// Set our default elelment.
@@ -554,6 +560,9 @@ protected:
 			value = 0;
 		}
 		size = 0;
+	}
+	void init(const int i, const V * v) {
+		new(&value[i]) _V(*v);
 	}
 	// And the null constructor.
 	inline explicit kfset()
@@ -603,7 +612,7 @@ public:
 			if ((p = haskey(v[i])) != 0)
 				this->value[p] = v[i];
 			else
-				this->value[++(this->size)] = v[i];
+				this->init(++(this->size),&v[i]);
 		}
 		return allocate(this->size);
 	}
@@ -633,7 +642,7 @@ public:
 };
 
 /*
- * class aoset - Keyed ordered set
+ * class koset - Keyed ordered set
  * 
  * Think oset and ksset.
  */
@@ -713,12 +722,10 @@ public:
 			return;
 		}
 		for (i = 0, size = 0; k && i < s; i++) {
-			if ((p = haskey(k[i])) != 0) {
+			if ((p = haskey(k[i])) != 0)
 				value[p] = (v ? v[i] : value[0]);
-			} else {
-				key[++size] = k[i];
-				value[size] = (v ? v[i] : value[0]);
-			}
+			else
+				init(++size,&k[i],v ? &v[i] : 0);
 		}
 		allocate(size);
 	}
@@ -729,10 +736,8 @@ public:
 			size = 0;
 			return;
 		}
-		for (int i = 0; i <= size; i++) {
-			key[i] = v.key[i];
-			value[i] = v.value[i];
-		}
+		for (int i = 0; i <= size; i++)
+			init(i,&v.key[i],&v.value[i]);
 	}
 	// Kill one...
 	inline ~afset() {
@@ -753,10 +758,8 @@ public:
 		if (!allocate(v.size))
 			return *this;
 		size = v.size;
-		for (int i = 0; i <= size; i++) {
-			key[i] = v.key[i];
-			value[i] = v.value[i];
-		}
+		for (int i = 0; i <= size; i++)
+			init(i,&v.key[i],&v.value[i]);
 		return *this;
 	}
 	// Set our defaults.
@@ -827,6 +830,13 @@ protected:
 		}
 		size = 0;
 	}
+	void init(const int i, const K * k, const V * v) {
+		new(&key[i]) _K(*k);
+		if (v)
+			new(&value[i]) _V(*v);
+		else
+			new(&value[i]) _V();
+	}
 	// Don't allow yobos to make empty sets...
 	inline explicit afset()
 	  : set(), key(0), value(0) {
@@ -875,8 +885,7 @@ public:
 			if ((p = haskey(k[i])) != 0) {
 				this->value[p] = (v ? v[i] : this->value[0]);
 			} else {
-				this->key[++(this->size)] = k[i];
-				this->value[this->size] = (v ? v[i] : this->value[0]);
+				this->init(++(this->size),&k[i],v ? &v[i] : 0);
 			}
 		}
 		return allocate(this->size);
