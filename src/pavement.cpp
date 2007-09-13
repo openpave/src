@@ -1173,7 +1173,7 @@ LEsystem::calculate(resulttype res, double * Q)
 				if (MIN(x1-bm[ib-1],bm[ib]-x1)
 						< MAX(4,ngqp-6)*M_PI_4/r[ir])
 					continue;
-				if (!bm.add(ib+1,x2 = x1))
+				if (!bm.add(ib,x2 = x1))
 					goto abort;
 			}
 		}
@@ -1189,7 +1189,7 @@ LEsystem::calculate(resulttype res, double * Q)
 					;
 				if (MIN(x1-bm[ib-1],bm[ib]-x1) < 5*a[ia]/z[iz])
 					continue;
-				if (!bm.add(ib+1,x2 = x1))
+				if (!bm.add(ib,x2 = x1))
 					goto abort;
 			}
 		}

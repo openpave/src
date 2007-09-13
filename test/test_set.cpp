@@ -137,23 +137,25 @@ main()
 #endif
 
 #ifdef BUILD
+#define N 30000
 int
 main()
 {
 	int i, j;
-	oset<double> t;
+	oset<double> t(0,N);
 again:
 	t.empty();
-	for (i = 0; i < 100; i++)
-		t.add(RAND(-100,100));
-	for (j = 0; j < 100; j++)
-		printf("%4.2f\n",t[j]);
+	for (i = 0; i < N; i++)
+		t.add(RAND(-N,N));
+	//for (j = 0; j < N; j++)
+	//	printf("%4.2f\n",t[j]);
 	t.sort();
 	printf(".");
-	for (i = 1; i < 100; i++) {
+	fflush(NULL);
+	for (i = 1; i < N; i++) {
 		if (t[i-1] > t[i]) {
 			printf("Failed! (%i)\n",i);
-			for (j = i-2; j <= i+2; j++)
+			for (j = MAX(i-2,0); j <= MIN(i+2,N-1); j++)
 				printf("%4.2f\n",t[j]);
 			return 1;
 		}

@@ -349,7 +349,7 @@ bool WIMsurvey::ProcessRSADir(const char * dir, const char * bname)
 	const char * fn;
 #endif
 	FILE * bp;
-	aoset<char *,time_t> RSAfiles;
+	avoset<char *,time_t> RSAfiles;
 	WIMday d;
 
 	if (getcwd(pwd,FILENAME_MAX) == NULL) {
@@ -393,9 +393,9 @@ bool WIMsurvey::ProcessRSADir(const char * dir, const char * bname)
 #endif
 	RSAfiles.sort();
 	bp = fopen(bname,"wb");
-	d.day = RSAfiles.getvalue(1);
+	d.day = RSAfiles.getvalue(0);
 	for (i = 0; i < RSAfiles.length(); i++) {
-		fname = RSAfiles.getkey(i+1);
+		fname = RSAfiles.getkey(i);
 		WIMsurvey::ProcessRSAFile(fname,bp,&d);
 		free(fname);
 	}
