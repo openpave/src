@@ -130,7 +130,7 @@
 #define CEIL(x)		((2+int(x))-int((2+int(x))-(x)))
 #define ROUND(x)	((x) >= 0 ? int((x)+0.5) : -int(0.5-(x)) )
 
-#define RAND(a,b)	((a)+((b)-(a))*double(rand()+1)/double(RAND_MAX+2))
+#define RAND(a,b)	((a)+((b)-(a))*(double(rand())+1.0)/(double(RAND_MAX)+2.0))
 
 // Make some protable names for the bessel functions.
 #if defined(_MSC_VER)
