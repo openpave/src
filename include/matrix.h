@@ -75,6 +75,7 @@ class matrix;
 class matrix_storage {
 public:
 	enum is_t {
+		none   = 0x0000,
 		zero   = 0x0001,
 		eye    = 0x0002,
 		diag   = 0x0004,
@@ -198,12 +199,12 @@ class matrix_dense : public matrix_storage {
 public:
 	// A few constructors, for various uses...
 	inline matrix_dense(const unsigned m, const unsigned n)
-	  : matrix_storage(is_t(0)), data(0) {
+	  : matrix_storage(none), data(0) {
 		resize(m,n);
 	}
 	inline matrix_dense(const unsigned m, const unsigned n,
 		const double d, bool mkdiag = true)
-	  : matrix_storage(is_t(0)), data(0) {
+	  : matrix_storage(none), data(0) {
 		resize(m,n);
 		if (mkdiag) {
 			memset(data,0,M*N*sizeof(double));
@@ -223,7 +224,7 @@ public:
 	}
 	inline matrix_dense(const unsigned m, const unsigned n,
 		const double * v)
-	  : matrix_storage(is_t(0)), data(0) {
+	  : matrix_storage(none), data(0) {
 		resize(m,n);
 		memcpy(data,v,M*N*sizeof(double));
 	}
@@ -466,16 +467,16 @@ public:
 public:
 	inline matrix_operator(const op_t op_,
 		matrix_storage * op1_ = 0, matrix_storage * op2_ = 0)
-	  : matrix_storage(is_t(0)), op(op_), op1(op1_), op2(op2_) {
+	  : matrix_storage(none), op(op_), op1(op1_), op2(op2_) {
 	}
 	inline matrix_operator(const op_t op_,
 		const matrix_storage_ptr & op1_)
-	  : matrix_storage(is_t(0)), op(op_), op1(op1_), op2(0) {
+	  : matrix_storage(none), op(op_), op1(op1_), op2(0) {
 	}
 	inline matrix_operator(const op_t op_,
 		const matrix_storage_ptr & op1_,
 		const matrix_storage_ptr & op2_)
-	  : matrix_storage(is_t(0)), op(op_), op1(op1_), op2(op2_) {
+	  : matrix_storage(none), op(op_), op1(op1_), op2(op2_) {
 	}
 	virtual ~matrix_operator() {
 	}
@@ -738,4 +739,4 @@ void eig_ql(const int n, double * A, double * d);
 void equ_eig(const int n, const double * A, const double * b, double * x, const double tol = ERR_TOL);
 void inv_eig(const int n, double * A);
 
-#endif // __MATRIX_H
+#endif // MATRIX_H

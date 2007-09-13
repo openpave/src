@@ -608,4 +608,4 @@ operator* (const tmatrix_expr<E1,M,K> & e1, const tmatrix_expr<E2,K,N> & e2) {
 	return tmatrix_expr<expr_t,M,N>(expr_t(e1,e2));
 }
 
-#endif // __TMATRIX_H
+#endif // TMATRIX_H
