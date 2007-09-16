@@ -50,6 +50,7 @@ topsrcdir=$1
 
 for _config in "$OPCONFIG" \
                "$topsrcdir/opconfig" \
+               "$topsrcdir/../opconfig" \
                "$HOME/opconfig"
 do
   if test -f "$_config"; then

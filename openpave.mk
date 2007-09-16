@@ -198,6 +198,9 @@ OPCONFIG := $(shell cd $(ROOTDIR) && $(OPCONFIG_FINDER) $(TOPSRCDIR))
 # Options that may come from opconfig
 
 OP_PROJECT_LIST := $(subst $(comma), ,$(OP_PROJECTS))
+ifeq ($(OP_PROJECT_LIST),)
+  OP_PROJECT_LIST := all
+endif
 ifeq (all,$(filter all,$(OP_PROJECT_LIST)))
   OP_PROJECT_LIST := $(AVAILABLE_PROJECTS)
 endif
