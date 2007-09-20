@@ -55,7 +55,6 @@
 #include "event.h"
 #include "set.h"
 #include "list.h"
-#include "fixed.h"
 
 struct LElayer;
 struct paveload;
@@ -229,7 +228,7 @@ public:
 		v = pl.v;
 		s = pl.s;
 	}
-	virtual ~LElayer() {
+	~LElayer() {
 	}
 private:
 	friend class LEsystem;
@@ -275,7 +274,7 @@ struct paveload : point2d {
 		f = pl.f;
 		p = pl.p;
 	}
-	virtual ~paveload() {
+	~paveload() {
 	}
 private:
 	friend class LEsystem;
@@ -304,7 +303,7 @@ struct pavedata : point3d {
 		else
 			deflgrad = 0;
 	}
-	virtual ~pavedata() {
+	~pavedata() {
 		delete [] deflgrad;
 	}
 //private:
@@ -401,7 +400,7 @@ struct defldata : point3d {
 		measured = dd.measured;
 		calculated = dd.calculated;
 	}
-	virtual ~defldata() {
+	~defldata() {
 	}
 //private:
 	double measured;
