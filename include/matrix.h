@@ -728,6 +728,7 @@ void orth_gs(const int n, double * Q);
 bool equ_gauss(const int n, const double * A, const double * b, double * x);
 bool equ_lu(const int n, const double * A, const double * b, double * x, const double tol = ERR_TOL);
 bool inv_lu(const int n, double * A);
+double inv_mul_lu(const int n, const int m, double * A, double * B);
 bool equ_chol(const int n, const double * A, const double * b, double * x, const double tol = ERR_TOL);
 bool equ_chol(const int n, const int w, const double * A, const double * b, double * x, const double tol = ERR_TOL);
 bool inv_chol(const int n, double * A);
@@ -735,7 +736,7 @@ bool equ_ldl(const int n, const double * A, const double * b, double * x, const 
 void equ_svd(const int n, const double * A, const double * b, double * x, const double tol = ERR_TOL);
 void inv_svd(const int n, double * A);
 void orth_svd(const int n, double * Q);
-void eig_ql(const int n, double * A, double * d);
+void eig_ql(const int n, double * A, double * d, bool sorted = true);
 void equ_eig(const int n, const double * A, const double * b, double * x, const double tol = ERR_TOL);
 void inv_eig(const int n, double * A);
 

@@ -150,29 +150,32 @@ decmp_lu(const int n, double * A, int * idx, int & d)
 		}
 		work[i] = max;
 	}
-	for (j = 0; j < n; j++) {
-		for (i = 0; i < j; i++) {
-			for (k = 0; k < i; k++)
-				A[i*n+j] -= A[i*n+k]*A[k*n+j];
+	for (i = 0; i < n; i++) {
+		for (j = 0; j < i; j++) {
+			for (k = 0; k < j; k++)
+				A[j*n+i] -= A[j*n+k]*A[k*n+i];
 		}
 		double tmp = 0.0, max = 0.0;
-		for (i = j, idx[j] = -1; i < n; i++) {
-			for (k = 0; k < j; k++)
-				A[i*n+j] -= A[i*n+k]*A[k*n+j];
-			if (idx[j] == -1
-			 || (tmp = fabs(A[i*n+j])/work[i]) > max)
-				max = tmp, idx[j] = i;
+		for (j = i; j < n; j++) {
+			for (k = 0; k < i; k++)
+				A[j*n+i] -= A[j*n+k]*A[k*n+i];
+			if ((tmp = fabs(A[j*n+i])/work[j]) >= max) {
+				max = tmp; idx[i] = j;
+			}
 		}
-		if (j != idx[j]){
-			for (k = 0; k < n; k++)
-				swap(A[idx[j]*n+k],A[j*n+k]);
+		if (i != idx[i]) {
+			for (j = 0; j < n; j++)
+				swap(A[idx[i]*n+j],A[i*n+j]);
 			d *= -1;
-			swap(work[idx[j]],work[j]);
+			swap(work[idx[i]],work[i]);
 		}
-		//if (A[j*n+j] == 0.0)
-		//	A[j*n+j] = DBL_MIN;
-		for (i = j+1; i < n; i++)
-			A[i*n+j] /= A[j*n+j];
+		if (A[i*n+i] == 0.0) {
+			event_msg(EVENT_WARN,"Singular matrix A in decmp_lu()!");
+			rv = false;
+			goto abort;
+		}
+		for (j = i+1; j < n; j++)
+			A[j*n+i] /= A[i*n+i];
 	}
 abort:
 	delete [] work;
@@ -259,30 +262,30 @@ equ_lu(const int n, const double * A, const double * b, double * x, const double
 
 /*
  * This function returns the nxm matrix X = A^-1*B.  Both A and B are destoryed...
- * The result is returned in B.
+ * The result is returned in B, and the determinant in the return value.
  */
-bool
+double
 inv_mul_lu(const int n, const int m, double * A, double * B)
 {
-	bool rv = true;
+	double det = 0.0;
 	int i, d;
 
 	int * idx = new int[n];
 	if (idx == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in inv_mul_lu()!");
-		rv = false;
 		goto abort;
 	}
 	if (!decmp_lu(n,A,idx,d)) {
 		memset(B,0,sizeof(double)*n*m);
-		rv = false;
 		goto abort;
 	}
+	for (i = 0, det = d; i < n; i++)
+		det *= A[i*n+i];
 	for (i = 0; i < m; i++)
 		bksub_lu(n,A,idx,B,m,i);
 abort:
 	delete [] idx;
-	return rv;
+	return det;
 }
 
 /*
@@ -1150,7 +1153,7 @@ eig_tri_ql(const int n, double * d, double * e, double * A)
  * QL transform.
  */
 void
-eig_ql(const int n, double * A, double * d)
+eig_ql(const int n, double * A, double * d, bool sorted)
 {
 	double t;
 	int i, j, k;
@@ -1163,7 +1166,7 @@ eig_ql(const int n, double * A, double * d)
 	tridiag_hh(n,A,d,e);
 	eig_tri_ql(n,d,e,A);
 	// Sort the eigenvalues into descending order
-	for (i = 0; i < n-1; i++) {
+	for (i = 0; sorted && i < n-1; i++) {
 		for (j = i+1, t = d[k = i]; j < n; j++) {
 			if (d[j] >= t)
 				t = d[k = j];
