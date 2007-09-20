@@ -85,22 +85,32 @@ struct meta_assign {
 	    meta_assign<I,J>::assignR_sub(lhs,rhs);
 	    meta_assign<I-1,J>::assign_sub(lhs,rhs);
 	}
-	template<class A, class E>
+	template<class A>
+	static inline void assignR_d(A & lhs, const double & d) {
+	    lhs(I,J) = d;
+	    meta_assign<I,J-1>::assignR_d(lhs,d);
+	}
+	template<class A>
+	static inline void assign_d(A & lhs, const double & d) {
+	    meta_assign<I,J>::assignR_d(lhs,d);
+	    meta_assign<I-1,J>::assign_d(lhs,d);
+	}
+	template<class A>
 	static inline void assignR_add_d(A & lhs, const double & d) {
 	    lhs(I,J) += d;
 	    meta_assign<I,J-1>::assignR_add_d(lhs,d);
 	}
-	template<class A, class E>
+	template<class A>
 	static inline void assign_add_d(A & lhs, const double & d) {
 	    meta_assign<I,J>::assignR_add_d(lhs,d);
 	    meta_assign<I-1,J>::assign_add_d(lhs,d);
 	}
-	template<class A, class E>
+	template<class A>
 	static inline void assignR_mul_d(A & lhs, const double & d) {
 	    lhs(I,J) *= d;
 	    meta_assign<I,J-1>::assignR_mul_d(lhs,d);
 	}
-	template<class A, class E>
+	template<class A>
 	static inline void assign_mul_d(A & lhs, const double & d) {
 	    meta_assign<I,J>::assignR_mul_d(lhs,d);
 	    meta_assign<I-1,J>::assign_mul_d(lhs,d);
@@ -113,10 +123,12 @@ template<unsigned I> struct meta_assign<I,-1> {
 	static inline void assignR_add(A &, const E &) {}
 	template<class A, class E>
 	static inline void assignR_sub(A &, const E &) {}
-	template<class A, class E>
-	static inline void assignR_add_d(A &, const E &) {}
-	template<class A, class E>
-	static inline void assignR_mul_d(A &, const E &) {}
+	template<class A>
+	static inline void assignR_d(A &, const double & d) {}
+	template<class A>
+	static inline void assignR_add_d(A &, const double & d) {}
+	template<class A>
+	static inline void assignR_mul_d(A &, const double & d) {}
 };
 template<unsigned J> struct meta_assign<-1,J> {
 	template<class A, class E>
@@ -125,10 +137,12 @@ template<unsigned J> struct meta_assign<-1,J> {
 	static inline void assign_add(A &, const E &) {}
 	template<class A, class E>
 	static inline void assign_sub(A &, const E &) {}
-	template<class A, class E>
-	static inline void assign_add_d(A &, const E &) {}
-	template<class A, class E>
-	static inline void assign_mul_d(A &, const E &) {}
+	template<class A>
+	static inline void assign_d(A &, const double & d) {}
+	template<class A>
+	static inline void assign_add_d(A &, const double & d) {}
+	template<class A>
+	static inline void assign_mul_d(A &, const double & d) {}
 };
 
 /*
@@ -161,7 +175,7 @@ public:
 	inline explicit tmatrix(const double * v) {
 		memcpy(data,v,M*N*sizeof(double));
 	}
-	inline explicit tmatrix(const tmatrix<M,N> & m) {
+	inline tmatrix(const tmatrix<M,N> & m) {
 		meta_assign<M-1,N-1>::assign(*this,m);
 	}
 	template<class E>
@@ -173,6 +187,10 @@ public:
 
 	inline tmatrix<M,N> & operator= (const tmatrix<M,N> & m) {
 		meta_assign<M-1,N-1>::assign(*this,m);
+		return *this;
+	}
+	inline tmatrix<M,N> & operator= (const double & d) {
+		meta_assign<M-1,N-1>::assign_d(*this,d);
 		return *this;
 	}
 	template<class E>
@@ -223,8 +241,14 @@ public:
 	inline double operator() (const int r, const int c) const {
 		return data[r][c];
 	}
+	inline double operator() (const int i) const {
+		return data[i/N][i%N];
+	}
 	inline double & operator() (const int r, const int c) {
 		return data[r][c];
+	}
+	inline double & operator() (const int i) {
+		return data[i/N][i%N];
 	}
 	inline double * operator[] (const int r) {
 		return data[r];
@@ -243,6 +267,27 @@ public:
 
 private:
 	double data[M][N];
+};
+
+/*
+ * class tmatrix_scalar - A 1x1 matrix.
+ */
+class tmatrix_scalar {
+public:
+	inline tmatrix_scalar(const tmatrix<1,1> & m) {
+		m_d = m(0,0);
+	}
+	template<class E>
+	inline tmatrix_scalar(const tmatrix_expr<E,1,1> & m) {
+		m_d = m(0,0);
+	}
+	~tmatrix_scalar() {
+	}
+	inline operator double () const {
+		return m_d;
+	}
+private:
+	double m_d;
 };
 
 /*
