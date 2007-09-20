@@ -178,7 +178,16 @@ class fixed {
 	}
 
   private:
+	template <unsigned int P1>
+	friend fixed<P1> fabs(const fixed<P1> & f);
 	int value;
 };
+
+template<unsigned int P>
+inline fixed<P> fabs(const fixed<P> & f) {
+	fixed<P> t;
+	t.value = abs(f.value);
+	return t;
+}
 
 #endif // FIXED_H
