@@ -113,8 +113,8 @@ protected:
 		s = (s <= 0 ? 1 : s + 1);
 		while (s > 10*block)
 			block *= 10;
-		while (100*s < block)
-			block /= 10;
+		//while (100*s < block)
+		//	block /= 10;
 		return block*(s/block+(s%block?1:0));
 	}
 
@@ -201,8 +201,8 @@ protected:
 	}
 	void deallocate() {
 		if (value) {
-			for (int i = 0; i <= size; i++)
-				value[i].~V();
+			for (int i = -1; i < size; i++)
+				value[i+1].~V();
 			free(value);
 			value = 0;
 		}
@@ -475,8 +475,8 @@ public:
 			return;
 		}
 		for (i = 0, size = 0; v && i < s; i++) {
-			if ((p = haskey(v[i])) != 0)
-				value[p] = v[i];
+			if ((p = haskey(v[i])) != -1)
+				value[p+1] = v[i];
 			else
 				init(++size,&v[i]);
 		}
@@ -501,9 +501,9 @@ public:
 	inline int haskey(const K & k) const {
 		for (int i = 0; i < size; i++) {
 			if (static_cast<K &>(value[i+1]) == k)
-				return i+1;
+				return i;
 		}
-		return 0;
+		return -1;
 	}
 	// Assignment operator.
 	inline kfset<K,V> & operator= (const kfset<K,V> & v) {
@@ -522,7 +522,7 @@ public:
 	// Return data based on a key lookup. The default value is
 	// returned if the key is not found.
 	inline V & operator[] (const K & k) const {
-		return value[haskey(k)];
+		return value[haskey(k)+1];
 	}
 	// Allow integer keys.
 	inline V & operator[] (const int p) const {
@@ -609,8 +609,8 @@ public:
 		if (!allocate(this->size+s))
 			return false;
 		for (int i = 0, p; i < s; i++) {
-			if ((p = haskey(v[i])) != 0)
-				this->value[p] = v[i];
+			if ((p = haskey(v[i])) != -1)
+				this->value[p+1] = v[i];
 			else
 				this->init(++(this->size),&v[i]);
 		}
@@ -618,7 +618,7 @@ public:
 	}
 	// Remove based on key.
 	bool remove(const K & k) {
-		int p = haskey(k);
+		int p = haskey(k) + 1;
 		if (p == 0)
 			return false;
 		this->value[p].~V();
@@ -630,9 +630,9 @@ public:
 	// Replace key/value with another.
 	inline bool replace(const K & ko, const V & v) {
 		int p = haskey(ko);
-		if (p == 0)
+		if (p == -1)
 			return false;
-		this->value[p] = v;
+		this->value[p+1] = v;
 		return true;
 	}
 	inline bool empty() {
@@ -722,8 +722,8 @@ public:
 			return;
 		}
 		for (i = 0, size = 0; k && i < s; i++) {
-			if ((p = haskey(k[i])) != 0)
-				value[p] = (v ? v[i] : value[0]);
+			if ((p = haskey(k[i])) != -1)
+				value[p+1] = (v ? v[i] : value[0]);
 			else
 				init(++size,&k[i],v ? &v[i] : 0);
 		}
@@ -748,9 +748,9 @@ public:
 	inline int haskey(const K & k) const {
 		for (int i = 0; i < size; i++) {
 			if (key[i+1] == k)
-				return i+1;
+				return i;
 		}
-		return 0;
+		return -1;
 	}
 	// Assignement operator.
 	inline afset<K,V> & operator= (const afset<K,V> & v) {
@@ -769,7 +769,7 @@ public:
 	}
 	// Behave like an indexed array...
 	inline V & operator[] (const K & k) const {
-		return value[haskey(k)];
+		return value[haskey(k)+1];
 	}
 	// Linear access.
 	inline K & getkey(const int p) const {
@@ -882,8 +882,8 @@ public:
 		if (!allocate(this->size+s))
 			return false;
 		for (int i = 0, p; i < s; i++) {
-			if ((p = haskey(k[i])) != 0) {
-				this->value[p] = (v ? v[i] : this->value[0]);
+			if ((p = haskey(k[i])) != -1) {
+				this->value[p+1] = (v ? v[i] : this->value[0]);
 			} else {
 				this->init(++(this->size),&k[i],v ? &v[i] : 0);
 			}
@@ -892,7 +892,7 @@ public:
 	}
 	// Now start removing them...
 	bool remove(const K & k) {
-		int p = haskey(k);
+		int p = haskey(k) + 1;
 		if (p == 0)
 			return false;
 		this->key[p].~K();
@@ -908,10 +908,10 @@ public:
 	// Or replacing them...
 	inline bool replace(const K & ko, const K & k, const V & v) {
 		int p = haskey(ko);
-		if (p == 0)
+		if (p == -1)
 			return false;
-		this->key[p] = k;
-		this->value[p] = v;
+		this->key[p+1] = k;
+		this->value[p+1] = v;
 		return true;
 	}
 	inline bool empty() {
