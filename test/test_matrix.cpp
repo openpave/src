@@ -33,8 +33,8 @@
 #include "matrix.h"
 
 #ifdef NOBUILD
-#define n 10
-#define m 9
+#define n 3
+#define m 2
 int
 main()
 {
@@ -69,8 +69,8 @@ again:
 	fflush(NULL);
 	
 	memcpy(A,B,sizeof(double)*n*n);
-	equ_gauss(n,A,b,x);
-	//equ_lu(n,A,b,x);
+	//equ_gauss(n,A,b,x);
+	equ_lu(n,A,b,x);
 	//equ_chol(n,A,b,x);
 	//equ_ldl(n,A,b,x);
 	//equ_svd(n,A,b,x);
@@ -92,7 +92,7 @@ again:
 		y1 = fma(s,s,-c1); t1 = dot + y1;
 		c1 = t1 - dot - y1; dot = t1;
 	}
-	if (sqrt(dot) > n*n*1e-12) {
+	if (sqrt(dot) > n*n*1e-8) {
 		printf("\n%g\nA = [ ",sqrt(dot));
 		for (i = 0; i < n; i++) {
 			for (j = 0; j < n; j++)

@@ -31,6 +31,7 @@
 **************************************************************************/
 
 #include "pavement.h"
+#include <stdio.h>
 
 #ifdef NOBUILD
 int
@@ -123,9 +124,9 @@ main()
 		Slow.addpoint(p[i]);
 		Fast.addpoint(p[i]);
 	}
-	Best.accurate();
+	Best.calc_accurate();
 	Slow.calculate(LEsystem::all);
-	Fast.fastnum();
+	Fast.calc_fastnum();
 
 	for (i = 0; i < p.length(); i++) {
 		const pavedata & b = Best.result(p[i]);

@@ -34,7 +34,7 @@
 #include "set.h"
 #include <stdio.h>
 
-#ifdef NOBUILD
+#ifdef BUILD
 struct key {
 	int i;
 	key() : i(0) {}
@@ -64,6 +64,15 @@ void fset_print(const fset<T> & t) {
 template<class K, class V>
 void kfset_print(const kfset<K,V> & t) {
 	printf("k = {");
+	for (int i = 0; i < t.length(); i++) {
+		K & k = t[i];
+		printf("%i:%4.2f%s",k.i,t[k].d,(i == t.length()-1 ? "" : ","));
+	}
+	printf("}\n");
+}
+template<class K, class V>
+void kiset_print(const kiset<K,V> & t) {
+	printf("i = {");
 	for (int i = 0; i < t.length(); i++) {
 		K & k = t[i];
 		printf("%i:%4.2f%s",k.i,t[k].d,(i == t.length()-1 ? "" : ","));
@@ -120,6 +129,14 @@ main()
 	k.sort();
 	kfset_print(k);
 
+	kiset<key,pair> i(7);
+	kiset_print(i);
+	i.add(pair(2,1.5));
+	i.add(pair(1,0.5));
+	kiset_print(i);
+	i.add(pair(1,1.5));
+	kiset_print(i);
+
 	aoset<key,value> a(7);
 	afset_print(a);
 	a.add(key(2),value(1.5));
@@ -136,7 +153,7 @@ main()
 }
 #endif
 
-#ifdef BUILD
+#ifdef NOBUILD
 #define N 30000
 int
 main()
