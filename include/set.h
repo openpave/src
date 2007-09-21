@@ -655,9 +655,12 @@ public:
 	inline explicit koset(const int s, const int b = DFLT_BLK,
 			const V * v = 0)
 	  : ksset<K,V>(s,b,v) {
+		if (v)
+			sort();
 	}
 	inline explicit koset(const kfset<K,V> & v)
 	  : ksset<K,V>(v) {
+		sort();
 	}
 	inline ~koset() {
 	}
@@ -697,6 +700,244 @@ protected:
 			for (int j = i; i >= l && j >= l
 					 && this->value[j] > this->value[j+1]; j--) {
 				swap(this->value[j],this->value[j+1]);
+			}
+		}
+	}
+};
+
+/*
+ * class kiset - Keyed indexed set
+ *
+ * This is like a ksset, expect that sorting only sorts an index.
+ * As a result haskey() is much faster, but at the expense of having
+ * the set be read only...
+ */
+template <class K, class V>
+class kiset : public set {
+public:
+	// Make one...
+	inline explicit kiset()
+	  : set(), idx(0), value(0) {
+		allocate(size);
+	}
+	// Basic constructor
+	inline explicit kiset(const int s, const int b = DFLT_BLK,
+			const V * v = 0)
+	  : set(s,b), idx(0), value(0) {
+		int i, p;
+		if (!allocate(size)) {
+			size = 0;
+			return;
+		}
+		for (i = 0, size = 0; v && i < s; i++) {
+			if ((p = haskey(v[i])) != -1) {
+				value[p+1] = v[i];
+			} else
+				init(++size,&v[i]);
+		}
+		allocate(size);
+		sort();
+	}
+	// Copy constuctor.
+	inline explicit kiset(const kfset<K,V> & v)
+	  : set(v), idx(0), value(0) {
+		if (!allocate(size)) {
+			size = 0;
+			return;
+		}
+		for (int i = 0; i <= size; i++)
+			init(i,&v.value[i]);
+		sort();
+	}
+	// Clean up.
+	inline ~kiset() {
+		deallocate();
+	}
+
+	// Do a key lookup, and return zero if the key is not found.
+	inline int haskey(const K & k) const {
+		int l = 1, r = this->size;
+		while (l <= r) {
+			int i = (l+r)/2;
+			const K & ki = static_cast<K &>(value[idx[i]]);
+			if (ki == k)
+				return idx[i]-1;
+			if (ki > k)
+				r = i-1;
+			else
+				l = i+1;
+		}
+		return -1;
+	}
+	// Assignment operator.
+	inline kiset<K,V> & operator= (const kfset<K,V> & v) {
+		deallocate();
+		if (!allocate(v.size))
+			return *this;
+		size = v.size;
+		for (int i = 0; i <= size; i++)
+			init(i,&v.value[i]);
+		return *this;
+	}
+	// Set our default elelment.
+	inline void setdefault(const V & d) {
+		value[0] = d;
+	}
+	// Return data based on a key lookup. The default value is
+	// returned if the key is not found.
+	inline const V & operator[] (const K & k) const {
+		return value[haskey(k)+1];
+	}
+	// Allow integer keys.
+	inline V & operator[] (const int p) const {
+		return (inbounds(p+1) ? value[p+1] : value[0]);
+	}
+
+	// Add one value at the end.
+	inline bool add(const V & v) {
+		return add(&v,1);
+	}
+	// Add a whole set, at the end.
+	inline bool add(const kfset<K,V> & v) {
+		return add(&v.value[1],v.size);
+	}
+	// Add an array of values... There is no point in
+	// a position based addition. 
+	bool add(const V * v, const int s = 1) {
+		if (s <= 0 || v == 0)
+			return false;
+		if (!allocate(this->size+s))
+			return false;
+		for (int i = 0, p; i < s; i++) {
+			if ((p = haskey(v[i])) != -1)
+				value[p+1] = v[i];
+			else
+				init(++(this->size),&v[i]);
+		}
+		sort();
+		return allocate(this->size);
+	}
+	// Now start removing them...
+	bool remove(const K & k) {
+		int p = haskey(k) + 1, q = -1;
+		if (p == 0)
+			return false;
+		value[p].~V();
+		if (p < this->size)
+			memmove(&value[p],&value[p+1],
+					(this->size-p)*sizeof(V));
+		for (int i = 0; i < this->size; i++) {
+			if (idx[i] == p)
+				q = i;
+			else if (idx[i] > p)
+				idx[i]--;
+		}
+		if (q < this->size)
+			memmove(&idx[q],&idx[q+1],
+					(this->size-q)*sizeof(K));
+		return allocate(--(this->size));
+	}
+	// Replace key/value with another.
+	inline bool replace(const K & ko, const V & v) {
+		int p = haskey(ko);
+		if (p == -1)
+			return false;
+		value[p+1] = v;
+		sort();
+		return true;
+	}
+	inline bool empty() {
+		deallocate();
+		return allocate(0);
+	}
+
+protected:
+	int * idx;                          // The index.
+	V * value;                          // Take a guess...
+	struct _V {                         // Placement new wrapper
+		V _v;
+		explicit _V() : _v() {}
+		explicit _V(const V & v) : _v(v) {}
+		void *operator new(size_t, void * p) {
+			return p;
+		} 
+	};
+
+	// Make some space...
+	bool allocate(const int s) {
+		int * itemp = static_cast<int *>(realloc(idx,bufsize(s)*sizeof(int)));
+		V * vtemp = static_cast<V *>(realloc(value,bufsize(s)*sizeof(V)));
+		if (itemp == 0 || vtemp == 0) {
+			event_msg(EVENT_ERROR,"Out of memory in kiset::allocate()!");
+			return false;
+		}
+		if (idx == 0)
+			itemp[0] = 0;
+		if (value == 0)
+			new(&vtemp[0]) _V();
+		idx = itemp; value = vtemp;
+		return true;
+	}
+	void deallocate() {
+		if (idx) {
+			free(idx);
+			idx = 0;
+		}
+		if (value) {
+			for (int i = 0; i <= size; i++)
+				value[i].~V();
+			free(value);
+			value = 0;
+		}
+		size = 0;
+	}
+	void init(const int i, const V * v) {
+		if (v)
+			new(&value[i]) _V(*v);
+		else
+			new(&value[i]) _V();
+		idx[i] = i;
+	}
+	inline void sort() {
+		qsort(1,this->size);
+	}
+	void qsort(const int l, const int r) {
+		if (r > l) {
+			int i, j, k, p = (l+r)/2;
+			if (static_cast<K &>(value[idx[l]])
+					> static_cast<K &>(value[idx[p]]))
+				swap(idx[l],idx[p]);
+			if (static_cast<K &>(value[idx[l]])
+					> static_cast<K &>(value[idx[r]]))
+				swap(idx[l],idx[r]);
+			if (static_cast<K &>(value[idx[p]])
+					> static_cast<K &>(value[idx[r]]))
+				swap(idx[p],idx[r]);
+			for (i = l, j = r, k = 0; ;
+								p = (p==i?j++:(p==j?i--:p)), k++) {
+				while (++i < p && !(static_cast<K &>(value[idx[i]])
+						> static_cast<K &>(value[idx[p]])));
+				while (p < --j && !(static_cast<K &>(value[idx[p]])
+						> static_cast<K &>(value[idx[j]])));
+				if (i >= j)
+					break;
+				swap(idx[i],idx[j]);
+			}
+			if (k == 0) {
+				isort(l, p-1);
+				isort(p+1, r);
+			} else {
+				qsort(l, p-1);
+				qsort(p+1, r);
+			}
+		}
+	}
+	void isort(const int l, const int r) {
+		for (int i = l; l < r && i < r; i++) {
+			for (int j = i; i >= l && j >= l
+					&& static_cast<K &>(value[idx[j]])
+						> static_cast<K &>(value[idx[j+1]]); j--) {
+				swap(idx[j],idx[j+1]);
 			}
 		}
 	}
@@ -923,7 +1164,7 @@ public:
 /*
  * class aoset - Associative ordered set
  *
- * Ordered by key set. Does anyone want to order by value?
+ * Ordered by key set.
  */
 template <class K, class V>
 class aoset : public asset<K,V> {
@@ -934,9 +1175,12 @@ public:
 	inline explicit aoset(const int s, const int b = DFLT_BLK,
 			const K * k = 0, const V * v = 0)
 	  : asset<K,V>(s,b,k,v) {
+		if (k)
+			sort();
 	}
 	inline explicit aoset(const afset<K,V> & v)
 	  : asset<K,V>(v) {
+		sort();
 	}
 	inline ~aoset() {
 	}
@@ -1001,9 +1245,12 @@ public:
 	inline explicit avoset(const int s, const int b = DFLT_BLK,
 			const K * k = 0, const V * v = 0)
 	  : asset<K,V>(s,b,k,v) {
+		if (k)
+			sort();
 	}
 	inline explicit avoset(const afset<K,V> & v)
 	  : asset<K,V>(v) {
+		sort();
 	}
 	inline ~avoset() {
 	}
