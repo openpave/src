@@ -34,14 +34,15 @@
 #include "set.h"
 #include <stdio.h>
 
-#ifdef BUILD
+#ifdef NOBUILD
 struct key {
 	int i;
 	key() : i(0) {}
 	key(int s) : i(s) {}
 	bool operator== (const key & k) const { return (i==k.i); }  
 	bool operator<= (const key & k) const { return (i<=k.i); }  
-	bool operator> (const key & k) const { return (i>k.i); }  
+	bool operator>  (const key & k) const { return (i> k.i); }  
+	bool operator>= (const key & k) const { return (i>=k.i); }  
 };
 struct pair : public key {
 	double d;
@@ -174,6 +175,64 @@ again:
 			printf("Failed! (%i)\n",i);
 			for (j = MAX(i-2,0); j <= MIN(i+2,N-1); j++)
 				printf("%4.2f\n",t[j]);
+			return 1;
+		}
+	}
+	goto again;
+	return 0;
+}
+#endif
+
+#ifdef BUILD
+#define N 30000
+
+struct key {
+	int i;
+	key() : i(0) {}
+	key(int s) : i(s) {}
+	bool operator== (const key & k) const { return (i==k.i); }  
+	bool operator<= (const key & k) const { return (i<=k.i); }  
+	bool operator>  (const key & k) const { return (i> k.i); }  
+	bool operator<  (const key & k) const { return (i< k.i); }  
+};
+struct pair : public key {
+	double d;
+	pair() : key(), d(0.0) {}
+	pair(int s, double v) : key(s), d(v) {}
+};
+
+template<class K, class V>
+void kiset_print(const kiset<K,V> & t) {
+	printf("i = {");
+	for (int i = 0; i < t.length(); i++) {
+		const K & k = t.getindex(i);
+		printf("%i:%i %4.2f%s",i,k.i,t[k].d,(i == t.length()-1 ? "" : ","));
+	}
+	printf("}\n");
+}
+
+int
+main()
+{
+	int i;
+	kiset<key,pair> t(0,N);
+again:
+	t.empty();
+	for (i = 0; i < N; i++) {
+		int s = int(floor(RAND(0,N)));
+		double v = double(i);
+		//printf("Add %i:%i %4.2f\n",i,s,v);
+		t.add(pair(s,v));
+		//kiset_print(t);
+	}
+	//for (j = 0; j < N; j++)
+	//	printf("%4.2f\n",t[j]);
+	printf(".");
+	fflush(NULL);
+	for (i = 1; i < t.length(); i++) {
+		if (t.getindex(i-1).i > t.getindex(i).i) {
+			printf("Failed! (%i)\n",i);
+			kiset_print(t);
 			return 1;
 		}
 	}

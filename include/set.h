@@ -64,7 +64,8 @@
 
 #include "event.h"
 #include "mathplus.h"
-#include "string.h"
+#include <string.h>
+#include <assert.h>
 
 #define DFLT_BLK	100
 
@@ -95,15 +96,15 @@ public:
 
 protected:
 	int size;                           // The size of the set...
+	int buffer;							// The allocated buffer size...
 
 	// Simple constructor...
 	inline explicit set(const int s = 0,
-			const int b = DFLT_BLK) {
-		size = (s > 0 ? s : 0);
-		block = (b > 1 ? b : 1);
+			const int b = DFLT_BLK)
+	  : size(s > 0 ? s : 0), buffer(0), block(b > 1 ? b : 1) {
 	}
 	inline explicit set(const set & s)
-	 : size(s.size), block(s.block) {
+	 : size(s.size), buffer(0), block(s.block) {
 	}
 	inline ~set() {
 	}
@@ -173,7 +174,8 @@ public:
 	}
 	// Behave like an array. Zero indexed.
 	V & operator[] (const int p) const {
-		return (inbounds(p+1) ? value[p+1] : value[0]);
+		assert(inbounds(p+1));
+		return value[p+1];
 	}
 
 protected:
@@ -189,7 +191,10 @@ protected:
 
 	// Since this is a fixed size set, hide the allocator...
 	bool allocate(const int s) {
-		V * temp = static_cast<V *>(realloc(value,bufsize(s)*sizeof(V)));
+		int b = bufsize(s);
+		if (b == buffer)
+			return true;
+		V * temp = static_cast<V *>(realloc(value,b*sizeof(V)));
 		if (temp == 0) {
 			event_msg(EVENT_ERROR,"Out of memory in fset::allocate()!");
 			return false;
@@ -197,6 +202,7 @@ protected:
 		if (value == 0)
 			new(&temp[0]) _V();
 		value = temp;
+		buffer = b;
 		return true;
 	}
 	void deallocate() {
@@ -207,6 +213,7 @@ protected:
 			value = 0;
 		}
 		size = 0;
+		buffer = 0;
 	}
 	void init(const int i, const V * v) {
 		if (v)
@@ -355,7 +362,7 @@ protected:
 	// A highly optimised quick sort. Don't touch...
 	void qsort(const int l, const int r) {
 		if (r > l) {
-			int i, j, k, p = (l+r)/2;
+			int i, j, k, p = l+(r-l)/2;
 			if (this->value[l] > this->value[p])
 				swap(this->value[l],this->value[p]);
 			if (this->value[l] > this->value[r])
@@ -526,7 +533,8 @@ public:
 	}
 	// Allow integer keys.
 	inline V & operator[] (const int p) const {
-		return (inbounds(p+1) ? value[p+1] : value[0]);
+		assert(inbounds(p+1));
+		return value[p+1];
 	}
 
 protected:
@@ -542,7 +550,10 @@ protected:
 
 	// Hide the allocation function.
 	bool allocate(const int s) {
-		V * temp = static_cast<V *>(realloc(value,bufsize(s)*sizeof(V)));
+		int b = bufsize(s);
+		if (b == buffer)
+			return true;
+		V * temp = static_cast<V *>(realloc(value,b*sizeof(V)));
 		if (temp == 0) {
 			event_msg(EVENT_ERROR,"Out of memory in kfset::allocate()!");
 			return false;
@@ -550,6 +561,7 @@ protected:
 		if (value == 0)
 			new(&temp[0]) _V();
 		value = temp;
+		buffer = b;
 		return true;
 	}
 	void deallocate() {
@@ -560,6 +572,7 @@ protected:
 			value = 0;
 		}
 		size = 0;
+		buffer = 0;
 	}
 	void init(const int i, const V * v) {
 		new(&value[i]) _V(*v);
@@ -628,8 +641,8 @@ public:
 		return allocate(--(this->size));
 	}
 	// Replace key/value with another.
-	inline bool replace(const K & ko, const V & v) {
-		int p = haskey(ko);
+	inline bool replace(const V & v) {
+		int p = haskey(v);
 		if (p == -1)
 			return false;
 		this->value[p+1] = v;
@@ -671,7 +684,7 @@ public:
 protected:
 	void qsort(const int l, const int r) {
 		if (r > l) {
-			int i, j, k, p = (l+r)/2;
+			int i, j, k, p = l+(r-l)/2;
 			if (this->value[l] > this->value[p])
 				swap(this->value[l],this->value[p]);
 			if (this->value[l] > this->value[r])
@@ -736,7 +749,6 @@ public:
 				init(++size,&v[i]);
 		}
 		allocate(size);
-		sort();
 	}
 	// Copy constuctor.
 	inline explicit kiset(const kfset<K,V> & v)
@@ -747,7 +759,6 @@ public:
 		}
 		for (int i = 0; i <= size; i++)
 			init(i,&v.value[i]);
-		sort();
 	}
 	// Clean up.
 	inline ~kiset() {
@@ -756,18 +767,11 @@ public:
 
 	// Do a key lookup, and return zero if the key is not found.
 	inline int haskey(const K & k) const {
-		int l = 1, r = this->size;
-		while (l <= r) {
-			int i = (l+r)/2;
-			const K & ki = static_cast<K &>(value[idx[i]]);
-			if (ki == k)
-				return idx[i]-1;
-			if (ki > k)
-				r = i-1;
-			else
-				l = i+1;
-		}
-		return -1;
+		int p = findkey(k,1,size+1);
+		if (p <= size && static_cast<K &>(value[idx[p]]) == k)
+			return idx[p]-1;
+		else
+			return -1;
 	}
 	// Assignment operator.
 	inline kiset<K,V> & operator= (const kfset<K,V> & v) {
@@ -789,8 +793,14 @@ public:
 		return value[haskey(k)+1];
 	}
 	// Allow integer keys.
-	inline V & operator[] (const int p) const {
-		return (inbounds(p+1) ? value[p+1] : value[0]);
+	inline const V & operator[] (const int p) const {
+		assert(inbounds(p+1));
+		return value[p+1];
+	}
+	// Allow sorted acess.
+	inline const V & getindex(const int i) const {
+		assert(inbounds(i+1));
+		return value[idx[i+1]];
 	}
 
 	// Add one value at the end.
@@ -806,16 +816,15 @@ public:
 	bool add(const V * v, const int s = 1) {
 		if (s <= 0 || v == 0)
 			return false;
-		if (!allocate(this->size+s))
+		if (!allocate(size+s))
 			return false;
 		for (int i = 0, p; i < s; i++) {
 			if ((p = haskey(v[i])) != -1)
 				value[p+1] = v[i];
 			else
-				init(++(this->size),&v[i]);
+				init(++size,&v[i]);
 		}
-		sort();
-		return allocate(this->size);
+		return allocate(size);
 	}
 	// Now start removing them...
 	bool remove(const K & k) {
@@ -823,27 +832,24 @@ public:
 		if (p == 0)
 			return false;
 		value[p].~V();
-		if (p < this->size)
-			memmove(&value[p],&value[p+1],
-					(this->size-p)*sizeof(V));
-		for (int i = 0; i < this->size; i++) {
+		if (p < size)
+			memmove(&value[p],&value[p+1],(size-p)*sizeof(V));
+		for (int i = 0; i < size; i++) {
 			if (idx[i] == p)
 				q = i;
 			else if (idx[i] > p)
 				idx[i]--;
 		}
-		if (q < this->size)
-			memmove(&idx[q],&idx[q+1],
-					(this->size-q)*sizeof(K));
-		return allocate(--(this->size));
+		if (q < size)
+			memmove(&idx[q],&idx[q+1],(size-q)*sizeof(int));
+		return allocate(--size);
 	}
 	// Replace key/value with another.
-	inline bool replace(const K & ko, const V & v) {
-		int p = haskey(ko);
+	inline bool replace(const V & v) {
+		int p = haskey(v);
 		if (p == -1)
 			return false;
 		value[p+1] = v;
-		sort();
 		return true;
 	}
 	inline bool empty() {
@@ -865,8 +871,11 @@ protected:
 
 	// Make some space...
 	bool allocate(const int s) {
-		int * itemp = static_cast<int *>(realloc(idx,bufsize(s)*sizeof(int)));
-		V * vtemp = static_cast<V *>(realloc(value,bufsize(s)*sizeof(V)));
+		int b = bufsize(s);
+		if (b == buffer)
+			return true;
+		int * itemp = static_cast<int *>(realloc(idx,b*sizeof(int)));
+		V * vtemp = static_cast<V *>(realloc(value,b*sizeof(V)));
 		if (itemp == 0 || vtemp == 0) {
 			event_msg(EVENT_ERROR,"Out of memory in kiset::allocate()!");
 			return false;
@@ -876,6 +885,7 @@ protected:
 		if (value == 0)
 			new(&vtemp[0]) _V();
 		idx = itemp; value = vtemp;
+		buffer = b;
 		return true;
 	}
 	void deallocate() {
@@ -890,55 +900,32 @@ protected:
 			value = 0;
 		}
 		size = 0;
+		buffer = 0;
 	}
+	// Find the position which is either equal or greater...
+	inline int findkey(const K & k, int l, int r) const {
+		while (l < r) {
+			int i = l + (r-l)/2;
+			if (static_cast<K &>(value[idx[i]]) < k)
+				l = i+1;
+			else
+				r = i;
+		}
+		return l;
+	}
+	// In this version i is always the last record...
 	void init(const int i, const V * v) {
 		if (v)
 			new(&value[i]) _V(*v);
 		else
 			new(&value[i]) _V();
-		idx[i] = i;
-	}
-	inline void sort() {
-		qsort(1,this->size);
-	}
-	void qsort(const int l, const int r) {
-		if (r > l) {
-			int i, j, k, p = (l+r)/2;
-			if (static_cast<K &>(value[idx[l]])
-					> static_cast<K &>(value[idx[p]]))
-				swap(idx[l],idx[p]);
-			if (static_cast<K &>(value[idx[l]])
-					> static_cast<K &>(value[idx[r]]))
-				swap(idx[l],idx[r]);
-			if (static_cast<K &>(value[idx[p]])
-					> static_cast<K &>(value[idx[r]]))
-				swap(idx[p],idx[r]);
-			for (i = l, j = r, k = 0; ;
-								p = (p==i?j++:(p==j?i--:p)), k++) {
-				while (++i < p && !(static_cast<K &>(value[idx[i]])
-						> static_cast<K &>(value[idx[p]])));
-				while (p < --j && !(static_cast<K &>(value[idx[p]])
-						> static_cast<K &>(value[idx[j]])));
-				if (i >= j)
-					break;
-				swap(idx[i],idx[j]);
-			}
-			if (k == 0) {
-				isort(l, p-1);
-				isort(p+1, r);
-			} else {
-				qsort(l, p-1);
-				qsort(p+1, r);
-			}
-		}
-	}
-	void isort(const int l, const int r) {
-		for (int i = l; l < r && i < r; i++) {
-			for (int j = i; i >= l && j >= l
-					&& static_cast<K &>(value[idx[j]])
-						> static_cast<K &>(value[idx[j+1]]); j--) {
-				swap(idx[j],idx[j+1]);
-			}
+		if (i > 0) {
+			int p = findkey(static_cast<const K &>(*v),1,i);
+			if (p < i) {
+				memmove(&idx[p+1],&idx[p],(i-p)*sizeof(int));
+				idx[p] = i;
+			} else
+				idx[i] = i;
 		}
 	}
 };
@@ -1014,11 +1001,13 @@ public:
 	}
 	// Linear access.
 	inline K & getkey(const int p) const {
-		return (inbounds(p+1) ? key[p+1] : key[0]);
+		assert(inbounds(p+1));
+		return key[p+1];
 	}
 	// More linear access.
 	inline V & getvalue(const int p) const {
-		return (inbounds(p+1) ? value[p+1] : value[0]);
+		assert(inbounds(p+1));
+		return value[p+1];
 	}
 protected:
 	K * key;                            // The keys.
@@ -1042,10 +1031,13 @@ protected:
 
 	// Make some space...
 	bool allocate(const int s) {
-		K * ktemp = static_cast<K *>(realloc(key,bufsize(s)*sizeof(K)));
-		V * vtemp = static_cast<V *>(realloc(value,bufsize(s)*sizeof(V)));
+		int b = bufsize(s);
+		if (b == buffer)
+			return true;
+		K * ktemp = static_cast<K *>(realloc(key,b*sizeof(K)));
+		V * vtemp = static_cast<V *>(realloc(value,b*sizeof(V)));
 		if (ktemp == 0 || vtemp == 0) {
-			event_msg(EVENT_ERROR,"Out of memory in kfset::allocate()!");
+			event_msg(EVENT_ERROR,"Out of memory in afset::allocate()!");
 			return false;
 		}
 		if (key == 0)
@@ -1053,6 +1045,7 @@ protected:
 		if (value == 0)
 			new(&vtemp[0]) _V();
 		key = ktemp; value = vtemp;
+		buffer = b;
 		return true;
 
 	}
@@ -1070,6 +1063,7 @@ protected:
 			value = 0;
 		}
 		size = 0;
+		buffer = 0;
 	}
 	void init(const int i, const K * k, const V * v) {
 		new(&key[i]) _K(*k);
@@ -1147,11 +1141,10 @@ public:
 		return allocate(--(this->size));
 	}
 	// Or replacing them...
-	inline bool replace(const K & ko, const K & k, const V & v) {
-		int p = haskey(ko);
+	inline bool replace(const K & k, const V & v) {
+		int p = haskey(k);
 		if (p == -1)
 			return false;
-		this->key[p+1] = k;
 		this->value[p+1] = v;
 		return true;
 	}
@@ -1191,7 +1184,7 @@ public:
 protected:
 	void qsort(const int l, const int r) {
 		if (r > l) {
-			int i, j, k, p = (l+r)/2;
+			int i, j, k, p = l+(r-l)/2;
 			if (this->key[l] > this->key[p]) {
 				swap(this->key[l],this->key[p]);
 				swap(this->value[l],this->value[p]);
@@ -1261,7 +1254,7 @@ public:
 protected:
 	void qsort(const int l, const int r) {
 		if (r > l) {
-			int i, j, k, p = (l+r)/2;
+			int i, j, k, p = l+(r-l)/2;
 			if (this->value[l] > this->value[p]) {
 				swap(this->key[l],this->key[p]);
 				swap(this->value[l],this->value[p]);
