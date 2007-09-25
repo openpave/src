@@ -183,7 +183,7 @@ again:
 }
 #endif
 
-#ifdef BUILD
+#ifdef NOBUILD
 #define N 30000
 
 struct key {

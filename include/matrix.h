@@ -726,6 +726,7 @@ operator- (const matrix & b) {
 
 void orth_gs(const int n, double * Q);
 bool equ_gauss(const int n, const double * A, const double * b, double * x);
+double inv_mul_gauss(const int n, const int m, double * A, double * B);
 bool equ_lu(const int n, const double * A, const double * b, double * x, const double tol = ERR_TOL);
 bool inv_lu(const int n, double * A);
 double inv_mul_lu(const int n, const int m, double * A, double * B);

@@ -114,6 +114,55 @@ equ_gauss(const int n, const double * A, const double * b, double * x)
 }
 
 /*
+ * This function returns the nxm matrix X = A^-1*B.  Both A and B are destoryed...
+ * The result is returned in B, and the determinant in the return value.
+ *
+ * This function employs Gaussian elimination with full pivoting.
+ */
+double
+inv_mul_gauss(const int n, const int m, double * A, double * B)
+{
+	double det = 1.0;
+	int i, j, k;
+
+	for (i = 0; i < n; i++) {
+		double pvt = A[i*n+i];
+		if (fabs(pvt) < DBL_EPSILON) {
+			for (j = i+1; j < n; j++) {
+				if (fabs(pvt = A[j*n+i]) >= DBL_EPSILON)
+					break;
+			}
+			if (j == n) {
+				event_msg(EVENT_ERROR,"Singular matrix in inv_mul_gauss()!");
+				det = 0.0;
+				goto abort;
+			}
+			for (k = 0; k < n; k++)
+				swap(A[j*n+k],A[i*n+k]);
+			for (k = 0; k < m; k++)
+				swap(B[j*m+k],B[i*m+k]);
+		}
+		det *= pvt;
+		for (k = n-1; k > i; k--) {
+			double tmp = A[k*n+i]/pvt;
+			for (j = n-1; j > i; j--)
+				A[k*n+j] -= tmp*A[i*n+j];
+			for (j = 0; j < m; j++)
+				B[k*m+j] -= tmp*B[i*m+j];
+		}
+	}
+	for (i = n-1; i >= 0; i--) {
+		for (j = n-1; j > i; j--)
+			for (k = 0; k < m; k++)
+				B[i*m+k] -= A[i*n+j]*B[j*m+k];
+		for (k = 0; k < m; k++)
+			B[i*m+k] /= A[i*n+i];
+	}
+abort:
+	return det;
+}
+
+/*
  * Perform LU decompostion of an nxn matrix A.
  *
  * The algorithm comes from the net, based on the implementation in

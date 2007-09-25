@@ -220,6 +220,96 @@ abort:
 }
 #endif
 
+#ifdef BUILD
+#define n 3
+int
+main()
+{
+	bool rv = false;
+	int i, j, k, iter = 0;
+	double * A = new double[n*n];
+	double * B = new double[n*n];
+	double * I = new double[n*n];
+	double * R = new double[n*n];
+	if (A == 0 || B == 0 || I == 0 || R == 0) {
+		event_msg(EVENT_ERROR,"Out of memory!");
+		goto abort;
+	}
+again:
+	printf(".");
+	for (i = 0; i < n*n; i++)
+		R[i] = RAND(0.0,1.0), B[i] = A[i] = I[i] = 0.0;
+	for (i = 0; i < n; i++) {
+		for (j = 0; j < n; j++) {
+			for (k = 0; k < n; k++)
+				A[i*n+j] += R[i*n+k]*R[j*n+k];
+		}
+	}
+	for (i = 0; i < n*n; i++)
+		R[i] = A[i];
+	for (i = 0; i < n; i++)
+		B[i*n+i] = 1.0;
+	//printf("\nA = [ ");
+	//for (i = 0; i < n; i++) {
+	//	for (j = 0; j < n; j++)
+	//		printf("%.60e%s",A[i*n+j],(j == n-1 ? "; ...\n" : ", "));
+	//}
+	//printf("];\n");
+	//printf("\nB = [ ");
+	//for (i = 0; i < n; i++) {
+	//	for (j = 0; j < n; j++)
+	//		printf("%.60e%s",B[i*n+j],(j == n-1 ? "; ...\n" : ", "));
+	//}
+	//printf("];\n");
+	printf("(");
+	//inv_mul_gauss(n,n,A,B);
+	inv_mul_lu(n,n,A,B);
+	printf("%d)",++iter);
+	//printf("\nR = [ ");
+	//for (i = 0; i < n; i++) {
+	//	for (j = 0; j < n; j++)
+	//		printf("%.60e%s",B[i*n+j],(j == n-1 ? "; ...\n" : ", "));
+	//}
+	//printf("];\n");
+	for (i = 0; i < n; i++) {
+		for (j = 0; j < n; j++) {
+			for (k = 0; k < n; k++)
+				I[i*n+j] += B[i*n+k]*R[k*n+j];
+		}
+	}
+	for (i = 0; i < n; i++) {
+		for (j = 0; j < n; j++) {
+			//printf("%f\t",I[i*n+j]-(i==j?1.0:0.0));
+			if (fabs(I[i*n+j]-(i==j?1.0:0.0)) > 1e-6)
+				rv = true;
+		}
+		//printf("\n");
+	}
+	if (rv) {
+		printf("\nA = [ ");
+		for (i = 0; i < n; i++) {
+			for (j = 0; j < n; j++)
+				printf("%.60e%s",R[i*n+j],(j == n-1 ? "; ...\n" : ", "));
+		}
+		printf("];\n");
+		printf("\nI = [ ");
+		for (i = 0; i < n; i++) {
+			for (j = 0; j < n; j++)
+				printf("%.60e%s",I[i*n+j],(j == n-1 ? "; ...\n" : ", "));
+		}
+		printf("];\n");
+		exit(1);
+	}
+	goto again;
+
+abort:
+	delete [] A;
+	delete [] B;
+	delete [] I;
+	delete [] R;
+}
+#endif
+
 #ifdef NOBUILD
 #define n 5
 int
