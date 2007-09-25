@@ -273,13 +273,12 @@ class mesh;
 /*
  * class smatrix_elem - an element stiffness matrix
  */
-// XXX: we need to use a row major storage here...
 class smatrix_elem {
 public:
-	explicit smatrix_elem(const int n, const int * in)
+	explicit smatrix_elem(const int n, const fset<int> & in)
 	  : nnd(n), inel(in), K(0) {
 		K = static_cast<tmatrix<double,NDOF,NDOF> *>
-				(calloc(B_SIZE(nnd,nnd-1),sizeof(tmatrix<double,NDOF,NDOF>)));
+				(calloc(size(),sizeof(tmatrix<double,NDOF,NDOF>)));
 		if (K == 0)
 			event_msg(EVENT_ERROR,"Out of memory in smatrix_elem::smatrix_elem()!");
 	}
@@ -288,16 +287,25 @@ public:
 			free(K);
 	}
 	inline tmatrix<double,NDOF,NDOF> & operator() (int i, int j) const {
-		if (i > j)
+		if (i < j)
 			swap(i,j);
-		return K[B_IDX(nnd,nnd-1,i,j)];
+		return K[index(i,j)];
 	}
 
 private:
 	friend class mesh;
 	const int nnd;
-	const int * inel;
+	const fset<int> & inel;
 	tmatrix<double,NDOF,NDOF> * K;
+
+	// Size of the triangular matrix storage
+	inline int size() const {
+		return nnd*(nnd+1)/2;
+	}
+	// Index into the triangular matrix storage
+	inline int index(const int i, const int j) const {
+		return i*(i+1)/2 + j;
+	}
 };
 
 /*
@@ -315,39 +323,36 @@ public:
 	}
 
 	virtual smatrix_elem * stiffness() = 0;
-
+	
 protected:
 	friend class mesh;
 	const material & mat;
-};
 
-/*
- * struct gauss - a Gauss integration point
- *
- * This stores all of the things we might need for this point...
- */
-template<int N>
-struct gauss {
-	double gw;
-	double detJ;
-	//double H[N];
-	tmatrix<double,N,NDIM> dHdx;
+	inline int addnode(const node3d & c);
+	inline const node3d & getnode(const int i);
 };
 
 template<int N>
 class element_N : public element {
 public:
 	element_N(mesh * o, element * p, const element_t t, const material & m,
-			const fset<int> & in)
-	  : element(o,p,t,m) {
-	  	assert(N == in.length());
-		memcpy(inel,&in[0],N*sizeof(int));
+			const fset<node3d> & c)
+	  : element(o,p,t,m), inel(8,9) {
+	  	assert(N == c.length());
+		switch (etype) {
+		case block8:
+			for (int i = 0; i < 8; i++)
+				inel[i] = addnode(c[i]);
+			break;
+		case block16:
+			break;
+		}
 	}
 	virtual smatrix_elem * stiffness();
 
 protected:
 	friend class mesh;
-	int inel[N];
+	fset<int> inel;
 };
 
 class smatrix_diag;
@@ -587,18 +592,8 @@ public:
 
 	bool add(const element::element_t t, const material & m,
 			const fset<node3d> & c) {
-		sset<int> inel(0,8);
 		assert(8 == c.length());
-		// XXX: Needs work
-		for (int i = 0; i < 8; i++) {
-			int k = node.haskey(c[i]);
-			if (k == -1) {
-				k = node.length();
-				node.add(c[i]);
-			}
-			inel.add(k);
-		}
-		element * e = new element_N<8>(this,last,t,m,inel);
+		element * e = new element_N<8>(this,last,t,m,c);
 		if (e == 0) {
 			event_msg(EVENT_ERROR,"Out of memory in mesh::add()!");
 			return false;
@@ -706,7 +701,7 @@ public:
 		for (i = 0; i < nnd; i++)
 			r += tmatrix_scalar<double>(~F(i)*F(i));
 		double ri = r;
-		while (r > 1e-10*ri && it < nnd*NDOF) {
+		while (r > 1e-30*ri && it < nnd*NDOF) {
 			if (it == 0) {
 				for (i = 0; i < nnd; i++)
 					P(i) = F(i);
@@ -742,7 +737,7 @@ public:
 				r += tmatrix_scalar<double>(~F(i)*F(i));
 			}
 			it++;
-			//printf("CG step %i with residual %g\n",it,r);
+			printf("CG step %i with residual %g\n",it,r);
 		}
 		printf("CG took %i steps with residual %g\n",it,r);
 		/*for (i = 0; i < nnd; i++) {
@@ -759,11 +754,81 @@ public:
 
 private:
 	friend class listelement_o<mesh,element>;
-	template<int N>	friend class element_N;
-	ksset<node3d,node3d> node;
+	friend class element;
+	kiset<node3d,node3d> node;
 	koset<mesh_bc_key,mesh_bc> disp_bc;
 	koset<mesh_bc_key,mesh_bc> f_ext;
 };
+
+/*
+ * Add a node to the mesh's node list, returning the index.
+ */
+int
+element::addnode(const node3d & c)
+{
+	int k = owner->node.haskey(c);
+	if (k == -1) {
+		k = owner->node.length();
+		owner->node.add(c);
+	}
+	return k;
+}
+
+/*
+ * Get a node from the node list, based on the index.
+ */
+inline const node3d &
+element::getnode(const int i)
+{
+	return  owner->node[i];
+}
+
+/*
+ * Special tmatrix version of this...
+ */
+template<unsigned N, unsigned M>
+double
+inv_mul_gauss(tmatrix<double,N,N> & A, tmatrix<double,N,M> & B)
+{
+	double det = 1.0;
+	unsigned i, j, k;
+
+	for (i = 0; i < N; i++) {
+		double pvt = A(i,i);
+		if (fabs(pvt) < DBL_EPSILON) {
+			for (j = i+1; j < N; j++) {
+				if (fabs(pvt = A(j,i)) >= DBL_EPSILON)
+					break;
+			}
+			if (j == N) {
+				event_msg(EVENT_ERROR,"Singular matrix in inv_mul_gauss()!");
+				det = 0.0;
+				goto abort;
+			}
+			for (k = 0; k < N; k++)
+				swap(A(j,k),A(i,k));
+			for (k = 0; k < M; k++)
+				swap(B(j,k),B(i,k));
+		}
+		det *= pvt;
+		for (k = N-1; k > i; k--) {
+			double tmp = A(k,i)/pvt;
+			for (j = N-1; j > i; j--)
+				A(k,j) -= tmp*A(i,j);
+			for (j = 0; j < M; j++)
+				B(k,j) -= tmp*B(i,j);
+		}
+	}
+	for (i = N; i > 0; ) {
+		for (--i, j = N-1; j > i; j--)
+			for (k = 0; k < M; k++)
+				B(i,k) -= A(i,j)*B(j,k);
+		for (k = 0; k < M; k++)
+			B(i,k) /= A(i,i);
+	}
+abort:
+	return det;
+}
 
 template<int N>
 smatrix_elem *
@@ -791,7 +856,7 @@ element_N<N>::stiffness()
 	// Element nodal coords
 	tmatrix<double,N,NDIM> xe;
 	for (i = 0; i < N; i++) {
-		node3d & p = owner->node[inel[i]];
+		const node3d & p = getnode(inel[i]);
 		xe[i][0] = p.x; xe[i][1] = p.y; xe[i][2] = p.z;
 	}
 
@@ -886,7 +951,7 @@ element_N<N>::stiffness()
 		}
 		tmatrix<double,NDIM,NDIM> J(dHdr*xe);
 		// This returns det(J);
-		gw *= inv_mul_lu(NDIM,N,&J[0][0],&dHdr[0][0]);
+		gw *= inv_mul_gauss(J,dHdr);
 		for (i = 0; i < N; i++) {
 			for (j = i; j < N; j++) {
 				for (k = 0; k < 3; k++)
