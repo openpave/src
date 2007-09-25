@@ -309,6 +309,53 @@ private:
 };
 
 /*
+ * Special tmatrix version of this...
+ */
+template<unsigned N, unsigned M>
+double
+inv_mul_gauss(tmatrix<double,N,N> & A, tmatrix<double,N,M> & B)
+{
+	double det = 1.0;
+	unsigned i, j, k;
+
+	for (i = 0; i < N; i++) {
+		double pvt = A(i,i);
+		if (fabs(pvt) < DBL_EPSILON) {
+			for (j = i+1; j < N; j++) {
+				if (fabs(pvt = A(j,i)) >= DBL_EPSILON)
+					break;
+			}
+			if (j == N) {
+				event_msg(EVENT_ERROR,"Singular matrix in inv_mul_gauss()!");
+				det = 0.0;
+				goto abort;
+			}
+			for (k = 0; k < N; k++)
+				swap(A(j,k),A(i,k));
+			for (k = 0; k < M; k++)
+				swap(B(j,k),B(i,k));
+		}
+		det *= pvt;
+		for (k = N-1; k > i; k--) {
+			double tmp = A(k,i)/pvt;
+			for (j = N-1; j > i; j--)
+				A(k,j) -= tmp*A(i,j);
+			for (j = 0; j < M; j++)
+				B(k,j) -= tmp*B(i,j);
+		}
+	}
+	for (i = N; i > 0; ) {
+		for (--i, j = N-1; j > i; j--)
+			for (k = 0; k < M; k++)
+				B(i,k) -= A(i,j)*B(j,k);
+		for (k = 0; k < M; k++)
+			B(i,k) /= A(i,i);
+	}
+abort:
+	return det;
+}
+
+/*
  * class element - a finite element
  */
 class element : public listelement_o<mesh,element> {
@@ -348,7 +395,165 @@ public:
 			break;
 		}
 	}
-	virtual smatrix_elem * stiffness();
+	virtual smatrix_elem * stiffness() {
+		int i, j, k, l, g;
+		double rx, ry, rz;
+		double e = mat.getprop(material_property::emod);
+		double v = mat.getprop(material_property::poissons);
+		double lambda = v*e/(1+v)/(1-2*v);
+		double mu = e/2/(1+v);
+	
+		// Build the point stiffness tensor E_abcd
+		tmatrix<double,3,3> E[3][3];
+		pointstiffness<0,0>(E[0][0],lambda,mu);
+		pointstiffness<0,1>(E[0][1],lambda,mu);
+		pointstiffness<0,2>(E[0][2],lambda,mu);
+		pointstiffness<1,0>(E[1][0],lambda,mu);
+		pointstiffness<1,1>(E[1][1],lambda,mu);
+		pointstiffness<1,2>(E[1][2],lambda,mu);
+		pointstiffness<2,0>(E[2][0],lambda,mu);
+		pointstiffness<2,1>(E[2][1],lambda,mu);
+		pointstiffness<2,2>(E[2][2],lambda,mu);
+
+		// Element nodal coords
+		tmatrix<double,N,NDIM> xe;
+		for (i = 0; i < N; i++) {
+			const node3d & p = getnode(inel[i]);
+			xe[i][0] = p.x; xe[i][1] = p.y; xe[i][2] = p.z;
+		}
+
+		ksset<point3d,gauss3d> gp(0,8);
+		const double gp_2[2][2] = {{-1.0/sqrt(3.0), 1.0},
+		                           {+1.0/sqrt(3.0), 1.0}};
+		const double gp_A[4][2] = {{-(1.0+1.0/sqrt(3.0))/2.0, 1.0/2.0},
+		                           {-(1.0-1.0/sqrt(3.0))/2.0, 1.0/2.0},
+		                           {+(1.0-1.0/sqrt(3.0))/2.0, 1.0/2.0},
+		                           {+(1.0+1.0/sqrt(3.0))/2.0, 1.0/2.0}};
+		const double gp_3[3][2] = {{-sqrt(3.0/5.0), 5.0/9.0},
+		                           {             0, 8.0/9.0},
+		                           {+sqrt(3.0/5.0), 5.0/9.0}};
+		//const double gp_4[4][2] =
+		//	{{-sqrt(525.0+70.0*sqrt(30.0))/35.0, (18.0-sqrt(30.0))/36.0},
+		//	 {-sqrt(525.0-70.0*sqrt(30.0))/35.0, (18.0+sqrt(30.0))/36.0},
+		//	 {+sqrt(525.0-70.0*sqrt(30.0))/35.0, (18.0+sqrt(30.0))/36.0},
+		//	 {+sqrt(525.0+70.0*sqrt(30.0))/35.0, (18.0-sqrt(30.0))/36.0}};
+		switch (etype) {
+		case block8:
+			for (i = 0; i < 2; i++) {
+				for (j = 0; j < 2; j++) {
+					for (k = 0; k < 2; k++) {
+						gp.add(gauss3d(gp_2[i][0],gp_2[j][0],gp_2[k][0],
+								gp_2[i][1]*gp_2[j][1]*gp_2[k][1]));
+					}
+				}
+			}
+			break;
+		case block16:
+			for (i = 0; i < 2; i++) {
+				for (j = 0; j < 2; j++) {
+					for (k = 0; k < 3; k++) {
+						gp.add(gauss3d(gp_2[i][0],gp_2[j][0],gp_3[k][0],
+								gp_2[i][1]*gp_2[j][1]*gp_3[k][1]));
+					}
+				}
+			}
+			break;
+		}
+	
+		smatrix_elem * _K = new smatrix_elem(N,inel);
+		if (_K == 0) {
+			event_msg(EVENT_ERROR,"Out of memory in element::stiffness()!");
+			return 0;
+		}
+		smatrix_elem & K = *_K;
+	
+		for (g = 0; g < gp.length(); g++) {
+			rx = gp[g].x; ry = gp[g].y; rz = gp[g].z;
+			double gw = gp[g].gw;
+			tmatrix<double,NDIM,N> dHdr;
+			//tmatrix<double,N,1> H;
+	
+			// shape functions for 8-node 3D brick:
+			//   N = 1/8*(1+-x)*(1+-y)*(1+-z);
+			const double Hx_8[8] = {-1, -1, +1, +1, -1, -1, +1, +1};
+			const double Hy_8[8] = {-1, +1, -1, +1, -1, +1, -1, +1};
+			const double Hz_8[8] = {-1, -1, -1, -1, +1, +1, +1, +1};
+	
+			// shape functions for 16-node 3D brick:
+			const double Hx1_16[16] = {-1,-1,+1,+1,-1,-1,+1,+1,-1,-1,+1,+1,-1,-1,+1,+1};
+			const double Hy1_16[16] = {-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1};
+			const double Hz0_16[16] = {-1,-1,-1,-1,+9,+9,+9,+9,+9,+9,+9,+9,-1,-1,-1,-1};
+			const double Hz2_16[16] = {+9,+9,+9,+9,-9,-9,-9,-9,-9,-9,-9,-9,+9,+9,+9,+9};
+			const double Hz1_16[16] = {-1,-1,-1,-1,-3,-3,-3,-3,+3,+3,+3,+3,+1,+1,+1,+1};
+	
+			switch (etype) {
+			case block8:
+				assert(N == 8);
+				for (l = 0; l < N; l++) {
+					dHdr[0][l] = Hx_8[l]*(1+Hy_8[l]*ry)*(1+Hz_8[l]*rz)/8;
+					dHdr[1][l] = Hy_8[l]*(1+Hx_8[l]*rx)*(1+Hz_8[l]*rz)/8;
+					dHdr[2][l] = Hz_8[l]*(1+Hx_8[l]*rx)*(1+Hy_8[l]*ry)/8;
+					//H[0][l] =(1+Hx_8[l]*rx)*(1+Hy_8[l]*ry)*(1+Hz_8[l]*rz)/8;
+				}
+				break;
+			case block16:
+				assert(N == 16);
+				for (l = 0; l < N; l++) {
+					dHdr[0][l] = Hx1_16[l]*(1+Hy1_16[l]*ry)
+							*(Hz0_16[l]+Hz2_16[l]*rz*rz)*(1+Hz1_16[l]*rz)/64;
+					dHdr[1][l] = (1+Hx1_16[l]*rx)*Hy1_16[l]
+							*(Hz0_16[l]+Hz2_16[l]*rz*rz)*(1+Hz1_16[l]*rz)/64;
+					dHdr[2][l] = (1+Hx1_16[l]*rx)*(1+Hy1_16[l]*ry)
+							*((2*Hz2_16[l]*rz)*(1+Hz1_16[l]*rz)
+						+ (Hz0_16[l]+Hz2_16[l]*rz*rz)*Hz1_16[l])/64;
+					//H[l][0] = (1+Hx1_16[l]*rx)*(1+Hy1_16[l]*ry)
+					//		*(Hz0_16[l]+Hz2_16[l]*rz*rz)*(1+Hz1_16[l]*rz)/64;
+				}
+				break;
+			}
+			tmatrix<double,NDIM,NDIM> J(dHdr*xe);
+			// This returns det(J);
+			gw *= inv_mul_gauss(J,dHdr);
+			for (i = 0; i < N; i++) {
+				for (j = i; j < N; j++) {
+					for (k = 0; k < 3; k++)
+						for (l = 0; l < 3; l++) 
+							K(i,j) += E[k][l]*(dHdr[k][i]*dHdr[l][j]*gw);
+				}
+			}
+		}
+		return _K;
+	}
+
+/*
+	% shape functions for 16-node 3D brick:
+	% the ordering depends on the find above!!!!!!!!!!!
+	Nd  = [ 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 2; 1; 2; 4; 2; 1; 2; 1];
+	N1  = [ 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1];
+	Nx0 = [ 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 0; 0; 0;-1;-1;-1; 0; 0; 0];
+	Nx1 = [-1;-1;+1;+1;-1;-1;+1;+1;-1;-1;+1;+1;+1;+1;+1; 0; 0; 0;-1;-1;-1];
+	Nxa = [ 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0;-1;-1;-1;+1;+1;+1;-1;-1;-1];
+	Ny0 = [ 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 0;-1; 0; 0;-1; 0; 0;-1; 0];
+	Ny1 = [-1;+1;-1;+1;-1;+1;-1;+1;-1;+1;-1;+1;+1; 0;-1;+1; 0;-1;+1; 0;-1];
+	Nya = [ 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0;-1;+1;-1;-1;+1;-1;-1;+1;-1];
+	Nz0 = [-1;-1;-1;-1;+9;+9;+9;+9;+9;+9;+9;+9;-1;-1;-1;-1;-1;-1;-1;-1;-1];
+	Nz2 = [+9;+9;+9;+9;-9;-9;-9;-9;-9;-9;-9;-9;+9;+9;+9;+9;+9;+9;+9;+9;+9];
+	Nz1 = [-1;-1;-1;-1;-3;-3;-3;-3;+3;+3;+3;+3;+1;+1;+1;+1;+1;+1;+1;+1;+1];
+
+				dNdrx = (Nx1+Nxa*sign(rx)) ...
+					  .*(Ny0+Ny1*ry+Nya*abs(ry)) ...
+					  .*(Nz0+Nz2*rz^2).*(N1+Nz1*rz).*Nd/64;
+				dNdry = (Nx0+Nx1*rx+Nxa*abs(rx)) ...
+					  .*(Ny1+Nya*sign(ry)) ...
+					  .*(Nz0+Nz2*rz^2).*(N1+Nz1*rz).*Nd/64;
+				dNdrz = (Nx0+Nx1*rx+Nxa*abs(rx)) ...
+					  .*(Ny0+Ny1*ry+Nya*abs(ry)) ...
+					  .*((2*Nz2*rz).*(N1+Nz1*rz) ...
+						 +(Nz0+Nz2*rz^2).*Nz1).*Nd/64;
+				N = (Nx0+Nx1*rx+Nxa*abs(rx)) ...
+				  .*(Ny0+Ny1*ry+Nya*abs(ry)) ...
+				  .*(Nz0+Nz2*rz^2).*(N1+Nz1*rz).*Nd/64;
+*/
 
 protected:
 	friend class mesh;
@@ -782,216 +987,6 @@ element::getnode(const int i)
 {
 	return  owner->node[i];
 }
-
-/*
- * Special tmatrix version of this...
- */
-template<unsigned N, unsigned M>
-double
-inv_mul_gauss(tmatrix<double,N,N> & A, tmatrix<double,N,M> & B)
-{
-	double det = 1.0;
-	unsigned i, j, k;
-
-	for (i = 0; i < N; i++) {
-		double pvt = A(i,i);
-		if (fabs(pvt) < DBL_EPSILON) {
-			for (j = i+1; j < N; j++) {
-				if (fabs(pvt = A(j,i)) >= DBL_EPSILON)
-					break;
-			}
-			if (j == N) {
-				event_msg(EVENT_ERROR,"Singular matrix in inv_mul_gauss()!");
-				det = 0.0;
-				goto abort;
-			}
-			for (k = 0; k < N; k++)
-				swap(A(j,k),A(i,k));
-			for (k = 0; k < M; k++)
-				swap(B(j,k),B(i,k));
-		}
-		det *= pvt;
-		for (k = N-1; k > i; k--) {
-			double tmp = A(k,i)/pvt;
-			for (j = N-1; j > i; j--)
-				A(k,j) -= tmp*A(i,j);
-			for (j = 0; j < M; j++)
-				B(k,j) -= tmp*B(i,j);
-		}
-	}
-	for (i = N; i > 0; ) {
-		for (--i, j = N-1; j > i; j--)
-			for (k = 0; k < M; k++)
-				B(i,k) -= A(i,j)*B(j,k);
-		for (k = 0; k < M; k++)
-			B(i,k) /= A(i,i);
-	}
-abort:
-	return det;
-}
-
-template<int N>
-smatrix_elem *
-element_N<N>::stiffness()
-{
-	int i, j, k, l, g;
-	double rx, ry, rz;
-	double e = mat.getprop(material_property::emod);
-	double v = mat.getprop(material_property::poissons);
-	double lambda = v*e/(1+v)/(1-2*v);
-	double mu = e/2/(1+v);
-
-	// Build the point stiffness tensor E_abcd
-	tmatrix<double,3,3> E[3][3];
-	pointstiffness<0,0>(E[0][0],lambda,mu);
-	pointstiffness<0,1>(E[0][1],lambda,mu);
-	pointstiffness<0,2>(E[0][2],lambda,mu);
-	pointstiffness<1,0>(E[1][0],lambda,mu);
-	pointstiffness<1,1>(E[1][1],lambda,mu);
-	pointstiffness<1,2>(E[1][2],lambda,mu);
-	pointstiffness<2,0>(E[2][0],lambda,mu);
-	pointstiffness<2,1>(E[2][1],lambda,mu);
-	pointstiffness<2,2>(E[2][2],lambda,mu);
-
-	// Element nodal coords
-	tmatrix<double,N,NDIM> xe;
-	for (i = 0; i < N; i++) {
-		const node3d & p = getnode(inel[i]);
-		xe[i][0] = p.x; xe[i][1] = p.y; xe[i][2] = p.z;
-	}
-
-	ksset<point3d,gauss3d> gp(0,8);
-	const double gp_2[2][2] = {{-1.0/sqrt(3.0), 1.0},
-	                           {+1.0/sqrt(3.0), 1.0}};
-	const double gp_A[4][2] = {{-(1.0+1.0/sqrt(3.0))/2.0, 1.0/2.0},
-	                           {-(1.0-1.0/sqrt(3.0))/2.0, 1.0/2.0},
-	                           {+(1.0-1.0/sqrt(3.0))/2.0, 1.0/2.0},
-	                           {+(1.0+1.0/sqrt(3.0))/2.0, 1.0/2.0}};
-	const double gp_3[3][2] = {{-sqrt(3.0/5.0), 5.0/9.0},
-	                           {             0, 8.0/9.0},
-	                           {+sqrt(3.0/5.0), 5.0/9.0}};
-	//const double gp_4[4][2] =
-	//	{{-sqrt(525.0+70.0*sqrt(30.0))/35.0, (18.0-sqrt(30.0))/36.0},
-    //	 {-sqrt(525.0-70.0*sqrt(30.0))/35.0, (18.0+sqrt(30.0))/36.0},
-    //	 {+sqrt(525.0-70.0*sqrt(30.0))/35.0, (18.0+sqrt(30.0))/36.0},
-    //	 {+sqrt(525.0+70.0*sqrt(30.0))/35.0, (18.0-sqrt(30.0))/36.0}};
-	switch (etype) {
-	case block8:
-		for (i = 0; i < 2; i++) {
-			for (j = 0; j < 2; j++) {
-				for (k = 0; k < 2; k++) {
-					gp.add(gauss3d(gp_2[i][0],gp_2[j][0],gp_2[k][0],
-							gp_2[i][1]*gp_2[j][1]*gp_2[k][1]));
-				}
-			}
-		}
-		break;
-	case block16:
-		for (i = 0; i < 2; i++) {
-			for (j = 0; j < 2; j++) {
-				for (k = 0; k < 3; k++) {
-					gp.add(gauss3d(gp_2[i][0],gp_2[j][0],gp_3[k][0],
-							gp_2[i][1]*gp_2[j][1]*gp_3[k][1]));
-				}
-			}
-		}
-		break;
-	}
-
-	smatrix_elem * _K = new smatrix_elem(N,inel);
-	if (_K == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in element::stiffness()!");
-		return 0;
-	}
-	smatrix_elem & K = *_K;
-
-	for (g = 0; g < gp.length(); g++) {
-		rx = gp[g].x; ry = gp[g].y; rz = gp[g].z;
-		double gw = gp[g].gw;
-		tmatrix<double,NDIM,N> dHdr;
-		//tmatrix<double,N,1> H;
-
-		// shape functions for 8-node 3D brick:
-		//   N = 1/8*(1+-x)*(1+-y)*(1+-z);
-		const double Hx_8[8] = {-1, -1, +1, +1, -1, -1, +1, +1};
-		const double Hy_8[8] = {-1, +1, -1, +1, -1, +1, -1, +1};
-		const double Hz_8[8] = {-1, -1, -1, -1, +1, +1, +1, +1};
-
-		// shape functions for 16-node 3D brick:
-		const double Hx1_16[16] = {-1,-1,+1,+1,-1,-1,+1,+1,-1,-1,+1,+1,-1,-1,+1,+1};
-		const double Hy1_16[16] = {-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1};
-		const double Hz0_16[16] = {-1,-1,-1,-1,+9,+9,+9,+9,+9,+9,+9,+9,-1,-1,-1,-1};
-		const double Hz2_16[16] = {+9,+9,+9,+9,-9,-9,-9,-9,-9,-9,-9,-9,+9,+9,+9,+9};
-		const double Hz1_16[16] = {-1,-1,-1,-1,-3,-3,-3,-3,+3,+3,+3,+3,+1,+1,+1,+1};
-
-		switch (etype) {
-		case block8:
-			assert(N == 8);
-			for (l = 0; l < N; l++) {
-				dHdr[0][l] = Hx_8[l]*(1+Hy_8[l]*ry)*(1+Hz_8[l]*rz)/8;
-				dHdr[1][l] = Hy_8[l]*(1+Hx_8[l]*rx)*(1+Hz_8[l]*rz)/8;
-				dHdr[2][l] = Hz_8[l]*(1+Hx_8[l]*rx)*(1+Hy_8[l]*ry)/8;
-				//H[0][l] =(1+Hx_8[l]*rx)*(1+Hy_8[l]*ry)*(1+Hz_8[l]*rz)/8;
-			}
-			break;
-		case block16:
-			assert(N == 16);
-			for (l = 0; l < N; l++) {
-				dHdr[0][l] = Hx1_16[l]*(1+Hy1_16[l]*ry)
-						*(Hz0_16[l]+Hz2_16[l]*rz*rz)*(1+Hz1_16[l]*rz)/64;
-				dHdr[1][l] = (1+Hx1_16[l]*rx)*Hy1_16[l]
-						*(Hz0_16[l]+Hz2_16[l]*rz*rz)*(1+Hz1_16[l]*rz)/64;
-				dHdr[2][l] = (1+Hx1_16[l]*rx)*(1+Hy1_16[l]*ry)
-						*((2*Hz2_16[l]*rz)*(1+Hz1_16[l]*rz)
-					+ (Hz0_16[l]+Hz2_16[l]*rz*rz)*Hz1_16[l])/64;
-				//H[l][0] = (1+Hx1_16[l]*rx)*(1+Hy1_16[l]*ry)
-				//		*(Hz0_16[l]+Hz2_16[l]*rz*rz)*(1+Hz1_16[l]*rz)/64;
-			}
-			break;
-		}
-		tmatrix<double,NDIM,NDIM> J(dHdr*xe);
-		// This returns det(J);
-		gw *= inv_mul_gauss(J,dHdr);
-		for (i = 0; i < N; i++) {
-			for (j = i; j < N; j++) {
-				for (k = 0; k < 3; k++)
-					for (l = 0; l < 3; l++) 
-						K(i,j) += E[k][l]*(dHdr[k][i]*dHdr[l][j]*gw);
-			}
-		}
-	}
-	return _K;
-}
-
-/*
-	% shape functions for 16-node 3D brick:
-	% the ordering depends on the find above!!!!!!!!!!!
-	Nd  = [ 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 2; 1; 2; 4; 2; 1; 2; 1];
-	N1  = [ 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1];
-	Nx0 = [ 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 0; 0; 0;-1;-1;-1; 0; 0; 0];
-	Nx1 = [-1;-1;+1;+1;-1;-1;+1;+1;-1;-1;+1;+1;+1;+1;+1; 0; 0; 0;-1;-1;-1];
-	Nxa = [ 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0;-1;-1;-1;+1;+1;+1;-1;-1;-1];
-	Ny0 = [ 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 0;-1; 0; 0;-1; 0; 0;-1; 0];
-	Ny1 = [-1;+1;-1;+1;-1;+1;-1;+1;-1;+1;-1;+1;+1; 0;-1;+1; 0;-1;+1; 0;-1];
-	Nya = [ 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0;-1;+1;-1;-1;+1;-1;-1;+1;-1];
-	Nz0 = [-1;-1;-1;-1;+9;+9;+9;+9;+9;+9;+9;+9;-1;-1;-1;-1;-1;-1;-1;-1;-1];
-	Nz2 = [+9;+9;+9;+9;-9;-9;-9;-9;-9;-9;-9;-9;+9;+9;+9;+9;+9;+9;+9;+9;+9];
-	Nz1 = [-1;-1;-1;-1;-3;-3;-3;-3;+3;+3;+3;+3;+1;+1;+1;+1;+1;+1;+1;+1;+1];
-
-				dNdrx = (Nx1+Nxa*sign(rx)) ...
-					  .*(Ny0+Ny1*ry+Nya*abs(ry)) ...
-					  .*(Nz0+Nz2*rz^2).*(N1+Nz1*rz).*Nd/64;
-				dNdry = (Nx0+Nx1*rx+Nxa*abs(rx)) ...
-					  .*(Ny1+Nya*sign(ry)) ...
-					  .*(Nz0+Nz2*rz^2).*(N1+Nz1*rz).*Nd/64;
-				dNdrz = (Nx0+Nx1*rx+Nxa*abs(rx)) ...
-					  .*(Ny0+Ny1*ry+Nya*abs(ry)) ...
-					  .*((2*Nz2*rz).*(N1+Nz1*rz) ...
-						 +(Nz0+Nz2*rz^2).*Nz1).*Nd/64;
-				N = (Nx0+Nx1*rx+Nxa*abs(rx)) ...
-				  .*(Ny0+Ny1*ry+Nya*abs(ry)) ...
-				  .*(Nz0+Nz2*rz^2).*(N1+Nz1*rz).*Nd/64;
-*/
 
 /*
  * This program is a custom 3D finite element code, intended for
