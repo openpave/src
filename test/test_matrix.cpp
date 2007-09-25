@@ -412,8 +412,8 @@ main()
 int
 main()
 {
-	tmatrix<3,2> B;
-	tmatrix<3,3> D;
+	tmatrix<double,3,2> B;
+	tmatrix<double,3,3> D;
 
 	B[0][0] = -0.05; B[0][1] =  0;
 	B[1][0] =  0;    B[1][1] =  0.05;
@@ -426,11 +426,11 @@ main()
 	printf("B = "); B.print();
 	printf("D = ");	D.print();
 
-	tmatrix<2,2> BT;
+	tmatrix<double,2,2> BT;
 	BT = ~B*B;
 	printf(" BT = "); BT.print();
 
-	tmatrix<2,2> K;
+	tmatrix<double,2,2> K;
 	K = ~B*D*B;
 	printf(" K = "); K.print();
 	K = ~B*D*B + ~B*B;
@@ -438,7 +438,7 @@ main()
 	K -= BT;
 	printf(" K = "); K.print();
 
-	tmatrix<2,2> I;
+	tmatrix<double,2,2> I;
 	I[0][0] = 1; I[0][1] = 0;
 	I[1][0] = 0; I[1][1] = 1;
 	printf(" I = "); I.print();

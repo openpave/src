@@ -106,6 +106,9 @@ class fixed {
 	inline operator int () const {
 		return value >> P;
 	}
+	inline operator float () const {
+		return (float(value))/(1 << P);
+	}
 	inline operator double () const {
 		return (double(value))/(1 << P);
 	}
