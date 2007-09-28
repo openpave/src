@@ -386,10 +386,13 @@ inline matrix_dense
 operator* (const matrix_dense & a, const matrix_dense & b) {
 	assert(a.cols() == b.rows());
 	matrix_dense t(a.rows(),b.cols());
-	for (unsigned i = 0; i < a.rows(); i++)
-		for (unsigned j = 0; j < b.cols(); j++)
+	for (unsigned i = 0; i < a.rows(); i++) {
+		for (unsigned j = 0; j < b.cols(); j++) {
+			t(i,j) = 0.0;
 			for (unsigned k = 0; k < a.cols(); k++)
 				t(i,j) += a(i,k)*b(k,j);
+		}
+	}
 	return t;
 }
 
