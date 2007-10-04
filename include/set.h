@@ -802,6 +802,11 @@ public:
 		assert(inbounds(i+1));
 		return value[idx[i+1]];
 	}
+	// Get the position of an element in the sort.
+	inline int getorder(const int i) const {
+		assert(inbounds(i+1));
+		return findkey(value[i+1],1,size+1)-1;
+	}
 
 	// Add one value at the end.
 	inline bool add(const V & v) {

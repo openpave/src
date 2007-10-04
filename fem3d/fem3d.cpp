@@ -961,31 +961,6 @@ class smatrix_diag {
 			// smatrix_nodes dont have a destructor...
 			free(nodes);
 	}
-	// Insertion sort the row
-	void sort() {
-		int k, l;
-		char t[sizeof(smatrix_node)];
-		
-		for (k = 1; k < nnz; k++) {
-			for (l = k; l > 0
-					&& nodes[l-1].j > nodes[l].j; l--) {
-				memcpy(t          ,&nodes[l-1],sizeof(smatrix_node));
-				memcpy(&nodes[l-1],&nodes[l]  ,sizeof(smatrix_node));
-				memcpy(&nodes[l]  ,t          ,sizeof(smatrix_node));
-			}
-		}
-		if (row_head)
-			row_head = nodes;
-		for (k = 0; k < nnz; k++) {
-			nodes[k].row_next = (k < nnz-1 ? &nodes[k+1] : 0);
-			if (nodes[k].col_prev)
-				nodes[k].col_prev->col_next = &nodes[k];
-			else
-				nodes[k].col_diag->col_head = &nodes[k];
-			if (nodes[k].col_next)
-				nodes[k].col_next->col_prev = &nodes[k];
-		}
-	}
 	bool insert(int i, int j, const tmatrix<double,NDOF,NDOF> & t,
 			smatrix_diag * d) {
 		int s = nnz+1, nnb = 1;
@@ -1002,7 +977,25 @@ class smatrix_diag {
 			}
 			if (nodes != temp) {
 				nodes = temp;
-				sort();
+				for (int k = 1; k < nnz; k++) {
+					for (int l = k; l > 0
+							&& nodes[l-1].j > nodes[l].j; l--) {
+						memcpy(&nodes[nnz],&nodes[l-1],sizeof(smatrix_node));
+						memcpy(&nodes[l-1],&nodes[l]  ,sizeof(smatrix_node));
+						memcpy(&nodes[l]  ,&nodes[nnz],sizeof(smatrix_node));
+					}
+				}
+				if (row_head)
+					row_head = nodes;
+				for (int k = 0; k < nnz; k++) {
+					nodes[k].row_next = (k < nnz-1 ? &nodes[k+1] : 0);
+					if (nodes[k].col_prev)
+						nodes[k].col_prev->col_next = &nodes[k];
+					else
+						nodes[k].col_diag->col_head = &nodes[k];
+					if (nodes[k].col_next)
+						nodes[k].col_next->col_prev = &nodes[k];
+				}
 			}
 		}
 		new(&nodes[nnz]) smatrix_node(i,j,t,d);
@@ -1285,7 +1278,9 @@ public:
 				return false;
 			for (i = 0; i < ke->nnd; i++) {
 				for (j = i; j < ke->nnd; j++) {
-					K.append(ke->inel[i],ke->inel[j],(*ke)(i,j));
+					K.append(node.getorder(ke->inel[i]),
+					         node.getorder(ke->inel[j]),(*ke)(i,j));
+					//K.append(ke->inel[i],ke->inel[j],(*ke)(i,j));
 					//printf("Element stiffness (%i,%i):\n",i,j);
 					//(*ke)(i,j).print();
 				}
@@ -1297,15 +1292,16 @@ public:
 		for (i = 0; i < f_ext.length(); i++) {
 			const mesh_bc & f = f_ext[i];
 			//printf("Adding force %f at node %i dof %i\n",f.d,f.n,f.i);
-			F(f.n)(f.i) = f.d;
+			F(node.getorder(f.n))(f.i) = f.d;
+			//F(f.n)(f.i) = f.d;
 		}
 		disp_bc.sort();
 		for (i = 0; i < disp_bc.length(); i++) {
 			const mesh_bc & u = disp_bc[i];
 			// XXX: extract forces
 			//printf("Adding bc %f at node %i dof %i\n",u.d,u.n,u.i);
-			assert(u.n >= 0 && u.n < nnd && u.i >= 0 && u.i < NDOF);
-			d = &(K.diag[u.n]);
+			d = &(K.diag[node.getorder(u.n)]);
+			//d = &(K.diag[u.n]);
 			for (j = 0; j < NDOF; j++) {
 				d->K(u.i,j) = 0.0; d->K(j,u.i) = 0.0;
 			}
@@ -1447,7 +1443,8 @@ public:
 		}
 		printf("CG took %i steps with residual %g\n",it,r);
 		for (i = 0; i < nnd; i++) {
-			node3d n = node[i];
+			//node3d n = node[i];
+			node3d n = node.getindex(i);
 			n.setdisp(U(i));
 			node.replace(n);
 		}
