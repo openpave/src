@@ -678,7 +678,7 @@ class element_block34 : public element {
 public:
 	element_block34(mesh * o, element * p, const material & m,
 			const fset<coord3d> & c)
-	  : element(o,p,block16,m) {
+	  : element(o,p,block34,m) {
 	  	assert(8 == c.length());
 		int i;
 		double xb[4], yb[4], zb[4];
@@ -762,7 +762,7 @@ public:
 		for (i = 0; i < 18; i++) {
 			if (mask[i] != -1) {
 				inel.add(mask[i]);
-				mask[i] = inel.length();
+				mask[i] = inel.length()-1;
 			} else
 				mask[i] = 0;
 		}
@@ -854,8 +854,8 @@ public:
 				dHdr(0,i) = (Sxy[l] ? -SGN(rx) : Hx1[l])
 				        *(1+(!Sxy[l] ? -fabs(ry) : Hy1[l]*ry))
 						*(Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/32;
-				dHdr(1,i) = (1+(Sxy[l] ? -fabs(rx) : (Hx1[l]*rx))
-				        *(!Sxy[l] ? -SGN(ry) : Hy1[l]))
+				dHdr(1,i) = (1+(Sxy[l] ? -fabs(rx) : Hx1[l]*rx))
+				        *(!Sxy[l] ? -SGN(ry) : Hy1[l])
 						*(Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/32;
 				dHdr(2,i) = (1+(Sxy[l] ? -fabs(rx) : Hx1[l]*rx))
 				        *(1+(!Sxy[l] ? -fabs(ry) : Hy1[l]*ry))
@@ -919,35 +919,6 @@ public:
 		return _K;
 	}
 
-/*
-	% shape functions for 16-node 3D brick:
-	% the ordering depends on the find above!!!!!!!!!!!
-	Nd  = [ 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 2; 1; 2; 4; 2; 1; 2; 1];
-	N1  = [ 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1];
-	Nx0 = [ 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 0; 0; 0;-1;-1;-1; 0; 0; 0];
-	Nx1 = [-1;-1;+1;+1;-1;-1;+1;+1;-1;-1;+1;+1;+1;+1;+1; 0; 0; 0;-1;-1;-1];
-	Nxa = [ 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0;-1;-1;-1;+1;+1;+1;-1;-1;-1];
-	Ny0 = [ 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 0;-1; 0; 0;-1; 0; 0;-1; 0];
-	Ny1 = [-1;+1;-1;+1;-1;+1;-1;+1;-1;+1;-1;+1;+1; 0;-1;+1; 0;-1;+1; 0;-1];
-	Nya = [ 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0;-1;+1;-1;-1;+1;-1;-1;+1;-1];
-	Nz0 = [-1;-1;-1;-1;+9;+9;+9;+9;+9;+9;+9;+9;-1;-1;-1;-1;-1;-1;-1;-1;-1];
-	Nz2 = [+9;+9;+9;+9;-9;-9;-9;-9;-9;-9;-9;-9;+9;+9;+9;+9;+9;+9;+9;+9;+9];
-	Nz1 = [-1;-1;-1;-1;-3;-3;-3;-3;+3;+3;+3;+3;+1;+1;+1;+1;+1;+1;+1;+1;+1];
-
-				dNdrx = (Nx1+Nxa*sign(rx)) ...
-					  .*(Ny0+Ny1*ry+Nya*abs(ry)) ...
-					  .*(Nz0+Nz2*rz^2).*(N1+Nz1*rz).*Nd/64;
-				dNdry = (Nx0+Nx1*rx+Nxa*abs(rx)) ...
-					  .*(Ny1+Nya*sign(ry)) ...
-					  .*(Nz0+Nz2*rz^2).*(N1+Nz1*rz).*Nd/64;
-				dNdrz = (Nx0+Nx1*rx+Nxa*abs(rx)) ...
-					  .*(Ny0+Ny1*ry+Nya*abs(ry)) ...
-					  .*((2*Nz2*rz).*(N1+Nz1*rz) ...
-						 +(Nz0+Nz2*rz^2).*Nz1).*Nd/64;
-				N = (Nx0+Nx1*rx+Nxa*abs(rx)) ...
-				  .*(Ny0+Ny1*ry+Nya*abs(ry)) ...
-				  .*(Nz0+Nz2*rz^2).*(N1+Nz1*rz).*Nd/64;
-*/
 protected:
 	int mask[18];
 };
@@ -990,12 +961,36 @@ class smatrix_diag {
 			// smatrix_nodes dont have a destructor...
 			free(nodes);
 	}
-
-	smatrix_node * insert(int i, int j, const tmatrix<double,NDOF,NDOF> & t,
+	// Insertion sort the row
+	void sort() {
+		int k, l;
+		char t[sizeof(smatrix_node)];
+		
+		for (k = 1; k < nnz; k++) {
+			for (l = k; l > 0
+					&& nodes[l-1].j > nodes[l].j; l--) {
+				memcpy(t          ,&nodes[l-1],sizeof(smatrix_node));
+				memcpy(&nodes[l-1],&nodes[l]  ,sizeof(smatrix_node));
+				memcpy(&nodes[l]  ,t          ,sizeof(smatrix_node));
+			}
+		}
+		if (row_head)
+			row_head = nodes;
+		for (k = 0; k < nnz; k++) {
+			nodes[k].row_next = (k < nnz-1 ? &nodes[k+1] : 0);
+			if (nodes[k].col_prev)
+				nodes[k].col_prev->col_next = &nodes[k];
+			else
+				nodes[k].col_diag->col_head = &nodes[k];
+			if (nodes[k].col_next)
+				nodes[k].col_next->col_prev = &nodes[k];
+		}
+	}
+	bool insert(int i, int j, const tmatrix<double,NDOF,NDOF> & t,
 			smatrix_diag * d) {
-		int s = nnz+1, nnb = 8;
-		while (s > 8*nnb)
-			nnb *= 2;
+		int s = nnz+1, nnb = 1;
+		//while (s > 8*nnb)
+		//	nnb *= 2;
 		s = nnb*(s/nnb+(s%nnb?1:0));
 		if (s > nnd) {
 			nnd = s;
@@ -1003,31 +998,11 @@ class smatrix_diag {
 					(realloc(nodes,nnd*sizeof(smatrix_node)));
 			if (temp == 0) {
 				event_msg(EVENT_ERROR,"Out of memory in smatrix_diag::insert()!");
-				return 0;
+				return false;
 			}
 			if (nodes != temp) {
-				// Insertion sort the row
 				nodes = temp;
-				int k, l;
-				for (k = 1; k < nnz; k++) {
-					for (l = k; l > 0
-							&& nodes[l-1].j > nodes[l].j; l--) {
-						memcpy(&nodes[nnz],&nodes[l-1],sizeof(smatrix_node));
-						memcpy(&nodes[l-1],&nodes[l]  ,sizeof(smatrix_node));
-						memcpy(&nodes[l]  ,&nodes[nnz],sizeof(smatrix_node));
-					}
-				}
-				if (row_head)
-					row_head = nodes;
-				for (k = 0; k < nnz; k++) {
-					nodes[k].row_next = (k < nnz-1 ? &nodes[k+1] : 0);
-					if (nodes[k].col_prev)
-						nodes[k].col_prev->col_next = &nodes[k];
-					else
-						nodes[k].col_diag->col_head = &nodes[k];
-					if (nodes[k].col_next)
-						nodes[k].col_next->col_prev = &nodes[k];
-				}
+				sort();
 			}
 		}
 		new(&nodes[nnz]) smatrix_node(i,j,t,d);
@@ -1060,7 +1035,8 @@ class smatrix_diag {
 			nodes[nnz].col_next = p;
 			p->col_prev = &nodes[nnz];
 		}
-		return &nodes[nnz++];
+		nnz++;
+		return true;
 	}
 
 	friend class smatrix;
@@ -1084,6 +1060,24 @@ public:
 				(calloc(nnd,sizeof(smatrix_diag)));
 		if (diag == 0)
 			event_msg(EVENT_ERROR,"Out of memory in smatrix::smatrix()!");
+	}
+	inline explicit smatrix(const smatrix & A)
+	  : nnd(A.nnd), diag(0) {
+		diag = static_cast<smatrix_diag *>
+				(calloc(nnd,sizeof(smatrix_diag)));
+		if (diag == 0) {
+			event_msg(EVENT_ERROR,"Out of memory in smatrix::smatrix()!");
+			return;
+		}
+		for (int i = 0; i < nnd; i++) {
+			smatrix_diag * d = &(A.diag[i]);
+			append(i,i,d->K);
+			smatrix_node * p = d->row_head;
+			while (p) {
+				append(p->i,p->j,p->K);
+				p = p->row_next;
+			}
+		}
 	}
 	inline ~smatrix() {
 		if (diag) {
@@ -1113,6 +1107,55 @@ public:
 				return false;
 		} else
 			p->K += n;
+		return true;
+	}
+
+	bool chol() {
+		int i, j;
+		smatrix_diag * d;
+		smatrix_node * p;
+		
+		for (i = 0; i < nnd; i++) {
+			d = &(diag[i]);
+			tmatrix<double,NDOF,NDOF> & K = d->K;
+			tmatrix<double,NDOF,NDOF> t(0.0);
+			p = d->col_head;
+			while (p) {
+				t += ~(p->K)*(p->K);
+				p = p->col_next;
+			}
+			K(0,0) = sqrt(K(0,0)-t(0,0));
+			K(0,1) = (K(0,1)-t(0,1))/K(0,0);
+			K(0,2) = (K(0,2)-t(0,2))/K(0,0);
+			K(1,1) = sqrt(K(1,1)-K(0,1)*K(0,1)-t(1,1));
+			K(1,2) = (K(1,2)-K(0,2)*K(0,1)-t(1,2))/K(1,1);
+			K(2,2) = sqrt(K(2,2)-K(0,2)*K(0,2)-K(1,2)*K(1,2)-t(2,2));
+			K(1,0) = K(2,0) = K(2,1) = 0.0;
+			p = d->row_head;
+			while (p) {
+				tmatrix<double,NDOF,NDOF> & J = p->K;
+				smatrix_node * pi = d->col_head;
+				smatrix_node * pj = diag[p->j].col_head;
+				while (pi && pj) {
+					if (pi->i > pj->i)
+						pj = pj->col_next;
+					else if (pi->i < pj->i)
+						pi = pi->col_next;
+					else {
+						J -= ~(pi->K)*(pj->K);
+						pi = pi->col_next;
+						pj = pj->col_next;
+					}
+				}
+				for (j = 0; j < NDOF; j++)
+					J(0,j) /= K(0,0);
+				for (j = 0; j < NDOF; j++)
+					J(1,j) = (J(1,j)-K(0,1)*J(0,j))/K(1,1);
+				for (j = 0; j < NDOF; j++)
+					J(2,j) = (J(2,j)-K(0,2)*J(0,j)-K(1,2)*J(1,j))/K(2,2);
+				p = p->row_next;
+			}
+		}
 		return true;
 	}
 
@@ -1200,7 +1243,7 @@ public:
 			break;
 		case element::block34:
 			e = new element_block34(this,last,m,c);
-			if (e !=0 && e->inel.length() == 16) {
+			if (e != 0 && e->inel.length() == 16) {
 				delete e;
 				e = new element_block16(this,last,m,c);
 			}
@@ -1232,7 +1275,7 @@ public:
 		int i, j, nnd = node.length();
 		printf("Solving with %i nodes!\n",nnd);
 		smatrix K(nnd);
-		svector F(nnd), U(nnd), P(nnd), W(nnd);
+		svector F(nnd), U(nnd), P(nnd), W(nnd), Z(nnd);
 		element * e = this->first;
 		smatrix_diag * d;
 		smatrix_node * p;
@@ -1304,6 +1347,23 @@ public:
 			}
 		}*/
 
+		smatrix M(K);
+		M.chol();
+		/*for (i = 0; i < nnd; i++) {
+			d = &(M.diag[i]);
+			printf("Chol %i,%i:\n",i,i);
+			tmatrix<double,NDOF,NDOF> t(d->K);
+			t.print();
+			p = d->row_head;
+			while (p) {
+				assert(p->i == i);
+				printf("Chol %i,%i:\n",p->i,p->j);
+				tmatrix<double,NDOF,NDOF> tr(p->K);
+				tr.print();
+				p = p->row_next;
+			}
+		}*/
+
 		// CG solution
 		int it = 0;
 		double r = 0.0, ro = 0.0;
@@ -1311,12 +1371,49 @@ public:
 			r += tmatrix_scalar<double>(~F(i)*F(i));
 		double ri = r;
 		while (r > 1e-30*ri && it < nnd*NDOF) {
+			r = 0.0;
+			for (i = 0; i < nnd; i++) {
+				//d = &(K.diag[i]);
+				d = &(M.diag[i]);
+				tmatrix<double,NDOF,1> t(F(i));
+				p = d->col_head;
+				while (p) {
+					t -= ~(p->K)*Z(p->i);
+					p = p->col_next;
+				}
+				t(0) = t(0)/d->K(0,0);
+				t(1) = (t(1)-t(0)*d->K(0,1))/d->K(1,1);
+				t(2) = (t(2)-t(0)*d->K(0,2)-t(1)*d->K(1,2))/d->K(2,2);
+				Z(i) = t;
+			}
+			//for (i = 0; i < nnd; i++) {
+			//	d = &(K.diag[i]);
+			//	for (j = 0; j < NDOF; j++)
+			//		Z(i)(j) *= d->K(j,j);
+			//}
+			for (i = nnd-1; i >= 0; i--) {
+				//d = &(K.diag[i]);
+				d = &(M.diag[i]);
+				tmatrix<double,NDOF,1> t(Z(i));
+				p = d->row_head;
+				while (p) {
+					t -= (p->K)*Z(p->j);
+					p = p->row_next;
+				}
+				t(2) = t(2)/d->K(2,2);
+				t(1) = (t(1)-t(2)*d->K(1,2))/d->K(1,1);
+				t(0) = (t(0)-t(1)*d->K(0,1)-t(2)*d->K(0,2))/d->K(0,0);
+				Z(i) = t;
+				r += tmatrix_scalar<double>(~t*F(i));
+			}
 			if (it == 0) {
 				for (i = 0; i < nnd; i++)
-					P(i) = F(i);
+					P(i) = Z(i);
+					//P(i) = F(i);
 			} else {
 				for (i = 0; i < nnd; i++)
-					P(i) = F(i) + r/ro*P(i);
+					P(i) = Z(i) + (r/ro)*P(i);
+					//P(i) = F(i) + (r/ro)*P(i);
 			}
 			double a = 0.0;
 			for (i = 0; i < nnd; i++) {
@@ -1333,7 +1430,7 @@ public:
 					p = p->row_next;
 				}
 				W(i) = t;
-				a += tmatrix_scalar<double>(~P(i)*t);
+				a += tmatrix_scalar<double>(~t*P(i));
 			}
 			if (a <= 0) {
 				event_msg(EVENT_ERROR,"negative curvature!");
@@ -1341,8 +1438,8 @@ public:
 			}
 			ro = r; r = 0.0;
 			for (i = 0; i < nnd; i++) {
-				U(i) += ro/a*P(i);
-				F(i) -= ro/a*W(i);
+				U(i) += (ro/a)*P(i);
+				F(i) -= (ro/a)*W(i);
 				r += tmatrix_scalar<double>(~F(i)*F(i));
 			}
 			it++;
@@ -1354,17 +1451,17 @@ public:
 			n.setdisp(U(i));
 			node.replace(n);
 		}
-		for (i = 0; i < nnd; i++) {
+		/*for (i = 0; i < nnd; i++) {
 			const node3d & n = node.getindex(i);
 			double x = n.x;
 			double y = n.y;
 			double z = n.z;
-			double ux = n.uz;
+			double ux = n.ux;
 			double uy = n.uy;
 			double uz = n.uz;
 			j = node.haskey(n);
 			printf("Node %i: (%f,%f,%f) = (%f,%f,%f)\n",j,x,y,z,ux,uy,uz);
-		}
+		}*/
 		return true;
 	}
 
@@ -1426,7 +1523,7 @@ main()
 	m.setprop(material_property::poissons,0.2);
 
 	const double domain[3][2] = {{-10, 10}, {-10, 10}, {-10, 0}};
-	const int ndiv[3] = {4, 4, 2};
+	const int ndiv[3] = {40, 40, 20};
 	int i, j, k;
 	mesh FEM((ndiv[0]+1)*(ndiv[1]+1)*(ndiv[2]+1));
 	
@@ -1435,11 +1532,11 @@ main()
 	double dz = (domain[2][1]-domain[2][0])/ndiv[2];
 	fset<coord3d> coord(8);
 
-	for (i = 0; i < ndiv[0]; i++) {
+	for (i = 0; i < ndiv[0]/2; i++) {
 		double x = domain[0][0] + i*dx;
 		for (j = 0; j < ndiv[1]; j++) {
 			double y = domain[1][0] + j*dy;
-			for (k = 1; k < ndiv[2]; k++) {
+			for (k = 0; k < ndiv[2]; k++) {
 				double z = domain[2][0] + k*dz;
 				coord[0] = coord3d(x   ,y   ,z   );
 				coord[1] = coord3d(x   ,y+dy,z   );
@@ -1454,18 +1551,18 @@ main()
 			}
 		}
 	}
-	for (i = 0; i < ndiv[0]; i +=2 ) {
+	for (i = ndiv[0]/2; i < ndiv[0]; i += 2) {
 		double x = domain[0][0] + i*dx;
 		for (j = 0; j < ndiv[1]; j += 2) {
 			double y = domain[1][0] + j*dy;
-			for (k = 0; k < ndiv[2]-1; k++) {
+			for (k = 0; k < ndiv[2]; k++) {
 				double z = domain[2][0] + k*dz;
-				coord[0] = coord3d(x     ,y     ,z   );
-				coord[1] = coord3d(x     ,y+2*dy,z   );
+				coord[0] = coord3d(x   ,y     ,z   );
+				coord[1] = coord3d(x   ,y+2*dy,z   );
 				coord[2] = coord3d(x+2*dx,y     ,z   );
 				coord[3] = coord3d(x+2*dx,y+2*dy,z   );
-				coord[4] = coord3d(x     ,y     ,z+dz);
-				coord[5] = coord3d(x     ,y+2*dy,z+dz);
+				coord[4] = coord3d(x   ,y     ,z+dz);
+				coord[5] = coord3d(x   ,y+2*dy,z+dz);
 				coord[6] = coord3d(x+2*dx,y     ,z+dz);
 				coord[7] = coord3d(x+2*dx,y+2*dy,z+dz);
 				//printf("%4.2f\t%4.2f\t%4.2f\n",x,y,z);
@@ -1473,8 +1570,115 @@ main()
 			}
 		}
 	}
-	for (i = 0; i <= ndiv[0]; i += 2) {
+	for (i = 0; i <= ndiv[0]/2; i++) {
+		for (j = 0; j <= ndiv[1]; j++) {
+			double x = domain[0][0] + i*dx;
+			double y = domain[1][0] + j*dy;
+			FEM.add_bc(coord3d(x,y,domain[2][0]),2,0.0);
+		}
+	}
+	for (i = ndiv[0]/2+2; i <= ndiv[0]; i += 2) {
 		for (j = 0; j <= ndiv[1]; j += 2) {
+			double x = domain[0][0] + i*dx;
+			double y = domain[1][0] + j*dy;
+			FEM.add_bc(coord3d(x,y,domain[2][0]),2,0.0);
+		}
+	}
+	//FEM.add_bc(coord3d(0.0,0.0,domain[2][0]),0,0.0);
+	//FEM.add_bc(coord3d(0.0,0.0,domain[2][0]),1,0.0);
+	//FEM.add_bc(coord3d(domain[0][0],0.0,domain[2][0]),1,0.0);
+	FEM.add_bc(coord3d(domain[0][0],domain[1][0],domain[2][0]),0,0.0);
+	FEM.add_bc(coord3d(domain[0][0],domain[1][0],domain[2][0]),1,0.0);
+	FEM.add_bc(coord3d(domain[0][1],domain[1][0],domain[2][0]),1,0.0);
+	double F = -0.15*dx*dy;
+	for (i = 0; i < ndiv[0]/2; i++) {
+		for (j = 0; j <= ndiv[1]; j++) {
+			double x = domain[0][0] + i*dx;
+			double y = domain[1][0] + j*dy;
+			double f = F;
+			if (x == domain[0][0] || x == domain[0][1])
+				f /= 2; 
+			if (y == domain[1][0] || y == domain[1][1])
+				f /= 2; 
+			FEM.add_fext(coord3d(x,y,domain[2][1]),2,f);
+		}
+	}
+	for (i = ndiv[0]/2; i <= ndiv[0]/2; i++) {
+		for (j = 0; j <= ndiv[1]; j++) {
+			double x = domain[0][0] + i*dx;
+			double y = domain[1][0] + j*dy;
+			double f = F*1.5;
+			if (x == domain[0][0] || x == domain[0][1])
+				f /= 2; 
+			if (y == domain[1][0] || y == domain[1][1])
+				f /= 2; 
+			FEM.add_fext(coord3d(x,y,domain[2][1]),2,f);
+		}
+	}
+	for (i = ndiv[0]/2+2; i <= ndiv[0]; i += 2) {
+		for (j = 0; j <= ndiv[1]; j += 2) {
+			double x = domain[0][0] + i*dx;
+			double y = domain[1][0] + j*dy;
+			double f = F*4;
+			if (x == domain[0][0] || x == domain[0][1])
+				f /= 2; 
+			if (y == domain[1][0] || y == domain[1][1])
+				f /= 2; 
+			FEM.add_fext(coord3d(x,y,domain[2][1]),2,f);
+		}
+	}
+	FEM.solve();
+
+    // calculate run time
+    clock_gettime(CLOCK_PROF,&stop);
+    double run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
+    fprintf(stdout,"%f\n",run_time);
+
+	return 0;
+}
+
+int
+main_test()
+{
+    // get starting time    
+    struct timespec start, stop;
+    clock_gettime(CLOCK_PROF,&start);
+
+	material m;
+	m.setprop(material_property::emod,1000);
+	m.setprop(material_property::poissons,0.2);
+
+	const double domain[3][2] = {{-10, 10}, {-10, 10}, {-10, 0}};
+	const int ndiv[3] = {40, 40, 20};
+	int i, j, k;
+	mesh FEM((ndiv[0]+1)*(ndiv[1]+1)*(ndiv[2]+1));
+	
+	double dx = (domain[0][1]-domain[0][0])/ndiv[0];
+	double dy = (domain[1][1]-domain[1][0])/ndiv[1];
+	double dz = (domain[2][1]-domain[2][0])/ndiv[2];
+	fset<coord3d> coord(8);
+
+		for (j = 0; j < ndiv[1]; j++) {
+			double y = domain[1][0] + j*dy;
+	for (i = 0; i < ndiv[0]; i++) {
+		double x = domain[0][0] + i*dx;
+			for (k = 0; k < ndiv[2]; k++) {
+				double z = domain[2][0] + k*dz;
+				coord[0] = coord3d(x   ,y   ,z   );
+				coord[1] = coord3d(x   ,y+dy,z   );
+				coord[2] = coord3d(x+dx,y   ,z   );
+				coord[3] = coord3d(x+dx,y+dy,z   );
+				coord[4] = coord3d(x   ,y   ,z+dz);
+				coord[5] = coord3d(x   ,y+dy,z+dz);
+				coord[6] = coord3d(x+dx,y   ,z+dz);
+				coord[7] = coord3d(x+dx,y+dy,z+dz);
+				//printf("%4.2f\t%4.2f\t%4.2f\n",x,y,z);
+				FEM.add(element::block8,m,coord);
+			}
+		}
+	}
+	for (i = 0; i <= ndiv[0]; i++) {
+		for (j = 0; j <= ndiv[1]; j++) {
 			double x = domain[0][0] + i*dx;
 			double y = domain[1][0] + j*dy;
 			FEM.add_bc(coord3d(x,y,domain[2][0]),2,0.0);
