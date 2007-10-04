@@ -658,4 +658,29 @@ operator* (const tmatrix_expr<T,E1,M,K> & e1, const tmatrix_expr<T,E2,K,N> & e2)
 	return tmatrix_expr<T,expr_t,M,N>(expr_t(e1,e2));
 }
 
+/*
+ * Support for matrix diag
+ */
+template<typename T, class E>
+struct tmatrix_expr_diag {
+	explicit tmatrix_expr_diag(const E & e) : m_e(e) { }
+	inline T operator() (const unsigned i, const unsigned) const {
+  		return m_e(i,i);
+  	}
+private:
+	const E m_e;
+};
+template<typename T, unsigned N>
+inline tmatrix_expr<T,tmatrix_expr_diag<T,tmatrix<T,N,N> >,N,1> 
+diag(const tmatrix<T,N,N> & e) {
+	typedef tmatrix_expr_diag<T,tmatrix<T,N,N> > expr_t;
+	return tmatrix_expr<T,expr_t,N,1>(expr_t(e));
+}
+template<typename T, class E, unsigned N>
+inline tmatrix_expr<T,tmatrix_expr_diag<T,tmatrix_expr<T,E,N,N> >,N,1>
+diag(const tmatrix_expr<T,E,N,N> & e) {
+	typedef tmatrix_expr_diag<T,tmatrix_expr<T,E,N,N> > expr_t;
+	return tmatrix_expr<T,expr_t,N,1>(expr_t(e));
+}
+
 #endif // TMATRIX_H
