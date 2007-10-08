@@ -1219,8 +1219,8 @@ struct mesh_bc : public mesh_bc_key {
  */
 class mesh : private list_owned<mesh,element> {
 public:
-	explicit mesh(const int b)
-	  : list_owned<mesh,element>(), node(0,b), disp_bc(), f_ext() {
+	explicit mesh()
+	  : list_owned<mesh,element>(), node(), disp_bc(), f_ext() {
 	}
 
 	bool add(const element::element_t t, const material & m,
@@ -1237,6 +1237,7 @@ public:
 		case element::block34:
 			e = new element_block34(this,last,m,c);
 			if (e != 0 && e->inel.length() == 16) {
+				printf("Ooops...\n");
 				delete e;
 				e = new element_block16(this,last,m,c);
 			}
@@ -1247,6 +1248,23 @@ public:
 			return false;
 		}
 		return true;
+	}
+	inline int addnode(const coord3d & p) {
+		int k = node.haskey(p);
+		if (k == -1) {
+			k = node.length();
+			node.add(p);
+		}
+		return k;
+	}
+	inline void updatenode(const node3d & n) {
+		node.replace(n);
+	}
+	inline const node3d & getnode(const int i) {
+		return node[i];
+	}
+	inline const int hasnode(const coord3d & p) {
+		return node.haskey(p);
 	}
 	bool add_bc(const coord3d & p, const int i, const double d) {
 		int k = node.haskey(p);
@@ -1291,7 +1309,7 @@ public:
 		f_ext.sort();
 		for (i = 0; i < f_ext.length(); i++) {
 			const mesh_bc & f = f_ext[i];
-			//printf("Adding force %f at node %i dof %i\n",f.d,f.n,f.i);
+			printf("Adding force %f at node %i dof %i\n",f.d,f.n,f.i);
 			F(node.getorder(f.n))(f.i) = f.d;
 			//F(f.n)(f.i) = f.d;
 		}
@@ -1299,7 +1317,7 @@ public:
 		for (i = 0; i < disp_bc.length(); i++) {
 			const mesh_bc & u = disp_bc[i];
 			// XXX: extract forces
-			//printf("Adding bc %f at node %i dof %i\n",u.d,u.n,u.i);
+			printf("Adding bc %f at node %i dof %i\n",u.d,u.n,u.i);
 			d = &(K.diag[node.getorder(u.n)]);
 			//d = &(K.diag[u.n]);
 			for (j = 0; j < NDOF; j++) {
@@ -1448,7 +1466,7 @@ public:
 			n.setdisp(U(i));
 			node.replace(n);
 		}
-		/*for (i = 0; i < nnd; i++) {
+		for (i = 0; i < nnd; i++) {
 			const node3d & n = node.getindex(i);
 			double x = n.x;
 			double y = n.y;
@@ -1458,7 +1476,7 @@ public:
 			double uz = n.uz;
 			j = node.haskey(n);
 			printf("Node %i: (%f,%f,%f) = (%f,%f,%f)\n",j,x,y,z,ux,uy,uz);
-		}*/
+		}
 		return true;
 	}
 
@@ -1476,12 +1494,7 @@ private:
 int
 element::addnode(const coord3d & c) const
 {
-	int k = owner->node.haskey(c);
-	if (k == -1) {
-		k = owner->node.length();
-		owner->node.add(c);
-	}
-	return k;
+	return owner->addnode(c);
 }
 
 /*
@@ -1490,7 +1503,7 @@ element::addnode(const coord3d & c) const
 void
 element::updatenode(const node3d & n) const
 {
-	owner->node.replace(n);
+	owner->updatenode(n);
 }
 
 /*
@@ -1499,7 +1512,7 @@ element::updatenode(const node3d & n) const
 inline const node3d &
 element::getnode(const int i) const
 {
-	return owner->node[i];
+	return owner->getnode(i);
 }
 
 /*
@@ -1519,111 +1532,56 @@ main()
 	m.setprop(material_property::emod,1000);
 	m.setprop(material_property::poissons,0.2);
 
-	const double domain[3][2] = {{-10, 10}, {-10, 10}, {-10, 0}};
-	const int ndiv[3] = {40, 40, 20};
-	int i, j, k;
-	mesh FEM((ndiv[0]+1)*(ndiv[1]+1)*(ndiv[2]+1));
-	
-	double dx = (domain[0][1]-domain[0][0])/ndiv[0];
-	double dy = (domain[1][1]-domain[1][0])/ndiv[1];
-	double dz = (domain[2][1]-domain[2][0])/ndiv[2];
+	double x, y, z;
+	double dx, dy, dz;
+	mesh FEM;
 	fset<coord3d> coord(8);
-
-	for (i = 0; i < ndiv[0]/2; i++) {
-		double x = domain[0][0] + i*dx;
-		for (j = 0; j < ndiv[1]; j++) {
-			double y = domain[1][0] + j*dy;
-			for (k = 0; k < ndiv[2]; k++) {
-				double z = domain[2][0] + k*dz;
-				coord[0] = coord3d(x   ,y   ,z   );
-				coord[1] = coord3d(x   ,y+dy,z   );
-				coord[2] = coord3d(x+dx,y   ,z   );
-				coord[3] = coord3d(x+dx,y+dy,z   );
-				coord[4] = coord3d(x   ,y   ,z+dz);
-				coord[5] = coord3d(x   ,y+dy,z+dz);
-				coord[6] = coord3d(x+dx,y   ,z+dz);
-				coord[7] = coord3d(x+dx,y+dy,z+dz);
-				//printf("%4.2f\t%4.2f\t%4.2f\n",x,y,z);
-				FEM.add(element::block16,m,coord);
-			}
+	
+	// Start with the tyre grid.
+	dx = 4.0; dy = 4.0;
+	for (x = -128.0; x <= 128.0; x += dx) {
+		for (y = -128.0; y <= 128.0; y += dy) {
+			FEM.addnode(coord3d(x,y,0.0));
+		}
+	} 
+	double F = -1*dx*dy;
+	for (x = -128.0; x <= 128.0; x += dx) {
+		for (y = -128.0; y <= 128.0; y += dy) {
+			node3d n = FEM.getnode(FEM.hasnode(coord3d(x,y,0.0)));
+			int x_m = FEM.hasnode(coord3d(x-dx,y,0.0));
+			int x_p = FEM.hasnode(coord3d(x+dx,y,0.0));
+			int y_m = FEM.hasnode(coord3d(x,y-dy,0.0));
+			int y_p = FEM.hasnode(coord3d(x,y+dy,0.0));
+			n.setneighbours(x_m,x_p,y_m,y_p,-1,-1);
+			if (hypot(x,y) > 100)
+				continue;
+			FEM.add_fext(coord3d(x,y,0.0),2,F);
 		}
 	}
-	for (i = ndiv[0]/2; i < ndiv[0]; i += 2) {
-		double x = domain[0][0] + i*dx;
-		for (j = 0; j < ndiv[1]; j += 2) {
-			double y = domain[1][0] + j*dy;
-			for (k = 0; k < ndiv[2]; k++) {
-				double z = domain[2][0] + k*dz;
-				coord[0] = coord3d(x   ,y     ,z   );
-				coord[1] = coord3d(x   ,y+2*dy,z   );
-				coord[2] = coord3d(x+2*dx,y     ,z   );
-				coord[3] = coord3d(x+2*dx,y+2*dy,z   );
-				coord[4] = coord3d(x   ,y     ,z+dz);
-				coord[5] = coord3d(x   ,y+2*dy,z+dz);
-				coord[6] = coord3d(x+2*dx,y     ,z+dz);
-				coord[7] = coord3d(x+2*dx,y+2*dy,z+dz);
-				//printf("%4.2f\t%4.2f\t%4.2f\n",x,y,z);
-				FEM.add(element::block34,m,coord);
-			}
+	// Now add the elements below the tyre.
+	dx = 8.0; dy = 8.0;
+	for (x = -128.0; x < 128.0; x += dx) {
+		for (y = -128.0; y < 128.0; y += dy) {
+			z = 0.0; dz = -30.0;
+			coord[0] = coord3d(x   ,y   ,z   );
+			coord[1] = coord3d(x   ,y+dy,z   );
+			coord[2] = coord3d(x+dx,y   ,z   );
+			coord[3] = coord3d(x+dx,y+dy,z   );
+			coord[4] = coord3d(x   ,y   ,z+dz);
+			coord[5] = coord3d(x   ,y+dy,z+dz);
+			coord[6] = coord3d(x+dx,y   ,z+dz);
+			coord[7] = coord3d(x+dx,y+dy,z+dz);
+			FEM.add(element::block34,m,coord);
+		}
+	} 
+	for (x = -128.0; x <= 128.0; x += dx) {
+		for (y = -128.0; y <= 128.0; y += dy) {
+			FEM.add_bc(coord3d(x,y,-30.0),2,0.0);
 		}
 	}
-	for (i = 0; i <= ndiv[0]/2; i++) {
-		for (j = 0; j <= ndiv[1]; j++) {
-			double x = domain[0][0] + i*dx;
-			double y = domain[1][0] + j*dy;
-			FEM.add_bc(coord3d(x,y,domain[2][0]),2,0.0);
-		}
-	}
-	for (i = ndiv[0]/2+2; i <= ndiv[0]; i += 2) {
-		for (j = 0; j <= ndiv[1]; j += 2) {
-			double x = domain[0][0] + i*dx;
-			double y = domain[1][0] + j*dy;
-			FEM.add_bc(coord3d(x,y,domain[2][0]),2,0.0);
-		}
-	}
-	//FEM.add_bc(coord3d(0.0,0.0,domain[2][0]),0,0.0);
-	//FEM.add_bc(coord3d(0.0,0.0,domain[2][0]),1,0.0);
-	//FEM.add_bc(coord3d(domain[0][0],0.0,domain[2][0]),1,0.0);
-	FEM.add_bc(coord3d(domain[0][0],domain[1][0],domain[2][0]),0,0.0);
-	FEM.add_bc(coord3d(domain[0][0],domain[1][0],domain[2][0]),1,0.0);
-	FEM.add_bc(coord3d(domain[0][1],domain[1][0],domain[2][0]),1,0.0);
-	double F = -0.15*dx*dy;
-	for (i = 0; i < ndiv[0]/2; i++) {
-		for (j = 0; j <= ndiv[1]; j++) {
-			double x = domain[0][0] + i*dx;
-			double y = domain[1][0] + j*dy;
-			double f = F;
-			if (x == domain[0][0] || x == domain[0][1])
-				f /= 2; 
-			if (y == domain[1][0] || y == domain[1][1])
-				f /= 2; 
-			FEM.add_fext(coord3d(x,y,domain[2][1]),2,f);
-		}
-	}
-	for (i = ndiv[0]/2; i <= ndiv[0]/2; i++) {
-		for (j = 0; j <= ndiv[1]; j++) {
-			double x = domain[0][0] + i*dx;
-			double y = domain[1][0] + j*dy;
-			double f = F*1.5;
-			if (x == domain[0][0] || x == domain[0][1])
-				f /= 2; 
-			if (y == domain[1][0] || y == domain[1][1])
-				f /= 2; 
-			FEM.add_fext(coord3d(x,y,domain[2][1]),2,f);
-		}
-	}
-	for (i = ndiv[0]/2+2; i <= ndiv[0]; i += 2) {
-		for (j = 0; j <= ndiv[1]; j += 2) {
-			double x = domain[0][0] + i*dx;
-			double y = domain[1][0] + j*dy;
-			double f = F*4;
-			if (x == domain[0][0] || x == domain[0][1])
-				f /= 2; 
-			if (y == domain[1][0] || y == domain[1][1])
-				f /= 2; 
-			FEM.add_fext(coord3d(x,y,domain[2][1]),2,f);
-		}
-	}
+	FEM.add_bc(coord3d(   0.0,0.0,-30.0),0,0.0);
+	FEM.add_bc(coord3d(   0.0,0.0,-30.0),1,0.0);
+	FEM.add_bc(coord3d(-128.0,0.0,-30.0),1,0.0);
 	FEM.solve();
 
     // calculate run time
@@ -1648,7 +1606,7 @@ main_test()
 	const double domain[3][2] = {{-10, 10}, {-10, 10}, {-10, 0}};
 	const int ndiv[3] = {40, 40, 20};
 	int i, j, k;
-	mesh FEM((ndiv[0]+1)*(ndiv[1]+1)*(ndiv[2]+1));
+	mesh FEM;
 	
 	double dx = (domain[0][1]-domain[0][0])/ndiv[0];
 	double dy = (domain[1][1]-domain[1][0])/ndiv[1];
