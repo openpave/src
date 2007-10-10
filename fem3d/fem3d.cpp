@@ -827,7 +827,7 @@ public:
 			rx = gp[g].x; ry = gp[g].y; rz = gp[g].z;
 			double gw = gp[g].gw;
 			matrix_dense dHdr(NDIM,nnd);
-			//tmatrix<double,nnd,1> H;
+			//matrix_dense H(nnd,1);
 	
 			// shape functions for 16/34-node 3D brick:
 			const double Sxy[16] = { 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0};
@@ -845,7 +845,7 @@ public:
 				dHdr(2,l) = (1+Hx1[l]*rx)*(1+Hy1[l]*ry)
 						*((2*Hz2[l]*rz)*(1+Hz1[l]*rz)
 					+ (Hz0[l]+Hz2[l]*rz*rz)*Hz1[l])/64;
-				//H(0,l) = (1+Hx1[l]*rx)*(1+Hy1[l]*ry)
+				//H(l) = (1+Hx1[l]*rx)*(1+Hy1[l]*ry)
 				//		*(Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/64;
 			}
 			for (l = 0; l < 16; l++) {
@@ -861,7 +861,7 @@ public:
 				        *(1+(!Sxy[l] ? -fabs(ry) : Hy1[l]*ry))
 						*((2*Hz2[l]*rz)*(1+Hz1[l]*rz)
 					+ (Hz0[l]+Hz2[l]*rz*rz)*Hz1[l])/32;
-				//H(0,i) = (1+(Sxy[l] ? -fabs(rx) : Hx1[l]*rx))
+				//H(i) = (1+(Sxy[l] ? -fabs(rx) : Hx1[l]*rx))
 				//      *(1+(!Sxy[l] ? -fabs(ry) : Hy1[l]*ry))
 				//		*(Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/32;
 			}
@@ -875,7 +875,7 @@ public:
 				dHdr(2,i) = (1-fabs(rx))*(1-fabs(ry))
 						*((2*Hz2[l]*rz)*(1+Hz1[l]*rz)
 					+ (Hz0[l]+Hz2[l]*rz*rz)*Hz1[l])/16;
-				//H(0,i) = (1-fabs(rx))*(1-fabs(ry))
+				//H(i) = (1-fabs(rx))*(1-fabs(ry))
 				//		*(Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/16;
 			}
 			for (l = 0; l < 16; l++) {
@@ -895,19 +895,37 @@ public:
 					if (l >= 12 && mask[17])
 						dHdr(i,l) += dHdr(i,mask[17])/4;
 				}
+				//if (mask[l])
+				//	H(l) -= H(mask[l])/2;
+				//if (mask[l+j])
+				//	H(l) -= H(mask[l+j])/2;
+				//if (l < 4 && mask[16])
+				//	H(l) += H(mask[16])/4;
+				//if (l >= 12 && mask[17])
+				//	H(l) += H(mask[17])/4;
 			}
 			for (l = 0; mask[16] && l < 4; l++) {
 				for (i = 0; i < 3; i++)
 					dHdr(i,mask[l]) -= dHdr(i,mask[16])/2;
+				//H(mask[l]) -= H(mask[16])/2;
 			}
 			for (l = 12; mask[17] && l < 16; l++) {
 				for (i = 0; i < 3; i++)
 					dHdr(i,mask[l]) -= dHdr(i,mask[17])/2;
+				//H(mask[l]) -= H(mask[17])/2;
 			}
+			//double junk = 0.0;
+			//for (i = 0; i < nnd; i++)
+			//	junk += H(i);
+			//if (junk-1.0 > 1e-6)
+			//	printf("Got a shape function of %f\n",junk);
 
 			matrix_dense J(dHdr*xe);
 			// This returns det(J);
 			gw *= inv_mul_gauss(NDIM,nnd,&J(0,0),&dHdr(0,0));
+			//junk -= (xe(15,0)-xe(0,0))*(xe(15,1)-xe(0,1))*(xe(15,2)-xe(0,2));
+			//if (junk > 1e-6)
+			//	printf("Got a detJ %f\n",junk);
 			for (i = 0; i < nnd; i++) {
 				for (j = i; j < nnd; j++) {
 					for (k = 0; k < 3; k++)
@@ -1237,12 +1255,18 @@ public:
 		case element::block34:
 			e = new element_block34(this,last,m,c);
 			if (e != 0 && e->inel.length() == 16) {
-				printf("Ooops...\n");
 				delete e;
 				e = new element_block16(this,last,m,c);
 			}
 			break;
 		}
+		//printf("Added a %i node element:\n",e->inel.length());
+		//for (int i = 0; i < e->inel.length(); i++) {
+		//	int x = node[e->inel[i]].x;
+		//	int y = node[e->inel[i]].y;
+		//	int z = node[e->inel[i]].z;
+		//	printf("\t(%i,%i,%i)\n",x,y,z);
+		//}
 		if (e == 0) {
 			event_msg(EVENT_ERROR,"Out of memory in mesh::add()!");
 			return false;
@@ -1260,10 +1284,16 @@ public:
 	inline void updatenode(const node3d & n) {
 		node.replace(n);
 	}
-	inline const node3d & getnode(const int i) {
+	inline int getnodes() const {
+		return node.length();
+	}
+	inline const node3d & getnode(const int i) const {
 		return node[i];
 	}
-	inline const int hasnode(const coord3d & p) {
+	inline const node3d & getorderednode(const int i) const {
+		return node.getindex(i);
+	}
+	inline const int hasnode(const coord3d & p) const {
 		return node.haskey(p);
 	}
 	bool add_bc(const coord3d & p, const int i, const double d) {
@@ -1281,6 +1311,54 @@ public:
 			return false;
 		f_ext.add(mesh_bc(k,i,d));
 		return true;
+	}
+	void check() {
+		int i, j, k, l, nnd = node.length();
+		for (i = 0; i < nnd; i++) {
+			if (node[i].xm != -1 && node[node[i].xm].xp != i)
+				printf("Nodes %i and %i not right!\n",i,node[i].xm);
+			if (node[i].xp != -1 && node[node[i].xp].xm != i)
+				printf("Nodes %i and %i not right!\n",i,node[i].xp);
+			if (node[i].ym != -1 && node[node[i].ym].yp != i)
+				printf("Nodes %i and %i not right!\n",i,node[i].ym);
+			if (node[i].yp != -1 && node[node[i].yp].ym != i)
+				printf("Nodes %i and %i not right!\n",i,node[i].yp);
+			if (node[i].zm != -1 && node[node[i].zm].zp != i)
+				printf("Nodes %i and %i not right!\n",i,node[i].zm);
+			if (node[i].zp != -1 && node[node[i].zp].zm != i)
+				printf("Nodes %i and %i not right!\n",i,node[i].zp);
+
+			if (node[i].xm != -1 && (node[node[i].xm].y != node[i].y || node[node[i].xm].z != node[i].z))
+				printf("Nodes %i and %i not aligned!\n",i,node[i].xm);
+			if (node[i].xp != -1 && (node[node[i].xp].y != node[i].y || node[node[i].xp].z != node[i].z))
+				printf("Nodes %i and %i not aligned!\n",i,node[i].xp);
+			if (node[i].ym != -1 && (node[node[i].ym].x != node[i].x || node[node[i].ym].z != node[i].z))
+				printf("Nodes %i and %i not aligned!\n",i,node[i].ym);
+			if (node[i].yp != -1 && (node[node[i].yp].x != node[i].x || node[node[i].yp].z != node[i].z))
+				printf("Nodes %i and %i not aligned!\n",i,node[i].yp);
+			if (node[i].zm != -1 && (node[node[i].zm].x != node[i].x || node[node[i].zm].y != node[i].y))
+				printf("Nodes %i and %i not aligned!\n",i,node[i].zm);
+			if (node[i].zp != -1 && (node[node[i].zp].x != node[i].x || node[node[i].zp].y != node[i].y))
+				printf("Nodes %i and %i not aligned!\n",i,node[i].zp);
+
+			
+			printf("Node %i (%i,%i,%i) connected to:",i,int(node[i].x),int(node[i].y),int(node[i].z));
+			element * e = this->first;
+			j = 0;
+			while (e) {
+				for (k = 0; k < e->inel.length(); k++) {
+					if (e->inel[k] == i) {
+						printf(" %i (%i)",j,e->inel.length());
+						//for (l = 0; l < e->inel.length(); l++)
+						//	printf(" (%i,%i,%i)",int(node[e->inel[l]].x),int(node[e->inel[l]].y),int(node[e->inel[l]].z));
+						//printf("\n");
+					}
+				}
+				j++;
+				e = e->next;
+			}
+			printf("\n");
+		}
 	}
 	bool solve() {
 		int i, j, nnd = node.length();
@@ -1309,7 +1387,7 @@ public:
 		f_ext.sort();
 		for (i = 0; i < f_ext.length(); i++) {
 			const mesh_bc & f = f_ext[i];
-			printf("Adding force %f at node %i dof %i\n",f.d,f.n,f.i);
+			//printf("Adding force %f at node %i dof %i\n",f.d,f.n,f.i);
 			F(node.getorder(f.n))(f.i) = f.d;
 			//F(f.n)(f.i) = f.d;
 		}
@@ -1317,7 +1395,7 @@ public:
 		for (i = 0; i < disp_bc.length(); i++) {
 			const mesh_bc & u = disp_bc[i];
 			// XXX: extract forces
-			printf("Adding bc %f at node %i dof %i\n",u.d,u.n,u.i);
+			//printf("Adding bc %f at node %i dof %i\n",u.d,u.n,u.i);
 			d = &(K.diag[node.getorder(u.n)]);
 			//d = &(K.diag[u.n]);
 			for (j = 0; j < NDOF; j++) {
@@ -1466,17 +1544,6 @@ public:
 			n.setdisp(U(i));
 			node.replace(n);
 		}
-		for (i = 0; i < nnd; i++) {
-			const node3d & n = node.getindex(i);
-			double x = n.x;
-			double y = n.y;
-			double z = n.z;
-			double ux = n.ux;
-			double uy = n.uy;
-			double uz = n.uz;
-			j = node.haskey(n);
-			printf("Node %i: (%f,%f,%f) = (%f,%f,%f)\n",j,x,y,z,ux,uy,uz);
-		}
 		return true;
 	}
 
@@ -1529,60 +1596,158 @@ main()
     clock_gettime(CLOCK_PROF,&start);
 
 	material m;
-	m.setprop(material_property::emod,1000);
-	m.setprop(material_property::poissons,0.2);
+	m.setprop(material_property::emod,100e3); // kPa
+	m.setprop(material_property::poissons,0.35);
 
 	double x, y, z;
-	double dx, dy, dz;
+	double dx, dy, dz, delta = 4.0;
 	mesh FEM;
 	fset<coord3d> coord(8);
 	
 	// Start with the tyre grid.
-	dx = 4.0; dy = 4.0;
-	for (x = -128.0; x <= 128.0; x += dx) {
-		for (y = -128.0; y <= 128.0; y += dy) {
+	dx = delta; dy = delta;
+	for (x = -30*dx; x <= 30*dx; x += dx) {
+		for (y = -30*dy; y <= 30*dy; y += dy) {
 			FEM.addnode(coord3d(x,y,0.0));
 		}
-	} 
-	double F = -1*dx*dy;
-	for (x = -128.0; x <= 128.0; x += dx) {
-		for (y = -128.0; y <= 128.0; y += dy) {
+	}
+	// Add the tire loads
+	double F = -690*dx*dy;
+	for (x = -30*dx; x <= 30*dx; x += dx) {
+		for (y = -30*dy; y <= 30*dy; y += dy) {
 			node3d n = FEM.getnode(FEM.hasnode(coord3d(x,y,0.0)));
 			int x_m = FEM.hasnode(coord3d(x-dx,y,0.0));
 			int x_p = FEM.hasnode(coord3d(x+dx,y,0.0));
 			int y_m = FEM.hasnode(coord3d(x,y-dy,0.0));
 			int y_p = FEM.hasnode(coord3d(x,y+dy,0.0));
 			n.setneighbours(x_m,x_p,y_m,y_p,-1,-1);
+			FEM.updatenode(n);
 			if (hypot(x,y) > 100)
 				continue;
 			FEM.add_fext(coord3d(x,y,0.0),2,F);
 		}
 	}
-	// Now add the elements below the tyre.
-	dx = 8.0; dy = 8.0;
-	for (x = -128.0; x < 128.0; x += dx) {
-		for (y = -128.0; y < 128.0; y += dy) {
-			z = 0.0; dz = -30.0;
-			coord[0] = coord3d(x   ,y   ,z   );
-			coord[1] = coord3d(x   ,y+dy,z   );
-			coord[2] = coord3d(x+dx,y   ,z   );
-			coord[3] = coord3d(x+dx,y+dy,z   );
-			coord[4] = coord3d(x   ,y   ,z+dz);
-			coord[5] = coord3d(x   ,y+dy,z+dz);
-			coord[6] = coord3d(x+dx,y   ,z+dz);
-			coord[7] = coord3d(x+dx,y+dy,z+dz);
-			FEM.add(element::block34,m,coord);
+	// Now add the elements from below the tyre, working outwards.
+	double xm = 0.0, xp = 0.0, ym = 0.0, yp = 0.0, zm = 0.0;
+	while (zm > -4000.0) {
+		dz = MIN(-30.0,zm), zm += dz;
+		dx = delta*2; dy = delta*2;
+		z = 0.0;
+		while (z > zm) {
+			dz = MIN(-30.0,z), z += dz;
+			for (x = -MIN(16*dx,4096); x < MIN(16*dx,4096); x += dx) {
+				for (y = -MIN(16*dy,4096); y < MIN(16*dy,4096); y += dy) {
+					if (xm < xp && (x >= xm && x < xp)
+					 && ym < yp && (y >= ym && y < yp)
+					 && z > zm)
+					 	continue;
+					coord[0] = coord3d(x   ,y   ,z);
+					coord[1] = coord3d(x   ,y+dy,z);
+					coord[2] = coord3d(x+dx,y   ,z);
+					coord[3] = coord3d(x+dx,y+dy,z);
+					coord[4] = coord3d(x   ,y   ,z-dz);
+					coord[5] = coord3d(x   ,y+dy,z-dz);
+					coord[6] = coord3d(x+dx,y   ,z-dz);
+					coord[7] = coord3d(x+dx,y+dy,z-dz);
+					FEM.add(element::block34,m,coord);
+					if (x == -4096.0) {
+						//FEM.add_bc(coord[0],1,0.0);
+						//FEM.add_bc(coord[1],1,0.0);
+						//FEM.add_bc(coord[4],1,0.0);
+						//FEM.add_bc(coord[5],1,0.0);
+						FEM.add_bc(coord[0],0,0.0);
+						FEM.add_bc(coord[1],0,0.0);
+						FEM.add_bc(coord[4],0,0.0);
+						FEM.add_bc(coord[5],0,0.0);
+					}
+					if (x+dx == 4096.0) {
+						//FEM.add_bc(coord[2],1,0.0);
+						//FEM.add_bc(coord[3],1,0.0);
+						//FEM.add_bc(coord[6],1,0.0);
+						//FEM.add_bc(coord[7],1,0.0);
+						FEM.add_bc(coord[2],0,0.0);
+						FEM.add_bc(coord[3],0,0.0);
+						FEM.add_bc(coord[6],0,0.0);
+						FEM.add_bc(coord[7],0,0.0);
+					}
+					if (y == -4096.0) {
+						//FEM.add_bc(coord[0],0,0.0);
+						//FEM.add_bc(coord[2],0,0.0);
+						//FEM.add_bc(coord[4],0,0.0);
+						//FEM.add_bc(coord[6],0,0.0);
+						FEM.add_bc(coord[0],1,0.0);
+						FEM.add_bc(coord[2],1,0.0);
+						FEM.add_bc(coord[4],1,0.0);
+						FEM.add_bc(coord[6],1,0.0);
+					}
+					if (y+dy == 4096.0) {
+						//FEM.add_bc(coord[1],0,0.0);
+						//FEM.add_bc(coord[3],0,0.0);
+						//FEM.add_bc(coord[5],0,0.0);
+						//FEM.add_bc(coord[7],0,0.0);
+						FEM.add_bc(coord[1],1,0.0);
+						FEM.add_bc(coord[3],1,0.0);
+						FEM.add_bc(coord[5],1,0.0);
+						FEM.add_bc(coord[7],1,0.0);
+					}
+					if (z < -4000.0) {
+						//FEM.add_bc(coord[0],0,0.0);
+						//FEM.add_bc(coord[1],0,0.0);
+						//FEM.add_bc(coord[2],0,0.0);
+						//FEM.add_bc(coord[3],0,0.0);
+						//FEM.add_bc(coord[0],1,0.0);
+						//FEM.add_bc(coord[1],1,0.0);
+						//FEM.add_bc(coord[2],1,0.0);
+						//FEM.add_bc(coord[3],1,0.0);
+						FEM.add_bc(coord[0],2,0.0);
+						FEM.add_bc(coord[1],2,0.0);
+						FEM.add_bc(coord[2],2,0.0);
+						FEM.add_bc(coord[3],2,0.0);
+					}
+				}
+			}
 		}
+		xm = -MIN(16*dx,4096); xp = MIN(16*dx,4096);
+		ym = -MIN(16*dy,4096); yp = MIN(16*dy,4096);
+		delta *= 2;
 	} 
-	for (x = -128.0; x <= 128.0; x += dx) {
-		for (y = -128.0; y <= 128.0; y += dy) {
-			FEM.add_bc(coord3d(x,y,-30.0),2,0.0);
-		}
-	}
-	FEM.add_bc(coord3d(   0.0,0.0,-30.0),0,0.0);
-	FEM.add_bc(coord3d(   0.0,0.0,-30.0),1,0.0);
-	FEM.add_bc(coord3d(-128.0,0.0,-30.0),1,0.0);
+	//for (x = xm; x <= xp; x += dx) {
+	//	for (y = ym; y <= yp; y += dy) {
+	//		FEM.add_bc(coord3d(x,y,zm),2,0.0);
+	//	}
+	//}
+	//FEM.check();
 	FEM.solve();
+
+	int i, nnd = FEM.getnodes();
+	LEsystem test;
+	test.addlayer(0.0,100e3,0.35);
+	test.addload(point2d(0.0,0.0),0.0,690.0,100.0);
+	for (i = 0; i < nnd; i++) {
+		const node3d & n = FEM.getorderednode(i);
+		x = n.x; y = n.y; z = n.z;
+		//if (y != 0.0 || x != 0.0)
+		//	continue;
+		test.addpoint(point3d(x,y,-z));
+	}
+	test.calculate();
+	for (i = 0; i < nnd; i++) {
+		const node3d & n = FEM.getorderednode(i);
+		x = n.x; y = n.y; z = n.z;
+		//if (y != 0.0 || x != 0.0)
+		//	continue;
+		const pavedata & d = test.result(point3d(x,y,-z));
+		double ux = n.ux;
+		double uy = n.uy;
+		double uz = n.uz;
+		double vx =  d.result(pavedata::deflct,pavedata::xx);
+		double vy =  d.result(pavedata::deflct,pavedata::yy);
+		double vz = -d.result(pavedata::deflct,pavedata::zz);
+		int j = FEM.hasnode(n);
+		double h = hypot(hypot(vx-ux,vy-uy),vz-uz);
+		double v = hypot(hypot(vx,vy),vz);
+		printf("Node %i: (%i,%i,%i) =\t(%f,%f,%f)\t(%f,%f,%f)\t%f\t(%f)\n",j,int(x),int(y),int(z),ux,uy,uz,vx,vy,vz,h,h/v);
+	}
 
     // calculate run time
     clock_gettime(CLOCK_PROF,&stop);

@@ -284,6 +284,12 @@ public:
 	inline double & operator() (const unsigned i, const unsigned j) {
 		return data[i*N+j];
 	}
+	virtual double operator() (const unsigned i) const {
+		return data[i];
+	}
+	inline double & operator() (const unsigned i) {
+		return data[i];
+	}
 	virtual matrix_dense getdense() const {
 		return matrix_dense(*this);
 	} 

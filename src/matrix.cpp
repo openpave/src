@@ -1045,10 +1045,10 @@ decmp_qr(const int n, double * A, double * s, double * d)
 			rv = false;
 			s[k] = d[k] = 0.0;
 		} else {
-			for (i = k; i < n; i++)
+			for (i = k, sum = 0.0; i < n; i++) {
 				A[i*n+k] /= scale;
-			for (i = k, sum = 0.0; i < n; i++)
 				sum += A[i*n+k]*A[i*n+k];
+			}
 			sum = (A[k*n+k] < 0.0 ? -1 : 1)*sqrt(sum);
 			A[k*n+k] += sum;
 			s[k] = sum*A[k*n+k];
@@ -1079,14 +1079,13 @@ bksbp_qr(const int n, const double * A, const double * s, const double * d,
 	int i, j;
 	double sum;
 	for (j = 0; j < n-1; j++) {
-		for (i = j, sum=0.0; i < n; i++)
+		for (i = j, sum = 0.0; i < n; i++)
 			sum += A[i*n+j]*b[i*m+c];
 		sum /= s[j];
 		for (i = j; i < n; i++)
 			b[i*m+c] -= sum*A[i*n+j];
 	}
-	b[(n-1)*m+c] /= d[n-1];
-	for (i = n-2; i >= 0; i--) {
+	for (i = n-1; i >= 0; i--) {
 		for (j = i+1, sum = 0.0; j < n; j++)
 			sum += A[i*n+j]*b[j*m+c];
 		b[i*m+c] = (b[i*m+c]-sum)/d[i];
@@ -1170,7 +1169,7 @@ eig_tri_ql(const int n, double * d, double * e, double * A)
 			if (m == i)
 				break;
 			g = (d[i+1]-d[i])/(2.0*e[i+1]);
-			r = (g > 0.0? 1 : -1)*sqrt(g*g+1.0);
+			r = (g > 0.0 ? 1 : -1)*sqrt(g*g+1.0);
 			g = d[m] - d[i] + e[i+1]/(g+r);
 			s = c = 1.0; p = 0.0;
 			for (j = m-1; m-1 >= i && j >= i; j--) {
