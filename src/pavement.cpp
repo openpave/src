@@ -1069,24 +1069,9 @@ LEsystem::calculate(resulttype res, double * Q)
 	double * v = new double[nl];
 	double * E = new double[nl];
 	// Some place to store our data...
-	cset<double> * _z = new cset<double>(0,data.length());
-	cset<double> * _a = new cset<double>(0,load.length());
-	cset<double> & z = *_z;
-	cset<double> & a = *_a;
-	double * al = new double[load.length()];
-	double * rl = new double[load.length()*data.length()];
-	int * zl = new int[data.length()];
-	cset<double> * _r = new cset<double>(0,data.length());
-	cset<double> * _bm = new cset<double>(0,4*nbz);
-	cset<double> & r = *_r;
-	cset<double> & bm = *_bm;
-	// And finally, somewhere to stick the radial data...
-	axialdata * ax = new axialdata[load.length()*data.length()*data.length()];
-	double * m0 = new double[load.length()*data.length()];
-	double * m1 = new double[load.length()*data.length()];
-	if (R == 0 || ABCD == 0 || h == 0 || f == 0 || v == 0 || E == 0
-	 || _z == 0 || _a == 0 || al == 0 || rl == 0 || zl == 0 || _r == 0
-	 || _bm == 0 || ax == 0 || m0 == 0 || m1 == 0)
+	cset<double> z, a, r, bm;
+	sset<int> zl;
+	if (R == 0 || ABCD == 0 || h == 0 || f == 0 || v == 0 || E == 0)
 		goto abort;
 	for (pl = first, il = 0; pl != 0; pl = pl->next, il++) {
 		h[il] = pl->bottom();
@@ -1109,22 +1094,22 @@ LEsystem::calculate(resulttype res, double * Q)
 			}
 			memset(data[ixy].deflgrad,0,nl*sizeof(double));
 		}
-		z.add(data[ixy].z);
+		if (!z.add(data[ixy].z))
+			goto abort;
 	}
 	z.sort();
 	// Map z values to layers.
 	for (iz = 0; iz < z.length(); iz++) {
 		for (pl = first, il = 0; pl != 0; pl = pl->next, il++) {
 			if (pl->top() <= z[iz] && (h[il] == 0.0 || z[iz] < h[il]))
-				zl[iz] = il;
+				zl.add(il);
 		}
 	}
 
 	// Gerenate a list of load radii, then sort them and map from loads.
 	for (ild = 0; ild < load.length(); ild++) {
-		a.add(al[ild] = load[ild].radius());
-		for (ixy = 0; ixy < data.length(); ixy++)
-			rl[ild*data.length()+ixy] = load[ild].distance(data[ixy]);
+		if (!a.add(load[ild].radius()))
+			goto abort;
 	}
 	a.sort();
 
@@ -1134,14 +1119,16 @@ LEsystem::calculate(resulttype res, double * Q)
 		// Gerenate a list of radii, then sort them.
 		r.empty();
 		for (ild = 0; ild < load.length(); ild++) {
-			if (al[ild] != a[ia]) // load[ild].radius()
+			if (fabs(load[ild].radius()-a[ia]) > DBL_MIN)
 				continue;
 			for (ixy = 0; ixy < data.length(); ixy++) {
-				if (!r.add(rl[ild*data.length()+ixy])) // load[ild].distance(data[ixy])
+				if (!r.add(load[ild].distance(data[ixy])))
 					goto abort;
 			}
 		}
 		r.sort();
+		fset<double> m0(r.length());
+		fset<double> m1(r.length());
 
 		// Now gerenate a list of integration intervals, then sort them.
 		bm.empty();
@@ -1196,17 +1183,17 @@ LEsystem::calculate(resulttype res, double * Q)
 		bm.sort();
 
 gradloop:
-		memset(ax,0,sizeof(axialdata)*r.length()*z.length());
+		// And finally, somewhere to stick the radial data...
+		fset<axialdata> ax(r.length()*z.length());
+		memset(&ax[0],0,sizeof(axialdata)*r.length()*z.length());
 		// Compute the active set.
 		for (ixy = 0; ixy < data.length(); ixy++) {
 			pavedata & d = data[ixy];
-			for (iz = 0; z[iz] != d.z; iz++)
-				;
+			iz = z.findvalue(d.z);
 			for (ild = 0; ild < load.length(); ++ild) {
-				if (al[ild] != a[ia])
+				if (fabs(load[ild].radius()-a[ia]) > DBL_MIN)
 					continue;
-				for (ir = 0; r[ir] != rl[ild*data.length()+ixy]; ir++)
-					;
+				ir = r.findvalue(load[ild].distance(d));
 				ax[ir*z.length()+iz].active = true;
 			}
 		}
@@ -1237,7 +1224,7 @@ gradloop:
 						if (!s.active)
 							continue;
 						alldone = false;
-						double & tz = z[iz];
+						const double & tz = z[iz];
 						il = zl[iz];
 						t3 = m*(ABCD[il][2] + ABCD[il][3]*tz)*exp(-m*tz);
 						t4 = ABCD[il][3]*exp(-m*tz);
@@ -1317,13 +1304,11 @@ gradloop:
 		// After doing everything in radial coords, translate to cartesian.
 		for (ixy = 0; ixy < data.length(); ixy++) {
 			pavedata & d = data[ixy];
-			for (iz = 0; z[iz] != d.z; iz++)
-				;
+			iz = z.findvalue(d.z);
 			for (ild = 0; ild < load.length(); ++ild) {
-				if (al[ild] != a[ia]) // load[ild].radius()
+				if (fabs(load[ild].radius()-a[ia]) > DBL_MIN)
 					continue;
-				for (ir = 0; r[ir] != rl[ild*data.length()+ixy]; ir++) // load[ild].distance(d)
-					;
+				ir = r.findvalue(load[ild].distance(d));
 				axialdata & s = ax[ir*z.length()+iz];
 				double p = load[ild].pressure();
 				if (r[ir] == 0.0 && !(res & disp)) {
@@ -1370,9 +1355,7 @@ gradloop:
 	// derived results (principal stresses and strains).
 	for (ixy = 0; ixy < data.length(); ixy++) {
 		if (!(res & disp)) {
-			for (iz = 0; z[iz] != data[ixy].z; iz++)
-				;
-			il = zl[iz];
+			il = zl[z.findvalue(data[ixy].z)];
 			data[ixy].principle(v[il],E[il]);
 		}
 		if (res & grad) {
@@ -1403,16 +1386,6 @@ abort:
 	delete [] f;
 	delete [] v;
 	delete [] E;
-	delete _z;
-	delete _a;
-	delete [] al;
-	delete [] rl;
-	delete [] zl;
-	delete _r;
-	delete _bm;
-	delete [] ax;
-	delete [] m0;
-	delete [] m1;
 	return rv;
 }
 

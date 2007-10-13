@@ -357,6 +357,22 @@ public:
 	inline void sort() {
 		qsort(1,this->size);
 	}
+	// Do a lookup, and return -1 if the value is not found.
+	// You must sort the set first!
+	inline int findvalue(const V & v) const {
+		int l = 1, r = this->size +1;
+		while (l < r) {
+			int i = l + (r-l)/2;
+			if (this->value[i] < v)
+				l = i+1;
+			else
+				r = i;
+		}
+		if (l <= this->size && this->value[l] == v)
+			return l-1;
+		else
+			return -1;
+	}
 
 protected:
 	// A highly optimised quick sort. Don't touch...
@@ -458,6 +474,251 @@ protected:
 };
 
 /*
+ * class iset - Indexed set
+ *
+ * This is like a sset, expect that sorting only sorts an index.
+ * As a result hasvalue() is much faster, but at the expense of having
+ * the set be read only...
+ */
+template <class V>
+class iset : public set {
+public:
+	// Make one...
+	inline explicit iset()
+	  : set(), idx(0), value(0) {
+		allocate(size);
+	}
+	// Basic constructor
+	inline explicit iset(const int s, const int b = DFLT_BLK,
+			const V * v = 0)
+	  : set(s,b), idx(0), value(0) {
+		int i, p;
+		if (!allocate(size)) {
+			size = 0;
+			return;
+		}
+		for (i = 0, size = 0; v && i < s; i++) {
+			if ((p = hasvalue(v[i])) != -1)
+				value[p+1] = v[i];
+			else
+				init(++size,&v[i]);
+		}
+		allocate(size);
+	}
+	// Copy constuctor.
+	inline explicit iset(const iset<V> & v)
+	  : set(v), idx(0), value(0) {
+		if (!allocate(size)) {
+			size = 0;
+			return;
+		}
+		for (int i = 0; i <= size; i++)
+			init(i,&v.value[i]);
+	}
+	// Copy from an fset.
+	inline explicit iset(const fset<V> & v)
+	  : set(v), idx(0), value(0) {
+		int i, p;
+		if (!allocate(v.size)) {
+			size = 0;
+			return;
+		}
+		for (i = 0, size = 0; v && i < v.size; i++) {
+			if ((p = hasvalue(v[i])) != -1)
+				value[p+1] = v[i];
+			else
+				init(++size,&v[i]);
+		}
+		allocate(size);
+	}
+	// Clean up.
+	inline ~iset() {
+		deallocate();
+	}
+
+	// Do a lookup, and return -1 if the value is not found.
+	inline int hasvalue(const V & v) const {
+		int p = findvalue(v,1,size+1);
+		if (p <= size && value[idx[p]] == v)
+			return idx[p]-1;
+		else
+			return -1;
+	}
+	// Assignment operator.
+	inline iset<V> & operator= (const iset<V> & v) {
+		deallocate();
+		if (!allocate(v.size))
+			return *this;
+		size = v.size;
+		for (int i = 0; i <= size; i++)
+			init(i,&v.value[i]);
+		return *this;
+	}
+	inline iset<V> & operator= (const fset<V> & v) {
+		int i, p;
+		deallocate();
+		if (!allocate(v.size))
+			return *this;
+		for (i = 0, size = 0; v && i < v.size; i++) {
+			if ((p = hasvalue(v[i])) != -1)
+				value[p+1] = v[i];
+			else
+				init(++size,&v[i]);
+		}
+		allocate(size);
+		return *this;
+	}
+	// Set our default elelment.
+	inline void setdefault(const V & d) {
+		value[0] = d;
+	}
+	// Only integer keys make sense.
+	inline const V & operator[] (const int p) const {
+		assert(inbounds(p+1));
+		return value[p+1];
+	}
+	// Allow sorted acess.
+	inline const V & getindex(const int i) const {
+		assert(inbounds(i+1));
+		return value[idx[i+1]];
+	}
+	// Get the position of an element in the sort.
+	inline int getorder(const int i) const {
+		assert(inbounds(i+1));
+		return findvalue(value[i+1],1,size+1)-1;
+	}
+
+	// Add one value at the end.
+	inline bool add(const V & v) {
+		return add(&v,1);
+	}
+	// Add a whole set, at the end.
+	inline bool add(const iset<V> & v) {
+		return add(&v.value[1],v.size);
+	}
+	inline bool add(const fset<V> & v) {
+		return add(&v.value[1],v.size);
+	}
+	// Add an array of values... There is no point in
+	// a position based addition. 
+	bool add(const V * v, const int s = 1) {
+		if (s <= 0 || v == 0)
+			return false;
+		if (!allocate(size+s))
+			return false;
+		for (int i = 0, p; i < s; i++) {
+			if ((p = hasvalue(v[i])) != -1)
+				value[p+1] = v[i];
+			else
+				init(++size,&v[i]);
+		}
+		return allocate(size);
+	}
+	// Now start removing them...
+	bool remove(const V & v) {
+		int p = hasvalue(v) + 1, q = -1;
+		if (p == 0)
+			return false;
+		value[p].~V();
+		if (p < size)
+			memmove(&value[p],&value[p+1],(size-p)*sizeof(V));
+		for (int i = 0; i < size; i++) {
+			if (idx[i] == p)
+				q = i;
+			else if (idx[i] > p)
+				idx[i]--;
+		}
+		if (q < size)
+			memmove(&idx[q],&idx[q+1],(size-q)*sizeof(int));
+		return allocate(--size);
+	}
+	// Replace key/value with another.
+	inline bool replace(const V & v) {
+		int p = hasvalue(v);
+		if (p == -1)
+			return false;
+		value[p+1] = v;
+		return true;
+	}
+	inline bool empty() {
+		deallocate();
+		return allocate(0);
+	}
+
+protected:
+	int * idx;                          // The index.
+	V * value;                          // Take a guess...
+	struct _V {                         // Placement new wrapper
+		V _v;
+		explicit _V() : _v() {}
+		explicit _V(const V & v) : _v(v) {}
+		void *operator new(size_t, void * p) {
+			return p;
+		} 
+	};
+
+	// Make some space...
+	bool allocate(const int s) {
+		int b = bufsize(s);
+		if (b == buffer)
+			return true;
+		int * itemp = static_cast<int *>(realloc(idx,b*sizeof(int)));
+		V * vtemp = static_cast<V *>(realloc(value,b*sizeof(V)));
+		if (itemp == 0 || vtemp == 0) {
+			event_msg(EVENT_ERROR,"Out of memory in iset::allocate()!");
+			return false;
+		}
+		if (idx == 0)
+			itemp[0] = 0;
+		if (value == 0)
+			new(&vtemp[0]) _V();
+		idx = itemp; value = vtemp;
+		buffer = b;
+		return true;
+	}
+	void deallocate() {
+		if (idx) {
+			free(idx);
+			idx = 0;
+		}
+		if (value) {
+			for (int i = 0; i <= size; i++)
+				value[i].~V();
+			free(value);
+			value = 0;
+		}
+		size = 0;
+		buffer = 0;
+	}
+	// Find the position which is either equal or greater...
+	inline int findvalue(const V & v, int l, int r) const {
+		while (l < r) {
+			int i = l + (r-l)/2;
+			if (value[idx[i]] < v)
+				l = i+1;
+			else
+				r = i;
+		}
+		return l;
+	}
+	// In this version i is always the last record...
+	void init(const int i, const V * v) {
+		if (v)
+			new(&value[i]) _V(*v);
+		else
+			new(&value[i]) _V();
+		if (i > 0) {
+			int p = findvalue(*v,1,i);
+			if (p < i) {
+				memmove(&idx[p+1],&idx[p],(i-p)*sizeof(int));
+				idx[p] = i;
+			} else
+				idx[i] = i;
+		}
+	}
+};
+
+/*
  * class kfset - Keyed fixed set.
  *
  * This implements a set where the values contain a base
@@ -504,7 +765,7 @@ public:
 		deallocate();
 	}
 
-	// Do a key lookup, and return zero if the key is not found.
+	// Do a key lookup, and return -1 if the key is not found.
 	inline int haskey(const K & k) const {
 		for (int i = 0; i < size; i++) {
 			if (static_cast<K &>(value[i+1]) == k)
@@ -743,15 +1004,15 @@ public:
 			return;
 		}
 		for (i = 0, size = 0; v && i < s; i++) {
-			if ((p = haskey(v[i])) != -1) {
+			if ((p = haskey(v[i])) != -1)
 				value[p+1] = v[i];
-			} else
+			else
 				init(++size,&v[i]);
 		}
 		allocate(size);
 	}
 	// Copy constuctor.
-	inline explicit kiset(const kfset<K,V> & v)
+	inline explicit kiset(const kiset<K,V> & v)
 	  : set(v), idx(0), value(0) {
 		if (!allocate(size)) {
 			size = 0;
@@ -760,12 +1021,28 @@ public:
 		for (int i = 0; i <= size; i++)
 			init(i,&v.value[i]);
 	}
+	// Copy from a kfset.
+	inline explicit kiset(const kfset<K,V> & v)
+	  : set(v), idx(0), value(0) {
+		int i, p;
+		if (!allocate(v.size)) {
+			size = 0;
+			return;
+		}
+		for (i = 0, size = 0; v && i < v.size; i++) {
+			if ((p = haskey(v[i])) != -1)
+				value[p+1] = v[i];
+			else
+				init(++size,&v[i]);
+		}
+		allocate(size);
+	}
 	// Clean up.
 	inline ~kiset() {
 		deallocate();
 	}
 
-	// Do a key lookup, and return zero if the key is not found.
+	// Do a key lookup, and return -1 if the key is not found.
 	inline int haskey(const K & k) const {
 		int p = findkey(k,1,size+1);
 		if (p <= size && static_cast<K &>(value[idx[p]]) == k)
@@ -774,13 +1051,27 @@ public:
 			return -1;
 	}
 	// Assignment operator.
-	inline kiset<K,V> & operator= (const kfset<K,V> & v) {
+	inline kiset<K,V> & operator= (const kiset<K,V> & v) {
 		deallocate();
 		if (!allocate(v.size))
 			return *this;
 		size = v.size;
 		for (int i = 0; i <= size; i++)
 			init(i,&v.value[i]);
+		return *this;
+	}
+	inline kiset<K,V> & operator= (const kfset<K,V> & v) {
+		int i, p;
+		deallocate();
+		if (!allocate(v.size))
+			return *this;
+		for (i = 0, size = 0; v && i < v.size; i++) {
+			if ((p = haskey(v[i])) != -1)
+				value[p+1] = v[i];
+			else
+				init(++size,&v[i]);
+		}
+		allocate(size);
 		return *this;
 	}
 	// Set our default elelment.
