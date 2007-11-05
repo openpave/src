@@ -914,18 +914,10 @@ public:
 					dHdr(i,mask[l]) -= dHdr(i,mask[17])/2;
 				//H(mask[l]) -= H(mask[17])/2;
 			}
-			//double junk = 0.0;
-			//for (i = 0; i < nnd; i++)
-			//	junk += H(i);
-			//if (junk-1.0 > 1e-6)
-			//	printf("Got a shape function of %f\n",junk);
 
 			matrix_dense J(dHdr*xe);
 			// This returns det(J);
 			gw *= inv_mul_gauss(NDIM,nnd,&J(0,0),&dHdr(0,0));
-			//junk -= (xe(15,0)-xe(0,0))*(xe(15,1)-xe(0,1))*(xe(15,2)-xe(0,2));
-			//if (junk > 1e-6)
-			//	printf("Got a detJ %f\n",junk);
 			for (i = 0; i < nnd; i++) {
 				for (j = i; j < nnd; j++) {
 					for (k = 0; k < 3; k++)
@@ -951,7 +943,7 @@ class smatrix_node {
 	explicit smatrix_node(const int I, const int J,
 			const tmatrix<double,NDOF,NDOF> & t, smatrix_diag * d)
 	  : K(t), i(I), j(J), col_next(0), col_prev(0), col_diag(d),
-	  		row_next(0) {
+	  		row_prev(0), row_next(0) {
 	}
 	void *operator new(size_t, void * p) {
 		return p;
@@ -966,6 +958,7 @@ class smatrix_node {
 	smatrix_node * col_next;
 	smatrix_node * col_prev;
 	smatrix_diag * col_diag;
+	smatrix_node * row_prev;
 	smatrix_node * row_next;
 }; 
 
@@ -981,12 +974,8 @@ class smatrix_diag {
 	}
 	bool insert(int i, int j, const tmatrix<double,NDOF,NDOF> & t,
 			smatrix_diag * d) {
-		int s = nnz+1, nnb = 1;
-		//while (s > 8*nnb)
-		//	nnb *= 2;
-		s = nnb*(s/nnb+(s%nnb?1:0));
-		if (s > nnd) {
-			nnd = s;
+		if (nnz+1 > nnd) {
+			nnd = nnz+1;
 			smatrix_node * temp = static_cast<smatrix_node *>
 					(realloc(nodes,nnd*sizeof(smatrix_node)));
 			if (temp == 0) {
@@ -1006,6 +995,7 @@ class smatrix_diag {
 				if (row_head)
 					row_head = nodes;
 				for (int k = 0; k < nnz; k++) {
+					nodes[k].row_prev = (k > 0     ? &nodes[k-1] : 0);
 					nodes[k].row_next = (k < nnz-1 ? &nodes[k+1] : 0);
 					if (nodes[k].col_prev)
 						nodes[k].col_prev->col_next = &nodes[k];
@@ -1024,11 +1014,14 @@ class smatrix_diag {
 		}
 		if (o == 0)
 			row_head = &nodes[nnz];
-		else
+		else {
 			o->row_next = &nodes[nnz];
+			nodes[nnz].row_prev = o;
+		}
 		if (p != 0) {
 			assert(p->j > j);
 			nodes[nnz].row_next = p;
+			p->row_prev = &nodes[nnz];
 		}
 		// Fix up the column refereces.
 		p = d->col_head; o = 0;
@@ -1260,13 +1253,6 @@ public:
 			}
 			break;
 		}
-		//printf("Added a %i node element:\n",e->inel.length());
-		//for (int i = 0; i < e->inel.length(); i++) {
-		//	int x = node[e->inel[i]].x;
-		//	int y = node[e->inel[i]].y;
-		//	int z = node[e->inel[i]].z;
-		//	printf("\t(%i,%i,%i)\n",x,y,z);
-		//}
 		if (e == 0) {
 			event_msg(EVENT_ERROR,"Out of memory in mesh::add()!");
 			return false;
@@ -1312,54 +1298,6 @@ public:
 		f_ext.add(mesh_bc(k,i,d));
 		return true;
 	}
-	void check() {
-		int i, j, k, l, nnd = node.length();
-		for (i = 0; i < nnd; i++) {
-			if (node[i].xm != -1 && node[node[i].xm].xp != i)
-				printf("Nodes %i and %i not right!\n",i,node[i].xm);
-			if (node[i].xp != -1 && node[node[i].xp].xm != i)
-				printf("Nodes %i and %i not right!\n",i,node[i].xp);
-			if (node[i].ym != -1 && node[node[i].ym].yp != i)
-				printf("Nodes %i and %i not right!\n",i,node[i].ym);
-			if (node[i].yp != -1 && node[node[i].yp].ym != i)
-				printf("Nodes %i and %i not right!\n",i,node[i].yp);
-			if (node[i].zm != -1 && node[node[i].zm].zp != i)
-				printf("Nodes %i and %i not right!\n",i,node[i].zm);
-			if (node[i].zp != -1 && node[node[i].zp].zm != i)
-				printf("Nodes %i and %i not right!\n",i,node[i].zp);
-
-			if (node[i].xm != -1 && (node[node[i].xm].y != node[i].y || node[node[i].xm].z != node[i].z))
-				printf("Nodes %i and %i not aligned!\n",i,node[i].xm);
-			if (node[i].xp != -1 && (node[node[i].xp].y != node[i].y || node[node[i].xp].z != node[i].z))
-				printf("Nodes %i and %i not aligned!\n",i,node[i].xp);
-			if (node[i].ym != -1 && (node[node[i].ym].x != node[i].x || node[node[i].ym].z != node[i].z))
-				printf("Nodes %i and %i not aligned!\n",i,node[i].ym);
-			if (node[i].yp != -1 && (node[node[i].yp].x != node[i].x || node[node[i].yp].z != node[i].z))
-				printf("Nodes %i and %i not aligned!\n",i,node[i].yp);
-			if (node[i].zm != -1 && (node[node[i].zm].x != node[i].x || node[node[i].zm].y != node[i].y))
-				printf("Nodes %i and %i not aligned!\n",i,node[i].zm);
-			if (node[i].zp != -1 && (node[node[i].zp].x != node[i].x || node[node[i].zp].y != node[i].y))
-				printf("Nodes %i and %i not aligned!\n",i,node[i].zp);
-
-			
-			printf("Node %i (%i,%i,%i) connected to:",i,int(node[i].x),int(node[i].y),int(node[i].z));
-			element * e = this->first;
-			j = 0;
-			while (e) {
-				for (k = 0; k < e->inel.length(); k++) {
-					if (e->inel[k] == i) {
-						printf(" %i (%i)",j,e->inel.length());
-						//for (l = 0; l < e->inel.length(); l++)
-						//	printf(" (%i,%i,%i)",int(node[e->inel[l]].x),int(node[e->inel[l]].y),int(node[e->inel[l]].z));
-						//printf("\n");
-					}
-				}
-				j++;
-				e = e->next;
-			}
-			printf("\n");
-		}
-	}
 	bool solve() {
 		int i, j, nnd = node.length();
 		printf("Solving with %i nodes!\n",nnd);
@@ -1376,9 +1314,6 @@ public:
 				for (j = i; j < ke->nnd; j++) {
 					K.append(node.getorder(ke->inel[i]),
 					         node.getorder(ke->inel[j]),(*ke)(i,j));
-					//K.append(ke->inel[i],ke->inel[j],(*ke)(i,j));
-					//printf("Element stiffness (%i,%i):\n",i,j);
-					//(*ke)(i,j).print();
 				}
 			}
 			delete ke;
@@ -1387,74 +1322,85 @@ public:
 		f_ext.sort();
 		for (i = 0; i < f_ext.length(); i++) {
 			const mesh_bc & f = f_ext[i];
-			//printf("Adding force %f at node %i dof %i\n",f.d,f.n,f.i);
 			F(node.getorder(f.n))(f.i) = f.d;
-			//F(f.n)(f.i) = f.d;
 		}
 		disp_bc.sort();
 		for (i = 0; i < disp_bc.length(); i++) {
-			const mesh_bc & u = disp_bc[i];
-			// XXX: extract forces
-			//printf("Adding bc %f at node %i dof %i\n",u.d,u.n,u.i);
-			d = &(K.diag[node.getorder(u.n)]);
-			//d = &(K.diag[u.n]);
-			for (j = 0; j < NDOF; j++) {
-				d->K(u.i,j) = 0.0; d->K(j,u.i) = 0.0;
-			}
-			d->K(u.i,u.i) = 1.0;
-			p = d->col_head;
-			while (p) {
-				for (j = 0; j < NDOF; j++)
-					p->K(j,u.i) = 0.0;
-				p = p->col_next;
-			}
-			p = d->row_head;
-			while (p) {
-				for (j = 0; j < NDOF; j++)
-					p->K(u.i,j) = 0.0;
-				p = p->row_next;
+			if (i+2 < disp_bc.length()
+			 && disp_bc[i].n == disp_bc[i+1].n
+			 && disp_bc[i+1].n == disp_bc[i+2].n) {
+				const mesh_bc & u0 = disp_bc[i];
+				const mesh_bc & u1 = disp_bc[i+1];
+				const mesh_bc & u2 = disp_bc[i+2];
+				int n = node.getorder(u0.n);
+				F(n)(0) = u0.d; F(n)(1) = u1.d; F(n)(2) = u2.d;
+				d = &(K.diag[n]);
+				d->K = tmatrix<double,NDOF,NDOF>(1.0,true);
+				p = d->col_head;
+				while (p) {
+					if (u0.d != 0.0 || u1.d != 0.0 || u2.d != 0.0)
+						F(p->i) -= p->K*F(n);
+					if (p->row_prev) {
+						p->row_prev->row_next = p->row_next;
+					} else {
+						K.diag[p->i].row_head = p->row_next;
+					}
+					if (p->row_next)
+						p->row_next->row_prev = p->row_prev;
+					p = p->col_next;
+				}
+				d->col_head = 0;
+				p = d->row_head;
+				while (p) {
+					if (u0.d != 0.0 || u1.d != 0.0 || u2.d != 0.0)
+						F(p->j) -= ~(p->K)*F(n);
+					if (p->col_prev)
+						p->col_prev->col_next = p->col_next;
+					else
+						p->col_diag->col_head = p->col_next;
+					if (p->col_next)
+						p->col_next->col_prev = p->col_prev;
+					p = p->row_next;
+				}
+				d->row_head = 0;
+				free(d->nodes);
+				d->nodes = 0;
+			} else {
+				const mesh_bc & u = disp_bc[i];
+				int n = node.getorder(u.n);
+				d = &(K.diag[n]);
+				for (j = 0; j < NDOF; j++) {
+					if (j == u.i)
+						continue;
+					if (u.d != 0.0)
+						F(n)(j) -= d->K(j,u.i)*u.d;
+					d->K(u.i,j) = 0.0; d->K(j,u.i) = 0.0;
+				}
+				d->K(u.i,u.i) = 1.0;
+				p = d->col_head;
+				while (p) {
+					for (j = 0; j < NDOF; j++) {
+						if (u.d != 0.0)
+							F(p->i)(j) -= p->K(j,u.i)*u.d;
+						p->K(j,u.i) = 0.0;
+					}
+					p = p->col_next;
+				}
+				p = d->row_head;
+				while (p) {
+					for (j = 0; j < NDOF; j++) {
+						if (u.d != 0.0)
+							F(p->j)(j) -= p->K(u.i,j)*u.d;
+						p->K(u.i,j) = 0.0;
+					}
+					p = p->row_next;
+				}
+				F(n)(u.i) = u.d;
 			}
 		}
 
-		/*for (i = 0; i < nnd; i++) {
-			d = &(K.diag[i]);
-			p = d->col_head;
-			while (p) {
-				assert(p->j == i);
-				printf("New stiffness %i,%i:\n",p->j,p->i);
-				tmatrix<double,NDOF,NDOF> tc(~(p->K));
-				tc.print();
-				p = p->col_next;
-			}
-			printf("New stiffness %i,%i:\n",i,i);
-			tmatrix<double,NDOF,NDOF> t(d->K);
-			t.print();
-			p = d->row_head;
-			while (p) {
-				assert(p->i == i);
-				printf("New stiffness %i,%i:\n",p->i,p->j);
-				tmatrix<double,NDOF,NDOF> tr(p->K);
-				tr.print();
-				p = p->row_next;
-			}
-		}*/
-
 		smatrix M(K);
 		M.chol();
-		/*for (i = 0; i < nnd; i++) {
-			d = &(M.diag[i]);
-			printf("Chol %i,%i:\n",i,i);
-			tmatrix<double,NDOF,NDOF> t(d->K);
-			t.print();
-			p = d->row_head;
-			while (p) {
-				assert(p->i == i);
-				printf("Chol %i,%i:\n",p->i,p->j);
-				tmatrix<double,NDOF,NDOF> tr(p->K);
-				tr.print();
-				p = p->row_next;
-			}
-		}*/
 
 		// CG solution
 		int it = 0;
@@ -1465,7 +1411,6 @@ public:
 		while (r > 1e-30*ri && it < nnd*NDOF) {
 			r = 0.0;
 			for (i = 0; i < nnd; i++) {
-				//d = &(K.diag[i]);
 				d = &(M.diag[i]);
 				tmatrix<double,NDOF,1> t(F(i));
 				p = d->col_head;
@@ -1478,13 +1423,7 @@ public:
 				t(2) = (t(2)-t(0)*d->K(0,2)-t(1)*d->K(1,2))/d->K(2,2);
 				Z(i) = t;
 			}
-			//for (i = 0; i < nnd; i++) {
-			//	d = &(K.diag[i]);
-			//	for (j = 0; j < NDOF; j++)
-			//		Z(i)(j) *= d->K(j,j);
-			//}
 			for (i = nnd-1; i >= 0; i--) {
-				//d = &(K.diag[i]);
 				d = &(M.diag[i]);
 				tmatrix<double,NDOF,1> t(Z(i));
 				p = d->row_head;
@@ -1501,11 +1440,9 @@ public:
 			if (it == 0) {
 				for (i = 0; i < nnd; i++)
 					P(i) = Z(i);
-					//P(i) = F(i);
 			} else {
 				for (i = 0; i < nnd; i++)
 					P(i) = Z(i) + (r/ro)*P(i);
-					//P(i) = F(i) + (r/ro)*P(i);
 			}
 			double a = 0.0;
 			for (i = 0; i < nnd; i++) {
@@ -1539,7 +1476,6 @@ public:
 		}
 		printf("CG took %i steps with residual %g\n",it,r);
 		for (i = 0; i < nnd; i++) {
-			//node3d n = node[i];
 			node3d n = node.getindex(i);
 			n.setdisp(U(i));
 			node.replace(n);
@@ -1582,6 +1518,43 @@ element::getnode(const int i) const
 	return owner->getnode(i);
 }
 
+inline double
+circlearea(double a, double b, double r)
+{
+	a = fabs(a); b = fabs(b);
+	if (hypot(a,b) >= r)
+		return 0.0;
+	double t = M_PI_2 - asin(a/r) - asin(b/r);
+	double ar = (sqrt(r*r-b*b)-a)*b/2;
+	double br = (sqrt(r*r-a*a)-b)*a/2;
+	return (r*r*t/2) - ar -br;
+} 
+
+inline double
+blockarea(double x1, double x2, double y1, double y2, double r)
+{
+	double h1 = hypot(x1,y1), h2 = hypot(x2,y1);
+	double h3 = hypot(x1,y2), h4 = hypot(x2,y2);
+	if (MIN(MIN(h1,h2),MIN(h3,h4)) >= r)
+		return 0.0;
+	if (MAX(MAX(h1,h2),MAX(h3,h4)) <= r)
+		return fabs(x1-x2)*fabs(y1-y2);
+	if (x1*x2 < 0.0) {
+		double y = MAX(fabs(y1),fabs(y2));
+		return 2*circlearea(0.0,y,r)-circlearea(x1,y,r)
+					-circlearea(x2,y,r);
+	}
+	if (y1*y2 < 0.0) {
+		double x = MAX(fabs(x1),fabs(x2));
+		return 2*circlearea(x,0.0,r) - circlearea(x,y1,r)
+					- circlearea(x,y2,r);
+	}
+	x1 = fabs(x1); x2 = fabs(x2); if (x2 < x1) swap(x1,x2);
+	y1 = fabs(y1); y2 = fabs(y2); if (y2 < y1) swap(y1,y2);
+	return circlearea(x1,y1,r) - circlearea(x1,y2,r)
+			- circlearea(x2,y1,r) + circlearea(x2,y2,r);
+} 
+
 /*
  * This program is a custom 3D finite element code, intended for
  * work on my PhD.  It will hopefully form the basis for a later
@@ -1606,27 +1579,43 @@ main()
 	
 	// Start with the tyre grid.
 	dx = delta; dy = delta;
-	for (x = -30*dx; x <= 30*dx; x += dx) {
-		for (y = -30*dy; y <= 30*dy; y += dy) {
-			FEM.addnode(coord3d(x,y,0.0));
+	for (x = -30*dx; x < 30*dx; x += 2*dx) {
+		for (y = -30*dy; y < 30*dy; y += 2*dy) {
+			if (blockarea(x,x+2*dx,y,y+2*dx,100) == 0.0)
+				continue;
+			FEM.addnode(coord3d(x     ,y     ,0.0));
+			FEM.addnode(coord3d(x  +dx,y     ,0.0));
+			FEM.addnode(coord3d(x+2*dx,y     ,0.0));
+			FEM.addnode(coord3d(x     ,y  +dy,0.0));
+			FEM.addnode(coord3d(x  +dx,y  +dy,0.0));
+			FEM.addnode(coord3d(x+2*dx,y  +dy,0.0));
+			FEM.addnode(coord3d(x     ,y+2*dy,0.0));
+			FEM.addnode(coord3d(x  +dx,y+2*dy,0.0));
+			FEM.addnode(coord3d(x+2*dx,y+2*dy,0.0));
 		}
 	}
 	// Add the tire loads
-	double F = -690*dx*dy;
+	double F = -690;
 	for (x = -30*dx; x <= 30*dx; x += dx) {
 		for (y = -30*dy; y <= 30*dy; y += dy) {
-			node3d n = FEM.getnode(FEM.hasnode(coord3d(x,y,0.0)));
+			int p = FEM.hasnode(coord3d(x,y,0.0));
+			if (p == -1)
+				continue;
+			node3d n = FEM.getnode(p);
 			int x_m = FEM.hasnode(coord3d(x-dx,y,0.0));
 			int x_p = FEM.hasnode(coord3d(x+dx,y,0.0));
 			int y_m = FEM.hasnode(coord3d(x,y-dy,0.0));
 			int y_p = FEM.hasnode(coord3d(x,y+dy,0.0));
 			n.setneighbours(x_m,x_p,y_m,y_p,-1,-1);
 			FEM.updatenode(n);
-			if (hypot(x,y) > 100)
-				continue;
-			FEM.add_fext(coord3d(x,y,0.0),2,F);
+			double f = F*blockarea(x-dx/2,x+dx/2,y-dy/2,y+dy/2,100.0);
+			if (fabs(f) > 0.0)
+				FEM.add_fext(coord3d(x,y,0.0),2,f);
 		}
 	}
+
+#define DOMAIN 8192
+
 	// Now add the elements from below the tyre, working outwards.
 	double xm = 0.0, xp = 0.0, ym = 0.0, yp = 0.0, zm = 0.0;
 	while (zm > -4000.0) {
@@ -1635,8 +1624,8 @@ main()
 		z = 0.0;
 		while (z > zm) {
 			dz = MIN(-30.0,z), z += dz;
-			for (x = -MIN(16*dx,4096); x < MIN(16*dx,4096); x += dx) {
-				for (y = -MIN(16*dy,4096); y < MIN(16*dy,4096); y += dy) {
+			for (x = -MIN(16*dx,DOMAIN); x < MIN(16*dx,DOMAIN); x += dx) {
+				for (y = -MIN(16*dy,DOMAIN); y < MIN(16*dy,DOMAIN); y += dy) {
 					if (xm < xp && (x >= xm && x < xp)
 					 && ym < yp && (y >= ym && y < yp)
 					 && z > zm)
@@ -1650,7 +1639,7 @@ main()
 					coord[6] = coord3d(x+dx,y   ,z-dz);
 					coord[7] = coord3d(x+dx,y+dy,z-dz);
 					FEM.add(element::block34,m,coord);
-					if (x == -4096.0) {
+					if (x == -DOMAIN) {
 						//FEM.add_bc(coord[0],1,0.0);
 						//FEM.add_bc(coord[1],1,0.0);
 						//FEM.add_bc(coord[4],1,0.0);
@@ -1660,7 +1649,7 @@ main()
 						FEM.add_bc(coord[4],0,0.0);
 						FEM.add_bc(coord[5],0,0.0);
 					}
-					if (x+dx == 4096.0) {
+					if (x+dx == DOMAIN) {
 						//FEM.add_bc(coord[2],1,0.0);
 						//FEM.add_bc(coord[3],1,0.0);
 						//FEM.add_bc(coord[6],1,0.0);
@@ -1670,7 +1659,7 @@ main()
 						FEM.add_bc(coord[6],0,0.0);
 						FEM.add_bc(coord[7],0,0.0);
 					}
-					if (y == -4096.0) {
+					if (y == -DOMAIN) {
 						//FEM.add_bc(coord[0],0,0.0);
 						//FEM.add_bc(coord[2],0,0.0);
 						//FEM.add_bc(coord[4],0,0.0);
@@ -1680,7 +1669,7 @@ main()
 						FEM.add_bc(coord[4],1,0.0);
 						FEM.add_bc(coord[6],1,0.0);
 					}
-					if (y+dy == 4096.0) {
+					if (y+dy == DOMAIN) {
 						//FEM.add_bc(coord[1],0,0.0);
 						//FEM.add_bc(coord[3],0,0.0);
 						//FEM.add_bc(coord[5],0,0.0);
@@ -1691,14 +1680,14 @@ main()
 						FEM.add_bc(coord[7],1,0.0);
 					}
 					if (z < -4000.0) {
-						//FEM.add_bc(coord[0],0,0.0);
-						//FEM.add_bc(coord[1],0,0.0);
-						//FEM.add_bc(coord[2],0,0.0);
-						//FEM.add_bc(coord[3],0,0.0);
-						//FEM.add_bc(coord[0],1,0.0);
-						//FEM.add_bc(coord[1],1,0.0);
-						//FEM.add_bc(coord[2],1,0.0);
-						//FEM.add_bc(coord[3],1,0.0);
+						FEM.add_bc(coord[0],0,0.0);
+						FEM.add_bc(coord[1],0,0.0);
+						FEM.add_bc(coord[2],0,0.0);
+						FEM.add_bc(coord[3],0,0.0);
+						FEM.add_bc(coord[0],1,0.0);
+						FEM.add_bc(coord[1],1,0.0);
+						FEM.add_bc(coord[2],1,0.0);
+						FEM.add_bc(coord[3],1,0.0);
 						FEM.add_bc(coord[0],2,0.0);
 						FEM.add_bc(coord[1],2,0.0);
 						FEM.add_bc(coord[2],2,0.0);
@@ -1707,35 +1696,33 @@ main()
 				}
 			}
 		}
-		xm = -MIN(16*dx,4096); xp = MIN(16*dx,4096);
-		ym = -MIN(16*dy,4096); yp = MIN(16*dy,4096);
+		xm = -MIN(16*dx,DOMAIN); xp = MIN(16*dx,DOMAIN);
+		ym = -MIN(16*dy,DOMAIN); yp = MIN(16*dy,DOMAIN);
 		delta *= 2;
 	} 
-	//for (x = xm; x <= xp; x += dx) {
-	//	for (y = ym; y <= yp; y += dy) {
-	//		FEM.add_bc(coord3d(x,y,zm),2,0.0);
-	//	}
-	//}
-	//FEM.check();
 	FEM.solve();
 
 	int i, nnd = FEM.getnodes();
 	LEsystem test;
-	test.addlayer(0.0,100e3,0.35);
+	test.addlayer(fabs(zm),100e3,0.35);
 	test.addload(point2d(0.0,0.0),0.0,690.0,100.0);
 	for (i = 0; i < nnd; i++) {
 		const node3d & n = FEM.getorderednode(i);
 		x = n.x; y = n.y; z = n.z;
-		//if (y != 0.0 || x != 0.0)
-		//	continue;
+		if (!(x == 0.0 || y == 0.0 || z == 0.0))
+			continue;
+		if (z <= zm)
+			continue;
 		test.addpoint(point3d(x,y,-z));
 	}
-	test.calculate();
+	test.calculate(LEsystem::fast);
 	for (i = 0; i < nnd; i++) {
 		const node3d & n = FEM.getorderednode(i);
 		x = n.x; y = n.y; z = n.z;
-		//if (y != 0.0 || x != 0.0)
-		//	continue;
+		if (!(x == 0.0 || y == 0.0 || z == 0.0))
+			continue;
+		if (z <= zm)
+			continue;
 		const pavedata & d = test.result(point3d(x,y,-z));
 		double ux = n.ux;
 		double uy = n.uy;
@@ -1746,7 +1733,7 @@ main()
 		int j = FEM.hasnode(n);
 		double h = hypot(hypot(vx-ux,vy-uy),vz-uz);
 		double v = hypot(hypot(vx,vy),vz);
-		printf("Node %i: (%i,%i,%i) =\t(%f,%f,%f)\t(%f,%f,%f)\t%f\t(%f)\n",j,int(x),int(y),int(z),ux,uy,uz,vx,vy,vz,h,h/v);
+		printf("Node %i: (%i,%i,%i) =\t(%4.2f,%4.2f,%4.2f)\t(%4.2f,%4.2f,%4.2f)\t%4.2f\t(%4.2f)\n",j,int(x),int(y),int(z),ux,uy,uz,vx,vy,vz,h,(v == 0.0 ? 0.0 : h/v));
 	}
 
     // calculate run time
@@ -1769,7 +1756,7 @@ main_test()
 	m.setprop(material_property::poissons,0.2);
 
 	const double domain[3][2] = {{-10, 10}, {-10, 10}, {-10, 0}};
-	const int ndiv[3] = {40, 40, 20};
+	const int ndiv[3] = {8, 8, 4};
 	int i, j, k;
 	mesh FEM;
 	
@@ -1801,7 +1788,7 @@ main_test()
 		for (j = 0; j <= ndiv[1]; j++) {
 			double x = domain[0][0] + i*dx;
 			double y = domain[1][0] + j*dy;
-			FEM.add_bc(coord3d(x,y,domain[2][0]),2,0.0);
+			FEM.add_bc(coord3d(x,y,domain[2][0]),2,1.0);
 		}
 	}
 	//FEM.add_bc(coord3d(0.0,0.0,domain[2][0]),0,0.0);
@@ -1824,6 +1811,20 @@ main_test()
 		}
 	}
 	FEM.solve();
+	int nnd = FEM.getnodes();
+	for (i = 0; i < nnd; i++) {
+		const node3d & n = FEM.getorderednode(i);
+		double x = n.x;
+		double y = n.y;
+		double z = n.z;
+		//if (y != 0.0 || x != 0.0)
+		//	continue;
+		double ux = n.ux;
+		double uy = n.uy;
+		double uz = n.uz;
+		j = FEM.hasnode(n);
+		printf("Node %i: (%i,%i,%i) =\t(%f,%f,%f)\n",j,int(x),int(y),int(z),ux,uy,uz);
+	}
 
     // calculate run time
     clock_gettime(CLOCK_PROF,&stop);
@@ -1832,3 +1833,24 @@ main_test()
 
 	return 0;
 }
+
+int
+main_junk()
+{
+	double x, y, a = 0.0, b;
+	double dx, dy, delta = 4.0;
+	
+	// Start with the tyre grid.
+	dx = delta; dy = delta;
+	for (x = -30*dx; x < 30*dx; x += dx) {
+		for (y = -30*dx; y < 30*dy; y += dy) {
+			a += b = blockarea(x,x+dx,y,y+dx,100);
+			printf("%+f %+f %f\n",x,y,b);
+		}
+	}
+	printf("%f %f",a,M_PI*100*100);
+
+	return 0;
+}
+
+
