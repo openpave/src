@@ -397,6 +397,7 @@ case "$target" in
 *-freebsd*)
     DEFINES="$DEFINES XP_UNIX"
     CPPFLAGS="$CPPFLAGS -ansi"
+    CXXFLAGS="$CXXFLAGS -fno-exceptions -fno-rtti"
     DSO_CFLAGS=-fPIC
     DSO_LDFLAGS='-shared -Wl,-soname -Wl,$(notdir $@)'
     _OPTIMIZE_FLAGS=-O2
@@ -436,11 +437,9 @@ case "$target" in
         _CC_MINOR_VERSION=`echo $CC_VERSION | awk -F\. '{ print $2 }'`
         MSC_VER=${_CC_MAJOR_VERSION}${_CC_MINOR_VERSION}
         if test "$_CC_MAJOR_VERSION" = "14"; then
-            CXXFLAGS="$CXXFLAGS -Zc:wchar_t-"
             DEFINES="$DEFINES _CRT_SECURE_NO_DEPRECATE"
             DEFINES="$DEFINES _CRT_NONSTDC_NO_DEPRECATE"
         elif test "$_CC_MAJOR_VERSION" = "15"; then
-            CXXFLAGS="$CXXFLAGS -Zc:wchar_t-"
             DEFINES="$DEFINES _CRT_SECURE_NO_WARNINGS"
             DEFINES="$DEFINES _CRT_NONSTDC_NO_WARNINGS"
         fi
@@ -678,6 +677,14 @@ _EOF
 #define OP_EXPORT
 #define OP_HIDDEN
 #endif
+#endif
+
+#if defined(_MSC_VER)
+#define restrict	__restrict
+#else
+#if !defined(restrict)
+#define restrict	__restrict
+#endif 
 #endif
 
 #endif // CONFIG_H
