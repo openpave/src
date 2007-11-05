@@ -1780,6 +1780,7 @@ case "$target" in
 *-freebsd*)
     DEFINES="$DEFINES XP_UNIX"
     CPPFLAGS="$CPPFLAGS -ansi"
+    CXXFLAGS="$CXXFLAGS -fno-exceptions -fno-rtti"
     DSO_CFLAGS=-fPIC
     DSO_LDFLAGS='-shared -Wl,-soname -Wl,$(notdir $@)'
     _OPTIMIZE_FLAGS=-O2
@@ -1815,7 +1816,7 @@ do
 # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2
 echo $ac_n "checking for $ac_word""... $ac_c" 1>&6
-echo "configure:1819: checking for $ac_word" >&5
+echo "configure:1820: checking for $ac_word" >&5
 if eval "test \"`echo '$''{'ac_cv_path_RC'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
@@ -1859,11 +1860,9 @@ test -n "$RC" || RC=":"
         _CC_MINOR_VERSION=`echo $CC_VERSION | awk -F\. '{ print $2 }'`
         MSC_VER=${_CC_MAJOR_VERSION}${_CC_MINOR_VERSION}
         if test "$_CC_MAJOR_VERSION" = "14"; then
-            CXXFLAGS="$CXXFLAGS -Zc:wchar_t-"
             DEFINES="$DEFINES _CRT_SECURE_NO_DEPRECATE"
             DEFINES="$DEFINES _CRT_NONSTDC_NO_DEPRECATE"
         elif test "$_CC_MAJOR_VERSION" = "15"; then
-            CXXFLAGS="$CXXFLAGS -Zc:wchar_t-"
             DEFINES="$DEFINES _CRT_SECURE_NO_WARNINGS"
             DEFINES="$DEFINES _CRT_NONSTDC_NO_WARNINGS"
         fi
@@ -1925,14 +1924,14 @@ esac
 if test -z "$_WIN32_MSVC"; then
 
 echo $ac_n "checking for library containing sqrt""... $ac_c" 1>&6
-echo "configure:1929: checking for library containing sqrt" >&5
+echo "configure:1928: checking for library containing sqrt" >&5
 if eval "test \"`echo '$''{'ac_cv_search_sqrt'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   ac_func_search_save_LIBS="$LIBS"
 ac_cv_search_sqrt="no"
 cat > conftest.$ac_ext <<EOF
-#line 1936 "configure"
+#line 1935 "configure"
 #include "confdefs.h"
 /* Override any gcc2 internal prototype to avoid an error.  */
 /* We use char because int might match the return type of a gcc2
@@ -1943,7 +1942,7 @@ int main() {
 sqrt()
 ; return 0; }
 EOF
-if { (eval echo configure:1947: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+if { (eval echo configure:1946: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
   rm -rf conftest*
   ac_cv_search_sqrt="none required"
 else
@@ -1954,7 +1953,7 @@ rm -f conftest*
 test "$ac_cv_search_sqrt" = "no" && for i in m; do
 LIBS="-l$i  $ac_func_search_save_LIBS"
 cat > conftest.$ac_ext <<EOF
-#line 1958 "configure"
+#line 1957 "configure"
 #include "confdefs.h"
 /* Override any gcc2 internal prototype to avoid an error.  */
 /* We use char because int might match the return type of a gcc2
@@ -1965,7 +1964,7 @@ int main() {
 sqrt()
 ; return 0; }
 EOF
-if { (eval echo configure:1969: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+if { (eval echo configure:1968: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
   rm -rf conftest*
   ac_cv_search_sqrt="-l$i"
 break
@@ -1988,12 +1987,12 @@ fi
 fi
 
 echo $ac_n "checking for fma()""... $ac_c" 1>&6
-echo "configure:1992: checking for fma()" >&5
+echo "configure:1991: checking for fma()" >&5
 if eval "test \"`echo '$''{'ac_cv_func_fma'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 1997 "configure"
+#line 1996 "configure"
 #include "confdefs.h"
 
         #include <math.h>
@@ -2002,7 +2001,7 @@ int main() {
 double foo = fma(1.0,1.0,1.0)
 ; return 0; }
 EOF
-if { (eval echo configure:2006: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+if { (eval echo configure:2005: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
   rm -rf conftest*
   ac_cv_func_fma=yes
 else
@@ -2109,7 +2108,7 @@ if test -n "$OP_PROJECT_fem3d"; then
 fi
 
 echo $ac_n "checking if config.h needs rebuilding""... $ac_c" 1>&6
-echo "configure:2113: checking if config.h needs rebuilding" >&5
+echo "configure:2112: checking if config.h needs rebuilding" >&5
 
 echo "$ac_t""done" 1>&6
 
@@ -2478,6 +2477,14 @@ _EOF
 #define OP_EXPORT
 #define OP_HIDDEN
 #endif
+#endif
+
+#if defined(_MSC_VER)
+#define restrict	__restrict
+#else
+#if !defined(restrict)
+#define restrict	__restrict
+#endif 
 #endif
 
 #endif // CONFIG_H
