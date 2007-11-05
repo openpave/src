@@ -1,6 +1,6 @@
 /*************************************************************************
 
-	LIBOP.CPP - DLL wrapper for OpenPave classes.
+	LIBOP.H - DLL wrapper for OpenPave classes.
 
 	$OpenPave$
 
