@@ -31,7 +31,9 @@
 **************************************************************************/
 
 #include "pavement.h"
+#include "reliability.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 #ifdef NOBUILD
 int
@@ -616,7 +618,7 @@ main()
 	//XXX: Should have a conjgrad here...
 	//XXX: Should have a gauss-newton here...
 	
-	return;
+	return 0;
 }
 #endif
 
@@ -626,7 +628,7 @@ int
 main()
 {
 	int i;
-	double mz[7], E[2], t;
+	double mz[7], t;
 	LEbackcalc Bowl;
 	static double T[2]= {800000.0, 50000.0};
 
@@ -656,7 +658,7 @@ redo:
 	Bowl.removedeflections();
 	for (i = 0; i < Bowl.data.length(); i++) {
 		point3d & p = Bowl.data[i];
-		t = mz[i] + RAND(2,6)*0.0001*random_normal();
+		t = mz[i] + RAND(2,6)*0.0001*stdnormal_rnd();
 		t = ROUND(t/0.0001)*0.0001;
 		Bowl.adddefl(p,t);
 	}
@@ -668,6 +670,6 @@ redo:
 	printf("%12.3f\t",Bowl.layer(0).emod()/1000);
 	printf("%12.3f\n",Bowl.layer(1).emod()/1000);
 	goto redo;
-	return;
+	return 0;
 }
 #endif

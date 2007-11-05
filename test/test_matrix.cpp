@@ -220,7 +220,7 @@ abort:
 }
 #endif
 
-#ifdef BUILD
+#ifdef NOBUILD
 #define n 3
 int
 main()

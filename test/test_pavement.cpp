@@ -176,7 +176,7 @@ main()
 }
 #endif
 
-#ifdef NOBUILD
+#ifdef BUILD
 int
 main()
 {
