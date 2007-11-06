@@ -134,7 +134,7 @@ class fset : public set {
 public:
 	// Nice simple constructor...
 	inline explicit fset(const int s, const int b = DFLT_BLK,
-			const V * v = 0)
+			const V * restrict v = 0)
 	  : set(s,b), value(0) {
 		if (!allocate(size)) {
 			size = 0;
@@ -179,7 +179,7 @@ public:
 	}
 
 protected:
-	V * value;							// The buffer.
+	V * restrict value;					// The buffer.
 	struct _V {                         // Placement new wrapper
 		V _v;
 		explicit _V() : _v() {}
@@ -215,7 +215,7 @@ protected:
 		size = 0;
 		buffer = 0;
 	}
-	void init(const int i, const V * v) {
+	void init(const int i, const V * restrict v) {
 		if (v)
 			new(&value[i]) _V(*v);
 		else
@@ -244,7 +244,7 @@ public:
 	}
 	// Simple constructor.
 	inline explicit sset(const int s, const int b = DFLT_BLK,
-			const V * v = 0)
+			const V * restrict v = 0)
 	  : fset<V>(s,b,v) {
 	}
 	// Copy constructor.
@@ -264,7 +264,7 @@ public:
 		return add(this->size,&v.value[1],v.size);
 	}
 	// Add an array, at the end.
-	inline bool add(const V * v, const int s = 1) {
+	inline bool add(const V * restrict v, const int s = 1) {
 		return add(this->size,v,s);
 	}
 	// Insert one element at position p.
@@ -276,7 +276,7 @@ public:
 		return add(p,&v.value[1],v.size);
 	}
 	// Add an array at position p. (Actually do the work too).
-	bool add(int p, const V * v, const int s = 1) {
+	bool add(int p, const V * restrict v, const int s = 1) {
 		int i;
 		if (++p <= 0 || s <= 0 || v == 0)
 			return false;
@@ -339,7 +339,7 @@ public:
 	}
 	// Simple constructor.
 	inline explicit oset(const int s, const int b = DFLT_BLK,
-			const V * v = 0)
+			const V * restrict v = 0)
 	  : sset<V>(s,b,v) {
 		if (v)
 			sort();
@@ -428,7 +428,7 @@ public:
 	  : oset<V>() {
 	}
 	inline explicit cset(const int s, const int b = DFLT_BLK,
-			const V * v = 0)
+			const V * restrict v = 0)
 	  : oset<V>(s,b,v) {
 		if (v)
 			compact();
@@ -490,7 +490,7 @@ public:
 	}
 	// Basic constructor
 	inline explicit iset(const int s, const int b = DFLT_BLK,
-			const V * v = 0)
+			const V * restrict v = 0)
 	  : set(s,b), idx(0), value(0) {
 		int i, p;
 		if (!allocate(size)) {
@@ -601,7 +601,7 @@ public:
 	}
 	// Add an array of values... There is no point in
 	// a position based addition. 
-	bool add(const V * v, const int s = 1) {
+	bool add(const V * restrict v, const int s = 1) {
 		if (s <= 0 || v == 0)
 			return false;
 		if (!allocate(size+s))
@@ -646,8 +646,8 @@ public:
 	}
 
 protected:
-	int * idx;                          // The index.
-	V * value;                          // Take a guess...
+	int * restrict idx;                 // The index.
+	V * restrict value;                 // Take a guess...
 	struct _V {                         // Placement new wrapper
 		V _v;
 		explicit _V() : _v() {}
@@ -702,7 +702,7 @@ protected:
 		return l;
 	}
 	// In this version i is always the last record...
-	void init(const int i, const V * v) {
+	void init(const int i, const V * restrict v) {
 		if (v)
 			new(&value[i]) _V(*v);
 		else
@@ -735,7 +735,7 @@ class kfset : public set {
 public:
 	// Simple constructor.
 	inline explicit kfset(const int s, const int b = DFLT_BLK,
-			const V * v = 0)
+			const V * restrict v = 0)
 	  : set(s,b), value(0) {
 		int i, p;
 		if (!allocate(size)) {
@@ -799,7 +799,7 @@ public:
 	}
 
 protected:
-	V * value;                          // The data.
+	V * restrict value;                 // The data.
 	struct _V {                         // Placement new wrapper
 		V _v;
 		explicit _V() : _v() {}
@@ -835,7 +835,7 @@ protected:
 		size = 0;
 		buffer = 0;
 	}
-	void init(const int i, const V * v) {
+	void init(const int i, const V * restrict v) {
 		new(&value[i]) _V(*v);
 	}
 	// And the null constructor.
@@ -858,7 +858,7 @@ public:
 	  : kfset<K,V>() {
 	}
 	inline explicit ksset(const int s, const int b = DFLT_BLK,
-			const V * v = 0)
+			const V * restrict v = 0)
 	  : kfset<K,V>(s,b,v) {
 	}
 	inline explicit ksset(const kfset<K,V> & v)
@@ -877,7 +877,7 @@ public:
 	}
 	// Add an array of values... There is no point in
 	// a position based addition. 
-	bool add(const V * v, const int s = 1) {
+	bool add(const V * restrict v, const int s = 1) {
 		if (s <= 0 || v == 0)
 			return false;
 		if (!allocate(this->size+s))
@@ -927,7 +927,7 @@ public:
 	  : ksset<K,V>() {
 	}
 	inline explicit koset(const int s, const int b = DFLT_BLK,
-			const V * v = 0)
+			const V * restrict v = 0)
 	  : ksset<K,V>(s,b,v) {
 		if (v)
 			sort();
@@ -996,7 +996,7 @@ public:
 	}
 	// Basic constructor
 	inline explicit kiset(const int s, const int b = DFLT_BLK,
-			const V * v = 0)
+			const V * restrict v = 0)
 	  : set(s,b), idx(0), value(0) {
 		int i, p;
 		if (!allocate(size)) {
@@ -1109,7 +1109,7 @@ public:
 	}
 	// Add an array of values... There is no point in
 	// a position based addition. 
-	bool add(const V * v, const int s = 1) {
+	bool add(const V * restrict v, const int s = 1) {
 		if (s <= 0 || v == 0)
 			return false;
 		if (!allocate(size+s))
@@ -1154,8 +1154,8 @@ public:
 	}
 
 protected:
-	int * idx;                          // The index.
-	V * value;                          // Take a guess...
+	int * restrict idx;                 // The index.
+	V * restrict value;                 // Take a guess...
 	struct _V {                         // Placement new wrapper
 		V _v;
 		explicit _V() : _v() {}
@@ -1210,7 +1210,7 @@ protected:
 		return l;
 	}
 	// In this version i is always the last record...
-	void init(const int i, const V * v) {
+	void init(const int i, const V * restrict v) {
 		if (v)
 			new(&value[i]) _V(*v);
 		else
@@ -1238,7 +1238,7 @@ class afset : public set {
 public:
 	// Make one...
 	inline explicit afset(const int s, const int b = DFLT_BLK,
-			const K * k = 0, const V * v = 0)
+			const K * restrict k = 0, const V * restrict v = 0)
 	  : set(s,b), key(0), value(0) {
 		int i, p;
 		if (!allocate(size)) {
@@ -1306,8 +1306,8 @@ public:
 		return value[p+1];
 	}
 protected:
-	K * key;                            // The keys.
-	V * value;                          // Take a guess...
+	K * restrict key;                   // The keys.
+	V * restrict value;                 // Take a guess...
 	struct _K {                         // Placement new wrapper
 		K _k;
 		explicit _K() : _k() {}
@@ -1361,7 +1361,7 @@ protected:
 		size = 0;
 		buffer = 0;
 	}
-	void init(const int i, const K * k, const V * v) {
+	void init(const int i, const K * restrict k, const V * restrict v) {
 		new(&key[i]) _K(*k);
 		if (v)
 			new(&value[i]) _V(*v);
@@ -1387,7 +1387,7 @@ public:
 	}
 	// Simple constructor.
 	inline explicit asset(const int s, const int b = DFLT_BLK,
-			const K * k = 0, const V * v = 0)
+			const K * restrict k = 0, const V * restrict v = 0)
 	  : afset<K,V>(s,b,k,v) {
 	}
 	// Copy constructor.
@@ -1407,7 +1407,8 @@ public:
 		return add(&v.key[1],&v.value[1],v.size);
 	}
 	// Add a whole bunch...
-	bool add(const K * k, const V * v = 0, const int s = 1) {
+	bool add(const K * restrict k, const V * restrict v = 0,
+			const int s = 1) {
 		if (s <= 0 || k == 0)
 			return false;
 		if (!allocate(this->size+s))
@@ -1462,7 +1463,7 @@ public:
 	  : asset<K,V>() {
 	}
 	inline explicit aoset(const int s, const int b = DFLT_BLK,
-			const K * k = 0, const V * v = 0)
+			const K * restrict k = 0, const V * restrict v = 0)
 	  : asset<K,V>(s,b,k,v) {
 		if (k)
 			sort();
@@ -1532,7 +1533,7 @@ public:
 	  : asset<K,V>() {
 	}
 	inline explicit avoset(const int s, const int b = DFLT_BLK,
-			const K * k = 0, const V * v = 0)
+			const K * restrict k = 0, const V * restrict v = 0)
 	  : asset<K,V>(s,b,k,v) {
 		if (k)
 			sort();

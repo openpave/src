@@ -105,14 +105,14 @@ protected:
 	double stdnormal;					// The current std normal value.
 	double ustdnormal;					// Uncorrelated std normal value.
 
-	randomvar(reliability * /* owner */, randomvar * /* prev */);
+	randomvar(reliability * restrict /* owner */, randomvar * restrict /* prev */);
 	virtual ~randomvar();
 
 private:
 	// List management stuff.
-	reliability * owner;
-	randomvar * prev;
-	randomvar * next;
+	reliability * restrict owner;
+	randomvar * restrict prev;
+	randomvar * restrict next;
 };
 
 struct gfunction  
@@ -123,14 +123,14 @@ protected:
 	// The reliability class does most of the work for us...
 	friend class reliability;
 
-	gfunction(reliability * owner, gfunction * prev);
+	gfunction(reliability * restrict owner, gfunction * restrict prev);
 	virtual ~gfunction();
 
 private:
 	// List management stuff.
-	reliability * owner;
-	gfunction * prev;
-	gfunction * next;
+	reliability * restrict owner;
+	gfunction * restrict prev;
+	gfunction * restrict next;
 };
 
 
@@ -140,13 +140,13 @@ private:
 class reliability  
 {
 private:
-	randomvar * rv_head;		// The list of rv's.
-	gfunction * gf_head;		// The list of rv's.
+	randomvar * restrict rv_head;		// The list of rv's.
+	gfunction * restrict gf_head;		// The list of rv's.
 
 public:
 	randomvar * NewRV(randomvar::distribution type,
 		double mean = 0.0, double stddev = 1.0);
-	void AddGFunc(gfunction * gfunction);
+	void AddGFunc(gfunction * restrict gfunction);
 
 	reliability();
 	~reliability();

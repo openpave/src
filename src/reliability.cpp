@@ -77,7 +77,7 @@ double stdnormal_pdf(const double u)
 #define LEVMAX	10
 double quad8_stdnormal_pdf(const double a, const double b, const double Q = 1.0)
 {
-	/* The magic Newton-Cotes weights */
+	// The magic Newton-Cotes weights
 	const int w[9] = {3956, 23552, -3712, 41984, -18160, 41984, -3712, 23552, 3956};
 	const int dw = 14175;
 	static int level = -1;
@@ -285,10 +285,11 @@ public:
 protected:
 	friend class reliability;
 
-	rv_normal(reliability * o, randomvar * p, double m, double s)
+	rv_normal(reliability * restrict o, randomvar * restrict p,
+			const double m, const double s)
 		: randomvar(o,p) {
-		param(0, m);
-		param(1, s);
+		param(0,m);
+		param(1,s);
 	}
 	virtual ~rv_normal() {
 	}
@@ -316,10 +317,11 @@ public:
 protected:
 	friend class reliability;
 
-	rv_lognormal(reliability * o, randomvar * p, double m, double s)
+	rv_lognormal(reliability * restrict o, randomvar * restrict p,
+			const double m, const double s)
 		: randomvar(o,p) {
-		param(1, sqrt(log(1+s*s/m/m)));
-		param(0, log(m) - d[1]*d[1]/2);
+		param(1,sqrt(log(1+s*s/m/m)));
+		param(0,log(m) - d[1]*d[1]/2);
 	}
 	virtual ~rv_lognormal() {
 	}
@@ -328,7 +330,7 @@ protected:
 /*
  *	Simple constructor.  We always have an owner, and optionally a previous list member.
  */
-gfunction::gfunction(reliability * o, gfunction * p) {
+gfunction::gfunction(reliability * restrict o, gfunction * restrict p) {
 	owner = o;
 	prev = p, next = 0;
 	if (prev != 0) {

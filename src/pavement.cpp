@@ -98,11 +98,9 @@ pavedata::principle(double v, double E)
 		data[2][k1] = data[0][k1];
 		data[3][k1] = data[1][k1];
 	}
-	/*
-	 * Find the eigen values of the stress tensor.  This is heavily
-	 * optimised for a symmetric 3x3 matrix, to use as few FP registers
-	 * as possible.
-	 */
+	// Find the eigen values of the stress tensor.  This is heavily
+	// optimised for a symmetric 3x3 matrix, to use as few FP registers
+	// as possible.
 	t1 = data[3][0]*data[3][0] + data[3][1]*data[3][1]
 			+ data[3][2]*data[3][2];
 	while (t1 > 1e-30) {
@@ -178,7 +176,8 @@ pavedata::principle(double v, double E)
 bool
 LEsystem::addlayer(double h, double e, const double v, const double s, const int p)
 {
-	LElayer * pl = new LElayer(this,(p < 0 ? last : &layer(p)),h,e,v,s);
+	LElayer * restrict pl =
+			new LElayer(this,(p < 0 ? last : &layer(p)),h,e,v,s);
 	if (pl == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in LEsystem::addlayer()!");
 		return false;
@@ -196,7 +195,7 @@ LEsystem::removelayers()
 bool
 LEsystem::removelayer(const int l)
 {
-	LElayer * pl = first;
+	LElayer * restrict pl = first;
 	int i = 0;
 
 	if (l < 0)
@@ -229,11 +228,11 @@ LEsystem::addpoint(const point3d & p)
 }
 	
 bool
-LEsystem::addgrid(const int nx, const double *xp,
-                  const int ny, const double *yp,
-                  const int nz, const double *zp)
+LEsystem::addgrid(const int nx, const double * restrict xp,
+                  const int ny, const double * restrict yp,
+                  const int nz, const double * restrict zp)
 {
-	pavedata * pd = new pavedata[nx*ny*nz];
+	pavedata * restrict pd = new pavedata[nx*ny*nz];
 	memset(pd,0,nx*ny*nz*sizeof(pavedata));
 	for (int ix = 0; ix < nx; ix++) {
 		for (int iy = 0; iy < ny; iy++) {
@@ -244,6 +243,7 @@ LEsystem::addgrid(const int nx, const double *xp,
 		}
 	}
 	return data.add(pd,nx*ny*nz);
+	delete [] pd;
 }
 
 bool
@@ -261,7 +261,7 @@ LEsystem::removepoint(const point3d & p)
 LElayer &
 LEsystem::layer(const int l)
 {
-	LElayer * pl = first;
+	LElayer * restrict pl = first;
 	int i = 0;
 	while (i++ < l && pl->next != 0)
 		pl = pl->next;
@@ -276,7 +276,7 @@ bool
 LEsystem::check()
 {
     int il, ixy;
-	const LElayer * pl;
+	const LElayer * restrict pl;
 
 	if (layers() <= 0) {
 		event_msg(EVENT_WARN,
@@ -515,7 +515,7 @@ refine_m1(double ma, double mb, double a, double r)
  */
 static void
 stoppingpoints(const int nbz, const double a, const double r,
-               double * m0, double * m1)
+               double * restrict m0, double * restrict m1)
 {
 	int ib;
 	double ra = r/a, r1 = fabs(ra-1);
@@ -572,9 +572,9 @@ stoppingpoints(const int nbz, const double a, const double r,
  * used above is singular.
  */
 static void
-buildabcd_full(const double m, const int nl, const double * h,
-			   const double * v, const double * E, const double * f,
-               double (* ABCD)[4])
+buildabcd_full(const double m, const int nl, const double * restrict h,
+			   const double * restrict v, const double * restrict E,
+			   const double * restrict f, double (* restrict ABCD)[4])
 {
 	int k1, k2, il = (nl-1);
 
@@ -582,8 +582,8 @@ buildabcd_full(const double m, const int nl, const double * h,
 	if (m <= 0.0)
 		return;
 	// First allocate space for the arrays...
-	double * A = new double[(nl*4)*(nl*4)];
-	double * B = &ABCD[0][0];
+	double * restrict A = new double[(nl*4)*(nl*4)];
+	double * restrict B = &ABCD[0][0];
 	if (A == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in buildabcd_slip()!");
 		goto abort;
@@ -724,9 +724,10 @@ abort:
  * This build the ABCD matrix, based on the structure.
  */
 static void
-buildabcd(const double m, const int nl, const double * h, const double * v,
-          const double * E, const double * f, double (* R)[4][2],
-          double (* ABCD)[4])
+buildabcd(const double m, const int nl, const double * restrict h,
+          const double * restrict v, const double * restrict E,
+          const double * restrict f, double (* restrict R)[4][2],
+          double (* restrict ABCD)[4])
 {
 	int k1, k2, il;
 	double B1[2][4], X[4][4], F[4][4], D[4][4];
@@ -856,7 +857,7 @@ bool
 LEsystem::calc_accurate()
 {
     int ixy, ild, ib, igp, il;
-	const LElayer * pl;
+	const LElayer * restrict pl;
 	bool rv = true;
 	
 	initarrays();
@@ -865,12 +866,12 @@ LEsystem::calc_accurate()
 	int nl = layers();
 
 	// The integration constants, per layer.
-	double (* R)[4][2] = new double[nl][4][2];
-	double (* ABCD)[4] = new double[nl][4];
-	double * h = new double[nl];
-	double * f = new double[nl];
-	double * v = new double[nl];
-	double * E = new double[nl];
+	double (* restrict R)[4][2] = new double[nl][4][2];
+	double (* restrict ABCD)[4] = new double[nl][4];
+	double * restrict h = new double[nl];
+	double * restrict f = new double[nl];
+	double * restrict v = new double[nl];
+	double * restrict E = new double[nl];
 	// We allocate these as big as we ever make them,
 	// so we never have to worry about the add()'s failing.
 	cset<double> * _bm0 = new cset<double>(0, 2*NBZ+2);
@@ -1038,7 +1039,7 @@ bool
 LEsystem::calculate(resulttype res, double * Q)
 {
     int ixy, ir, iz, ild, ia, ib, igp, il;
-	const LElayer * pl;
+	const LElayer * restrict pl;
 	double x1, x2;
 	bool rv = false;
 	
@@ -1061,13 +1062,13 @@ LEsystem::calculate(resulttype res, double * Q)
 		callcount += nl;
 
 	// The integration constants, per layer.
-	double (* R)[4][2] = new double[nl][4][2];
-	double (* ABCD)[4] = new double[nl][4];
+	double (* restrict R)[4][2] = new double[nl][4][2];
+	double (* restrict ABCD)[4] = new double[nl][4];
 	// Local variables, so we don't have to walk the list.
-	double * h = new double[nl];
-	double * f = new double[nl];
-	double * v = new double[nl];
-	double * E = new double[nl];
+	double * restrict h = new double[nl];
+	double * restrict f = new double[nl];
+	double * restrict v = new double[nl];
+	double * restrict E = new double[nl];
 	// Some place to store our data...
 	cset<double> z, a, r, bm;
 	sset<int> zl;
@@ -1398,7 +1399,7 @@ bool
 LEsystem::calc_odemark()
 {
 	int ixy, ild;
-	LElayer * pl;
+	LElayer * restrict pl;
 	double de = 0.0;
 
 	if (!check())
@@ -1652,15 +1653,15 @@ bool
 LEsystem::calc_fastnum()
 {
 	int ixy, ild, il;
-	LElayer * pl;
+	LElayer * restrict pl;
 	bool rv = true;
 
 	if (!check())
 		return false;
 	int nl = layers();
-	double * h = new double[nl];
-	double * v = new double[nl];
-	double * E = new double[nl];
+	double * restrict h = new double[nl];
+	double * restrict v = new double[nl];
+	double * restrict E = new double[nl];
 	if (h == 0 || v == 0 || E == 0) {
 		rv = false;
 		goto abort;
@@ -1735,10 +1736,10 @@ LEbackcalc::backcalc()
 	calctype speed = (precision >= 1e-4 ? fast : slow);
 	ksset<point3d,pavedata> orig(data);
 
-	double * P = new double[nl];
-	double * T = new double[nl];
-	double * O = new double[nl];
-	double * Q = new double[nl*nl];
+	double * restrict P = new double[nl];
+	double * restrict T = new double[nl];
+	double * restrict O = new double[nl];
+	double * restrict Q = new double[nl*nl];
 	if (P == 0 || T == 0 || O == 0 || Q == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in LEbackcalc::backcalc()!");
 		goto abort;
@@ -1882,7 +1883,7 @@ abort:
  * E mod seeding algorithm.
  */
 bool
-LEbackcalc::seed(int nl, double * P)
+LEbackcalc::seed(int nl, double * restrict P)
 {
 	double E = 0.0, v = layer(nl-1).poissons();
 	int i, j;
@@ -1929,18 +1930,20 @@ LEbackcalc::seed(int nl, double * P)
  * See the ICAP 2006 paper for details.
  */
 double
-LEbackcalc::deflgrad(int nl, double * P, double * Q, calctype cl) {
+LEbackcalc::deflgrad(int nl, double * restrict P, double * restrict Q,
+                     calctype cl)
+{
 	double step = 0.0, dgg = 0.0, gg = 0.0, dd = 0.0;
 	int i, j, k, dl = defl.length();
 
 	// Initial setup.
-	double * PG = new double[dl*nl];
-	double * MD = new double[dl];
-	double * CD = new double[dl];
-	double * DG = new double[dl];
-	double * D = new double[nl];
-	double * G = new double[nl];
-	double * W = new double[nl];
+	double * restrict PG = new double[dl*nl];
+	double * restrict MD = new double[dl];
+	double * restrict CD = new double[dl];
+	double * restrict DG = new double[dl];
+	double * restrict D = new double[nl];
+	double * restrict G = new double[nl];
+	double * restrict W = new double[nl];
 	if (PG == 0 || MD == 0 || CD == 0 || DG == 0
 	  || D == 0 || G == 0 || W == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in LEbackcalc::deflgrad()!");
@@ -2031,16 +2034,16 @@ abort:
  * Gauss-Newton approach.
  */
 double
-LEbackcalc::gaussnewton(int nl, double * P, calctype cl)
+LEbackcalc::gaussnewton(int nl, double * restrict P, calctype cl)
 {
 	int i, j, k, dl = defl.length();
 	double step = 0.0;
 
 	// Initial setup.
-	double * H = new double[dl*nl];
-	double * S = new double[nl*nl];
-	double * W = new double[nl];
-	double * Y = new double[nl];
+	double * restrict H = new double[dl*nl];
+	double * restrict S = new double[nl*nl];
+	double * restrict W = new double[nl];
+	double * restrict Y = new double[nl];
 	if (H == 0 || S == 0 || W == 0 || Y == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in LEbackcalc::kalman()!");
 		goto abort;
@@ -2086,16 +2089,16 @@ abort:
  * Rongzong Wu <wurong@berkeley.edu>.  Filter implementation based
  * on Wikipedia article.
  */
-double LEbackcalc::kalman(int nl, double * P) {
+double LEbackcalc::kalman(int nl, double * restrict P) {
 	int i, j, k, dl = defl.length();
 	double step = 0.0;
 
 	// Initial setup.
-	double * H = new double[dl*nl];
-	double * S = new double[dl*dl];
-	double * K = new double[nl*dl];
-	double * Y = new double[dl];
-	double * W = new double[nl];
+	double * restrict H = new double[dl*nl];
+	double * restrict S = new double[dl*dl];
+	double * restrict K = new double[nl*dl];
+	double * restrict Y = new double[dl];
+	double * restrict W = new double[nl];
 	if (H == 0 || S == 0 || K == 0 || Y == 0 || W == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in LEbackcalc::kalman()!");
 		goto abort;
@@ -2154,7 +2157,10 @@ abort:
  * avoid it rerunning the calcs.  Call with s and D to get it to do
  * prediction at distance s along the vector D.
  */
-double LEbackcalc::bowlerror(int nl, double * P, double s, double * D) {
+double
+LEbackcalc::bowlerror(int nl, const double * restrict P, const double s,
+                      const double * restrict D)
+{
 	int i;
 	double err;
 	
@@ -2183,7 +2189,9 @@ double LEbackcalc::bowlerror(int nl, double * P, double s, double * D) {
  * we use that interval to determine if we have bracketed the minimum.
  * Once we have bracketed the minimum we close in on the final minimum.
  */
-double LEbackcalc::brent(int nl, double * P, double * D) {
+double
+LEbackcalc::brent(int nl, double * restrict P, double * restrict D)
+{
 	const double GC = (3.0-sqrt(5.0))/2.0;
 	const double GR = 1/(1-GC);
 	const double TOL = 1e-6;
@@ -2279,15 +2287,15 @@ double LEbackcalc::brent(int nl, double * P, double * D) {
  * completely.  The routine is entirely self contained, since it works
  * better if it can keep track of its last direction.  It is slow.
  */
-double LEbackcalc::conjgrad(int nl, double * P) {
+double LEbackcalc::conjgrad(int nl, double * restrict P) {
 	double step = 1.0, dgg = 0.0, gg = 0.0;
 	double derr = DBL_MAX, oerr = 0.0;
 	int i, j, k, dl = defl.length();
 
 	// Initial setup.
-	double * D = new double[nl];
-	double * G = new double[nl];
-	double * W = new double[nl];
+	double * restrict D = new double[nl];
+	double * restrict G = new double[nl];
+	double * restrict W = new double[nl];
 	if (D == 0 || G == 0 || W == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in LEbackcalc::conjgrad()!");
 		goto abort;

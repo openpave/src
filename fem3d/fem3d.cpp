@@ -345,7 +345,7 @@ private:
 	friend class mesh;
 	const int nnd;
 	const fset<int> & inel;
-	tmatrix<double,NDOF,NDOF> * K;
+	tmatrix<double,NDOF,NDOF> * restrict K;
 
 	// Size of the triangular matrix storage
 	inline int size() const {
@@ -415,7 +415,8 @@ public:
 		block34
 	} etype;
 
-	element(mesh * o, element * p, const element_t t, const material & m)
+	element(mesh * restrict o, element * restrict p, const element_t t,
+			const material & m)
 	  : listelement_o<mesh,element>(o,p), etype(t), mat(m), inel(0,8) {
 	}
 	virtual smatrix_elem * stiffness() const = 0;
@@ -435,7 +436,7 @@ protected:
  */
 class element_block8 : public element {
 public:
-	element_block8(mesh * o, element * p, const material & m,
+	element_block8(mesh * restrict o, element * restrict p, const material & m,
 			const fset<coord3d> & c)
 	  : element(o,p,block8,m) {
 	  	assert(8 == c.length());
@@ -493,12 +494,12 @@ public:
 			}
 		}
 	
-		smatrix_elem * _K = new smatrix_elem(8,inel);
+		smatrix_elem * restrict _K = new smatrix_elem(8,inel);
 		if (_K == 0) {
 			event_msg(EVENT_ERROR,"Out of memory in element::stiffness()!");
 			return 0;
 		}
-		smatrix_elem & K = *_K;
+		smatrix_elem & restrict K = *_K;
 	
 		for (g = 0; g < gp.length(); g++) {
 			rx = gp[g].x; ry = gp[g].y; rz = gp[g].z;
@@ -536,7 +537,7 @@ public:
  */
 class element_block16 : public element {
 public:
-	element_block16(mesh * o, element * p, const material & m,
+	element_block16(mesh * restrict o, element * restrict p, const material & m,
 			const fset<coord3d> & c)
 	  : element(o,p,block16,m) {
 	  	assert(8 == c.length());
@@ -625,12 +626,12 @@ public:
 			}
 		}
 	
-		smatrix_elem * _K = new smatrix_elem(16,inel);
+		smatrix_elem * restrict _K = new smatrix_elem(16,inel);
 		if (_K == 0) {
 			event_msg(EVENT_ERROR,"Out of memory in element::stiffness()!");
 			return 0;
 		}
-		smatrix_elem & K = *_K;
+		smatrix_elem & restrict K = *_K;
 	
 		for (g = 0; g < gp.length(); g++) {
 			rx = gp[g].x; ry = gp[g].y; rz = gp[g].z;
@@ -676,7 +677,7 @@ public:
  */
 class element_block34 : public element {
 public:
-	element_block34(mesh * o, element * p, const material & m,
+	element_block34(mesh * restrict o, element * restrict p, const material & m,
 			const fset<coord3d> & c)
 	  : element(o,p,block34,m) {
 	  	assert(8 == c.length());
@@ -816,12 +817,12 @@ public:
 			}
 		}
 	
-		smatrix_elem * _K = new smatrix_elem(nnd,inel);
+		smatrix_elem * restrict _K = new smatrix_elem(nnd,inel);
 		if (_K == 0) {
 			event_msg(EVENT_ERROR,"Out of memory in element::stiffness()!");
 			return 0;
 		}
-		smatrix_elem & K = *_K;
+		smatrix_elem & restrict K = *_K;
 
 		for (g = 0; g < gp.length(); g++) {
 			rx = gp[g].x; ry = gp[g].y; rz = gp[g].z;
@@ -941,7 +942,7 @@ class smatrix;
  */
 class smatrix_node {
 	explicit smatrix_node(const int I, const int J,
-			const tmatrix<double,NDOF,NDOF> & t, smatrix_diag * d)
+			const tmatrix<double,NDOF,NDOF> & t, smatrix_diag * restrict d)
 	  : K(t), i(I), j(J), col_next(0), col_prev(0), col_diag(d),
 	  		row_prev(0), row_next(0) {
 	}
@@ -955,11 +956,11 @@ class smatrix_node {
 	
 	tmatrix<double,NDOF,NDOF> K;
 	int i, j;
-	smatrix_node * col_next;
-	smatrix_node * col_prev;
-	smatrix_diag * col_diag;
-	smatrix_node * row_prev;
-	smatrix_node * row_next;
+	smatrix_node * restrict col_next;
+	smatrix_node * restrict col_prev;
+	smatrix_diag * restrict col_diag;
+	smatrix_node * restrict row_prev;
+	smatrix_node * restrict row_next;
 }; 
 
 /*
@@ -973,10 +974,11 @@ class smatrix_diag {
 			free(nodes);
 	}
 	bool insert(int i, int j, const tmatrix<double,NDOF,NDOF> & t,
-			smatrix_diag * d) {
+			smatrix_diag * restrict d) {
 		if (nnz+1 > nnd) {
 			nnd = nnz+1;
-			smatrix_node * temp = static_cast<smatrix_node *>
+			smatrix_node * restrict temp =
+					static_cast<smatrix_node * restrict>
 					(realloc(nodes,nnd*sizeof(smatrix_node)));
 			if (temp == 0) {
 				event_msg(EVENT_ERROR,"Out of memory in smatrix_diag::insert()!");
@@ -1008,7 +1010,7 @@ class smatrix_diag {
 		}
 		new(&nodes[nnz]) smatrix_node(i,j,t,d);
 		// Fix up the row references.
-		smatrix_node * p = row_head, * o = 0;
+		smatrix_node * restrict p = row_head, * restrict o = 0;
 		while (p && p->j < j) {
 			o = p; p = p->row_next;
 		}
@@ -1048,9 +1050,9 @@ class smatrix_diag {
 
 	tmatrix<double,NDOF,NDOF> K;
 	int nnz, nnd;
-	smatrix_node * col_head;
-	smatrix_node * row_head;
-	smatrix_node * nodes;
+	smatrix_node * restrict col_head;
+	smatrix_node * restrict row_head;
+	smatrix_node * restrict nodes;
 }; 
 
 /*
@@ -1060,23 +1062,23 @@ class smatrix {
 public:
 	inline explicit smatrix(const int n)
 	  : nnd(n), diag(0) {
-		diag = static_cast<smatrix_diag *>
+		diag = static_cast<smatrix_diag * restrict>
 				(calloc(nnd,sizeof(smatrix_diag)));
 		if (diag == 0)
 			event_msg(EVENT_ERROR,"Out of memory in smatrix::smatrix()!");
 	}
 	inline explicit smatrix(const smatrix & A)
 	  : nnd(A.nnd), diag(0) {
-		diag = static_cast<smatrix_diag *>
+		diag = static_cast<smatrix_diag * restrict>
 				(calloc(nnd,sizeof(smatrix_diag)));
 		if (diag == 0) {
 			event_msg(EVENT_ERROR,"Out of memory in smatrix::smatrix()!");
 			return;
 		}
 		for (int i = 0; i < nnd; i++) {
-			smatrix_diag * d = &(A.diag[i]);
+			smatrix_diag * restrict d = &(A.diag[i]);
 			append(i,i,d->K);
-			smatrix_node * p = d->row_head;
+			smatrix_node * restrict p = d->row_head;
 			while (p) {
 				append(p->i,p->j,p->K);
 				p = p->row_next;
@@ -1103,7 +1105,7 @@ public:
 		} else {
 			n = t;
 		}
-		smatrix_node * p = diag[i].row_head;
+		smatrix_node * restrict p = diag[i].row_head;
 		while (p && p->j < j)
 			p = p->row_next;
 		if (p == 0 || p->j > j) {
@@ -1116,8 +1118,8 @@ public:
 
 	bool chol() {
 		int i, j;
-		smatrix_diag * d;
-		smatrix_node * p;
+		smatrix_diag * restrict d;
+		smatrix_node * restrict p;
 		
 		for (i = 0; i < nnd; i++) {
 			d = &(diag[i]);
@@ -1138,8 +1140,8 @@ public:
 			p = d->row_head;
 			while (p) {
 				tmatrix<double,NDOF,NDOF> & J = p->K;
-				smatrix_node * pi = d->col_head;
-				smatrix_node * pj = diag[p->j].col_head;
+				smatrix_node * restrict pi = d->col_head;
+				smatrix_node * restrict pj = diag[p->j].col_head;
 				while (pi && pj) {
 					if (pi->i > pj->i)
 						pj = pj->col_next;
@@ -1166,7 +1168,7 @@ public:
 private:
 	friend class mesh;
 	int nnd;
-	smatrix_diag * diag;
+	smatrix_diag * restrict diag;
 };
 
 /*
@@ -1176,7 +1178,7 @@ class svector {
 public:
 	inline explicit svector(const int n)
 	  : nnd(n), V(0) {
-		V = static_cast<tmatrix<double,NDOF,1> *>
+		V = static_cast<tmatrix<double,NDOF,1> * restrict>
 				(calloc(nnd,sizeof(tmatrix<double,NDOF,1>)));
 		if (V == 0)
 			event_msg(EVENT_ERROR,"Out of memory in svector::svector()!");
@@ -1194,7 +1196,7 @@ public:
 
 private:
 	int nnd;
-	tmatrix<double,NDOF,1> * V;
+	tmatrix<double,NDOF,1> * restrict V;
 };
 
 /*
@@ -1237,7 +1239,7 @@ public:
 	bool add(const element::element_t t, const material & m,
 			const fset<coord3d> & c) {
 		assert(8 == c.length());
-		element * e = 0;
+		element * restrict e = 0;
 		switch (t) {
 		case element::block8:
 			e = new element_block8(this,last,m,c);
@@ -1303,11 +1305,11 @@ public:
 		printf("Solving with %i nodes!\n",nnd);
 		smatrix K(nnd);
 		svector F(nnd), U(nnd), P(nnd), W(nnd), Z(nnd);
-		element * e = this->first;
-		smatrix_diag * d;
-		smatrix_node * p;
+		element * restrict e = this->first;
+		smatrix_diag * restrict d;
+		smatrix_node * restrict p;
 		while (e) {
-			smatrix_elem * ke = e->stiffness();
+			smatrix_elem * restrict ke = e->stiffness();
 			if (ke == 0)
 				return false;
 			for (i = 0; i < ke->nnd; i++) {
