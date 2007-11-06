@@ -285,7 +285,7 @@ public:
 protected:
 	friend class reliability;
 
-	rv_normal(reliability * restrict o, randomvar * restrict p,
+	rv_normal(reliability * __restrict o, randomvar * __restrict p,
 			const double m, const double s)
 		: randomvar(o,p) {
 		param(0,m);
@@ -317,7 +317,7 @@ public:
 protected:
 	friend class reliability;
 
-	rv_lognormal(reliability * restrict o, randomvar * restrict p,
+	rv_lognormal(reliability * __restrict o, randomvar * __restrict p,
 			const double m, const double s)
 		: randomvar(o,p) {
 		param(1,sqrt(log(1+s*s/m/m)));
@@ -330,7 +330,7 @@ protected:
 /*
  *	Simple constructor.  We always have an owner, and optionally a previous list member.
  */
-gfunction::gfunction(reliability * restrict o, gfunction * restrict p) {
+gfunction::gfunction(reliability * __restrict o, gfunction * __restrict p) {
 	owner = o;
 	prev = p, next = 0;
 	if (prev != 0) {

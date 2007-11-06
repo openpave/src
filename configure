@@ -2479,14 +2479,6 @@ _EOF
 #endif
 #endif
 
-#if defined(_MSC_VER)
-#define restrict	__restrict
-#else
-#if !defined(restrict)
-#define restrict	__restrict
-#endif 
-#endif
-
 #endif // CONFIG_H
 _EOF
   if cmp -s $outfile $configfile; then

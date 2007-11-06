@@ -39,7 +39,7 @@
  * Orthonormalize the nxn matrix Q, using the Gramm-Schmidt algorithm.
  */
 void
-orth_gs(const int n, double * restrict Q)
+orth_gs(const int n, double * __restrict Q)
 {
 	double r;
 	int i, j, k;
@@ -66,13 +66,13 @@ orth_gs(const int n, double * restrict Q)
  * This function employs Gaussian elimination with full pivoting.
  */
 bool
-equ_gauss(const int n, const double * restrict A, const double * restrict b,
-          double * restrict x)
+equ_gauss(const int n, const double * __restrict A, const double * __restrict b,
+          double * __restrict x)
 {
 	bool rv = true;
 	int i, j, k;
 
-	double * restrict a = new double[n*n];
+	double * __restrict a = new double[n*n];
 	if (a == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in equ_gauss()!");
 		rv = false;
@@ -121,8 +121,8 @@ equ_gauss(const int n, const double * restrict A, const double * restrict b,
  * This function employs Gaussian elimination with full pivoting.
  */
 double
-inv_mul_gauss(const int n, const int m, double * restrict A,
-              double * restrict B)
+inv_mul_gauss(const int n, const int m, double * __restrict A,
+              double * __restrict B)
 {
 	double det = 1.0;
 	int i, j, k;
@@ -174,13 +174,13 @@ abort:
  * of interchanges have been performed (this is for the determinant calc).
  */
 bool
-decmp_lu(const int n, double * restrict A, int * restrict idx,
-         int & restrict d)
+decmp_lu(const int n, double * __restrict A, int * __restrict idx,
+         int & __restrict d)
 {
 	bool rv = true;
 	int i, j, k;
 
-	double * restrict work = new double[n];
+	double * __restrict work = new double[n];
 	if (work == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in decmp_lu()!");
 		rv = false;
@@ -244,8 +244,8 @@ abort:
  * m is the number of columns in b, and c is the column index.
  */
 void
-bksub_lu(const int n, const double * restrict A, const int * restrict idx,
-         double * restrict b, const int m = 1, const int c = 0)
+bksub_lu(const int n, const double * __restrict A, const int * __restrict idx,
+         double * __restrict b, const int m = 1, const int c = 0)
 {
 	int i, j, k;
 
@@ -275,15 +275,15 @@ bksub_lu(const int n, const double * restrict A, const int * restrict idx,
  * substitution, with a single step refinement.
  */
 bool
-equ_lu(const int n, const double * restrict A, const double * restrict b,
-       double * restrict x, const double tol)
+equ_lu(const int n, const double * __restrict A, const double * __restrict b,
+       double * __restrict x, const double tol)
 {
 	bool rv = true;
 	int i, j, d;
 
-	int * restrict idx = new int[n];
-	double * restrict a = new double[n*n];
-	double * restrict r = new double[n];
+	int * __restrict idx = new int[n];
+	double * __restrict a = new double[n*n];
+	double * __restrict r = new double[n];
 	if (idx == 0 || a == 0 || r == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in equ_lu()!");
 		rv = false;
@@ -318,13 +318,13 @@ equ_lu(const int n, const double * restrict A, const double * restrict b,
  * The result is returned in B, and the determinant in the return value.
  */
 double
-inv_mul_lu(const int n, const int m, double * restrict A,
-           double * restrict B)
+inv_mul_lu(const int n, const int m, double * __restrict A,
+           double * __restrict B)
 {
 	double det = 0.0;
 	int i, d;
 
-	int * restrict idx = new int[n];
+	int * __restrict idx = new int[n];
 	if (idx == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in inv_mul_lu()!");
 		goto abort;
@@ -346,13 +346,13 @@ abort:
  * Matrix inverse of the real nxn matrix A using LU decomposition.  
  */
 bool
-inv_lu(const int n, double * restrict A)
+inv_lu(const int n, double * __restrict A)
 {
 	bool rv = true;
 	int i, d;
 
-	int * restrict idx = new int[n];
-	double * restrict a = new double[n*n];
+	int * __restrict idx = new int[n];
+	double * __restrict a = new double[n*n];
 	if (idx == 0 || a == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in inv_lu()!");
 		rv = false;
@@ -380,7 +380,7 @@ abort:
  * Returns L in the lower triangle of A.
  */
 bool
-decmp_chol(const int n, double * restrict A)
+decmp_chol(const int n, double * __restrict A)
 {
 	int i, j, k;
 	double sum;
@@ -410,7 +410,7 @@ decmp_chol(const int n, double * restrict A)
  * Returns U in the upper triangle of A.
  */
 bool
-decmp_chol(const int n, const int w, double * restrict A)
+decmp_chol(const int n, const int w, double * __restrict A)
 {
 	int i, j, k;
 	double sum, c, y, t;
@@ -442,8 +442,8 @@ decmp_chol(const int n, const int w, double * restrict A)
  * m is the number of columns in b, and c is the column index.
  */
 void
-bksub_chol(const int n, const double * restrict A,
-           double * restrict b, const int m = 1, const int c = 0)
+bksub_chol(const int n, const double * __restrict A,
+           double * __restrict b, const int m = 1, const int c = 0)
 {
 	int i, k;
 
@@ -464,8 +464,8 @@ bksub_chol(const int n, const double * restrict A,
  * matrix, to solve a particular system.
  */
 void
-bksub_chol(const int n, const int w, const double * restrict A,
-           double * restrict b, const int m = 1, const int c = 0)
+bksub_chol(const int n, const int w, const double * __restrict A,
+           double * __restrict b, const int m = 1, const int c = 0)
 {
 	int i, k;
 	double s, y, t;
@@ -491,13 +491,13 @@ bksub_chol(const int n, const int w, const double * restrict A,
  * substitution.
  */
 bool
-equ_chol(const int n, const double * restrict A,
-         const double * restrict b, double * restrict x, const double tol)
+equ_chol(const int n, const double * __restrict A,
+         const double * __restrict b, double * __restrict x, const double tol)
 {
 	bool rv = true;
 	//int i, j;
 
-	double * restrict a = new double[n*n];
+	double * __restrict a = new double[n*n];
 	//double * r = new double[n];
 	if (a == 0) { // || r == 0
 		event_msg(EVENT_ERROR,"Out of memory in equ_chol()!");
@@ -537,15 +537,15 @@ abort:
  * substitution, with a single step refinement.
  */
 bool
-equ_chol(const int n, const int w, const double * restrict A,
-         const double * restrict b, double * restrict x, const double tol)
+equ_chol(const int n, const int w, const double * __restrict A,
+         const double * __restrict b, double * __restrict x, const double tol)
 {
 	bool rv = true;
 	int i, j, iter = 0;
 	double dot, c1, y1, t1, c, y, t;
 
-	double * restrict a = new double[B_SIZE(n,w)];
-	double * restrict r = new double[n];
+	double * __restrict a = new double[B_SIZE(n,w)];
+	double * __restrict r = new double[n];
 	if (a == 0 || r == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in equ_chol()!");
 		rv = false;
@@ -592,7 +592,7 @@ abort:
  * Cholesky decomposition.  
  */
 bool
-inv_chol(int n, double * restrict A)
+inv_chol(int n, double * __restrict A)
 {
 	int i, j, k;
 	double sum;
@@ -628,7 +628,7 @@ inv_chol(int n, double * restrict A)
  * with D in the diagonal.
  */
 bool
-decmp_ldl(const int n, double * restrict A)
+decmp_ldl(const int n, double * __restrict A)
 {
 	int i, j, k;
 	double sum;
@@ -659,8 +659,8 @@ decmp_ldl(const int n, double * restrict A)
  * m is the number of columns in b, and c is the column index.
  */
 void
-bksub_ldl(const int n, const double * restrict A,
-          double * restrict b, const int m = 1, const int c = 0)
+bksub_ldl(const int n, const double * __restrict A,
+          double * __restrict b, const int m = 1, const int c = 0)
 {
 	int i, k;
 	double sum;
@@ -685,14 +685,14 @@ bksub_ldl(const int n, const double * restrict A,
  * substitution, (with a single step refinement).
  */
 bool
-equ_ldl(const int n, const double * restrict A,
-        const double * restrict b, double * restrict x, const double tol)
+equ_ldl(const int n, const double * __restrict A,
+        const double * __restrict b, double * __restrict x, const double tol)
 {
 	bool rv = true;
 	int i, j;
 
-	double * restrict a = new double[n*n];
-	double * restrict r = new double[n];
+	double * __restrict a = new double[n*n];
+	double * __restrict r = new double[n];
 	if (a == 0 || r == 0) { 
 		event_msg(EVENT_ERROR,"Out of memory in equ_chol()!");
 		rv = false;
@@ -727,8 +727,8 @@ equ_ldl(const int n, const double * restrict A,
  * The matrix V (not the transpose of V) is output as V.
  */
 void
-decmp_svd(const int m, const int n, double * restrict A,
-          double * restrict W, double * restrict V)
+decmp_svd(const int m, const int n, double * __restrict A,
+          double * __restrict W, double * __restrict V)
 {
 	double F, G = 0.0, H;
 	double C, S, X, Y;
@@ -737,7 +737,7 @@ decmp_svd(const int m, const int n, double * restrict A,
 	int iter, i, j, k, q;
 	bool flag;
 	
-	double * restrict rv1 = new double[n];
+	double * __restrict rv1 = new double[n];
 	if (rv1 == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in decmp_svd()!");
 		goto abort;
@@ -906,13 +906,13 @@ abort:
 }
 
 void
-bksub_svd(const int m, const int n, const double * restrict U,
-          const double * restrict W, const double * restrict V,
-          double * restrict b, const int p = 1, const int c = 0)
+bksub_svd(const int m, const int n, const double * __restrict U,
+          const double * __restrict W, const double * __restrict V,
+          double * __restrict b, const int p = 1, const int c = 0)
 {
 	int i, j;
 
-	double * restrict tmp = new double[n];
+	double * __restrict tmp = new double[n];
 	if (tmp == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in bksub_svd()!");
 		goto abort;
@@ -942,16 +942,16 @@ abort:
  * substitution, with refinement.
  */
 void
-equ_svd(const int n, const double * restrict A, const double * restrict b,
-        double * restrict x, const double tol)
+equ_svd(const int n, const double * __restrict A, const double * __restrict b,
+        double * __restrict x, const double tol)
 {
 	double max;
 	int i, j;
 
-	double * restrict U = new double[n*n];
-	double * restrict W = new double[n];
-	double * restrict V = new double[n*n];
-	double * restrict r = new double[n];
+	double * __restrict U = new double[n*n];
+	double * __restrict W = new double[n];
+	double * __restrict V = new double[n*n];
+	double * __restrict r = new double[n];
 	if (U == 0 || W == 0 || V == 0 || r == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in equ_svd()!");
 		goto abort;
@@ -985,14 +985,14 @@ abort:
  * Matrix inverse of the real nxn matrix A using SVD decomposition.
  */
 void
-inv_svd(const int n, double * restrict A)
+inv_svd(const int n, double * __restrict A)
 {
 	double max;
 	int i, j, k;
 
-	double * restrict U = new double[n*n];
-	double * restrict W = new double[n];
-	double * restrict V = new double[n*n];
+	double * __restrict U = new double[n*n];
+	double * __restrict W = new double[n];
+	double * __restrict V = new double[n*n];
 	if (U == 0 || W == 0 || V == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in inv_svd()!");
 		goto abort;
@@ -1023,10 +1023,10 @@ abort:
  * Orthonormalize the nxn matrix Q, using the SVD decomposition.
  */
 void
-orth_svd(const int n, double * restrict Q)
+orth_svd(const int n, double * __restrict Q)
 {
-	double * restrict W = new double[n];
-	double * restrict V = new double[n*n];
+	double * __restrict W = new double[n];
+	double * __restrict V = new double[n*n];
 	if (W == 0 || V == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in orth_svd()!");
 		goto abort;
@@ -1043,8 +1043,8 @@ abort:
  * XXX: this routine is using a stupid access scheme.
  */
 bool
-decmp_qr(const int n, double * restrict A, double * restrict s,
-         double * restrict d)
+decmp_qr(const int n, double * __restrict A, double * __restrict s,
+         double * __restrict d)
 {
 	bool rv = true;
 	int i, j, k;
@@ -1087,9 +1087,9 @@ decmp_qr(const int n, double * restrict A, double * restrict s,
  * Ax = b. 
  */
 void
-bksbp_qr(const int n, const double * restrict A,
-         const double * restrict s, const double * restrict d, 
-         double * restrict b, const int m = 1, const int c = 0)
+bksbp_qr(const int n, const double * __restrict A,
+         const double * __restrict s, const double * __restrict d, 
+         double * __restrict b, const int m = 1, const int c = 0)
 {
 	int i, j;
 	double sum;
@@ -1111,8 +1111,8 @@ bksbp_qr(const int n, const double * restrict A,
  * Householder reduction of a nxn matrix A to tridiagonal form.
  */
 void
-tridiag_hh(const int n, double * restrict A, double * restrict d,
-           double * restrict e)
+tridiag_hh(const int n, double * __restrict A, double * __restrict d,
+           double * __restrict e)
 {
 	int i, j, k;
 	double scale, f;
@@ -1170,8 +1170,8 @@ tridiag_hh(const int n, double * restrict A, double * restrict d,
  * eigenvectors of a real symmetric tridiagonal matrix.
  */
 void
-eig_tri_ql(const int n, double * restrict d, double * restrict e,
-           double * restrict A)
+eig_tri_ql(const int n, double * __restrict d, double * __restrict e,
+           double * __restrict A)
 {
 	int i, j, k, m;
 	double b,c,f,g,p,r,s;
@@ -1218,12 +1218,12 @@ eig_tri_ql(const int n, double * restrict d, double * restrict e,
  * QL transform.
  */
 void
-eig_ql(const int n, double * restrict A, double * restrict d, bool sorted)
+eig_ql(const int n, double * __restrict A, double * __restrict d, bool sorted)
 {
 	double t;
 	int i, j, k;
 
-	double * restrict e = new double[n];
+	double * __restrict e = new double[n];
 	if (e == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in inv_eig()!");
 		goto abort;
@@ -1251,12 +1251,12 @@ abort:
 }
 
 void
-bksub_eig(const int n, const double * restrict Q, const double * restrict d,
-          double * restrict b, const int p = 1, const int c = 0)
+bksub_eig(const int n, const double * __restrict Q, const double * __restrict d,
+          double * __restrict b, const int p = 1, const int c = 0)
 {
 	int i, j;
 
-	double * restrict tmp = new double[n];
+	double * __restrict tmp = new double[n];
 	if (tmp == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in bksub_eig()!");
 		goto abort;
@@ -1284,16 +1284,16 @@ abort:
  * substitution, with refinement.
  */
 void
-equ_eig(const int n, const double * restrict A, const double * restrict b,
-        double * restrict x, const double tol)
+equ_eig(const int n, const double * __restrict A, const double * __restrict b,
+        double * __restrict x, const double tol)
 {
 	double max;
 	int i, j;
 
-	double * restrict Q = new double[n*n];
-	double * restrict d = new double[n];
-	double * restrict e = new double[n];
-	double * restrict r = new double[n];
+	double * __restrict Q = new double[n*n];
+	double * __restrict d = new double[n];
+	double * __restrict e = new double[n];
+	double * __restrict r = new double[n];
 	if (Q == 0 || d == 0 || e == 0 || r == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in inv_eig()!");
 		goto abort;
@@ -1329,14 +1329,14 @@ abort:
  * Matrix inverse of the real symmetric nxn matrix A using eigenvalue decomposition.
  */
 void
-inv_eig(const int n, double * restrict A)
+inv_eig(const int n, double * __restrict A)
 {
 	double max;
 	int i, j, k;
 
-	double * restrict Q = new double[n*n];
-	double * restrict d = new double[n];
-	double * restrict e = new double[n];
+	double * __restrict Q = new double[n*n];
+	double * __restrict d = new double[n];
+	double * __restrict e = new double[n];
 	if (Q == 0 || d == 0 || e == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in inv_eig()!");
 		goto abort;

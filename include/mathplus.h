@@ -159,7 +159,7 @@ inline double fma(const double a, const double b, const double c) {
  * someone will make these part of the language...
  */
 template <class T>
-void inline swap(T & restrict a, T & restrict b) {
+void inline swap(T & __restrict a, T & __restrict b) {
 	T temp = b;
 	b = a;
 	a = temp;

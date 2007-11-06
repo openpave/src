@@ -134,7 +134,7 @@ private:
  */
 class matrix_storage_ptr {
 public:
-	inline matrix_storage_ptr(matrix_storage * restrict p = 0)
+	inline matrix_storage_ptr(matrix_storage * __restrict p = 0)
 	  : ptr(p) {
 		addref();
 	}
@@ -168,7 +168,7 @@ public:
 	// assignment
 	matrix_storage_ptr & operator= (const matrix_storage_ptr & p) {
 		if (this != &p) {
-			matrix_storage * restrict t = p.ptr;
+			matrix_storage * __restrict t = p.ptr;
 			if (t != 0)
 				t->addref();
 			release();
@@ -189,7 +189,7 @@ public:
 	}
 	
 private:
-	matrix_storage * restrict ptr;
+	matrix_storage * __restrict ptr;
 };
 
 /*
@@ -223,7 +223,7 @@ public:
 				data[i*N+j] = (!mkdiag || i == j ? d : 0.0);
 	}
 	inline matrix_dense(const unsigned m, const unsigned n,
-		const double * restrict v)
+		const double * __restrict v)
 	  : matrix_storage(none), data(0) {
 		resize(m,n);
 		memcpy(data,v,M*N*sizeof(double));
@@ -297,7 +297,7 @@ public:
 protected:
 	unsigned M;					// The rows
 	unsigned N;					// The cols
-	double * restrict data;		// The data
+	double * __restrict data;		// The data
 	void resize(const unsigned m, const unsigned n) {
 		if (data != 0)
 			delete [] data;
@@ -733,37 +733,37 @@ operator- (const matrix & b) {
  */
 #define B_IDX(n,w,i,j)		(j <= w ? j*(j+1)/2+i : (j+1)*w+i-w*(w+1)/2)
 
-void orth_gs(const int n, double * restrict Q);
-bool equ_gauss(const int n, const double * restrict A,
-	const double * restrict b, double * restrict x);
-double inv_mul_gauss(const int n, const int m, double * restrict A,
-	double * restrict B);
-bool equ_lu(const int n, const double * restrict A,
-	const double * restrict b, double * restrict x,
+void orth_gs(const int n, double * __restrict Q);
+bool equ_gauss(const int n, const double * __restrict A,
+	const double * __restrict b, double * __restrict x);
+double inv_mul_gauss(const int n, const int m, double * __restrict A,
+	double * __restrict B);
+bool equ_lu(const int n, const double * __restrict A,
+	const double * __restrict b, double * __restrict x,
 	const double tol = ERR_TOL);
-bool inv_lu(const int n, double * restrict A);
-double inv_mul_lu(const int n, const int m, double * restrict A,
-	double * restrict B);
-bool equ_chol(const int n, const double * restrict A,
-	const double * restrict b, double * restrict x,
+bool inv_lu(const int n, double * __restrict A);
+double inv_mul_lu(const int n, const int m, double * __restrict A,
+	double * __restrict B);
+bool equ_chol(const int n, const double * __restrict A,
+	const double * __restrict b, double * __restrict x,
 	const double tol = ERR_TOL);
-bool equ_chol(const int n, const int w, const double * restrict A,
-	const double * restrict b, double * restrict x,
+bool equ_chol(const int n, const int w, const double * __restrict A,
+	const double * __restrict b, double * __restrict x,
 	const double tol = ERR_TOL);
-bool inv_chol(const int n, double * restrict A);
-bool equ_ldl(const int n, const double * restrict A,
-	const double * restrict b, double * restrict x,
+bool inv_chol(const int n, double * __restrict A);
+bool equ_ldl(const int n, const double * __restrict A,
+	const double * __restrict b, double * __restrict x,
 	const double tol = ERR_TOL);
-void equ_svd(const int n, const double * restrict A,
-	const double * restrict b, double * restrict x,
+void equ_svd(const int n, const double * __restrict A,
+	const double * __restrict b, double * __restrict x,
 	const double tol = ERR_TOL);
-void inv_svd(const int n, double * restrict A);
-void orth_svd(const int n, double * restrict Q);
-void eig_ql(const int n, double * restrict A,
-	double * restrict d, bool sorted = true);
-void equ_eig(const int n, const double * restrict A,
-	const double * restrict b, double * restrict x,
+void inv_svd(const int n, double * __restrict A);
+void orth_svd(const int n, double * __restrict Q);
+void eig_ql(const int n, double * __restrict A,
+	double * __restrict d, bool sorted = true);
+void equ_eig(const int n, const double * __restrict A,
+	const double * __restrict b, double * __restrict x,
 	const double tol = ERR_TOL);
-void inv_eig(const int n, double * restrict A);
+void inv_eig(const int n, double * __restrict A);
 
 #endif // MATRIX_H
