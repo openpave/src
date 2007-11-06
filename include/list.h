@@ -77,9 +77,9 @@ protected:
 		if (prev != 0) {
 			if (prev->next != 0) {
 				next = prev->next;
-				next->prev = static_cast<T __restrict *>(this);
+				next->prev = static_cast<T * __restrict>(this);
 			}
-			prev->next = static_cast<T __restrict *>(this);
+			prev->next = static_cast<T * __restrict>(this);
 		}
 	}
 	// Unlink ourselves from the list before we die...
