@@ -208,12 +208,12 @@ public:
 	double slip(const double ts) {
 		return s = ts;
 	}
-	LElayer(LEsystem * __restrict o, LElayer * __restrict p)
+	LElayer(LEsystem * o, LElayer * p)
 		: listelement_o<LEsystem,LElayer>(o,p) {
 		h = E = v = 0.0;
 		s = 1.0;
 	}
-	LElayer(LEsystem * __restrict o, LElayer * __restrict p,
+	LElayer(LEsystem * o, LElayer * p,
 			const double th, const double te, const double tv, const double ts = 1.0)
 		: listelement_o<LEsystem,LElayer>(o,p) {
 		h = th;
@@ -221,7 +221,7 @@ public:
 		v = tv;
 		s = ts;
 	}
-	LElayer(LEsystem * __restrict o, LElayer * __restrict p, const LElayer & pl)
+	LElayer(LEsystem * o, LElayer * p, const LElayer & pl)
 		: listelement_o<LEsystem,LElayer>(o,p) {
 		h = pl.h;
 		E = pl.E;
@@ -308,7 +308,7 @@ struct pavedata : point3d {
 	}
 //private:
 	double data[9][3];
-	double * __restrict deflgrad;
+	double * deflgrad;
 	int count;
 	friend class LEsystem;
 	friend class LEbackcalc;
@@ -333,9 +333,9 @@ public:
 	bool removeload(const int i);
 	bool removeloads();
 	bool addpoint(const point3d & p);
-	bool addgrid(const int nx, const double * __restrict xp,
-				 const int ny, const double * __restrict yp,
-				 const int nz, const double * __restrict zp);
+	bool addgrid(const int nx, const double * xp,
+				 const int ny, const double * yp,
+				 const int nz, const double * zp);
 	bool removepoints();
 	bool removepoint(const point3d & p);
 
@@ -355,7 +355,7 @@ public:
 		fastgrad = 0x0301,
 	};
 	bool calc_accurate();
-	bool calculate(resulttype result = all, double * __restrict Q = 0);
+	bool calculate(resulttype result = all, double * Q = 0);
 	bool calc_odemark();
 	bool calc_fastnum();
 
@@ -447,15 +447,15 @@ public:
 	int	maxsteps;
 
 	enum calctype {slow, fast, reuse};
-	bool seed(int nl, double * __restrict P);
-	double deflgrad(int nl, double * __restrict P, double * __restrict Q,
+	bool seed(int nl, double * P);
+	double deflgrad(int nl, double * P, double * Q,
 			calctype cl = slow);
-	double gaussnewton(int nl, double * __restrict P, calctype cl = slow);
-	double kalman(int nl, double * __restrict P);
-	double bowlerror(int nl = 0, const double * __restrict P = 0,
-			const double s = 0.0, const double * __restrict D = 0);
-	double brent(int nl, double * __restrict P, double * __restrict D);
-	double conjgrad(int nl, double * __restrict P);
+	double gaussnewton(int nl, double * P, calctype cl = slow);
+	double kalman(int nl, double * P);
+	double bowlerror(int nl = 0, const double * P = 0,
+			const double s = 0.0, const double * D = 0);
+	double brent(int nl, double * P, double * D);
+	double conjgrad(int nl, double * P);
 };
 
 #endif // PAVEMENT_H

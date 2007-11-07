@@ -175,7 +175,7 @@ public:
 			for (unsigned j = 0; j < N; j++)
 				data[i][j] = (!eye || i == j ? d : 0.0);
 	}
-	inline explicit tmatrix(const T * __restrict v) {
+	inline explicit tmatrix(const T * v) {
 		memcpy(data,v,M*N*sizeof(T));
 	}
 	inline tmatrix(const tmatrix & m) {

@@ -67,19 +67,19 @@ class list_owned;
 template <class T>
 class listelement_d {
 protected:
-	T * __restrict next;					// The next element.
-	T * __restrict prev;					// The previous element.
+	T * next;					// The next element.
+	T * prev;					// The previous element.
 
 	// Create a new list element, with an optional previous element.
 	// We force the consumer to use 0 so that they have to think.
-	listelement_d(T * __restrict p)
+	listelement_d(T * p)
 	  : next(0), prev(p) {
 		if (prev != 0) {
 			if (prev->next != 0) {
 				next = prev->next;
-				next->prev = static_cast<T * __restrict>(this);
+				next->prev = static_cast<T *>(this);
 			}
-			prev->next = static_cast<T * __restrict>(this);
+			prev->next = static_cast<T *>(this);
 		}
 	}
 	// Unlink ourselves from the list before we die...
@@ -105,21 +105,21 @@ protected:
 template <class O, class T>
 class listelement_o : public listelement_d<T> {
 protected:
-	O * __restrict owner;					// Our owner.
+	O * owner;					// Our owner.
 
 	// Create an element.
-	listelement_o(O * __restrict o, T * __restrict p)
+	listelement_o(O * o, T * p)
 	  : listelement_d<T>(p), owner(o) {
 		if (owner != 0) {
 			if (this->prev == 0) {
 				this->prev = owner->last;
 				if (this->prev != 0)
-					this->prev->next = static_cast<T * __restrict>(this);
+					this->prev->next = static_cast<T *>(this);
 				else
-					owner->first = static_cast<T * __restrict>(this);
+					owner->first = static_cast<T *>(this);
 			}
 			if (this->next == 0)
-				owner->last = static_cast<T * __restrict>(this);
+				owner->last = static_cast<T *>(this);
 		}
 	}
 	// Also manage our owner's pointers.
@@ -145,8 +145,8 @@ protected:
 template <class T>
 class list_double {
 protected:
-	T * __restrict first;					// The head of the list.
-	T * __restrict last;					// The tail of the list.
+	T * first;					// The head of the list.
+	T * last;					// The tail of the list.
 
 	// All lists start empty...
 	list_double(): first(0), last(0) {
@@ -162,7 +162,7 @@ protected:
 	// Figure out the length of the list.
 	int length() const {
 		int s = 0;
-		T * __restrict t = first;
+		T * t = first;
 		while (t != 0) {
 			t = t->next;
 			s++;
