@@ -17,11 +17,9 @@
 	the License for the specific language governing rights and
 	limitations under the License.
 
-	The Original Code is OpenPave.org Core Libraries.
+	The Initial Developer of the Original Software is Jeremy Lea.
 
-	The Initial Developer of the Original Code is OpenPave.org.
-
-	Portions Copyright (C) 2006 OpenPave.org.
+	Portions Copyright (C) 2006-2008 OpenPave.org.
 
 	Contributor(s): Jeremy Lea <reg@openpave.org>.
 
@@ -64,8 +62,8 @@ OP_LE_Calc(const int flags,
              const double * v, const double * f,
            const int na, const double * ax, const double * ay,
              const double * al, const double * ap, const double * ar,
-		   const int np, const double * px, const double * py,
-		     const double * pz, double (* res)[27])
+           const int np, const double * px, const double * py,
+             const double * pz, double (* res)[27])
 {
 	LEsystem pave;
 	int i;

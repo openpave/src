@@ -17,11 +17,9 @@
 	the License for the specific language governing rights and
 	limitations under the License.
 
-	The Original Code is OpenPave.org Core Libraries.
+	The Initial Developer of the Original Software is Jeremy Lea.
 
-	The Initial Developer of the Original Code is OpenPave.org.
-
-	Portions Copyright (C) 2006 OpenPave.org.
+	Portions Copyright (C) 2006-2008 OpenPave.org.
 
 	Contributor(s): Jeremy Lea <reg@openpave.org>.
 
@@ -314,7 +312,7 @@ bool WIMsurvey::ProcessRSAFile(const char * fname, FILE * bp, WIMday * d)
 			d->AddRSAVehicle(buf);
 		}
 	}
-    fclose(fp);
+	fclose(fp);
 	return true;
 }
 
@@ -333,7 +331,7 @@ bool WIMsurvey::Read(const char * bname)
 		if (start <= d.day && end >= d.day)
 			*this += d;
 	}
-    fclose(bp);
+	fclose(bp);
 	return true;
 }
 
@@ -342,8 +340,8 @@ bool WIMsurvey::ProcessRSADir(const char * dir, const char * bname)
 	int i;
 	char pwd[FILENAME_MAX], * fname;
 #if defined(_MSC_VER) || defined(__MINGW32__)
-    _finddata_t found_file;
-    long fn;
+	_finddata_t found_file;
+	long fn;
 #else
 	glob_t g;
 	const char * fn;

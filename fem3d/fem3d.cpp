@@ -17,9 +17,7 @@
 	the License for the specific language governing rights and
 	limitations under the License.
 
-	The Original Code is OpenPave.org Core Libraries.
-
-	The Initial Developer of the Original Code is OpenPave.org.
+	The Initial Developer of the Original Software is Jeremy Lea.
 
 	Portions Copyright (C) 2007 OpenPave.org.
 
@@ -1566,9 +1564,9 @@ blockarea(double x1, double x2, double y1, double y2, double r)
 int
 main()
 {
-    // get starting time    
-    struct timespec start, stop;
-    clock_gettime(CLOCK_PROF,&start);
+	// get starting time
+	struct timespec start, stop;
+	clock_gettime(CLOCK_PROF,&start);
 
 	material m;
 	m.setprop(material_property::emod,100e3); // kPa
@@ -1738,10 +1736,10 @@ main()
 		printf("Node %i: (%i,%i,%i) =\t(%4.2f,%4.2f,%4.2f)\t(%4.2f,%4.2f,%4.2f)\t%4.2f\t(%4.2f)\n",j,int(x),int(y),int(z),ux,uy,uz,vx,vy,vz,h,(v == 0.0 ? 0.0 : h/v));
 	}*/
 
-    // calculate run time
-    clock_gettime(CLOCK_PROF,&stop);
-    double run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
-    fprintf(stdout,"%f\n",run_time);
+	// calculate run time
+	clock_gettime(CLOCK_PROF,&stop);
+	double run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
+	fprintf(stdout,"%f\n",run_time);
 
 	return 0;
 }
@@ -1749,9 +1747,9 @@ main()
 int
 main_test()
 {
-    // get starting time    
-    struct timespec start, stop;
-    clock_gettime(CLOCK_PROF,&start);
+	// get starting time    
+	struct timespec start, stop;
+	clock_gettime(CLOCK_PROF,&start);
 
 	material m;
 	m.setprop(material_property::emod,1000);
@@ -1828,10 +1826,10 @@ main_test()
 		printf("Node %i: (%i,%i,%i) =\t(%f,%f,%f)\n",j,int(x),int(y),int(z),ux,uy,uz);
 	}
 
-    // calculate run time
-    clock_gettime(CLOCK_PROF,&stop);
-    double run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
-    fprintf(stdout,"%f\n",run_time);
+	// calculate run time
+	clock_gettime(CLOCK_PROF,&stop);
+	double run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
+	fprintf(stdout,"%f\n",run_time);
 
 	return 0;
 }

@@ -17,11 +17,9 @@
 	the License for the specific language governing rights and
 	limitations under the License.
 
-	The Original Code is OpenPave.org Core Libraries.
+	The Initial Developer of the Original Software is Jeremy Lea.
 
-	The Initial Developer of the Original Code is OpenPave.org.
-
-	Portions Copyright (C) 2006 OpenPave.org.
+	Portions Copyright (C) 2006-2008 OpenPave.org.
 
 	Contributor(s): Jeremy Lea <reg@openpave.org>.
 
@@ -389,15 +387,15 @@ decmp_chol(const int n, double * A)
 		for (j = i; j < n; j++) {
 			sum = A[i*n+j];
 			for (k = i-1; k >= 0; k--)
-                sum -= A[i*n+k]*A[j*n+k];
+				sum -= A[i*n+k]*A[j*n+k];
 			if (i == j) {
-                if (sum <= 0.0) {
+				if (sum <= 0.0) {
 					event_msg(EVENT_WARN,"Non-positive definite matrix in decmp_chol(%f)!",sum);
 					return false;
 				}
-                A[i*n+i] = sqrt(sum);
+				A[i*n+i] = sqrt(sum);
 			} else
-                A[j*n+i] = sum/A[i*n+i];
+				A[j*n+i] = sum/A[i*n+i];
 		}
 	}
 	return true;
@@ -415,8 +413,8 @@ decmp_chol(const int n, const int w, double * A)
 	int i, j, k;
 	double sum, c, y, t;
 	
-    for (i = 0; i < n; i++) {
-        for (j = i; j <= i+w && j < n; j++) {
+	for (i = 0; i < n; i++) {
+		for (j = i; j <= i+w && j < n; j++) {
 			sum = A[B_IDX(n,w,i,j)];
 			for (k = i-1, c = 0.0; k >= j-w && k >= 0; k--) {
 				y = -fma(A[B_IDX(n,w,k,i)],A[B_IDX(n,w,k,j)],c);
@@ -470,7 +468,7 @@ bksub_chol(const int n, const int w, const double * A,
 	int i, k;
 	double s, y, t;
 	
-    for (i = 0; i < n; i++) {
+	for (i = 0; i < n; i++) {
 		for (k = i-1, s = 0.0; k >= i-w && k >= 0; k--) {
 			y = -fma(A[B_IDX(n,w,k,i)],b[k*m+c],s); t = b[i*m+c] + y;
 			s = t - b[i*m+c] - y; b[i*m+c] = t;
@@ -613,7 +611,7 @@ inv_chol(int n, double * A)
 		for (j = i+1; j < n; j++) {
 			A[i*n+j] = 0.0;
 			for (k = j; k < n; k++)
-                A[i*n+j] += A[k*n+i]*A[k*n+j];
+				A[i*n+j] += A[k*n+i]*A[k*n+j];
 			A[j*n+i] = A[i*n+j];
 		}
 	}
@@ -638,7 +636,7 @@ decmp_ldl(const int n, double * A)
 			sum += A[k*n+k]*(A[i*n+k]*A[i*n+k]);
 		}
 		A[i*n+i] -= sum;
-        if (fabs(A[i*n+i]) < DBL_EPSILON) {
+		if (fabs(A[i*n+i]) < DBL_EPSILON) {
 			event_msg(EVENT_WARN,"Indefinite matrix in decmp_ldl(%f)!",A[i*n+i]);
 			return false;
 		}
@@ -1161,7 +1159,7 @@ tridiag_hh(const int n, double * A, double * d,
 		d[i] = A[i*n+i], A[i*n+i] = 1.0;
 		for (j = 0; j < i; j++)
 			A[j*n+i] = A[i*n+j] = 0.0;
-    }
+	}
 }
 
 /*

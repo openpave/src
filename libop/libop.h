@@ -17,11 +17,9 @@
 	the License for the specific language governing rights and
 	limitations under the License.
 
-	The Original Code is OpenPave.org Core Libraries.
+	The Initial Developer of the Original Software is Jeremy Lea.
 
-	The Initial Developer of the Original Code is OpenPave.org.
-
-	Portions Copyright (C) 2006 OpenPave.org.
+	Portions Copyright (C) 2006-2008 OpenPave.org.
 
 	Contributor(s): Jeremy Lea <reg@openpave.org>.
 
@@ -51,11 +49,11 @@ BEGIN_C_DECLS
  * 
  * For Visual Basic use:
 Declare Function OP_LE_Calc Lib "libop.dll" Alias "_OP_LE_Calc@68" ( _
-	ByVal flags as Long,
+    ByVal flags as Long,
     ByVal nl As Long, h As Double, E As Double, v As Double, f As Double_
     ByVal na As Long, Ax As Double, Ay As Double, Al As Double, Ap As Double, Ar as Double_
     ByVal np As Long, Px As Double, Py As Double, Pz As Double, Res As Double) _
- As Long
+  As Long
  *
  * Note: VB uses Fortan array storage (cols first) so the results are Res(1,i).
  */
@@ -67,12 +65,12 @@ int OP_EXPORT OP_LE_Calc(
 	const double * E,				// Elastic modulus
 	const double * v,				// Poisson's ratio
 	const double * f,				// Friction (0.0 to 1.0)
-    const int na,					// Number of loads
-    const double * ax,				// Center X location
-    const double * ay,				// Center Y location
-    const double * al,				// Load (0 for auto) 
-    const double * ap,				// Pressure (0 for auto)
-    const double * ar,				// Radius (0 for auto)
+	const int na,					// Number of loads
+	const double * ax,				// Center X location
+	const double * ay,				// Center Y location
+	const double * al,				// Load (0 for auto) 
+	const double * ap,				// Pressure (0 for auto)
+	const double * ar,				// Radius (0 for auto)
 	const int np,					// Number of evaluation points
 	const double * px,				// Point X
 	const double * py,				// Point Y

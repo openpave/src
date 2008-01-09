@@ -458,7 +458,7 @@ case "$target" in
         CPPFLAGS="$CPPFLAGS -W3 -GF -Gy -GR- -EHs-c-"
         _DEBUG_FLAGS="-Z7 -RTCsu -GS"
         _OPTIMIZE_FLAGS="-Ox -Ob2 -Oi -Ot -fp:precise -GS-"
-	_CONFIG_H="-FIconfig.h"
+        _CONFIG_H="-FIconfig.h"
 
         if test -z "$OP_OPTIMIZE"; then
             CPPFLAGS="$CPPFLAGS -Od"

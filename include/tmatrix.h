@@ -17,11 +17,9 @@
 	the License for the specific language governing rights and
 	limitations under the License.
 
-	The Original Code is OpenPave.org Core Libraries.
+	The Initial Developer of the Original Software is Jeremy Lea.
 
-	The Initial Developer of the Original Code is OpenPave.org.
-
-	Portions Copyright (C) 2006 OpenPave.org.
+	Portions Copyright (C) 2006-2008 OpenPave.org.
 
 	Contributor(s): Jeremy Lea <reg@openpave.org>.
 

@@ -17,11 +17,9 @@
 	the License for the specific language governing rights and
 	limitations under the License.
 
-	The Original Code is OpenPave.org Core Libraries.
+	The Initial Developer of the Original Software is Jeremy Lea.
 
-	The Initial Developer of the Original Code is OpenPave.org.
-
-	Portions Copyright (C) 2006 OpenPave.org.
+	Portions Copyright (C) 2006-2008 OpenPave.org.
 
 	Contributor(s): Jeremy Lea <reg@openpave.org>.
 
@@ -92,7 +90,7 @@ void
 pavedata::principle(double v, double E)
 {
 	int k1, k2;
-    double t1, t2;
+	double t1, t2;
 
 	for (k1 = 0; k1 < 3; k1++) {
 		data[2][k1] = data[0][k1];
@@ -275,7 +273,7 @@ LEsystem::layer(const int l)
 bool
 LEsystem::check()
 {
-    int il, ixy;
+	int il, ixy;
 	const LElayer * pl;
 
 	if (layers() <= 0) {
@@ -392,7 +390,7 @@ static double lf[NLQP+1][NLQP];
  */
 static void
 initarrays() {
-    int ib;
+	int ib;
 	static bool done = false;
 
 	if (done)
@@ -485,12 +483,12 @@ initarrays() {
 static double
 refine_m0(double ma, double mb, double a, double r)
 {
-    double m0, ya = j1j0(ma,a,r), yb = j1j0(mb,a,r), y0;
+	double m0, ya = j1j0(ma,a,r), yb = j1j0(mb,a,r), y0;
 	do {
 		m0 = ma - (ma-mb)*ya/(ya-yb), y0 = j1j0(m0,a,r);
 		if (ma == m0 || mb == m0)
 			break;
-        (yb*y0 < 0 ? ma : mb) = m0, (ma == m0 ? ya : yb) = y0;
+		(yb*y0 < 0 ? ma : mb) = m0, (ma == m0 ? ya : yb) = y0;
 	} while (fabs(y0) > DBL_EPSILON);
 	return m0;
 }
@@ -498,12 +496,12 @@ refine_m0(double ma, double mb, double a, double r)
 static double
 refine_m1(double ma, double mb, double a, double r)
 {
-    double m1, ya = j1j1(ma,a,r), yb = j1j1(mb,a,r), y1;
-    do {
-        m1 = ma - ya*(ma-mb)/(ya-yb), y1 = j1j1(m1,a,r);
+	double m1, ya = j1j1(ma,a,r), yb = j1j1(mb,a,r), y1;
+	do {
+		m1 = ma - ya*(ma-mb)/(ya-yb), y1 = j1j1(m1,a,r);
 		if (ma == m1 || mb == m1)
 			break;
-        (yb*y1 < 0 ? ma : mb) = m1, (ma == m1 ? ya : yb) = y1;
+		(yb*y1 < 0 ? ma : mb) = m1, (ma == m1 ? ya : yb) = y1;
 	} while (fabs(y1) > DBL_EPSILON);
 	return m1;
 }
@@ -856,7 +854,7 @@ buildabcd(const double m, const int nl, const double * h,
 bool
 LEsystem::calc_accurate()
 {
-    int ixy, ild, ib, igp, il;
+	int ixy, ild, ib, igp, il;
 	const LElayer * pl;
 	bool rv = true;
 	
@@ -1019,7 +1017,7 @@ LEsystem::calc_accurate()
 		}
 		// Calculate the derived results (principal stresses and strains).
 		d.principle(v[il],E[il]);
-    }
+	}
 abort:
 	delete [] R;
 	delete [] ABCD;
@@ -1038,7 +1036,7 @@ abort:
 bool
 LEsystem::calculate(resulttype res, double * Q)
 {
-    int ixy, ir, iz, ild, ia, ib, igp, il;
+	int ixy, ir, iz, ild, ia, ib, igp, il;
 	const LElayer * pl;
 	double x1, x2;
 	bool rv = false;
@@ -1252,7 +1250,7 @@ gradloop:
 			bool fullp = (fabs(j0(bm[ib-1]*a[ia])) <= j0max
 				 && fabs(j0(bm[ib]*a[ia])) <= j0max);
 			double eps = ((res & mask) == dirty ? 1e-6 : 
-			               ((res & mask) == fast ? 1e-8 : 0.0));
+						   ((res & mask) == fast ? 1e-8 : 0.0));
 			for (ir = 0; ir < r.length(); ir++) {
 				for (iz = 0; iz < z.length(); iz++) {
 					axialdata & s = ax[ir*z.length()+iz];
@@ -1375,7 +1373,7 @@ gradloop:
 				}
 			}
 		}
-    }
+	}
 	rv = true;
 
 abort:
@@ -1505,8 +1503,8 @@ LEsystem::calc_odemark()
 				break;
 		}
 		data[ixy].principle(pl->poissons(),pl->emod());
-    }
-    return true;
+	}
+	return true;
 }
 
 /*

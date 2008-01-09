@@ -43,27 +43,28 @@ ACADEMIC DEVELOPMENT AND DISTRIBUTION LICENSE (ADDL) Version 1.0
             Software or previous Modifications;
 
             B. Any new file that contains any part of the Original Software
-            or previous Modification;
+            or previous Modification; or
 
             C. Any new file that is contributed or otherwise made available
-            under the terms of this License; or
-
-            D. Any new file that is required by other Modifications in order
-            to build or function as intended by the Contributor.
+            under the terms of this License.
 
         1.11. "Original Software" means the Source Code and Executable form
         of computer software code that is originally released under this
         License.
 
-        1.12. "Patent Claims" means any patent claim(s), now owned or
+        1.12. "Participant" means the Initial Developer or Contributor
+        against whom You are assert Patent Claims, or those involved in any
+        ligitation.
+
+        1.13. "Patent Claims" means any patent claim(s), now owned or
         hereafter acquired, including without limitation, method, process,
         and apparatus claims, in any patent Licensable by grantor.
 
-        1.13. "Source Code" means (a) the common form of computer software
+        1.14. "Source Code" means (a) the common form of computer software
         code in which modifications are made and (b) associated
         documentation included in or with such code.
 
-        1.14. "You" (or "Your") means an individual or a legal entity
+        1.15. "You" (or "Your") means an individual or a legal entity
         exercising rights under, and complying with all of the terms of,
         this License.  For legal entities, "You" includes any entity which
         controls, is controlled by, or is under common control with You. 
@@ -172,17 +173,18 @@ ACADEMIC DEVELOPMENT AND DISTRIBUTION LICENSE (ADDL) Version 1.0
         3.4. Application of Additional Terms
 
         You may not offer or impose any terms on any Covered Software in
-        Source Code form that alters or restricts the applicable version of
-        this License or the recipients' rights hereunder.  You may choose to
-        offer, and to charge a fee for, warranty, support, indemnity or
-        liability obligations to one or more recipients of Covered Software. 
-        However, you may do so only on Your own behalf, and not on behalf of
-        the Initial Developer or any Contributor.  You must make it
-        absolutely clear that any such warranty, support, indemnity or
-        liability obligation is offered by You alone, and You hereby agree
-        to indemnify the Initial Developer and every Contributor for any
-        liability incurred by the Initial Developer or such Contributor as a
-        result of warranty, support, indemnity or liability terms You offer.
+        Source Code form that imposes restrictions in addition to those
+        applicable under this version of the License or the recipients'
+        rights hereunder.  You may choose to offer, and to charge a fee for,
+        warranty, support, indemnity or liability obligations to one or more
+        recipients of Covered Software.  However, you may do so only on Your
+        own behalf, and not on behalf of the Initial Developer or any
+        Contributor.  You must make it absolutely clear that any such
+        warranty, support, indemnity or liability obligation is offered by
+        You alone, and You hereby agree to indemnify the Initial Developer
+        and every Contributor for any liability incurred by the Initial
+        Developer or such Contributor as a result of warranty, support,
+        indemnity or liability terms You offer.
 
         3.5. Distribution of Executable Versions
 
@@ -212,14 +214,14 @@ ACADEMIC DEVELOPMENT AND DISTRIBUTION LICENSE (ADDL) Version 1.0
         3.7. Academic Work
 
         Should You publish any Academic Work which is based in full or in
-        part on the Covered Software, which You have Modified, or results
-        obtained using such Covered Software, You must ensure that any
-        Modifications which You have made are also be made available in
-        Source Code form and that Source Code form must be distributed only
-        under the terms of this License.  You must inform recipients of any
-        such Academic Work as to how they can obtain such Covered Software
-        in Source Code form in a reasonable manner on or through a medium
-        customarily used for software exchange.
+        part on the Covered Software which You have Modified, You must
+        ensure that any Modifications which You have made are also made
+        available in Source Code form and that Source Code form must be
+        distributed under terms compatible with this License.  You must
+        inform recipients of any such Academic Work as to how they can
+        obtain such Covered Software in Source Code form in a reasonable
+        manner on or through a medium customarily used for software
+        exchange.
 
     4. VERSIONS OF THE LICENSE
 
@@ -267,20 +269,19 @@ ACADEMIC DEVELOPMENT AND DISTRIBUTION LICENSE (ADDL) Version 1.0
 
         6.2. If You assert a patent infringement claim (excluding
         declaratory judgment actions) against the Initial Developer or a
-        Contributor (the Initial Developer or Contributor against whom You
-        assert such claim is referred to as "Participant") alleging that the
-        Participant Software (meaning the Contributor Version where the
-        Participant is a Contributor or the Original Software where the
-        Participant is the Initial Developer) directly or indirectly
-        infringes any patent, then any and all rights granted directly or
-        indirectly to You by such Participant, the Initial Developer (if the
-        Initial Developer is not the Participant) and all Contributors under
-        Sections 2.1 and/or 2.2 of this License shall, upon 60 days notice
-        from Participant terminate prospectively and automatically at the
-        expiration of such 60 day notice period, unless if within such 60
-        day period You withdraw Your claim with respect to the Participant
-        Software against such Participant either unilaterally or pursuant to
-        a written agreement with Participant.
+        Contributor (the Participant) alleging that the "Participant
+        Software" (meaning the Contributor Version where the Participant is
+        a Contributor or the Original Software where the Participant is the
+        Initial Developer) directly or indirectly infringes any patent, then
+        any and all rights granted directly or indirectly to You by such
+        Participant, the Initial Developer (if the Initial Developer is not
+        the Participant) and all Contributors under Sections 2.1 and/or 2.2
+        of this License shall, upon 60 days notice from Participant
+        terminate prospectively and automatically at the expiration of such
+        60 day notice period, unless if within such 60 day period You
+        withdraw Your claim with respect to the Participant Software against
+        such Participant either unilaterally or pursuant to a written
+        agreement with Participant.
 
         6.3. In the event of termination under Sections 6.1 or 6.2 above,
         all end user licenses that have been validly granted by You or any
@@ -323,26 +324,20 @@ ACADEMIC DEVELOPMENT AND DISTRIBUTION LICENSE (ADDL) Version 1.0
     hereof.  If any provision of this License is held to be unenforceable,
     such provision shall be reformed only to the extent necessary to make it
     enforceable.  This License shall be governed by the law of the country
-    where Initial Developer is a citizen (or registered, in the case of
-    corporate entities), as noted below, except to the extent applicable
-    law, if any, provides otherwise.  Any litigation relating to this
-    License shall be subject to the jurisdiction of the nearest suitable
-    courts to the current residence or registered address of the Initial
-    Developer, except if both parties agree to a change of venue prior to
-    the commencement court proceedings.  The losing party shall be
-    responsible for costs, including, without limitation, court costs and
-    reasonable attorneys' fees and expenses.  Should a legal dispute arise,
-    in which You are involved, You agree to seek alternative means of
-    dispute resolution, such as arbitration, to minimize legal costs before
-    resorting to litigation.  Any law or regulation which provides that the
-    language of a contract shall be construed against the drafter shall not
-    apply to this License.  You agree that You alone are responsible for
-    compliance with the export control laws and regulations of any country
-    involved when You use, distribute or otherwise make available any
-    Covered Software.
-
-    The Source Code to which this copy of the License was attached is
-    governed by the laws of the Republic of South Africa.
+    where the Participant is a citizen (or registered, in the case of
+    corporate entities), except to the extent applicable law, if any,
+    provides otherwise.  Any litigation relating to this License shall be
+    subject to the jurisdiction of the nearest suitable courts to the
+    current residence or registered address of the Participant, except if
+    both parties agree to a change of venue prior to the commencement court
+    proceedings.  Should a legal dispute arise, in which You are involved,
+    You agree to exhaust alternative means of dispute resolution, such as
+    mediation or arbitration, before resorting to litigation.  Any law or
+    regulation which provides that the language of a contract shall be
+    construed against the drafter shall not apply to this License.  You
+    agree that You alone are responsible for compliance with the export
+    control laws and regulations of any country involved when You use,
+    distribute or otherwise make available any Covered Software.
 
     10. RESPONSIBILITY FOR CLAIMS
 
@@ -376,13 +371,10 @@ ACADEMIC DEVELOPMENT AND DISTRIBUTION LICENSE (ADDL) Version 1.0
     the License for the specific language governing rights and
     limitations under the License.
 
-    The Original Code is ______________________________________.
-
-    The Initial Developer of the Original Code is
-    ________________________.
+    The Initial Developer of the Original Software is ______________________.
 
     Portions Copyright (C) ______ _______________________.
 
-    Contributor(s): ______________________________________.
+    Contributor(s): ____________________________________.
 
 $OpenPave$
