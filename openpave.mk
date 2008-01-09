@@ -235,11 +235,11 @@ endif
 
 # Print out any options loaded from opconfig.
 all build checkout clean depend distclean install realclean::
-    @if test -f .opconfig.out; then \
-      cat .opconfig.out; \
-      rm -f .opconfig.out; \
-    else true; \
-    fi
+	@if test -f .opconfig.out; then \
+	  cat .opconfig.out; \
+	  rm -f .opconfig.out; \
+	else true; \
+	fi
 
 .DEFAULT_GOAL := all
 
@@ -255,13 +255,13 @@ everything: checkout clean build
 #
 .PHONY: checkout
 checkout::
-    @set -e; \
-    echo "*** CVS checkout started: "`date` | tee $(CVSCO_LOGFILE); \
-    echo '*** Checking out bootstrap files...'; \
-        cd $(ROOTDIR) && \
-            $(CVSCO) openpave/openpave.mk $(OP_BOOTSTRAP_LIST); \
-    cd $(ROOTDIR) && \
-        $(MAKE) $(OP_MAKE_ARGS) -f openpave/openpave.mk real_checkout
+	@set -e; \
+	echo "*** CVS checkout started: "`date` | tee $(CVSCO_LOGFILE); \
+	echo '*** Checking out bootstrap files...'; \
+	    cd $(ROOTDIR) && \
+	        $(CVSCO) openpave/openpave.mk $(OP_BOOTSTRAP_LIST); \
+	cd $(ROOTDIR) && \
+	    $(MAKE) $(OP_MAKE_ARGS) -f openpave/openpave.mk real_checkout
 
 #    Start the checkout. Split the output to the tty and a log file.
 
@@ -272,20 +272,20 @@ checkout::
 .PHONY: real_checkout
 ifeq (,$(strip $(OP_MODULE_LIST)))
 real_checkout:
-    $(error No modules or projects were specified. Use OP_PROJECTS to specify a project for checkout.)
+	$(error No modules or projects were specified. Use OP_PROJECTS to specify a project for checkout.)
 else
 real_checkout:
-    @echo '*** Checking out project files...'; \
-        $(CVSCO) $(OP_MODULE_LIST) 2>&1 | tee -a $(CVSCO_LOGFILE); \
-    echo "*** CVS checkout finished: "`date` | tee -a $(CVSCO_LOGFILE); \
-    conflicts=`egrep "^C " $(CVSCO_LOGFILE)`; \
-    if test "$$conflicts"; then \
-      echo "*** Conflicts during checkout."; \
-      echo "$$conflicts"; \
-      echo "*** Refer to $(CVSCO_LOGFILE) for full log."; \
-      false; \
-    else true; \
-    fi
+	@echo '*** Checking out project files...'; \
+	    $(CVSCO) $(OP_MODULE_LIST) 2>&1 | tee -a $(CVSCO_LOGFILE); \
+	echo "*** CVS checkout finished: "`date` | tee -a $(CVSCO_LOGFILE); \
+	conflicts=`egrep "^C " $(CVSCO_LOGFILE)`; \
+	if test "$$conflicts"; then \
+	  echo "*** Conflicts during checkout."; \
+	  echo "$$conflicts"; \
+	  echo "*** Refer to $(CVSCO_LOGFILE) for full log."; \
+	  false; \
+	else true; \
+	fi
 endif
 
 #####################################################
@@ -295,8 +295,8 @@ ifdef _IS_FIRST_CHECKOUT
 # First time, do build target in a new process to pick up new files.
 .PHONY: build
 build::
-    @cd $(TOPSRCDIR) && \
-        $(MAKE) $(OP_MAKE_ARGS) -f openpave.mk build
+	@cd $(TOPSRCDIR) && \
+	    $(MAKE) $(OP_MAKE_ARGS) -f openpave.mk build
 else
 
 #####################################################
@@ -306,27 +306,27 @@ else
 # Configure
 
 EXTRA_CONFIG_DEPS := \
-    $(TOPSRCDIR)/aclocal.m4 \
-    $(NULL)
+	$(TOPSRCDIR)/aclocal.m4 \
+	$(NULL)
 
 ifdef OP_AUTOCONF
 $(TOPSRCDIR)/configure: $(TOPSRCDIR)/configure.in $(EXTRA_CONFIG_DEPS)
-    @echo Generating $@ using $(AUTOCONF)
-    cd $(TOPSRCDIR); $(AUTOCONF)
+	@echo Generating $@ using $(AUTOCONF)
+	cd $(TOPSRCDIR); $(AUTOCONF)
 endif
 
 CONFIG_STATUS_DEPS := \
-    $(TOPSRCDIR)/openpave.mk \
-    $(TOPSRCDIR)/configure.in \
-    $(TOPSRCDIR)/configure \
-    $(TOPSRCDIR)/.opconfig.mk \
-    $(OPCONFIG)
+	$(TOPSRCDIR)/openpave.mk \
+	$(TOPSRCDIR)/configure.in \
+	$(TOPSRCDIR)/configure \
+	$(TOPSRCDIR)/.opconfig.mk \
+	$(OPCONFIG)
 
 CONFIG_STATUS_OUTS := \
-    $(OBJDIR)/config.status \
-    $(OBJDIR)/Makefile \
-    $(OBJDIR)/build/autoconf.mk \
-    $(NULL)
+	$(OBJDIR)/config.status \
+	$(OBJDIR)/Makefile \
+	$(OBJDIR)/build/autoconf.mk \
+	$(NULL)
 
 # configure uses the program name to determine @srcdir@. Calling it without
 #   $(TOPSRCDIR) will set @srcdir@ to "."; otherwise, it is set to the full
@@ -357,39 +357,39 @@ endif
 
 .PHONY: configure
 configure:: $(CONFIG_STATUS_DEPS)
-    @if test ! -d $(OBJDIR); then $(MKDIR) $(OBJDIR); else true; fi; \
-    echo '*** Running configure...' && \
-    cd $(OBJDIR) && $(CONFIGURE_ENV) $(CONFIGURE) $(CONFIGURE_ARGS) \
-      || ( echo "*** Fix above errors and then restart with\
-               \"gmake -f openpave.mk build\"" && exit 1 )
+	@if test ! -d $(OBJDIR); then $(MKDIR) $(OBJDIR); else true; fi; \
+	echo '*** Running configure...' && \
+	cd $(OBJDIR) && $(CONFIGURE_ENV) $(CONFIGURE) $(CONFIGURE_ARGS) \
+	  || ( echo "*** Fix above errors and then restart with\
+	           \"gmake -f openpave.mk build\"" && exit 1 )
 
 $(CONFIG_STATUS_OUTS): $(CONFIG_STATUS_DEPS)
-    @cd $(TOPSRCDIR) && \
-        $(MAKE) $(OP_MAKE_ARGS) -f openpave.mk configure
+	@cd $(TOPSRCDIR) && \
+	    $(MAKE) $(OP_MAKE_ARGS) -f openpave.mk configure
 
 ####################################
 # Build it
 
 .PHONY: build
 build:: $(CONFIG_STATUS_OUTS)
-    @echo '*** Building...' && \
-        $(OP_MAKE)
+	@echo '*** Building...' && \
+	    $(OP_MAKE)
 
 # Pass these target onto the real build system
 .PHONY: depend install install clean realclean distclean
 depend install clean realclean distclean:: $(CONFIG_STATUS_OUTS)
-    $(OP_MAKE) $@
+	$(OP_MAKE) $@
 
 endif # (! IS_FIRST_CHECKOUT)
 
 distclean::
-    @cd $(TOPSRCDIR) && \
-    rm -f config-defs.h \
-          config.cache \
-          config.log \
-          config.status \
-          .opconfig.out \
-          .opconfig.mk \
-    ;
+	@cd $(TOPSRCDIR) && \
+	rm -f config-defs.h \
+	      config.cache \
+	      config.log \
+	      config.status \
+	      .opconfig.out \
+	      .opconfig.mk \
+	;
 
 .SUFFIXES:
