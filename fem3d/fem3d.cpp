@@ -30,7 +30,9 @@
 
 #define _EVENT_IMP
 #define _PROGRESS_IMP
+#if !defined(_MSC_VER)
 #include <time.h>
+#endif
 #include "event.h"
 #include "fixed.h"
 #include "set.h"
@@ -1564,9 +1566,11 @@ blockarea(double x1, double x2, double y1, double y2, double r)
 int
 main()
 {
+#if !defined(_MSC_VER)
 	// get starting time
 	struct timespec start, stop;
 	clock_gettime(CLOCK_PROF,&start);
+#endif
 
 	material m;
 	m.setprop(material_property::emod,100e3); // kPa
@@ -1736,10 +1740,12 @@ main()
 		printf("Node %i: (%i,%i,%i) =\t(%4.2f,%4.2f,%4.2f)\t(%4.2f,%4.2f,%4.2f)\t%4.2f\t(%4.2f)\n",j,int(x),int(y),int(z),ux,uy,uz,vx,vy,vz,h,(v == 0.0 ? 0.0 : h/v));
 	}*/
 
+#if !defined(_MSC_VER)
 	// calculate run time
 	clock_gettime(CLOCK_PROF,&stop);
 	double run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
 	fprintf(stdout,"%f\n",run_time);
+#endif
 
 	return 0;
 }
@@ -1747,9 +1753,11 @@ main()
 int
 main_test()
 {
+#if !defined(_MSC_VER)
 	// get starting time    
 	struct timespec start, stop;
 	clock_gettime(CLOCK_PROF,&start);
+#endif
 
 	material m;
 	m.setprop(material_property::emod,1000);
@@ -1826,10 +1834,12 @@ main_test()
 		printf("Node %i: (%i,%i,%i) =\t(%f,%f,%f)\n",j,int(x),int(y),int(z),ux,uy,uz);
 	}
 
+#if !defined(_MSC_VER)
 	// calculate run time
 	clock_gettime(CLOCK_PROF,&stop);
 	double run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
 	fprintf(stdout,"%f\n",run_time);
+#endif
 
 	return 0;
 }

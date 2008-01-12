@@ -231,6 +231,8 @@ LEsystem::addgrid(const int nx, const double * xp,
                   const int nz, const double * zp)
 {
 	pavedata * pd = new pavedata[nx*ny*nz];
+	if (pd == 0)
+		return false;
 	memset(pd,0,nx*ny*nz*sizeof(pavedata));
 	for (int ix = 0; ix < nx; ix++) {
 		for (int iy = 0; iy < ny; iy++) {
@@ -240,8 +242,9 @@ LEsystem::addgrid(const int nx, const double * xp,
 			}
 		}
 	}
-	return data.add(pd,nx*ny*nz);
+	bool rv = data.add(pd,nx*ny*nz);
 	delete [] pd;
+	return rv;
 }
 
 bool
