@@ -254,7 +254,11 @@ ifdef MSC_VER
 	@sh $(topsrcdir)/build/cygwin-wrapper \
 		$(RANLIB) -MANIFEST $@.manifest -OUTPUTRESOURCE:"$@;2"
 else
+ifdef CXXSRCS
+	$(CXX) $(DSO_LDFLAGS) $(_LIBS) $(OBJS) $(RES) -o $@
+else
 	$(CC) $(DSO_LDFLAGS) $(_LIBS) $(OBJS) $(RES) -o $@
+endif
 ifdef BUILD_OPT
 	$(STRIP) $@
 endif
