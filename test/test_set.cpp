@@ -32,12 +32,13 @@
 #include "set.h"
 #include <stdio.h>
 
-#ifdef NOBUILD
+#ifdef BUILD
 struct key {
 	int i;
 	key() : i(0) {}
 	key(int s) : i(s) {}
 	bool operator== (const key & k) const { return (i==k.i); }  
+	bool operator<  (const key & k) const { return (i< k.i); }  
 	bool operator<= (const key & k) const { return (i<=k.i); }  
 	bool operator>  (const key & k) const { return (i> k.i); }  
 	bool operator>= (const key & k) const { return (i>=k.i); }  
@@ -73,7 +74,7 @@ template<class K, class V>
 void kiset_print(const kiset<K,V> & t) {
 	printf("i = {");
 	for (int i = 0; i < t.length(); i++) {
-		K & k = t[i];
+		const K & k = t[i];
 		printf("%i:%4.2f%s",k.i,t[k].d,(i == t.length()-1 ? "" : ","));
 	}
 	printf("}\n");
@@ -91,12 +92,18 @@ void afset_print(const afset<K,V> & t) {
 int
 main()
 {
-	const int d1[7] = {1,2,2,3,4,4,5};
+	const int d1[14] = {1,2,2,3,4,4,5,6,7,8,9,10,11,12};
 	const int d2[4] = {1,1,1,1};
-	cset<int> t(7,10,d1);
+	cset<int> t(14,10,d1);
 	fset_print(t);
 	t.empty();
+	t.resize(10);
+	t.add(d1,14);
+	t.add(d2,4);
 	fset_print(t);
+	t.sort();
+	fset_print(t);
+	t.empty();
 	t.add(d2,4);
 	fset_print(t);
 	t.sort();

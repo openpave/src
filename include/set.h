@@ -65,7 +65,7 @@
 #include <string.h>
 #include <assert.h>
 
-#define DFLT_BLK	100
+#define DFLT_BLK	64
 
 /*
  * class set - Set base class
@@ -110,10 +110,10 @@ protected:
 	// Calculate the buffer size.
 	inline int bufsize(int s) {
 		s = (s <= 0 ? 1 : s + 1);
-		while (s > 10*block)
-			block *= 10;
-		//while (100*s < block)
-		//	block /= 10;
+		while (s > 8*block)
+			block *= 8;
+		//while (64*s < block)
+		//	block /= 8;
 		return block*(s/block+(s%block?1:0));
 	}
 
@@ -170,6 +170,17 @@ public:
 	void setdefault(const V & d) {
 		value[0] = d;
 	}
+	// Allow the size to be changed, even for 'fixed' sets.
+	bool resize(const int s) {
+		deallocate();
+		if (!allocate(s)) {
+			return false;
+		}
+		size = s;
+		for (int i = 0; i < size; i++)
+			init(i+1,0);
+		return true;
+	}
 	// Behave like an array. Zero indexed.
 	V & operator[] (const int p) const {
 		assert(inbounds(p+1));
@@ -178,6 +189,7 @@ public:
 
 protected:
 	V * value;					// The buffer.
+	V _value[DFLT_BLK];			// Start buffer.
 	struct _V {                         // Placement new wrapper
 		V _v;
 		explicit _V() : _v() {}
@@ -192,24 +204,41 @@ protected:
 		int b = bufsize(s);
 		if (b == buffer)
 			return true;
+		if (b <= DFLT_BLK) {
+			if (value == 0) {
+				new(&_value[0]) _V();
+			} else if (value != _value) {
+				memcpy(_value,value,DFLT_BLK*sizeof(V));
+				free(value);
+			}
+			value = _value;
+			buffer = b;
+			return true;
+		}
+		if (value == _value)
+			value = 0;
 		V * temp = static_cast<V *>(realloc(value,b*sizeof(V)));
 		if (temp == 0) {
 			event_msg(EVENT_ERROR,"Out of memory in fset::allocate()!");
 			return false;
 		}
-		if (value == 0)
-			new(&temp[0]) _V();
+		if (value == 0) {
+			if (size == 0)
+				new(&temp[0]) _V();
+			else
+				memcpy(temp,_value,DFLT_BLK*sizeof(V));
+		}
 		value = temp;
 		buffer = b;
 		return true;
 	}
 	void deallocate() {
-		if (value) {
+		if (value && value != _value) {
 			for (int i = -1; i < size; i++)
 				value[i+1].~V();
 			free(value);
-			value = 0;
 		}
+		value = 0;
 		size = 0;
 		buffer = 0;
 	}

@@ -1063,18 +1063,30 @@ LEsystem::calculate(resulttype res, double * Q)
 		callcount += nl;
 
 	// The integration constants, per layer.
-	double (* R)[4][2] = new double[nl][4][2];
-	double (* ABCD)[4] = new double[nl][4];
+	double (* R)[4][2], (* ABCD)[4];
 	// Local variables, so we don't have to walk the list.
-	double * h = new double[nl];
-	double * f = new double[nl];
-	double * v = new double[nl];
-	double * E = new double[nl];
+	double * h, * f, * v, * E;
+	// Stack variables for small problems.
+	double _R[10][4][2], _ABCD[10][4];
+	double _h[10], _f[10], _v[10], _E[10];
 	// Some place to store our data...
 	cset<double> z, a, r, bm;
 	sset<int> zl;
-	if (R == 0 || ABCD == 0 || h == 0 || f == 0 || v == 0 || E == 0)
-		goto abort;
+	fset<double> m0(data.length()), m1(data.length());
+	fset<axialdata> ax(data.length());
+	if (nl <= 10) {
+		R = _R, ABCD = _ABCD;
+		h = _h, f = _f, v = _v, E = _E;
+	} else {
+		R = new double[nl][4][2];
+		ABCD = new double[nl][4];
+		h = new double[nl];
+		f = new double[nl];
+		v = new double[nl];
+		E = new double[nl];
+		if (R == 0 || ABCD == 0 || h == 0 || f == 0 || v == 0 || E == 0)
+			goto abort;
+	}
 	for (pl = first, il = 0; pl != 0; pl = pl->next, il++) {
 		h[il] = pl->bottom();
 		f[il] = MAX(0.0,pl->slip());
@@ -1129,8 +1141,8 @@ LEsystem::calculate(resulttype res, double * Q)
 			}
 		}
 		r.sort();
-		fset<double> m0(r.length());
-		fset<double> m1(r.length());
+		m0.resize(r.length());
+		m1.resize(r.length());
 
 		// Now gerenate a list of integration intervals, then sort them.
 		bm.empty();
@@ -1186,7 +1198,7 @@ LEsystem::calculate(resulttype res, double * Q)
 
 gradloop:
 		// And finally, somewhere to stick the radial data...
-		fset<axialdata> ax(r.length()*z.length());
+		ax.resize(r.length()*z.length());
 		memset(&ax[0],0,sizeof(axialdata)*r.length()*z.length());
 		// Compute the active set.
 		for (ixy = 0; ixy < data.length(); ixy++) {
@@ -1382,12 +1394,18 @@ gradloop:
 abort:
 	if (rv == false)
 		event_msg(EVENT_ERROR,"Out of memory in LEsystem::calculate()!");
-	delete [] R;
-	delete [] ABCD;
-	delete [] h;
-	delete [] f;
-	delete [] v;
-	delete [] E;
+	if (R != _R)
+		delete [] R;
+	if (ABCD != _ABCD)
+		delete [] ABCD;
+	if (h != _h)
+		delete [] h;
+	if (f != _f)
+		delete [] f;
+	if (v != _v)
+		delete [] v;
+	if (E != _E)
+		delete [] E;
 	return rv;
 }
 
