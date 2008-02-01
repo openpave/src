@@ -13,6 +13,13 @@ if test -z "$prog"; then
     exit 0
 fi
 
+quiet=""
+if test "${prog}" = "-quiet"; then
+    quiet=1
+    prog=${1}
+    shift
+fi
+
 # If $CYGDRIVE_MOUNT was not set in configure, give $mountpoint the results of mount -p
 mountpoint=$CYGDRIVE_MOUNT
 if test -z "$mountpoint"; then
@@ -72,5 +79,7 @@ do
     fi
 done
 
-echo $prog $args
+if test -z "${quiet}"; then
+	echo $prog $args
+fi
 exec $prog $args

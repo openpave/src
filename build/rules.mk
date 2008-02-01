@@ -286,6 +286,10 @@ endif
 
 %.$(OBJ_SUFFIX): %.cpp
 ifdef MSC_VER
+	@echo $@ ": \\" > $@.d 
+	@sh $(topsrcdir)/build/cygwin-wrapper -quiet \
+		$(CXX) -EP -showIncludes $(OS_CXXFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<) 2>&1 \
+			| grep "including" | sed -e 's/.*ile: //g' -e 's/^[ ]*//g' -e 's^\\^/^g' -e 's/^/\t/g' -e 's/$$/ \\/g' | grep -v " [^\]" >> $@.d 
 	@sh $(topsrcdir)/build/cygwin-wrapper \
 		$(CXX) -Fo$@ -c $(OS_CXXFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<)
 else
@@ -294,8 +298,11 @@ endif
 
 %.$(OBJ_SUFFIX): %.c
 ifdef MSC_VER
-	@sh $(topsrcdir)/build/cygwin-wrapper \
-		$(CC) -Fo$@ -c $(OS_CFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<)
+	@echo $< ": \\" > $@.d 
+	@sh $(topsrcdir)/build/cygwin-wrapper -quiet \
+		$(CC) -EP -showIncludes $(OS_CFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<) 2>&1 \
+			| grep "including" | sed -e 's/.*ile: //g' -e 's/^[ ]*//g' -e 's^\\^/^g' -e 's/^/\t/g' -e 's/$$/ \\/g' | grep -v " " >> $@.d 
+	| grep "including" | sed -e 's/.*ile: //g' -e 's/ //g' > $($(call abspath,$@):.$(OBJ_SUFFIX)=.d)
 else
 	$(CC) -c -MMD -MP $(OS_CFLAGS) $(DEFINES) $(INCLUDES) $< -o $@ 
 endif
@@ -307,7 +314,11 @@ endif
 	$(CPP) -C $(OS_CPPFLAGS) $(DEFINES) $(INCLUDES) $< > $@
 
 ifneq (,$(OBJS))
+ifdef MSC_VER
+-include $(OBJS:.$(OBJ_SUFFIX)=.$(OBJ_SUFFIX).d)
+else
 -include $(OBJS:.$(OBJ_SUFFIX)=.d)
+endif
 endif
 
 .SUFFIXES:
