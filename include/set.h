@@ -189,7 +189,6 @@ public:
 
 protected:
 	V * value;					// The buffer.
-	V _value[DFLT_BLK];			// Start buffer.
 	struct _V {                         // Placement new wrapper
 		V _v;
 		explicit _V() : _v() {}
@@ -204,36 +203,19 @@ protected:
 		int b = bufsize(s);
 		if (b == buffer)
 			return true;
-		if (b <= DFLT_BLK) {
-			if (value == 0) {
-				new(&_value[0]) _V();
-			} else if (value != _value) {
-				memcpy(_value,value,DFLT_BLK*sizeof(V));
-				free(value);
-			}
-			value = _value;
-			buffer = b;
-			return true;
-		}
-		if (value == _value)
-			value = 0;
 		V * temp = static_cast<V *>(realloc(value,b*sizeof(V)));
 		if (temp == 0) {
 			event_msg(EVENT_ERROR,"Out of memory in fset::allocate()!");
 			return false;
 		}
-		if (value == 0) {
-			if (size == 0)
-				new(&temp[0]) _V();
-			else
-				memcpy(temp,_value,DFLT_BLK*sizeof(V));
-		}
+		if (value == 0)
+			new(&temp[0]) _V();
 		value = temp;
 		buffer = b;
 		return true;
 	}
 	void deallocate() {
-		if (value && value != _value) {
+		if (value) {
 			for (int i = -1; i < size; i++)
 				value[i+1].~V();
 			free(value);
@@ -255,6 +237,20 @@ protected:
 		allocate(size);
 	}
 };
+
+/*
+ * Special case these to avoid constructors
+ */
+template<>
+inline void fset<int>::init(const int i, const int * v) {
+	if (v)
+		value[i] = *v;
+}
+template<>
+inline void fset<double>::init(const int i, const double * v) {
+	if (v)
+		value[i] = *v;
+}
 
 /*
  * class sset - Sizable set of type V.
