@@ -80,13 +80,17 @@ OP_LE_Calc(const int flags,
 	}
 	switch (flags & 0xFF) {
 	case 0x00:
-		rv = !pave.calculate(flags > 0xFF ? LEsystem::disp : LEsystem::all);
+	default:
+		rv = !pave.calculate(flags > 0xFF
+				? LEsystem::disp : LEsystem::all);
 		break;
 	case 0x01:
-		rv = !pave.calculate(flags > 0xFF ? LEsystem::fastdisp : LEsystem::fast);
+		rv = !pave.calculate(flags > 0xFF
+				? LEsystem::fastdisp : LEsystem::fast);
 		break;
 	case 0x02:
-		rv = !pave.calculate(LEsystem::dirty);
+		rv = !pave.calculate(flags > 0xFF
+				? LEsystem::dirtydisp : LEsystem::dirty);
 		break;
 	case 0x03:
 		rv = !pave.calc_odemark();
@@ -96,9 +100,6 @@ OP_LE_Calc(const int flags,
 		break;
 	case 0xFF:
 		rv = !pave.calc_accurate();
-		break;
-	default:
-		rv = !pave.calculate(flags > 0xFF ? LEsystem::disp : LEsystem::all);
 		break;
 	}
 	for (i = 0; i < np; i++) {

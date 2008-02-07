@@ -36,54 +36,6 @@
 #include <stdio.h>
 
 /*
- * Return the results based on a more rational system...
- */
-double
-pavedata::result(type t, direction d) const
-{
-	switch (t) {
-	case stress:
-		switch (d) {
-		case xx: case yy: case zz:
-			return data[0][d-xx];
-		case xy: case xz: case yz:
-			return data[1][d-xy];
-		case p1: case p2: case p3:
-			return data[2][d-p1];
-		case s1: case s2: case s3:
-			return data[3][d-s1];
-		default:
-			return 0.0;
-		}
-	case deflct:
-		switch (d) {
-		case xx: case yy: case zz:
-			return data[4][d-xx];
-		case xy: case xz: case yz:
-		case p1: case p2: case p3:
-		case s1: case s2: case s3:
-		default:
-			return 0.0;
-		}
-	case strain:
-		switch (d) {
-		case xx: case yy: case zz:
-			return data[5][d-xx];
-		case xy: case xz: case yz:
-			return data[6][d-xy];
-		case p1: case p2: case p3:
-			return data[7][d-p1];
-		case s1: case s2: case s3:
-			return data[8][d-s1];
-		default:
-			return 0.0;
-		}
-	default:
-		return 0.0;
-	}
-}
-
-/*
  * Calculate the principle stresses, and the strains.
  */
 void
@@ -586,7 +538,7 @@ buildabcd_full(const double m, const int nl, const double * h,
 	double * A = new double[(nl*4)*(nl*4)];
 	double * B = &ABCD[0][0];
 	if (A == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in buildabcd_slip()!");
+		event_msg(EVENT_ERROR,"Out of memory in buildabcd_full()!");
 		goto abort;
 	}
 	memset(A,0,(nl*4)*(nl*4)*sizeof(double));
@@ -807,18 +759,24 @@ buildabcd(const double m, const int nl, const double * h,
 				D[k1+2][k2] = (t2<MAX_EXP?exp(t2):DBL_MAX);
 			}
 		}
-		double t3 = 4*v1-4;
-		for (k1 = 0; k1 < 4; k1++) {
-			R[il-1][k1][0] = R[il-1][k1][1] = 0.0;
-			for (k2 = 0; k2 < 4; k2++) {
-				if (f[il-1] == 1.0) {
-					R[il-1][k1][0] += D[k1][k2]*(X[k1][k2]*R[il][k2][0])/t3;
-					R[il-1][k1][1] += D[k1][k2]*(X[k1][k2]*R[il][k2][1])/t3;
-				} else {
+		if (f[il-1] == 1.0) {
+			double t3 = 1.0/(4*v1-4);
+			for (k1 = 0; k1 < 4; k1++) {
+				R[il-1][k1][0] = R[il-1][k1][1] = 0.0;
+				for (k2 = 0; k2 < 4; k2++) {
+					R[il-1][k1][0] += D[k1][k2]*(X[k1][k2]*R[il][k2][0])*t3;
+					R[il-1][k1][1] += D[k1][k2]*(X[k1][k2]*R[il][k2][1])*t3;
+				}
+			}
+		} else {
+			double t3 = 1.0/(4*v1-4)/f[il-1];
+			for (k1 = 0; k1 < 4; k1++) {
+				R[il-1][k1][0] = R[il-1][k1][1] = 0.0;
+				for (k2 = 0; k2 < 4; k2++) {
 					R[il-1][k1][0] += D[k1][k2]*(f[il-1]*X[k1][k2]*R[il][k2][0]
-						+ F[k1][k2]*R[il][k2][0])/t3/f[il-1];
+						+ F[k1][k2]*R[il][k2][0])*t3;
 					R[il-1][k1][1] += D[k1][k2]*(f[il-1]*X[k1][k2]*R[il][k2][1]
-						+ F[k1][k2]*R[il][k2][1])/t3/f[il-1];
+						+ F[k1][k2]*R[il][k2][1])*t3;
 				}
 			}
 		}
@@ -875,13 +833,10 @@ LEsystem::calc_accurate()
 	double * E = new double[nl];
 	// We allocate these as big as we ever make them,
 	// so we never have to worry about the add()'s failing.
-	cset<double> * _bm0 = new cset<double>(0, 2*NBZ+2);
-	cset<double> & bm0 = *_bm0;
-	cset<double> * _bm1 = new cset<double>(0, 2*NBZ+2);
-	cset<double> & bm1 = *_bm1;
-	if (R == 0 || ABCD == 0 || h == 0 || f == 0 || v == 0 || E == 0
-	 || _bm0 == 0 || _bm1 == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in LEsystem::calculate()!");
+	cset<double> bm0(0, 2*NBZ+2);
+	cset<double> bm1(0, 2*NBZ+2);
+	if (R == 0 || ABCD == 0 || h == 0 || f == 0 || v == 0 || E == 0) {
+		event_msg(EVENT_ERROR,"Out of memory in LEsystem::calc_accurate()!");
 		rv =  false;
 		goto abort;
 	}
@@ -1028,8 +983,6 @@ abort:
 	delete [] f;
 	delete [] v;
 	delete [] E;
-	delete _bm0;
-	delete _bm1;
 	return rv;
 }
 
@@ -1101,12 +1054,8 @@ LEsystem::calculate(resulttype res, double * Q)
 		// If we're collecting displacement gradient results
 		// resize the array as needed then zero it.
 		if (res & grad) {
-			if (data[ixy].count != nl) {
-				delete [] data[ixy].deflgrad;
-				data[ixy].deflgrad = new double[nl];
-				data[ixy].count = nl;
-			}
-			memset(data[ixy].deflgrad,0,nl*sizeof(double));
+			data[ixy].deflgrad.resize(nl);
+			memset(&(data[ixy].deflgrad[0]),0,nl*sizeof(double));
 		}
 		if (!z.add(data[ixy].z))
 			goto abort;
@@ -1331,17 +1280,40 @@ gradloop:
 					d.data[0][2] += p*s.vse;
 					d.data[1][1] += p*s.sse;
 				} else if (!(res & disp)) {
-					double cost, sint;
-					sint = (d.y-load[ild].y)/r[ir];
-					cost = (d.x-load[ild].x)/r[ir];
-					d.data[0][0] += p*(cost*cost*s.rse+sint*sint*s.tse);
-					d.data[0][1] += p*(cost*cost*s.tse+sint*sint*s.rse);
-					d.data[0][2] += p*s.vse;
-					d.data[1][0] += p*cost*sint*(s.rse-s.tse);
-					d.data[1][1] += p*cost*s.sse;
-					d.data[1][2] += p*sint*s.sse;
-					d.data[4][0] += p*cost*s.rdp;
-					d.data[4][1] += p*sint*s.rdp;
+					double sint = (d.y-load[ild].y)/r[ir];
+					double cost = (d.x-load[ild].x)/r[ir];
+					if (cost == 0.0) {
+						d.data[0][0] += p*s.tse;
+						d.data[0][1] += p*s.rse;
+						d.data[0][2] += p*s.vse;
+						if (sint == 1.0) {
+							d.data[1][2] += p*s.sse;
+							d.data[4][1] += p*s.rdp;
+						} else {
+							d.data[1][2] -= p*s.sse;
+							d.data[4][1] -= p*s.rdp;
+						}
+					} else if (sint == 0.0) {
+						d.data[0][0] += p*s.rse;
+						d.data[0][1] += p*s.tse;
+						d.data[0][2] += p*s.vse;
+						if (cost == 1.0) {
+							d.data[1][1] += p*s.sse;
+							d.data[4][0] += p*s.rdp;
+						} else {
+							d.data[1][1] -= p*s.sse;
+							d.data[4][0] -= p*s.rdp;
+						}
+					} else {
+						d.data[0][0] += p*(cost*cost*s.rse+sint*sint*s.tse);
+						d.data[0][1] += p*(cost*cost*s.tse+sint*sint*s.rse);
+						d.data[0][2] += p*s.vse;
+						d.data[1][0] += p*cost*sint*(s.rse-s.tse);
+						d.data[1][1] += p*cost*s.sse;
+						d.data[1][2] += p*sint*s.sse;
+						d.data[4][0] += p*cost*s.rdp;
+						d.data[4][1] += p*sint*s.rdp;
+					}
 				}
 				if (gl != -1)
 					d.deflgrad[gl] += p*s.vdp;

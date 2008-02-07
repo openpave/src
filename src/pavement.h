@@ -61,7 +61,7 @@ class LEsystem;
 class LEbackcalc;
 
 /*
- * A simple point in 3D space.
+ * A simple point in 2D space.
  */
 struct point2d {
 	double x, y;
@@ -284,30 +284,65 @@ private:
  * class pavedata - An evaluation point within the pavement structure.
  */
 struct pavedata : point3d {
+	// Return the results based on a more rational system...
 	enum type {deflct, stress, strain};
 	enum direction {xx, yy, zz, xy, xz, yz, p1, p2, p3, s1, s2, s3};
-	double result(type t, direction d) const;
-
-	pavedata() : point3d(), deflgrad(0), count(0) {
+	double result(type t, direction d) const {
+		switch (t) {
+		case stress:
+			switch (d) {
+			case xx: case yy: case zz:
+				return data[0][d-xx];
+			case xy: case xz: case yz:
+				return data[1][d-xy];
+			case p1: case p2: case p3:
+				return data[2][d-p1];
+			case s1: case s2: case s3:
+				return data[3][d-s1];
+			default:
+				return 0.0;
+			}
+		case deflct:
+			switch (d) {
+			case xx: case yy: case zz:
+				return data[4][d-xx];
+			case xy: case xz: case yz:
+			case p1: case p2: case p3:
+			case s1: case s2: case s3:
+			default:
+				return 0.0;
+			}
+		case strain:
+			switch (d) {
+			case xx: case yy: case zz:
+				return data[5][d-xx];
+			case xy: case xz: case yz:
+				return data[6][d-xy];
+			case p1: case p2: case p3:
+				return data[7][d-p1];
+			case s1: case s2: case s3:
+				return data[8][d-s1];
+			default:
+				return 0.0;
+			}
+		default:
+			return 0.0;
+		}
 	}
-	pavedata(const point3d & p) : point3d(p), deflgrad(0), count(0) {
+
+	pavedata() : point3d(), deflgrad(0) {
+	}
+	pavedata(const point3d & p) : point3d(p), deflgrad(0) {
 		memset(data,0,sizeof(data));
 	}
-	pavedata(const pavedata & pd) : point3d(pd) {
+	pavedata(const pavedata & pd) : point3d(pd), deflgrad(pd.deflgrad) {
 		memcpy(data,pd.data,sizeof(data));
-		count = pd.count;
-		if (count > 0)
-			memcpy(deflgrad,pd.deflgrad,count*sizeof(double));
-		else
-			deflgrad = 0;
 	}
 	~pavedata() {
-		delete [] deflgrad;
 	}
-//private:
+private:
 	double data[9][3];
-	double * deflgrad;
-	int count;
+	fset<double> deflgrad;
 	friend class LEsystem;
 	friend class LEbackcalc;
 	void principle(double v, double E);
@@ -339,18 +374,19 @@ public:
 
 	bool check();
 	enum resulttype {
-		all	     = 0x0000,
-		fast     = 0x0001,
-		dirty    = 0x0002,
-		odemark  = 0x0003,
-		fastnum  = 0x0004,
-		accurate = 0x00FF,
-		mask     = 0x00FF,
-		disp     = 0x0100,
-		grad     = 0x0200,
-		dispgrad = 0x0300,
-		fastdisp = 0x0101,
-		fastgrad = 0x0301,
+		all       = 0x0000,
+		fast      = 0x0001,
+		dirty     = 0x0002,
+		odemark   = 0x0003,
+		fastnum   = 0x0004,
+		accurate  = 0x00FF,
+		mask      = 0x00FF,
+		disp      = 0x0100,
+		grad      = 0x0200,
+		dispgrad  = 0x0300,
+		fastdisp  = 0x0101,
+		dirtydisp = 0x0102,
+		fastgrad  = 0x0301,
 	};
 	bool calc_accurate();
 	bool calculate(resulttype result = all, double * Q = 0);
@@ -375,7 +411,7 @@ public:
 	}
 	~LEsystem() {
 	}
-//private:
+private:
 	int callcount;
 	ksset<point3d,pavedata> data;
 	sset<paveload> load;
@@ -400,7 +436,7 @@ struct defldata : point3d {
 	}
 	~defldata() {
 	}
-//private:
+private:
 	double measured;
 	double calculated;
 	friend class LEbackcalc;
@@ -437,7 +473,7 @@ public:
 	}
 	~LEbackcalc() {
 	}
-//private:
+private:
 	sset<defldata> defl;
 	double precision;
 	double noise;
