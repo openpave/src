@@ -243,7 +243,7 @@ abort:
  */
 void
 bksub_lu(const int n, const double * A, const int * idx,
-         double * b, const int m = 1, const int c = 0)
+         double * b, const int m, const int c)
 {
 	int i, j, k;
 
@@ -441,7 +441,7 @@ decmp_chol(const int n, const int w, double * A)
  */
 void
 bksub_chol(const int n, const double * A,
-           double * b, const int m = 1, const int c = 0)
+           double * b, const int m, const int c)
 {
 	int i, k;
 
@@ -463,7 +463,7 @@ bksub_chol(const int n, const double * A,
  */
 void
 bksub_chol(const int n, const int w, const double * A,
-           double * b, const int m = 1, const int c = 0)
+           double * b, const int m, const int c)
 {
 	int i, k;
 	double s, y, t;
@@ -658,7 +658,7 @@ decmp_ldl(const int n, double * A)
  */
 void
 bksub_ldl(const int n, const double * A,
-          double * b, const int m = 1, const int c = 0)
+          double * b, const int m, const int c)
 {
 	int i, k;
 	double sum;
@@ -906,7 +906,7 @@ abort:
 void
 bksub_svd(const int m, const int n, const double * U,
           const double * W, const double * V,
-          double * b, const int p = 1, const int c = 0)
+          double * b, const int p, const int c)
 {
 	int i, j;
 
@@ -1087,7 +1087,7 @@ decmp_qr(const int n, double * A, double * s,
 void
 bksbp_qr(const int n, const double * A,
          const double * s, const double * d, 
-         double * b, const int m = 1, const int c = 0)
+         double * b, const int m, const int c)
 {
 	int i, j;
 	double sum;
@@ -1250,7 +1250,7 @@ abort:
 
 void
 bksub_eig(const int n, const double * Q, const double * d,
-          double * b, const int p = 1, const int c = 0)
+          double * b, const int p, const int c)
 {
 	int i, j;
 
