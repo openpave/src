@@ -32,7 +32,8 @@
 #include "set.h"
 #include <stdio.h>
 
-#ifdef BUILD
+#define N 30000
+
 struct key {
 	int i;
 	key() : i(0) {}
@@ -61,36 +62,9 @@ void fset_print(const fset<T> & t) {
 		printf("%i%s",t[i],(i == t.length()-1 ? "" : ","));
 	printf("}\n");
 }
-template<class K, class V>
-void kfset_print(const kfset<K,V> & t) {
-	printf("k = {");
-	for (int i = 0; i < t.length(); i++) {
-		K & k = t[i];
-		printf("%i:%4.2f%s",k.i,t[k].d,(i == t.length()-1 ? "" : ","));
-	}
-	printf("}\n");
-}
-template<class K, class V>
-void kiset_print(const kiset<K,V> & t) {
-	printf("i = {");
-	for (int i = 0; i < t.length(); i++) {
-		const K & k = t[i];
-		printf("%i:%4.2f%s",k.i,t[k].d,(i == t.length()-1 ? "" : ","));
-	}
-	printf("}\n");
-}
-template<class K, class V>
-void afset_print(const afset<K,V> & t) {
-	printf("a = {");
-	for (int i = 0; i < t.length(); i++) {
-		K & k = t.getkey(i);
-		printf("%i:%4.2f%s",k.i,t[k].d,(i == t.length()-1 ? "" : ","));
-	}
-	printf("}\n");
-}
 
-int
-main()
+void
+test_set1a()
 {
 	const int d1[14] = {1,2,2,3,4,4,5,6,7,8,9,10,11,12};
 	const int d2[4] = {1,1,1,1};
@@ -122,7 +96,20 @@ main()
 	t.remove(0);
 	t.sort();
 	fset_print(t);
+}
 
+template<class K, class V>
+void kfset_print(const kfset<K,V> & t) {
+	printf("k = {");
+	for (int i = 0; i < t.length(); i++) {
+		K & k = t[i];
+		printf("%i:%4.2f%s",k.i,t[k].d,(i == t.length()-1 ? "" : ","));
+	}
+	printf("}\n");
+}
+void
+test_set1b()
+{
 	koset<key,pair> k(7);
 	kfset_print(k);
 	k.add(pair(2,1.5));
@@ -134,77 +121,7 @@ main()
 	kfset_print(k);
 	k.sort();
 	kfset_print(k);
-
-	kiset<key,pair> i(7);
-	kiset_print(i);
-	i.add(pair(2,1.5));
-	i.add(pair(1,0.5));
-	kiset_print(i);
-	i.add(pair(1,1.5));
-	kiset_print(i);
-
-	aoset<key,value> a(7);
-	afset_print(a);
-	a.add(key(2),value(1.5));
-	a.add(key(1),value(0.5));
-	afset_print(a);
-	a.sort();
-	afset_print(a);
-	a.add(key(1),value(1.5));
-	afset_print(a);
-	a.sort();
-	afset_print(a);
-
-	return 0;
 }
-#endif
-
-#ifdef NOBUILD
-#define N 30000
-int
-main()
-{
-	int i, j;
-	oset<double> t(0,N);
-again:
-	t.empty();
-	for (i = 0; i < N; i++)
-		t.add(RAND(-N,N));
-	//for (j = 0; j < N; j++)
-	//	printf("%4.2f\n",t[j]);
-	t.sort();
-	printf(".");
-	fflush(NULL);
-	for (i = 1; i < N; i++) {
-		if (t[i-1] > t[i]) {
-			printf("Failed! (%i)\n",i);
-			for (j = MAX(i-2,0); j <= MIN(i+2,N-1); j++)
-				printf("%4.2f\n",t[j]);
-			return 1;
-		}
-	}
-	goto again;
-	return 0;
-}
-#endif
-
-#ifdef NOBUILD
-#define N 30000
-
-struct key {
-	int i;
-	key() : i(0) {}
-	key(int s) : i(s) {}
-	bool operator== (const key & k) const { return (i==k.i); }  
-	bool operator<= (const key & k) const { return (i<=k.i); }  
-	bool operator>  (const key & k) const { return (i> k.i); }  
-	bool operator<  (const key & k) const { return (i< k.i); }  
-};
-struct pair : public key {
-	double d;
-	pair() : key(), d(0.0) {}
-	pair(int s, double v) : key(s), d(v) {}
-};
 
 template<class K, class V>
 void kiset_print(const kiset<K,V> & t) {
@@ -216,32 +133,132 @@ void kiset_print(const kiset<K,V> & t) {
 	printf("}\n");
 }
 
+void
+test_set1c()
+{
+	kiset<key,pair> i(7);
+	kiset_print(i);
+	i.add(pair(2,1.5));
+	i.add(pair(1,0.5));
+	kiset_print(i);
+	i.add(pair(1,1.5));
+	kiset_print(i);
+}
+
+template<class K, class V>
+void afset_print(const afset<K,V> & t) {
+	printf("a = {");
+	for (int i = 0; i < t.length(); i++) {
+		K & k = t.getkey(i);
+		printf("%i:%4.2f%s",k.i,t[k].d,(i == t.length()-1 ? "" : ","));
+	}
+	printf("}\n");
+}
+
+void
+test_set1d()
+{
+	aoset<key,value> a(7);
+	afset_print(a);
+	a.add(key(2),value(1.5));
+	a.add(key(1),value(0.5));
+	afset_print(a);
+	a.sort();
+	afset_print(a);
+	a.add(key(1),value(1.5));
+	afset_print(a);
+	a.sort();
+	afset_print(a);
+}
+
+void
+test_set2()
+{
+	int i, j, l = 10;
+	oset<double> t(0,N);
+	while (l-- > 0) {
+		t.empty();
+		for (i = 0; i < N; i++)
+			t.add(RAND(-N,N));
+		//for (j = 0; j < N; j++)
+		//	printf("%4.2f\n",t[j]);
+		t.sort();
+		printf(".");
+		fflush(NULL);
+		for (i = 1; i < N; i++) {
+			if (t[i-1] > t[i]) {
+				printf("Failed! (%i)\n",i);
+				for (j = MAX(i-2,0); j <= MIN(i+2,N-1); j++)
+					printf("%4.2f\n",t[j]);
+			}
+		}
+	}
+}
+
+void
+test_set3()
+{
+	int i, j, l = 10;
+	iset<double> t(0,N);
+	while (l-- > 0) {
+		t.empty();
+		for (i = 0; i < N; i++)
+			t.add(RAND(-N,N));
+		//for (j = 0; j < N; j++)
+		//	printf("%4.2f\n",t[j]);
+		printf(".");
+		fflush(NULL);
+		for (i = 1; i < N; i++) {
+			if (t.getindex(i-1) > t.getindex(i)) {
+				printf("Failed! (%i)\n",i);
+				for (j = MAX(i-2,0); j <= MIN(i+2,N-1); j++)
+					printf("%4.2f\n",t[j]);
+			}
+		}
+	}
+}
+
+void
+test_set4()
+{
+	int i, l = 100;
+	kiset<key,pair> t(0,N);
+
+	while (l-- > 0) {
+		t.empty();
+		for (i = 0; i < N; i++) {
+			int s = int(floor(RAND(0,N)));
+			double v = double(i);
+			//printf("Add %i:%i %4.2f\n",i,s,v);
+			t.add(pair(s,v));
+			//kiset_print(t);
+		}
+		//for (j = 0; j < N; j++)
+		//	printf("%4.2f\n",t[j]);
+		printf(".");
+		fflush(NULL);
+		for (i = 1; i < t.length(); i++) {
+			if (t.getindex(i-1).i > t.getindex(i).i) {
+				printf("Failed! (%i)\n",i);
+				kiset_print(t);
+			}
+		}
+	}
+}
+
+#ifdef BUILD
+
 int
 main()
 {
-	int i;
-	kiset<key,pair> t(0,N);
-again:
-	t.empty();
-	for (i = 0; i < N; i++) {
-		int s = int(floor(RAND(0,N)));
-		double v = double(i);
-		//printf("Add %i:%i %4.2f\n",i,s,v);
-		t.add(pair(s,v));
-		//kiset_print(t);
-	}
-	//for (j = 0; j < N; j++)
-	//	printf("%4.2f\n",t[j]);
-	printf(".");
-	fflush(NULL);
-	for (i = 1; i < t.length(); i++) {
-		if (t.getindex(i-1).i > t.getindex(i).i) {
-			printf("Failed! (%i)\n",i);
-			kiset_print(t);
-			return 1;
-		}
-	}
-	goto again;
+	test_set1a();
+	test_set1b();
+	test_set1c();
+	test_set1d();
+	test_set2();
+	test_set3();
+	test_set4();
 	return 0;
 }
+
 #endif
