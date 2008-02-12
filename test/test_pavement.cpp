@@ -87,22 +87,82 @@ main()
 }
 #endif
 
+/*
+ * This test adds a bunch of points at various depths below the center
+ * of circular load on an infinite layer and compares the results of the
+ * two methods (accurate and normal) against the exact solution.
+ */
 #ifdef NOBUILD
 int
 main()
 {
-	cset<point3d> * _p = new cset<point3d>(0,100);
-	cset<point3d> & p = *_p;
+	cset<point3d> p(0,1000);
 	LEsystem Best;
 	LEsystem Slow;
 	LEsystem Fast;
 	int i;
 
-	//Best.addlayer(3.0,1600.0*1e3,0.5);
 	Best.addlayer(0.0,1.0,0.5);
-	//Slow.addlayer(3.0,1600.0*1e3,0.5);
 	Slow.addlayer(0.0,1.0,0.5);
-	//Fast.addlayer(3.0,1600.0*1e3,0.5);
+	Fast.addlayer(0.0,1.0,0.5);
+
+	Best.addload(point2d(0.0,0.0),0,1.0,1.0);
+	Slow.addload(point2d(0.0,0.0),0,1.0,1.0);
+	Fast.addload(point2d(0.0,0.0),0,1.0,1.0);
+	
+	for (i = 0; i < 100; i++)
+		p.add(point3d(0,0,double(i)/100.0));
+	for (i = 10; i < 100; i++)
+		p.add(point3d(0,0,double(i)/10.0));
+	for (i = 10; i < 100; i++)
+		p.add(point3d(0,0,double(i)));
+	for (i = 10; i <= 100; i++)
+		p.add(point3d(0,0,double(i)*10.0));
+	p.sort();
+	for (i = 0; i < p.length(); i++) {
+		Best.addpoint(p[i]);
+		Slow.addpoint(p[i]);
+		Fast.addpoint(p[i]);
+	}
+	Best.calc_accurate();
+	Slow.calculate(LEsystem::all);
+	Fast.calc_fastnum();
+
+	for (i = 0; i < p.length(); i++) {
+		const pavedata & f = Fast.result(p[i]);
+		const pavedata & b = Best.result(p[i]);
+		const pavedata & s = Slow.result(p[i]);
+		printf("%6.4g",p[i].z);
+		printf("\t%+0.9e",f.result(pavedata::deflct,pavedata::zz));
+		printf("\t%+0.9e",b.result(pavedata::deflct,pavedata::zz));
+		printf("\t%+0.9e",s.result(pavedata::deflct,pavedata::zz));
+		printf("\n");
+	}
+}
+#endif
+
+/*
+ * This test adds a lot of points along the surface of a single
+ * layer pavement, and compares the three basic solutions for this
+ * problem (accurate, normal, numerical).
+ */
+#ifdef BUILD
+int
+main()
+{
+	cset<point3d> p(0,100);
+	LEsystem Best;
+	LEsystem Slow;
+	LEsystem Fast;
+	int i;
+
+	for (i = 0; i < 9; i++) {
+		Best.addlayer(0.1,1.0,0.5);
+		Slow.addlayer(0.1,1.0,0.5);
+		Fast.addlayer(0.1,1.0,0.5);
+	}
+	Best.addlayer(0.0,1.0,0.5);
+	Slow.addlayer(0.0,1.0,0.5);
 	Fast.addlayer(0.0,1.0,0.5);
 
 	Best.addload(point2d(0.0,0.0),0,1.0,1.0);
@@ -116,6 +176,13 @@ main()
 		p.add(point3d(r,0,0));
 		p.add(point3d(1.0/r,0,0));
 	}
+	p.add(point3d(0,0,1000.0));
+	p.add(point3d(1,0,1000.0));
+	for (i = 0; i < 50; i++) {
+		double r = 1+pow(10,-3.0*(25-i)/25);
+		p.add(point3d(r,0,1000.0));
+		p.add(point3d(1.0/r,0,1000.0));
+	}
 	p.sort();
 	for (i = 0; i < p.length(); i++) {
 		Best.addpoint(p[i]);
@@ -123,14 +190,17 @@ main()
 		Fast.addpoint(p[i]);
 	}
 	Best.calc_accurate();
+	//Best.calculate(LEsystem::all);
 	Slow.calculate(LEsystem::all);
+	//Slow.calculate(LEsystem::fast);
+	//Fast.calculate(LEsystem::dirty);
 	Fast.calc_fastnum();
 
 	for (i = 0; i < p.length(); i++) {
 		const pavedata & b = Best.result(p[i]);
 		const pavedata & s = Slow.result(p[i]);
 		const pavedata & f = Fast.result(p[i]);
-		printf("%10.4e",p[i].x);
+		printf("%8.4g",p[i].x);
 		//double l = (p[i].x < 1 ? -1 : p[i].x > 1 ? 0 : -0.5);
 		//printf("\t%+0.12e",b.result(pavedata::stress,pavedata::zz)-l);
 		//printf("\t%+0.12e",s.result(pavedata::stress,pavedata::zz)-l);
@@ -143,7 +213,6 @@ main()
 		printf("\t%+0.8e",f.result(pavedata::deflct,pavedata::zz));
 		printf("\n");
 	}
-	delete _p;
 }
 #endif
 
@@ -397,5 +466,88 @@ main()
 	printf("%0.16f\n",d2.result(pavedata::stress,pavedata::xy));
 	printf("%0.16f\n",d2.result(pavedata::stress,pavedata::xz));
 	printf("%0.16f\n",d2.result(pavedata::stress,pavedata::yz));
+}
+#endif
+
+#ifdef NOBUILD
+
+extern bool wantdebug;
+
+int
+main(int argc, char* argv[])
+{
+	int l, i;
+	double T[10], h[10], v[10];
+	sset<point3d> P;
+
+	LEsystem Base;
+	LEsystem Test;
+
+	//srand((unsigned)time(NULL));
+redo:
+	wantdebug = false;
+	l = int(ceil(RAND(1,10)));
+	Base.removelayers();
+	Test.removelayers();
+	for (i = 0; i < l; i++) {
+		do {
+			T[i] = pow(10,RAND((i<2?5.0:4.0),7.0));
+		} while (i > 0 && (T[i] > 2.0*T[i-1] || 5.0*T[i] < T[i-1]));
+		h[i] = RAND(25.0+i*50.0,75.0+i*100.0);
+		if (i == l-1 && int(ceil(RAND(0.0,5.0))) < 5.0)
+			h[i] = 0.0;
+		v[i] = RAND(0.15,(l < 2 ? 0.45 : 0.4));
+		Base.addlayer(h[i],T[i],v[i]);
+		Test.addlayer(h[i],T[i],v[i]);
+		//printf("Layer %d: %8.4f %12.6f %6.4f\n",i+1,h[i],T[i]/1000,v[i]);
+	}
+
+	Base.removeloads();
+	Test.removeloads();
+	Base.addload(point2d(0.0,0.0),20*1e6,690);
+	Test.addload(point2d(0.0,0.0),20*1e6,690);
+
+	P.empty();
+	Base.removepoints();
+	Test.removepoints();
+	for (i = 0; i < 1; i++) {
+		P.add(        point3d(   0.0, 0.0, i*25.0));
+		//P.add(        point3d(   0.0,95.0, i*25.0));
+		Base.addpoint(point3d(   0.0, 0.0, i*25.0));
+		//Base.addpoint(point3d(   0.0,95.0, i*25.0));
+		Test.addpoint(point3d(   0.0, 0.0, i*25.0));
+		//Test.addpoint(point3d(   0.0,95.0, i*25.0));
+	}
+
+	Base.calc_accurate();
+	Test.calculate();
+	//Test.calculate(LEsystem::fast);
+	for (i = 0; i < P.length(); i++) {
+		point3d & p = P[i];
+		const pavedata & f = Base.result(p);
+		const pavedata & d = Test.result(p);
+		double fz = f.result(pavedata::deflct, pavedata::zz);
+		double dz = d.result(pavedata::deflct, pavedata::zz);
+		double err = fabs(200.0*(fz-dz)/(fz+dz));
+		if (err > 1.0) {
+			printf("\n");
+			wantdebug = true;
+			printf("%7.2f\t%7.2f\t%10.6g\t", f.y, f.z, fz);
+			printf("%7.2f\t%7.2f\t%10.6g\t", d.y, d.z, dz);
+			printf("%10.6g\n",err);
+			for (int j = 0; j < l; j++)
+				printf("Layer %d: %8.4f %12.6f %6.4f\n",j+1,h[j],T[j]/1000,v[j]);
+			printf("\n");
+			printf("Base:\n\n");
+			Base.calc_accurate();
+			printf("Test:\n\n");
+			Test.calculate();
+			exit(1);
+		} else
+			printf(".");		
+	}
+	fflush(NULL);
+	goto redo;
+	return 0;
 }
 #endif

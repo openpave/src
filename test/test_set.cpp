@@ -246,7 +246,7 @@ test_set4()
 	}
 }
 
-#ifdef BUILD
+#ifdef NOBUILD
 
 int
 main()
