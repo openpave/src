@@ -471,8 +471,6 @@ main()
 
 #ifdef NOBUILD
 
-extern bool wantdebug;
-
 int
 main(int argc, char* argv[])
 {
@@ -485,7 +483,6 @@ main(int argc, char* argv[])
 
 	//srand((unsigned)time(NULL));
 redo:
-	wantdebug = false;
 	l = int(ceil(RAND(1,10)));
 	Base.removelayers();
 	Test.removelayers();
@@ -531,17 +528,12 @@ redo:
 		double err = fabs(200.0*(fz-dz)/(fz+dz));
 		if (err > 1.0) {
 			printf("\n");
-			wantdebug = true;
 			printf("%7.2f\t%7.2f\t%10.6g\t", f.y, f.z, fz);
 			printf("%7.2f\t%7.2f\t%10.6g\t", d.y, d.z, dz);
 			printf("%10.6g\n",err);
 			for (int j = 0; j < l; j++)
 				printf("Layer %d: %8.4f %12.6f %6.4f\n",j+1,h[j],T[j]/1000,v[j]);
 			printf("\n");
-			printf("Base:\n\n");
-			Base.calc_accurate();
-			printf("Test:\n\n");
-			Test.calculate();
 			exit(1);
 		} else
 			printf(".");		
