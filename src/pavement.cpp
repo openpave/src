@@ -60,9 +60,9 @@ pavedata::principle(double v, double E)
 			t1 = t2/(fabs(t1) + hypot(t1,t2));
 			data[2][0] -= t1*data[3][1];
 			data[2][2] += t1*data[3][1];
-			t2 = hypot(t1,1.0);
-			data[3][2] /= t2;
-			t2 = data[3][0] /= t2;
+			t2 = 1.0/hypot(t1,1.0);
+			data[3][2] *= t2;
+			t2 = data[3][0] *= t2;
 			data[3][0] -= t1*data[3][2];
 			data[3][2] += t1*t2;
 			data[3][1] = 0.0;
@@ -107,17 +107,17 @@ pavedata::principle(double v, double E)
 		}
 	}
 
-	t1 = 2*(v+1)/E;
-	data[5][0] = (data[0][0]-v*(data[0][1]+data[0][2]))/E;
-	data[5][1] = (data[0][1]-v*(data[0][2]+data[0][0]))/E;
-	data[5][2] = (data[0][2]-v*(data[0][0]+data[0][1]))/E;
+	t1 = 2*(v+1)/E; t2 = 1.0/E;
+	data[5][0] = (data[0][0]-v*(data[0][1]+data[0][2]))*t2;
+	data[5][1] = (data[0][1]-v*(data[0][2]+data[0][0]))*t2;
+	data[5][2] = (data[0][2]-v*(data[0][0]+data[0][1]))*t2;
 	data[6][0] = t1*data[1][0];
 	data[6][1] = t1*data[1][1];
 	data[6][2] = t1*data[1][2];
 
-	data[7][0] = (data[2][0]-v*(data[2][1]+data[2][2]))/E;
-	data[7][1] = (data[2][1]-v*(data[2][2]+data[2][0]))/E;
-	data[7][2] = (data[2][2]-v*(data[2][0]+data[2][1]))/E;
+	data[7][0] = (data[2][0]-v*(data[2][1]+data[2][2]))*t2;
+	data[7][1] = (data[2][1]-v*(data[2][2]+data[2][0]))*t2;
+	data[7][2] = (data[2][2]-v*(data[2][0]+data[2][1]))*t2;
 	data[8][0] = t1*data[3][0];
 	data[8][1] = t1*data[3][1];
 	data[8][2] = t1*data[3][2];
@@ -326,7 +326,7 @@ struct axialdata {
 #define GRADSTEP 1e-8
 
 #define NBZ		8192						// Number of zeros in bessels.
-static double j0r[NBZ+1], j1r[NBZ+1], j0p[NBZ+1], j0m[NBZ+1], j0max;
+static double j0r[NBZ+1], j1r[NBZ+1], j0p[NBZ+1], j0m[NBZ+1], j1max;
 #define j0pj1(x)	(j0(x)+j1(x))
 #define j0mj1(x)	(j0(x)-j1(x))
 #define j1d(x)		(j0(x)-j1(x)/x)
@@ -335,9 +335,9 @@ static double j0r[NBZ+1], j1r[NBZ+1], j0p[NBZ+1], j0m[NBZ+1], j0max;
 static double gu[NGQP+1][NGQP];
 static double gf[NGQP+1][NGQP];
 
-#define NLQP	16						// Max number of Lobatto points
-static double lu[NLQP+1][NLQP];
-static double lf[NLQP+1][NLQP];
+//#define NLQP	16						// Max number of Lobatto points
+//static double lu[NLQP+1][NLQP];
+//static double lf[NLQP+1][NLQP];
 
 /*
  * This initialises the arrays above to max accuracy, and
@@ -365,26 +365,26 @@ initarrays() {
 			gf[ib][i] =     gf[ib][ib-1-i] = 2.0/(1.0-z*z)/pp/pp;
 		}
 	}
-	memset(lu,0,sizeof(double)*(NLQP+1)*NLQP);
-	memset(lf,0,sizeof(double)*(NLQP+1)*NLQP);
-	for (ib = 2; ib <= NLQP; ib++) {
-		for (int j, i = 0; i < (ib+1)/2; i++) {
-			double p1, p2, p3, z = cos(M_PI*i/(ib-1));
-			do {
-				p2 = 1.0, p1 = z;
-				for (j = 1; j < (ib-1); j++)
-					p3 = p2, p2 = p1, p1 = z*p2+j*(z*p2-p3)/(j+1);
-				z += (p2/p1-z)/ib;
-			} while (fabs(p2/p1-z)/ib > DBL_EPSILON);
-			lu[ib][i] = -z, lu[ib][ib-1-i] = z;
-			lf[ib][i] =     lf[ib][ib-1-i] = 2.0/(ib*(ib-1)*p1*p1);
-		}
-	}
+	//memset(lu,0,sizeof(double)*(NLQP+1)*NLQP);
+	//memset(lf,0,sizeof(double)*(NLQP+1)*NLQP);
+	//for (ib = 2; ib <= NLQP; ib++) {
+	//	for (int j, i = 0; i < (ib+1)/2; i++) {
+	//		double p1, p2, p3, z = cos(M_PI*i/(ib-1));
+	//		do {
+	//			p2 = 1.0, p1 = z;
+	//			for (j = 1; j < (ib-1); j++)
+	//				p3 = p2, p2 = p1, p1 = z*p2+j*(z*p2-p3)/(j+1);
+	//			z += (p2/p1-z)/ib;
+	//		} while (fabs(p2/p1-z)/ib > DBL_EPSILON);
+	//		lu[ib][i] = -z, lu[ib][ib-1-i] = z;
+	//		lf[ib][i] =     lf[ib][ib-1-i] = 2.0/(ib*(ib-1)*p1*p1);
+	//	}
+	//}
 	memset(j0r,0,sizeof(double)*(NBZ+1));
 	memset(j1r,0,sizeof(double)*(NBZ+1));
 	memset(j0p,0,sizeof(double)*(NBZ+1));
 	memset(j0m,0,sizeof(double)*(NBZ+1));
-	for (ib = 0, j0max = 0.0; ib <= NBZ; ib++) {
+	for (ib = 0, j1max = 0.0; ib <= NBZ; ib++) {
 		double x1, x2, y1, y2, xi;
 		x1 = (ib == 0 ? M_PI_2 : j0r[ib-1] + M_PI), x2 = x1 + 0.1;
 		while (fabs(j0(x2)) > 1e-30 && x1 != x2) {
@@ -393,8 +393,6 @@ initarrays() {
 			x1 = x2, x2 = xi;
 		}
 		j0r[ib] = x2;
-		if (fabs(j0(x2)) > j0max)
-			j0max = fabs(j0(x2));
 		x1 = x2 + M_PI_2, x2 = x1 + 0.1;
 		while (fabs(j1(x2)) > 1e-30 && x1 != x2) {
 			y1 = j1(x1), y2 = j1(x2);
@@ -402,6 +400,8 @@ initarrays() {
 			x1 = x2, x2 = xi;
 		}
 		j1r[ib] = x2;
+		if (fabs(j1(x2)) > j1max)
+			j1max = fabs(j1(x2));
 		x1 = j0r[ib] - M_PI_4, x2 = x1 + 0.1;
 		while (fabs(j0mj1(x2)) > 1e-30 && x1 != x2) {
 			y1 = j0mj1(x1), y2 = j0mj1(x2);
@@ -477,25 +477,31 @@ stoppingpoints(const int nbz, const double a, const double r,
 	*m0 = j0r[nbz]/a, *m1 = (ra == 0.0 ? 0.0 : j0r[nbz]/a);
 	if (ra > 0.0 && ra <= 0.5) {
 		// Find the last root of J1(mr) & J0(mr).
-		for (ib = nbz; ib > 0 && j1r[ib]/ra > j1r[nbz]; ib--)
-			*m0 = j1r[ib-1]/ra;
-		for (ib = nbz; ib > 0 && j0r[ib]/ra > j1r[nbz]; ib--)
-			*m1 = j0r[ib-1]/ra;
+		for (ib = nbz; ib > 0 && j1r[ib] > j1r[nbz]*ra; ib--)
+			;
+		*m0 = j1r[ib]/ra;
+		for (ib = nbz; ib > 0 && j0r[ib] > j1r[nbz]*ra; ib--)
+			;
+		*m1 = j0r[ib]/ra;
 	} else if (ra > 0.5 && ra != 1.0 && ra < 2.0) {
 		// Between 0.5 and 2.0 use the J0(m|r-1|)-J1(m|r-1|) and
 		// J0(m|r-1|)+J1(m|r-1|) approximations.
-		for (ib = nbz; ib > 0 && j0m[ib]/r1 >
-					(ra < 1.0 ? j1r[nbz] : j0r[nbz]/ra); ib--)
-			*m0 = j0m[ib-1]/r1;
-		for (ib = nbz; ib > 0 && j0p[ib]/r1 >
-					(ra < 1.0 ? j1r[nbz] : j1r[nbz]/ra); ib--)
-			*m1 = j0p[ib-1]/r1;
+		for (ib = nbz; ib > 0 && j0m[ib] >
+				r1*(ra < 1.0 ? j1r[nbz] : j0r[nbz]/ra); ib--)
+			;
+		*m0 = j0m[ib]/r1;
+		for (ib = nbz; ib > 0 && j0p[ib] >
+				r1*(ra < 1.0 ? j1r[nbz] : j1r[nbz]/ra); ib--)
+			;
+		*m1 = j0p[ib-1]/r1;
 	} else if (ra >= 2.0) {
 		// Find the roots of J0(m).
-		for (ib = nbz; ib > 0 && j0r[ib] > j0r[nbz]/ra; ib--)
-			*m0 = j0r[ib-1];
-		for (ib = nbz; ib > 0 && j0r[ib] > j1r[nbz]/ra; ib--)
-			*m1 = j0r[ib-1];
+		for (ib = nbz; ib > 0 && j0r[ib]*ra > j0r[nbz]; ib--)
+			;
+		*m0 = j0r[ib];
+		for (ib = nbz; ib > 0 && j0r[ib]*ra > j1r[nbz]; ib--)
+			;
+		*m1 = j0r[ib];
 	}
 	if (ra > 0.0 && ra < 1.0) {
 		// Now find the closest roots of J0(ma).
@@ -679,52 +685,47 @@ abort:
 static void
 buildabcd(const double m, const int nl, const double * h,
           const double * v, const double * E,
-          const double * f, double (* R)[4][2],
-          double (* ABCD)[4])
+          const double * f, double (* __restrict R)[4][2],
+          double (* __restrict ABCD)[4])
 {
 	int k1, k2, il;
 	double B1[2][4], X[4][4], F[4][4], D[4][4];
 	double CDi[4] = {0, 0, 0, 0};
+	double mi = 1.0/m;
 
 	memset(ABCD,0,sizeof(double)*nl*4);
 	if (m <= 0.0)
 		return;
-	//if (slip) {
-	//	buildabcd_full(m,nl,h,v,E,f,ABCD);
-	//	return;
-	//}
 	// We start at the last layer...
 	il = nl-1;
+	memset(&R[il][0][0],0,8*sizeof(double));
 	if (h[il] > 0.0) {
 		double z = h[il];
 		double s = f[il];
 		double v1 = v[il];
 		double t1 = 2*m*E[il]*(1-s)*(v1-1)/(v1+1);
 		R[il][0][0] =   s*(1-4*v1-2*m*z) - t1;
-		R[il][0][1] = 4*s*(2*v1-1)/m - 2*s*m*z*z - 2*z*t1;
+		R[il][0][1] = 4*s*(2*v1-1)*mi - 2*s*m*z*z - 2*z*t1;
 		R[il][1][0] = 2*s*m;
 		R[il][1][1] =   s*(1-4*v1+2*m*z) + t1;
-		t1 += s*(3-4*v1);
+		t1 = 1.0/(t1+s*(3-4*v1));
 		for (k1 = 0; k1 < 2; k1++)
 			for (k2 = 0; k2 < 2; k2++)
-				R[il][k1][k2] *= exp(-2*m*h[il])/t1;
-	} else {
-		memset(&R[il][0][0],0,4*sizeof(double));
+				R[il][k1][k2] *= exp(-2*m*h[il])*t1;
 	}
-	R[il][2][0] = 1.0, R[il][2][1] = 0.0;
-	R[il][3][0] = 0.0, R[il][3][1] = 1.0;
+	R[il][2][0] = 1.0; R[il][3][1] = 1.0;
 	// Now we work back up, building the 4x2 R matrices...
 	for ( ; il > 0; il--) {
 		double z = h[il-1];
 		double v1 = v[il-1];
 		double v2 = v[il];
-		double K = (1+v2)/(1+v1)*E[il-1]/E[il];
+		double K = ((1+v2)*E[il-1])/((1+v1)*E[il]);
 		double t1 = m*z, t2 = 2*t1;
 		X[0][0] = X[2][2] = (4*v1-3-K);
 		X[0][1] = ((1+8*v1*v2-t2)*(1-K) + (4*t1*v1-6*v2)
-			- K*(4*t1*v2-6*v1))/m;
+			- K*(4*t1*v2-6*v1))*mi;
 		X[2][3] = ((1+8*v1*v2+t2)*(K-1) + (4*t1*v1+6*v2)
-			- K*(4*t1*v2+6*v1))/m;
+			- K*(4*t1*v2+6*v1))*mi;
 		X[1][0] = X[3][2] = 0.0;
 		X[1][1] = X[3][3] = (K*(4*v2-3)-1);
 		X[0][2] = ( t2+4*v1-1)*(1-K);
@@ -732,9 +733,9 @@ buildabcd(const double m, const int nl, const double * h,
 		X[1][3] = (-t2+4*v2-1)*(1-K);
 		X[3][1] = ( t2+4*v2-1)*(1-K);
 		X[0][3] = ((1+2*(t1+2*v1)*(t1-2*v2))*(1-K) + 2*v2
-			- 2*K*v1)/m;
+			- 2*K*v1)*mi;
 		X[2][1] = ((1+2*(t1-2*v1)*(t1+2*v2))*(K-1) - 2*v2
-			+ 2*K*v1)/m;
+			+ 2*K*v1)*mi;
 		X[1][2] = 2*m*(K-1);
 		X[3][0] = 2*m*(1-K);
 		if (f[il-1] != 1.0) {
@@ -743,12 +744,12 @@ buildabcd(const double m, const int nl, const double * h,
 			double r2 = (t1-2*v1+1)*s;
 			double r3 =  t1+2*v1;
 			double r4 =  t1-2*v1;
-			F[0][0] = r1;   F[0][1] = r1*r3/m;
-			F[0][2] = r1;   F[0][3] = r1*r4/m;
+			F[0][0] = r1;   F[0][1] = r1*r3*mi;
+			F[0][2] = r1;   F[0][3] = r1*r4*mi;
 			F[1][0] = -s*m; F[1][1] = -s*r3;
 			F[1][2] = -s*m; F[1][3] = -s*r4;
-			F[2][0] = r2;   F[2][1] = r2*r3/m;
-			F[2][2] = r2;   F[2][3] = r2*r4/m;
+			F[2][0] = r2;   F[2][1] = r2*r3*mi;
+			F[2][2] = r2;   F[2][3] = r2*r4*mi;
 			F[3][0] = -s*m; F[3][1] = -s*r3;
 			F[3][2] = -s*m; F[3][3] = -s*r4;
 		}
@@ -874,22 +875,22 @@ LEsystem::calc_accurate()
 			bm0.empty(), bm1.empty();
 			bm0.add(0.0), bm1.add(0.0);
 			stoppingpoints(NBZ,a,r,&m0,&m1);
-			for (ib = 0; r > 0 && j0r[ib]/r < m0 && ib <= NBZ; ib++)
+			// Account for big z's.
+			for (ib = 1; ib <= 5; ib++) {
+				if (ib*7*a/d.z < j0r[0])
+					bm0.add(ib*7*a/d.z);
+				if (ib*7*a/d.z < j1r[0])
+					bm1.add(ib*7*a/d.z);
+			}
+			for (ib = 0; r > 0 && ib <= NBZ && j0r[ib]/r < m0; ib++)
 				bm0.add(j0r[ib]/r);
-			for (ib = 0; r > 0 && j1r[ib]/r < m1 && ib <= NBZ; ib++)
+			for (ib = 0; r > 0 && ib <= NBZ && j1r[ib]/r < m1; ib++)
 				bm1.add(j1r[ib]/r);
-			for (ib = 0; j1r[ib]/a < m0 && ib <= NBZ; ib++)
+			for (ib = 0; ib <= NBZ && j1r[ib]/a < m0; ib++)
 				bm0.add(j1r[ib]/a);
-			for (ib = 0; j1r[ib]/a < m1 && ib <= NBZ; ib++)
+			for (ib = 0; ib <= NBZ && j1r[ib]/a < m1; ib++)
 				bm1.add(j1r[ib]/a);
 			bm0.add(m0), bm1.add(m1);
-			bm0.sort(), bm1.sort();
-			// Now remove every second zero.  We allow the sort
-			// to remove these, since it does things in one pass.
-			for (ib = 1; bm0[ib] < m0 && ib < bm0.length()-1; ib += 2)
-				bm0[ib] = bm0[ib-1];
-			for (ib = 1; bm1[ib] < m1 && ib < bm1.length()-1; ib += 2)
-				bm1[ib] = bm1[ib-1];
 			bm0.sort(), bm1.sort();
 
 			// We loop through all of our roots and gauss points.
@@ -992,10 +993,10 @@ abort:
 bool
 LEsystem::calculate(resulttype res, double * Q)
 {
-	int ixy, ir, iz, ild, ia, ib, igp, il;
+	int ixy, nr, ir, nz, iz, ild, ia, ib, igp, il;
 	const LElayer * pl;
 	double x1, x2;
-	bool rv = false;
+	bool rv = false, interpolate = false;
 	
 	initarrays();
 	if (!check())
@@ -1004,9 +1005,11 @@ LEsystem::calculate(resulttype res, double * Q)
 	if ((res & mask) == dirty) {
 		ngqp = MIN(NGQP,7);
 		nbz = MIN(NBZ,32);
+		interpolate = true;
 	} else if ((res & mask) == fast) {
 		ngqp = MIN(NGQP,8);
 		nbz = MIN(NBZ,64);
+		//interpolate = true;
 	} else {
 		ngqp = MIN(NGQP,12);
 		nbz = MIN(NBZ,256);
@@ -1016,30 +1019,20 @@ LEsystem::calculate(resulttype res, double * Q)
 		callcount += nl;
 
 	// The integration constants, per layer.
-	double (* R)[4][2], (* ABCD)[4];
+	double (* R)[4][2] = new double[nl][4][2];
+	double (* ABCD)[4] = new double[(interpolate ? 3*nl : nl)][4];
 	// Local variables, so we don't have to walk the list.
-	double * h, * f, * v, * E;
-	// Stack variables for small problems.
-	double _R[10][4][2], _ABCD[10][4];
-	double _h[10], _f[10], _v[10], _E[10];
+	double * h = new double[nl];
+	double * f = new double[nl];
+	double * v = new double[nl];
+	double * E = new double[nl];
 	// Some place to store our data...
 	cset<double> z, a, r, bm;
 	sset<int> zl;
-	fset<double> m0(data.length()), m1(data.length());
-	fset<axialdata> ax(data.length());
-	if (nl <= 10) {
-		R = _R, ABCD = _ABCD;
-		h = _h, f = _f, v = _v, E = _E;
-	} else {
-		R = new double[nl][4][2];
-		ABCD = new double[nl][4];
-		h = new double[nl];
-		f = new double[nl];
-		v = new double[nl];
-		E = new double[nl];
-		if (R == 0 || ABCD == 0 || h == 0 || f == 0 || v == 0 || E == 0)
-			goto abort;
-	}
+	fset<double> m0(data.length()), m1(data.length()); 
+	fset<axialdata> ax(data.length()); 
+	if (R == 0 || ABCD == 0 || h == 0 || f == 0 || v == 0 || E == 0)
+		goto abort;
 	for (pl = first, il = 0; pl != 0; pl = pl->next, il++) {
 		h[il] = pl->bottom();
 		f[il] = MAX(0.0,pl->slip());
@@ -1061,8 +1054,9 @@ LEsystem::calculate(resulttype res, double * Q)
 			goto abort;
 	}
 	z.sort();
+	nz = z.length();
 	// Map z values to layers.
-	for (iz = 0; iz < z.length(); iz++) {
+	for (iz = 0; iz < nz; iz++) {
 		for (pl = first, il = 0; pl != 0; pl = pl->next, il++) {
 			if (pl->top() <= z[iz] && (h[il] == 0.0 || z[iz] < h[il]))
 				zl.add(il);
@@ -1090,20 +1084,21 @@ LEsystem::calculate(resulttype res, double * Q)
 			}
 		}
 		r.sort();
-		m0.resize(r.length());
-		m1.resize(r.length());
+		nr = r.length();
+		m0.resize(nr);
+		m1.resize(nr);
 
 		// Now gerenate a list of integration intervals, then sort them.
 		bm.empty();
 		if (!bm.add(0.0))
 			goto abort;
 		for (ib = 0; nbz > 0 && ib <= nbz; ib++) {
-			if (!bm.add(j0r[ib]/a[ia]))
+			if (!bm.add(j1r[ib]/a[ia]))
 				goto abort;
 		}
 
 		// The correct stopping points for each radius.
-		for (ir = 0; ir < r.length(); ir++) {
+		for (ir = 0; ir < nr; ir++) {
 			stoppingpoints(nbz,a[ia],r[ir],&m0[ir],&m1[ir]);
 			if (!bm.add(m0[ir]) || !bm.add(m1[ir]))
 				goto abort;
@@ -1112,16 +1107,16 @@ LEsystem::calculate(resulttype res, double * Q)
 
 		// Account for big r's by adding extra integration intervals...
 		x1 = 0.0, x2 = 0.0;
-		for (ir = r.length()-1; ir >= 0 &&
-				r[ir]/a[ia] > double(MAX(4,ngqp-6)); ir--) {
+		for (ir = nr-1; ir >= 0 &&
+				r[ir] > a[ia]*MAX(4,ngqp-6); ir--) {
 			for (int k1 = MAX(4,ngqp-6);
 					k1 <= nbz; k1 += MAX(4,ngqp-6)) {
 				if ((x1 = j1r[k1]/r[ir]) < x2)
 					continue;
 				for (ib = 1; ib < bm.length() && bm[ib] < x1; ib++)
 					;
-				if (MIN(x1-bm[ib-1],bm[ib]-x1)
-						< MAX(4,ngqp-6)*M_PI_4/r[ir])
+				if (MIN(x1-bm[ib-1],bm[ib]-x1)*r[ir]
+						< MAX(4,ngqp-6)*M_PI_4)
 					continue;
 				if (!bm.add(ib,x2 = x1))
 					goto abort;
@@ -1131,24 +1126,24 @@ LEsystem::calculate(resulttype res, double * Q)
 		// magnitude for exp(-7).  Add 5 intervals, so we drop 15 orders
 		// of magnitude.
 		x1 = 0.0, x2 = 0.0;
-		for (iz = z.length()-1; iz >= 0 && z[iz] > 0.0; iz--) {
-			for (int k1 = 1; k1 <= 5 && k1*7*a[ia]/z[iz] < j0r[0]; k1++) {
+		for (iz = nz-1; iz >= 0 && z[iz] > 0.0; iz--) {
+			for (int k1 = 1; k1 <= 5 && k1*7*a[ia] < j0r[0]*z[iz]; k1++) {
 				if ((x1 = k1*7*a[ia]/z[iz]) < x2)
 					continue;
 				for (ib = 1; ib < bm.length() && bm[ib] < x1; ib++)
 					;
-				if (MIN(x1-bm[ib-1],bm[ib]-x1) < 5*a[ia]/z[iz])
+				if (MIN(x1-bm[ib-1],bm[ib]-x1)*z[iz] < 5*a[ia])
 					continue;
 				if (!bm.add(ib,x2 = x1))
 					goto abort;
 			}
 		}
 		bm.sort();
-
+		
 gradloop:
 		// And finally, somewhere to stick the radial data...
-		ax.resize(r.length()*z.length());
-		memset(&ax[0],0,sizeof(axialdata)*r.length()*z.length());
+		ax.resize(nr*nz);
+		memset(&ax[0],0,sizeof(axialdata)*nz*nr);
 		// Compute the active set.
 		for (ixy = 0; ixy < data.length(); ixy++) {
 			pavedata & d = data[ixy];
@@ -1157,7 +1152,7 @@ gradloop:
 				if (fabs(load[ild].radius()-a[ia]) > DBL_MIN)
 					continue;
 				ir = r.findvalue(load[ild].distance(d));
-				ax[ir*z.length()+iz].active = true;
+				ax[iz*nr+ir].active = true;
 			}
 		}
 		
@@ -1165,45 +1160,60 @@ gradloop:
 		// We loop through all of our roots and gauss points.
 		for (ib = 1; ib < bm.length(); ib++) {
 			bool alldone = true;
-			for (igp = 0; igp < ngqp; igp++) {
+			bool firstpanel = (bm[ib]*a[ia] <= j1r[1]);
+			int agqp = (firstpanel && (res & mask) != dirty ? NGQP : ngqp);
+			if (interpolate) {
+				if (!firstpanel)
+					memcpy(&ABCD[2*nl][0],&ABCD[nl][0],nl*4*sizeof(double));
+				buildabcd(bm[ib],nl,h,v,E,f,R,&ABCD[nl]);
+			}
+			for (igp = 0; igp < agqp; igp++) {
 				// Calculate the gauss point and weight.
 				double m = (bm[ib]+bm[ib-1])/2
-						 + gu[ngqp][igp]*(bm[ib]-bm[ib-1])/2;
-				double w = gf[ngqp][igp]*(bm[ib]-bm[ib-1])/2;
+						 + gu[agqp][igp]*(bm[ib]-bm[ib-1])/2;
+				double w = gf[agqp][igp]*(bm[ib]-bm[ib-1])/2;
+				w *= m*j1(m*a[ia]);
 
 				// First build a new ABCD matrix.
-				buildabcd(m,nl,h,v,E,f,R,ABCD);
+				if (!interpolate || firstpanel) {
+					buildabcd(m,nl,h,v,E,f,R,ABCD);
+				} else {
+					for (il = 0; il < nl; il++) {
+						for (int k1 = 0; k1 < 4; k1++)
+							ABCD[il][k1] = ABCD[nl+il][k1] -
+								(ABCD[nl+il][k1]-ABCD[2*nl+il][k1])*
+								(bm[ib]-m)/(bm[ib]-bm[ib-1]);
+					}
+				}
 				// Now calculate the integrals.
-				for (ir = 0; ir < r.length(); ir++) {
-					// Break if we are wasting time...
-					if (m >= m0[ir] && m >= m1[ir])
-						continue;
+				for (iz = 0; iz < nz; iz++) {
 					double t1, t2, t3, t4, t5, t6;
-					t2 = m*j1(m*a[ia])*w;
-					t1 = t2*j0(m*r[ir]);
-					t2 *= j1(m*r[ir]);
-					for (iz = 0; iz < z.length(); iz++) {
-						axialdata & s = ax[ir*z.length()+iz];
+					const double & tz = z[iz];
+					il = zl[iz];
+					const double tv = 2*v[il];
+					t4 = exp(-m*tz);
+					t3 = m*(ABCD[il][2] + ABCD[il][3]*tz)*t4;
+					t4 *= ABCD[il][3];
+					t6 = (m*tz<MAX_EXP?exp(m*tz):DBL_MAX);
+					t5 = m*(ABCD[il][0] + ABCD[il][1]*tz)*t6;
+					t6 *= ABCD[il][1];
+					for (ir = 0; ir < nr; ir++) {
+						axialdata & s = ax[iz*nr+ir];
 						if (!s.active)
 							continue;
 						alldone = false;
-						const double & tz = z[iz];
-						il = zl[iz];
-						t3 = m*(ABCD[il][2] + ABCD[il][3]*tz)*exp(-m*tz);
-						t4 = ABCD[il][3]*exp(-m*tz);
-						t5 = m*(ABCD[il][0] + ABCD[il][1]*tz)*
-										 (m*tz<MAX_EXP?exp(m*tz):DBL_MAX);
-						t6 = ABCD[il][1]*(m*tz<MAX_EXP?exp(m*tz):DBL_MAX);
 						if (m < m0[ir]) {
+							t1 = w*j0(m*r[ir]);
 							if (!(res & disp)) {
-								s.vse2 += t1*m*((1-2*v[il])*(t4+t6)+(t3-t5));
-								s.rse2 += t1*m*((1+2*v[il])*(t4+t6)-(t3-t5));
-								s.tse2 += t1*m*(2*v[il])*(t4+t6);
+								s.vse2 += t1*m*((1-tv)*(t4+t6)+(t3-t5));
+								s.rse2 += t1*m*((1+tv)*(t4+t6)-(t3-t5));
+								s.tse2 += t1*m*tv*(t4+t6);
 							}
-							s.vdp2 += t1*((2-4*v[il])*(t6-t4)-(t3+t5));
+							s.vdp2 += t1*(2*(1-tv)*(t6-t4)-(t3+t5));
 						}
 						if (m < m1[ir] && !(res & disp)) {
-							s.sse2 += t2*m*((2*v[il])*(t6-t4)+(t3+t5));
+							t2 = w*j1(m*r[ir]);
+							s.sse2 += t2*m*(tv*(t6-t4)+(t3+t5));
 							s.rdp2 += t2*((t4+t6)-(t3-t5));
 						}
 					}
@@ -1211,13 +1221,13 @@ gradloop:
 			}
 			if (alldone)
 				break;
-			bool fullp = (fabs(j0(bm[ib-1]*a[ia])) <= j0max
-				 && fabs(j0(bm[ib]*a[ia])) <= j0max);
+			bool fullp = (fabs(j1(bm[ib-1]*a[ia])) <= j1max
+					&& fabs(j1(bm[ib]*a[ia])) <= j1max);
 			double eps = ((res & mask) == dirty ? 1e-6 : 
-						   ((res & mask) == fast ? 1e-8 : 0.0));
-			for (ir = 0; ir < r.length(); ir++) {
-				for (iz = 0; iz < z.length(); iz++) {
-					axialdata & s = ax[ir*z.length()+iz];
+					((res & mask) == fast ? 1e-8 : 0.0));
+			for (iz = 0; iz < nz; iz++) {
+				for (ir = 0; ir < nr; ir++) {
+					axialdata & s = ax[iz*nr+ir];
 					if (!s.active)
 						continue;
 					bool active = false;
@@ -1245,9 +1255,9 @@ gradloop:
 		}
 
 		// Finalise the calculations, now that we have done the integration.
-		for (ir = 0; ir < r.length(); ir++) {
-			for (iz = 0; iz < z.length(); iz++) {
-				axialdata & s = ax[ir*z.length()+iz];
+		for (iz = 0; iz < nz; iz++) {
+			for (ir = 0; ir < nr; ir++) {
+				axialdata & s = ax[iz*nr+ir];
 				il = zl[iz];
 				if (!(res & disp)) {
 					if (r[ir] > 0.0) {
@@ -1272,7 +1282,7 @@ gradloop:
 				if (fabs(load[ild].radius()-a[ia]) > DBL_MIN)
 					continue;
 				ir = r.findvalue(load[ild].distance(d));
-				axialdata & s = ax[ir*z.length()+iz];
+				axialdata & s = ax[iz*nr+ir];
 				double p = load[ild].pressure();
 				if (r[ir] == 0.0 && !(res & disp)) {
 					d.data[0][0] += p*(s.rse+s.tse)/2;
@@ -1286,7 +1296,7 @@ gradloop:
 						d.data[0][0] += p*s.tse;
 						d.data[0][1] += p*s.rse;
 						d.data[0][2] += p*s.vse;
-						if (sint == 1.0) {
+						if (sint > 0.0) {
 							d.data[1][2] += p*s.sse;
 							d.data[4][1] += p*s.rdp;
 						} else {
@@ -1297,7 +1307,7 @@ gradloop:
 						d.data[0][0] += p*s.rse;
 						d.data[0][1] += p*s.tse;
 						d.data[0][2] += p*s.vse;
-						if (cost == 1.0) {
+						if (cost > 0.0) {
 							d.data[1][1] += p*s.sse;
 							d.data[4][0] += p*s.rdp;
 						} else {
@@ -1366,18 +1376,12 @@ gradloop:
 abort:
 	if (rv == false)
 		event_msg(EVENT_ERROR,"Out of memory in LEsystem::calculate()!");
-	if (R != _R)
-		delete [] R;
-	if (ABCD != _ABCD)
-		delete [] ABCD;
-	if (h != _h)
-		delete [] h;
-	if (f != _f)
-		delete [] f;
-	if (v != _v)
-		delete [] v;
-	if (E != _E)
-		delete [] E;
+	delete [] R;
+	delete [] ABCD;
+	delete [] h;
+	delete [] f;
+	delete [] v;
+	delete [] E;
 	return rv;
 }
 
