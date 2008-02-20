@@ -493,13 +493,13 @@ stoppingpoints(const int nbz, const double a, const double r,
 		for (ib = nbz; ib > 0 && j0p[ib] >
 				r1*(ra < 1.0 ? j1r[nbz] : j1r[nbz]/ra); ib--)
 			;
-		*m1 = j0p[ib-1]/r1;
+		*m1 = j0p[ib]/r1;
 	} else if (ra >= 2.0) {
 		// Find the roots of J0(m).
-		for (ib = nbz; ib > 0 && j0r[ib]*ra > j0r[nbz]; ib--)
+		for (ib = nbz; ib > 0 && j0r[ib] > j0r[nbz]/ra; ib--)
 			;
 		*m0 = j0r[ib];
-		for (ib = nbz; ib > 0 && j0r[ib]*ra > j1r[nbz]; ib--)
+		for (ib = nbz; ib > 0 && j0r[ib] > j1r[nbz]/ra; ib--)
 			;
 		*m1 = j0r[ib];
 	}
