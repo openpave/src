@@ -66,7 +66,7 @@ struct material_property {
 	}
 	inline bool operator== (const material_property & p) {
 		return (property == p.property);
-	} 
+	}
 };
 
 struct material_property_value : public material_property {
@@ -81,7 +81,7 @@ struct material_property_value : public material_property {
 	}
 	inline operator double() {
 		return value;
-	} 
+	}
 };
 
 class material {
@@ -208,7 +208,7 @@ struct coord3d : public coord2d {
  */
 struct gauss3d : public point3d {
 	double gw;
-	
+
 	gauss3d()
 	  : point3d() {
 	}
@@ -223,7 +223,7 @@ struct gauss3d : public point3d {
 struct node3d : public coord3d {
 	int xm, xp, ym, yp, zm, zp;
 	double ux, uy, uz;
-	
+
 	node3d()
 	  : coord3d(), xm(-1), xp(-1), ym(-1), yp(-1), zm(-1), zp(-1),
 			ux(0.0), uy(0.0), uz(0.0) {
@@ -267,7 +267,7 @@ struct node3d : public coord3d {
 
 /*
  * Templated Kronecker delta
- */ 
+ */
 template<int I, int J>
 static inline int delta()
 {
@@ -420,7 +420,7 @@ public:
 	  : listelement_o<mesh,element>(o,p), etype(t), mat(m), inel(0,8) {
 	}
 	virtual smatrix_elem * stiffness() const = 0;
-	
+
 protected:
 	friend class mesh;
 	const material & mat;
@@ -439,7 +439,7 @@ public:
 	element_block8(mesh * o, element * p, const material & m,
 			const fset<coord3d> & c)
 	  : element(o,p,block8,m) {
-	  	assert(8 == c.length());
+		assert(8 == c.length());
 		for (int i = 0; i < 8; i++)
 			inel.add(addnode(c[i]));
 		for (int i = 0; i < 8; i++) {
@@ -462,7 +462,7 @@ public:
 		double v = mat.getprop(material_property::poissons);
 		double lambda = v*e/(1+v)/(1-2*v);
 		double mu = e/2/(1+v);
-	
+
 		// Build the point stiffness tensor E_abcd
 		tmatrix<double,3,3> E[3][3];
 		pointstiffness<0,0>(E[0][0],lambda,mu);
@@ -493,14 +493,14 @@ public:
 				}
 			}
 		}
-	
+
 		smatrix_elem * _K = new smatrix_elem(8,inel);
 		if (_K == 0) {
 			event_msg(EVENT_ERROR,"Out of memory in element::stiffness()!");
 			return 0;
 		}
 		smatrix_elem & K = *_K;
-	
+
 		for (g = 0; g < gp.length(); g++) {
 			rx = gp[g].x; ry = gp[g].y; rz = gp[g].z;
 			double gw = gp[g].gw;
@@ -523,7 +523,7 @@ public:
 			for (i = 0; i < 8; i++) {
 				for (j = i; j < 8; j++) {
 					for (k = 0; k < 3; k++)
-						for (l = 0; l < 3; l++) 
+						for (l = 0; l < 3; l++)
 							K(i,j) += E[k][l]*(dHdr(k,i)*dHdr(l,j)*gw);
 				}
 			}
@@ -540,7 +540,7 @@ public:
 	element_block16(mesh * o, element * p, const material & m,
 			const fset<coord3d> & c)
 	  : element(o,p,block16,m) {
-	  	assert(8 == c.length());
+		assert(8 == c.length());
 		double xb[4], yb[4], zb[4];
 		double xt[4], yt[4], zt[4];
 		for (int i = 0; i < 4; i++) {
@@ -555,7 +555,7 @@ public:
 			double z = zb[i]+  (zt[i]-zb[i])/3;
 			inel.add(addnode(coord3d(x,y,z)));
 		}
-		for (int i = 0; i < 4; i++) {	
+		for (int i = 0; i < 4; i++) {
 			double x = xb[i]+2*(xt[i]-xb[i])/3;
 			double y = yb[i]+2*(yt[i]-yb[i])/3;
 			double z = zb[i]+2*(zt[i]-zb[i])/3;
@@ -586,7 +586,7 @@ public:
 		double v = mat.getprop(material_property::poissons);
 		double lambda = v*e/(1+v)/(1-2*v);
 		double mu = e/2/(1+v);
-	
+
 		// Build the point stiffness tensor E_abcd
 		tmatrix<double,3,3> E[3][3];
 		pointstiffness<0,0>(E[0][0],lambda,mu);
@@ -625,27 +625,27 @@ public:
 				}
 			}
 		}
-	
+
 		smatrix_elem * _K = new smatrix_elem(16,inel);
 		if (_K == 0) {
 			event_msg(EVENT_ERROR,"Out of memory in element::stiffness()!");
 			return 0;
 		}
 		smatrix_elem & K = *_K;
-	
+
 		for (g = 0; g < gp.length(); g++) {
 			rx = gp[g].x; ry = gp[g].y; rz = gp[g].z;
 			double gw = gp[g].gw;
 			tmatrix<double,NDIM,16> dHdr;
 			//tmatrix<double,16,1> H;
-	
+
 			// shape functions for 16-node 3D brick:
 			const double Hx1[16] = {-1,-1,+1,+1,-1,-1,+1,+1,-1,-1,+1,+1,-1,-1,+1,+1};
 			const double Hy1[16] = {-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1};
 			const double Hz0[16] = {-1,-1,-1,-1,+9,+9,+9,+9,+9,+9,+9,+9,-1,-1,-1,-1};
 			const double Hz2[16] = {+9,+9,+9,+9,-9,-9,-9,-9,-9,-9,-9,-9,+9,+9,+9,+9};
 			const double Hz1[16] = {-1,-1,-1,-1,-3,-3,-3,-3,+3,+3,+3,+3,+1,+1,+1,+1};
-	
+
 			for (l = 0; l < 16; l++) {
 				dHdr(0,l) = Hx1[l]*(1+Hy1[l]*ry)
 						*(Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/64;
@@ -663,7 +663,7 @@ public:
 			for (i = 0; i < 16; i++) {
 				for (j = i; j < 16; j++) {
 					for (k = 0; k < 3; k++)
-						for (l = 0; l < 3; l++) 
+						for (l = 0; l < 3; l++)
 							K(i,j) += E[k][l]*(dHdr(k,i)*dHdr(l,j)*gw);
 				}
 			}
@@ -680,7 +680,7 @@ public:
 	element_block34(mesh * o, element * p, const material & m,
 			const fset<coord3d> & c)
 	  : element(o,p,block34,m) {
-	  	assert(8 == c.length());
+		assert(8 == c.length());
 		int i;
 		double xb[4], yb[4], zb[4];
 		double xt[4], yt[4], zt[4];
@@ -696,7 +696,7 @@ public:
 			double z = zb[i]+  (zt[i]-zb[i])/3;
 			inel.add(addnode(coord3d(x,y,z)));
 		}
-		for (i = 0; i < 4; i++) {	
+		for (i = 0; i < 4; i++) {
 			double x = xb[i]+2*(xt[i]-xb[i])/3;
 			double y = yb[i]+2*(yt[i]-yb[i])/3;
 			double z = zb[i]+2*(zt[i]-zb[i])/3;
@@ -728,7 +728,7 @@ public:
 					y_p = n.yp;
 					mask[i] = y_p;
 					if ((i == 0 || i == 12)) {
-						const node3d & mid = getnode(n.yp); 
+						const node3d & mid = getnode(n.yp);
 						if (mid.xp != -1)
 							mask[i == 0 ? 16 : 17] = mid.xp;
 					}
@@ -775,7 +775,7 @@ public:
 		double v = mat.getprop(material_property::poissons);
 		double lambda = v*e/(1+v)/(1-2*v);
 		double mu = e/2/(1+v);
-	
+
 		// Build the point stiffness tensor E_abcd
 		tmatrix<double,3,3> E[3][3];
 		pointstiffness<0,0>(E[0][0],lambda,mu);
@@ -816,7 +816,7 @@ public:
 				}
 			}
 		}
-	
+
 		smatrix_elem * _K = new smatrix_elem(nnd,inel);
 		if (_K == 0) {
 			event_msg(EVENT_ERROR,"Out of memory in element::stiffness()!");
@@ -829,7 +829,7 @@ public:
 			double gw = gp[g].gw;
 			matrix_dense dHdr(NDIM,nnd);
 			//matrix_dense H(nnd,1);
-	
+
 			// shape functions for 16/34-node 3D brick:
 			const double Sxy[16] = { 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0};
 			const double Hx1[16] = {-1,-1,+1,+1,-1,-1,+1,+1,-1,-1,+1,+1,-1,-1,+1,+1};
@@ -837,7 +837,7 @@ public:
 			const double Hz0[16] = {-1,-1,-1,-1,+9,+9,+9,+9,+9,+9,+9,+9,-1,-1,-1,-1};
 			const double Hz2[16] = {+9,+9,+9,+9,-9,-9,-9,-9,-9,-9,-9,-9,+9,+9,+9,+9};
 			const double Hz1[16] = {-1,-1,-1,-1,-3,-3,-3,-3,+3,+3,+3,+3,+1,+1,+1,+1};
-	
+
 			for (l = 0; l < 16; l++) {
 				dHdr(0,l) = Hx1[l]*(1+Hy1[l]*ry)
 						*(Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/64;
@@ -922,7 +922,7 @@ public:
 			for (i = 0; i < nnd; i++) {
 				for (j = i; j < nnd; j++) {
 					for (k = 0; k < 3; k++)
-						for (l = 0; l < 3; l++) 
+						for (l = 0; l < 3; l++)
 							K(i,j) += E[k][l]*(dHdr(k,i)*dHdr(l,j)*gw);
 				}
 			}
@@ -944,16 +944,16 @@ class smatrix_node {
 	explicit smatrix_node(const int I, const int J,
 			const tmatrix<double,NDOF,NDOF> & t, smatrix_diag * d)
 	  : K(t), i(I), j(J), col_next(0), col_prev(0), col_diag(d),
-	  		row_prev(0), row_next(0) {
+			row_prev(0), row_next(0) {
 	}
 	void *operator new(size_t, void * p) {
 		return p;
-	} 
+	}
 
 	friend class smatrix_diag;
 	friend class smatrix;
 	friend class mesh;
-	
+
 	tmatrix<double,NDOF,NDOF> K;
 	int i, j;
 	smatrix_node * col_next;
@@ -961,7 +961,7 @@ class smatrix_node {
 	smatrix_diag * col_diag;
 	smatrix_node * row_prev;
 	smatrix_node * row_next;
-}; 
+};
 
 /*
  * class smatrix_diag - a diagonal in a stiffness matrix
@@ -1053,7 +1053,7 @@ class smatrix_diag {
 	smatrix_node * col_head;
 	smatrix_node * row_head;
 	smatrix_node * nodes;
-}; 
+};
 
 /*
  * class smatrix - a symmetric positive definite stiffness matrix
@@ -1092,7 +1092,7 @@ public:
 			free(diag);
 		}
 	}
-	
+
 	bool append(int i, int j, const tmatrix<double,NDOF,NDOF> & t) {
 		if (i == j) {
 			diag[i].K += t;
@@ -1120,7 +1120,7 @@ public:
 		int i, j;
 		smatrix_diag * d;
 		smatrix_node * p;
-		
+
 		for (i = 0; i < nnd; i++) {
 			d = &(diag[i]);
 			tmatrix<double,NDOF,NDOF> & K = d->K;
@@ -1212,10 +1212,10 @@ struct mesh_bc_key {
 	}
 	bool operator== (const mesh_bc_key & k) const {
 		return (n == k.n && i == k.i);
-	}  
+	}
 	bool operator> (const mesh_bc_key & k) const {
 		return (n > k.n || (n == k.n && i > k.i));
-	}  
+	}
 };
 struct mesh_bc : public mesh_bc_key {
 	double d;
@@ -1530,7 +1530,7 @@ circlearea(double a, double b, double r)
 	double ar = (sqrt(r*r-b*b)-a)*b/2;
 	double br = (sqrt(r*r-a*a)-b)*a/2;
 	return (r*r*t/2) - ar -br;
-} 
+}
 
 inline double
 blockarea(double x1, double x2, double y1, double y2, double r)
@@ -1555,13 +1555,13 @@ blockarea(double x1, double x2, double y1, double y2, double r)
 	y1 = fabs(y1); y2 = fabs(y2); if (y2 < y1) swap(y1,y2);
 	return circlearea(x1,y1,r) - circlearea(x1,y2,r)
 			- circlearea(x2,y1,r) + circlearea(x2,y2,r);
-} 
+}
 
 /*
  * This program is a custom 3D finite element code, intended for
  * work on my PhD.  It will hopefully form the basis for a later
  * full 3D FEM pavement modelling code, but at the moment, I need
- * to get some work done... 
+ * to get some work done...
  */
 int
 main()
@@ -1580,7 +1580,7 @@ main()
 	double dx, dy, dz, delta = 4.0;
 	mesh FEM;
 	fset<coord3d> coord(8);
-	
+
 	// Start with the tyre grid.
 	dx = delta; dy = delta;
 	for (x = -30*dx; x < 30*dx; x += 2*dx) {
@@ -1633,7 +1633,7 @@ main()
 					if (xm < xp && (x >= xm && x < xp)
 					 && ym < yp && (y >= ym && y < yp)
 					 && z > zm)
-					 	continue;
+						continue;
 					coord[0] = coord3d(x   ,y   ,z);
 					coord[1] = coord3d(x   ,y+dy,z);
 					coord[2] = coord3d(x+dx,y   ,z);
@@ -1703,7 +1703,7 @@ main()
 		xm = -MIN(16*dx,DOMAIN); xp = MIN(16*dx,DOMAIN);
 		ym = -MIN(16*dy,DOMAIN); yp = MIN(16*dy,DOMAIN);
 		delta *= 2;
-	} 
+	}
 	FEM.solve();
 
 	/*int i, nnd = FEM.getnodes();
@@ -1754,7 +1754,7 @@ int
 main_test()
 {
 #if !defined(_MSC_VER) && !defined(DARWIN)
-	// get starting time    
+	// get starting time
 	struct timespec start, stop;
 	clock_gettime(CLOCK_PROF,&start);
 #endif
@@ -1767,7 +1767,7 @@ main_test()
 	const int ndiv[3] = {8, 8, 4};
 	int i, j, k;
 	mesh FEM;
-	
+
 	double dx = (domain[0][1]-domain[0][0])/ndiv[0];
 	double dy = (domain[1][1]-domain[1][0])/ndiv[1];
 	double dz = (domain[2][1]-domain[2][0])/ndiv[2];
@@ -1812,9 +1812,9 @@ main_test()
 			double y = domain[1][0] + j*dy;
 			double f = F;
 			if (x == domain[0][0] || x == domain[0][1])
-				f /= 2; 
+				f /= 2;
 			if (y == domain[1][0] || y == domain[1][1])
-				f /= 2; 
+				f /= 2;
 			FEM.add_fext(coord3d(x,y,domain[2][1]),2,f);
 		}
 	}
@@ -1849,7 +1849,7 @@ main_junk()
 {
 	double x, y, a = 0.0, b;
 	double dx, dy, delta = 4.0;
-	
+
 	// Start with the tyre grid.
 	dx = delta; dy = delta;
 	for (x = -30*dx; x < 30*dx; x += dx) {
@@ -1862,5 +1862,3 @@ main_junk()
 
 	return 0;
 }
-
-
