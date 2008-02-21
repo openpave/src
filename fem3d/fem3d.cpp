@@ -885,10 +885,10 @@ public:
 			xe(i,0) = p.x; xe(i,1) = p.y; xe(i,2) = p.z;
 		}
 
-		ksset<point3d,gauss3d> gp(0,16);
+		ksset<point3d,gauss3d> gp(0,64);
 		// XXX: Do we need better integration in the infinite direction?
-		const double gp_2[2][2] = {{-1.0/sqrt(3.0), 1.0},
-		                           {+1.0/sqrt(3.0), 1.0}};
+		//const double gp_2[2][2] = {{-1.0/sqrt(3.0), 1.0},
+		//                           {+1.0/sqrt(3.0), 1.0}};
 		//const double gp_3[3][2] = {{-sqrt(3.0/5.0), 5.0/9.0},
 		//                           {             0, 8.0/9.0},
 		//                           {+sqrt(3.0/5.0), 5.0/9.0}};
@@ -897,11 +897,11 @@ public:
 			 {-sqrt(525.0-70.0*sqrt(30.0))/35.0, (18.0+sqrt(30.0))/36.0},
 			 {+sqrt(525.0-70.0*sqrt(30.0))/35.0, (18.0+sqrt(30.0))/36.0},
 			 {+sqrt(525.0+70.0*sqrt(30.0))/35.0, (18.0-sqrt(30.0))/36.0}};
-		for (i = 0; i < 2; i++) {
-			for (j = 0; j < 2; j++) {
+		for (i = 0; i < 4; i++) {
+			for (j = 0; j < 4; j++) {
 				for (k = 0; k < 4; k++) {
-					gp.add(gauss3d(gp_2[i][0],gp_2[j][0],gp_4[k][0],
-							gp_2[i][1]*gp_2[j][1]*gp_4[k][1]));
+					gp.add(gauss3d(gp_4[i][0],gp_4[j][0],gp_4[k][0],
+							gp_4[i][1]*gp_4[j][1]*gp_4[k][1]));
 				}
 			}
 		}
@@ -1697,9 +1697,9 @@ public:
 	}
 	bool add_bc_plane(const dof o, const bcplane p, const fixed<7> c,
 			const dof f, const double d) {
-		assert(!((o & mesh::X) && (o && mesh::Y)));
-		assert(!((o & mesh::X) && (o && mesh::Z)));
-		assert(!((o & mesh::Y) && (o && mesh::Z)));
+		assert(!((o & mesh::X) && (o & mesh::Y)));
+		assert(!((o & mesh::X) && (o & mesh::Z)));
+		assert(!((o & mesh::Y) && (o & mesh::Z)));
 		for (int i = 0; i < node.length(); i++) {
 			const node3d & n = node[i];
 			switch (o) {
@@ -1746,7 +1746,6 @@ public:
 			f_ext.add(mesh_bc(k,2,d));
 		return true;
 	}
-
 	bool solve() {
 		int i, j, nnd = node.length();
 		printf("Solving with %i nodes!\n",nnd);
@@ -2052,9 +2051,9 @@ main()
 	m.setprop(material_property::emod,100e3); // kPa
 	m.setprop(material_property::poissons,0.35);
 
-	double x, y, z;
-	double dx, dy, dz, delta = 4.0;
-	mesh FEM;
+	int x, y, z;
+	int dx, dy, dz, delta = 4;
+	mesh FEM1, FEM2;
 	fset<coord3d> coord(8);
 
 	// Start with the tyre grid.
@@ -2063,47 +2062,59 @@ main()
 		for (y = -30*dy; y < 30*dy; y += 2*dy) {
 			if (blockarea(x,x+2*dx,y,y+2*dx,100) == 0.0)
 				continue;
-			FEM.addnode(coord3d(x     ,y     ,0.0));
-			FEM.addnode(coord3d(x  +dx,y     ,0.0));
-			FEM.addnode(coord3d(x+2*dx,y     ,0.0));
-			FEM.addnode(coord3d(x     ,y  +dy,0.0));
-			FEM.addnode(coord3d(x  +dx,y  +dy,0.0));
-			FEM.addnode(coord3d(x+2*dx,y  +dy,0.0));
-			FEM.addnode(coord3d(x     ,y+2*dy,0.0));
-			FEM.addnode(coord3d(x  +dx,y+2*dy,0.0));
-			FEM.addnode(coord3d(x+2*dx,y+2*dy,0.0));
+			FEM1.addnode(coord3d(x     ,y     ,0.0));
+			FEM1.addnode(coord3d(x  +dx,y     ,0.0));
+			FEM1.addnode(coord3d(x+2*dx,y     ,0.0));
+			FEM1.addnode(coord3d(x     ,y  +dy,0.0));
+			FEM1.addnode(coord3d(x  +dx,y  +dy,0.0));
+			FEM1.addnode(coord3d(x+2*dx,y  +dy,0.0));
+			FEM1.addnode(coord3d(x     ,y+2*dy,0.0));
+			FEM1.addnode(coord3d(x  +dx,y+2*dy,0.0));
+			FEM1.addnode(coord3d(x+2*dx,y+2*dy,0.0));
+			FEM2.addnode(coord3d(x     ,y     ,0.0));
+			FEM2.addnode(coord3d(x  +dx,y     ,0.0));
+			FEM2.addnode(coord3d(x+2*dx,y     ,0.0));
+			FEM2.addnode(coord3d(x     ,y  +dy,0.0));
+			FEM2.addnode(coord3d(x  +dx,y  +dy,0.0));
+			FEM2.addnode(coord3d(x+2*dx,y  +dy,0.0));
+			FEM2.addnode(coord3d(x     ,y+2*dy,0.0));
+			FEM2.addnode(coord3d(x  +dx,y+2*dy,0.0));
+			FEM2.addnode(coord3d(x+2*dx,y+2*dy,0.0));
 		}
 	}
 	// Add the tire loads
 	double F = -690;
 	for (x = -30*dx; x <= 30*dx; x += dx) {
 		for (y = -30*dy; y <= 30*dy; y += dy) {
-			int p = FEM.hasnode(coord3d(x,y,0.0));
+			int p = FEM1.hasnode(coord3d(x,y,0.0));
 			if (p == -1)
 				continue;
-			node3d n = FEM.getnode(p);
-			int x_m = FEM.hasnode(coord3d(x-dx,y,0.0));
-			int x_p = FEM.hasnode(coord3d(x+dx,y,0.0));
-			int y_m = FEM.hasnode(coord3d(x,y-dy,0.0));
-			int y_p = FEM.hasnode(coord3d(x,y+dy,0.0));
+			node3d n = FEM1.getnode(p);
+			int x_m = FEM1.hasnode(coord3d(x-dx,y,0.0));
+			int x_p = FEM1.hasnode(coord3d(x+dx,y,0.0));
+			int y_m = FEM1.hasnode(coord3d(x,y-dy,0.0));
+			int y_p = FEM1.hasnode(coord3d(x,y+dy,0.0));
 			n.setneighbours(x_m,x_p,y_m,y_p,-1,-1);
-			FEM.updatenode(n);
+			FEM1.updatenode(n);
+			FEM2.updatenode(n);
 			double f = F*blockarea(x-dx/2,x+dx/2,y-dy/2,y+dy/2,100.0);
-			if (fabs(f) > 0.0)
-				FEM.add_fext(coord3d(x,y,0.0),mesh::Z,f);
+			if (fabs(f) > 0.0) {
+				FEM1.add_fext(coord3d(x,y,0.0),mesh::Z,f);
+				FEM2.add_fext(coord3d(x,y,0.0),mesh::Z,f);
+			}
 		}
 	}
 
-#define DOMAIN 8192
+#define DOMAIN (4096+2048)
 
 	// Now add the elements from below the tyre, working outwards.
-	double xm = 0.0, xp = 0.0, ym = 0.0, yp = 0.0, zm = 0.0;
-	while (zm > -4000.0) {
-		dz = MIN(-30.0,zm), zm += dz;
+	int xm = 0, xp = 0, ym = 0, yp = 0, zm = 0;
+	while (zm > -4000) {
+		dz = MIN(-30,zm), zm += dz;
 		dx = delta*2; dy = delta*2;
-		z = 0.0;
+		z = 0;
 		while (z > zm) {
-			dz = MIN(-30.0,z), z += dz;
+			dz = MIN(-30,z), z += dz;
 			for (x = -MIN(16*dx,DOMAIN); x < MIN(16*dx,DOMAIN); x += dx) {
 				for (y = -MIN(16*dy,DOMAIN); y < MIN(16*dy,DOMAIN); y += dy) {
 					if (xm < xp && (x >= xm && x < xp)
@@ -2119,56 +2130,57 @@ main()
 					coord[5] = coord3d(x   ,y+dy,z-dz);
 					coord[6] = coord3d(x+dx,y   ,z-dz);
 					coord[7] = coord3d(x+dx,y+dy,z-dz);
-					FEM.add(element::block34,m,coord);
+					FEM1.add(element::block34,m,coord);
+					FEM2.add(element::block34,m,coord);
 					if (x == -DOMAIN) {
 						if (y == -DOMAIN) {
 							coord.resize(2);
 							coord[0] = coord3d(x,y,z);
 							coord[1] = coord3d(x,y,z-dz);
-							FEM.add(element::infinite16,m,coord);
+							FEM2.add(element::infinite16,m,coord);
 						} else if (y+dy == DOMAIN) {
 							coord.resize(2);
 							coord[0] = coord3d(x,y+dy,z);
 							coord[1] = coord3d(x,y+dy,z-dz);
-							FEM.add(element::infinite16,m,coord);
+							FEM2.add(element::infinite16,m,coord);
 						}
-						if (y+dy < DOMAIN) {
+						if (y+dy <= DOMAIN) {
 							coord.resize(4);
 							coord[0] = coord3d(x,y   ,z);
 							coord[1] = coord3d(x,y+dy,z);
 							coord[2] = coord3d(x,y   ,z-dz);
 							coord[3] = coord3d(x,y+dy,z-dz);
-							FEM.add(element::infinite16,m,coord);
+							FEM2.add(element::infinite16,m,coord);
 						}
 					} else if (x+dx == DOMAIN) {
 						if (y == -DOMAIN) {
 							coord.resize(2);
 							coord[0] = coord3d(x+dx,y,z);
 							coord[1] = coord3d(x+dx,y,z-dz);
-							FEM.add(element::infinite16,m,coord);
+							FEM2.add(element::infinite16,m,coord);
 						} else if (y+dy == DOMAIN) {
 							coord.resize(2);
 							coord[0] = coord3d(x+dx,y+dy,z);
 							coord[1] = coord3d(x+dx,y+dy,z-dz);
-							FEM.add(element::infinite16,m,coord);
+							FEM2.add(element::infinite16,m,coord);
 						}
-						if (y+dy < DOMAIN) {
+						if (y+dy <= DOMAIN) {
 							coord.resize(4);
 							coord[0] = coord3d(x+dx,y   ,z);
 							coord[1] = coord3d(x+dx,y+dy,z);
 							coord[2] = coord3d(x+dx,y   ,z-dz);
 							coord[3] = coord3d(x+dx,y+dy,z-dz);
-							FEM.add(element::infinite16,m,coord);
+							FEM2.add(element::infinite16,m,coord);
 						}
 					}
-					if (x+dx < DOMAIN) {
+					if (x+dx <= DOMAIN) {
 						if (y == -DOMAIN) {
 							coord.resize(4);
 							coord[0] = coord3d(x   ,y,z);
 							coord[1] = coord3d(x+dx,y,z);
 							coord[2] = coord3d(x   ,y,z-dz);
 							coord[3] = coord3d(x+dx,y,z-dz);
-							FEM.add(element::infinite16,m,coord);
+							FEM2.add(element::infinite16,m,coord);
 						}
 						if (y+dy == DOMAIN) {
 							coord.resize(4);
@@ -2176,7 +2188,7 @@ main()
 							coord[1] = coord3d(x+dx,y+dy,z);
 							coord[2] = coord3d(x   ,y+dy,z-dz);
 							coord[3] = coord3d(x+dx,y+dy,z-dz);
-							FEM.add(element::infinite16,m,coord);
+							FEM2.add(element::infinite16,m,coord);
 						}
 					}
 				}
@@ -2188,28 +2200,39 @@ main()
 		 && ym > -DOMAIN && xp < DOMAIN)
 			delta *= 2;
 	}
-	FEM.add_bc_plane(mesh::Z,mesh::at|mesh::below,zm,
+	FEM1.add_bc_plane(mesh::X,mesh::at|mesh::below,-DOMAIN,
+			mesh::X,0.0);
+	FEM1.add_bc_plane(mesh::X,mesh::at|mesh::above, DOMAIN,
+			mesh::X,0.0);
+	FEM1.add_bc_plane(mesh::Y,mesh::at|mesh::below,-DOMAIN,
+			mesh::Y,0.0);
+	FEM1.add_bc_plane(mesh::Y,mesh::at|mesh::above, DOMAIN,
+			mesh::Y,0.0);
+	FEM1.add_bc_plane(mesh::Z,mesh::at|mesh::below,zm,
 			mesh::X|mesh::Y|mesh::Z,0.0);
-	FEM.solve();
+	FEM2.add_bc_plane(mesh::Z,mesh::at|mesh::below,zm,
+			mesh::X|mesh::Y|mesh::Z,0.0);
+	FEM2.solve();
+	FEM1.solve();
 
-	/*int i, nnd = FEM.getnodes();
+	int i, nnd = FEM1.getnodes();
 	LEsystem test;
 	test.addlayer(fabs(zm),100e3,0.35);
 	test.addload(point2d(0.0,0.0),0.0,690.0,100.0);
 	for (i = 0; i < nnd; i++) {
-		const node3d & n = FEM.getorderednode(i);
+		const node3d & n = FEM1.getorderednode(i);
 		x = n.x; y = n.y; z = n.z;
-		if (!(x == 0.0 || y == 0.0 || z == 0.0))
+		if (!(x == 0 || y == 0 || z == 0))
 			continue;
 		if (z <= zm)
 			continue;
 		test.addpoint(point3d(x,y,-z));
 	}
-	test.calculate(LEsystem::fast);
+	test.calculate(LEsystem::all);
 	for (i = 0; i < nnd; i++) {
-		const node3d & n = FEM.getorderednode(i);
+		const node3d & n = FEM1.getorderednode(i);
 		x = n.x; y = n.y; z = n.z;
-		if (!(x == 0.0 || y == 0.0 || z == 0.0))
+		if (!(x == 0 || y == 0 || z == 0))
 			continue;
 		if (z <= zm)
 			continue;
@@ -2220,11 +2243,16 @@ main()
 		double vx =  d.result(pavedata::deflct,pavedata::xx);
 		double vy =  d.result(pavedata::deflct,pavedata::yy);
 		double vz = -d.result(pavedata::deflct,pavedata::zz);
-		int j = FEM.hasnode(n);
-		double h = hypot(hypot(vx-ux,vy-uy),vz-uz);
+		int j = FEM1.hasnode(n);
+		double h1 = hypot(hypot(vx-ux,vy-uy),vz-uz);
 		double v = hypot(hypot(vx,vy),vz);
-		printf("Node %6i: (%+6i,%+6i,%+6i) =\t(%4.2f,%4.2f,%4.2f)\t(%4.2f,%4.2f,%4.2f)\t%4.2f\t(%4.2f)\n",j,int(x),int(y),int(z),ux,uy,uz,vx,vy,vz,h,(v == 0.0 ? 0.0 : h/v));
-	}*/
+		const node3d & n2 = FEM2.getnode(FEM2.hasnode(n));
+		double wx = n2.ux;
+		double wy = n2.uy;
+		double wz = n2.uz;
+		double h2 = hypot(hypot(wx-ux,wy-uy),wz-uz);
+		printf("Node %6i: (%+6i,%+6i,%+6i) =\t(%4.2f,%4.2f,%4.2f)\t(%4.2f,%4.2f,%4.2f)\t%4.2f\t(%4.2f)\t(%4.2f,%4.2f,%4.2f)\t%4.2f\t(%4.2f)\n",j,int(x),int(y),int(z),ux,uy,uz,vx,vy,vz,h1,(v == 0.0 ? 0.0 : h1/v),wx,wy,wz,h2,(v == 0.0 ? 0.0 : h2/v));
+	}
 
 #if !defined(_MSC_VER) && !defined(DARWIN)
 	// calculate run time
