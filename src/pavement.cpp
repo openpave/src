@@ -1115,8 +1115,9 @@ LEsystem::calculate(resulttype res, double * Q)
 					continue;
 				for (ib = 1; ib < bm.length() && bm[ib] < x1; ib++)
 					;
-				if (MIN(x1-bm[ib-1],bm[ib]-x1)*r[ir]
-						< MAX(4,ngqp-6)*M_PI_4)
+				if (ib == bm.length() ||
+						MIN(x1-bm[ib-1],bm[ib]-x1)*r[ir]
+							< MAX(4,ngqp-6)*M_PI_4)
 					continue;
 				if (!bm.add(ib,x2 = x1))
 					goto abort;
@@ -1132,7 +1133,8 @@ LEsystem::calculate(resulttype res, double * Q)
 					continue;
 				for (ib = 1; ib < bm.length() && bm[ib] < x1; ib++)
 					;
-				if (MIN(x1-bm[ib-1],bm[ib]-x1)*z[iz] < 5*a[ia])
+				if (ib == bm.length() ||
+						MIN(x1-bm[ib-1],bm[ib]-x1)*z[iz] < 5*a[ia])
 					continue;
 				if (!bm.add(ib,x2 = x1))
 					goto abort;
