@@ -412,6 +412,7 @@ public:
 	const enum element_t {
 		block8,
 		block16,
+		infinite16,
 		block34
 	} etype;
 
@@ -672,6 +673,383 @@ public:
 		}
 		return _K;
 	}
+};
+
+/*
+ * class element_infinite16 - a infinite element
+ */
+class element_infinite16 : public element {
+public:
+	element_infinite16(mesh * o, element * p, const material & m,
+			const fset<coord3d> & c)
+	  : element(o,p,infinite16,m), inftype(corner) {
+		// XXX: Should deal with each of these as a different class?
+		if (c.length() == 2) {
+			setup_XY(c);
+		} else {
+			assert(4 == c.length());
+			if (c[0].x == c[3].x)
+				setup_X(c);
+			else
+				setup_Y(c);
+		}
+	}
+	void setup_XY(const fset<coord3d> & c) {
+		// Corner infinite elements are defined by 2 points in
+		// a line, which must be vertical.
+		assert(2 == c.length());
+		assert(c[0].x == c[1].x);
+		assert(c[0].y == c[1].y);
+		double xb[4], yb[4], zb[4];
+		double xt[4], yt[4], zt[4];
+		for (int i = 0; i < 4; i++) {
+			double x = c[0].x, y = c[0].y;
+			x *= (i%4 < 2 ? 1 : 2);
+			y *= (i%2 < 1 ? 1 : 2);
+			xb[i] = x; yb[i] = y; zb[i] = c[0].z;
+			xt[i] = x; yt[i] = y; zt[i] = c[1].z;
+		}
+		for (int i = 0; i < 4; i++) {
+			double x = xb[i];
+			double y = yb[i];
+			double z = zb[i];
+			inel.add(addnode(coord3d(x,y,z)));
+		}
+		for (int i = 0; i < 4; i++) {
+			double x = xb[i]+  (xt[i]-xb[i])/3;
+			double y = yb[i]+  (yt[i]-yb[i])/3;
+			double z = zb[i]+  (zt[i]-zb[i])/3;
+			inel.add(addnode(coord3d(x,y,z)));
+		}
+		for (int i = 0; i < 4; i++) {
+			double x = xb[i]+2*(xt[i]-xb[i])/3;
+			double y = yb[i]+2*(yt[i]-yb[i])/3;
+			double z = zb[i]+2*(zt[i]-zb[i])/3;
+			inel.add(addnode(coord3d(x,y,z)));
+		}
+		for (int i = 0; i < 4; i++) {
+			double x = xt[i];
+			double y = yt[i];
+			double z = zt[i];
+			inel.add(addnode(coord3d(x,y,z)));
+		}
+		for (int i = 0; i < 16; i++) {
+			node3d n = getnode(inel[i]);
+			int x_m = -1, x_p = -1;
+			int y_m = -1, y_p = -1;
+			int z_m = -1, z_p = -1;
+			((xb[0] > 0) == (i%4 < 2) ? x_p : x_m) = inel[4*(i/4)+(i%4+2)%4];
+			((yb[0] > 0) == (i%2 < 1) ? y_p : y_m) = inel[2*(i/2)+(i%2+1)%2];
+			if (i < 12)
+				z_p = inel[i+4];
+			if (i >= 4)
+				z_m = inel[i-4];
+			n.setneighbours(x_m,x_p,y_m,y_p,z_m,z_p);
+			updatenode(n);
+		}
+		inftype = corner;
+	}
+	void setup_X(const fset<coord3d> & c) {
+		// Side infinite elements are defined by 4 points in a plane.
+		assert(4 == c.length());
+		assert(c[0].x == c[1].x);
+		assert(c[1].x == c[2].x);
+		assert(c[2].x == c[3].x);
+		double xb[4], yb[4], zb[4];
+		double xt[4], yt[4], zt[4];
+		for (int i = 0; i < 4; i++) {
+			double x = c[0].x;
+			x *= (i%4 < 2 ? 1 : 2);
+			xb[i] = x; yb[i] = c[i%2  ].y; zb[i] = c[i%2  ].z;
+			xt[i] = x; yt[i] = c[i%2+2].y; zt[i] = c[i%2+2].z;
+		}
+		for (int i = 0; i < 4; i++) {
+			double x = xb[i];
+			double y = yb[i];
+			double z = zb[i];
+			inel.add(addnode(coord3d(x,y,z)));
+		}
+		for (int i = 0; i < 4; i++) {
+			double x = xb[i]+  (xt[i]-xb[i])/3;
+			double y = yb[i]+  (yt[i]-yb[i])/3;
+			double z = zb[i]+  (zt[i]-zb[i])/3;
+			inel.add(addnode(coord3d(x,y,z)));
+		}
+		for (int i = 0; i < 4; i++) {
+			double x = xb[i]+2*(xt[i]-xb[i])/3;
+			double y = yb[i]+2*(yt[i]-yb[i])/3;
+			double z = zb[i]+2*(zt[i]-zb[i])/3;
+			inel.add(addnode(coord3d(x,y,z)));
+		}
+		for (int i = 0; i < 4; i++) {
+			double x = xt[i];
+			double y = yt[i];
+			double z = zt[i];
+			inel.add(addnode(coord3d(x,y,z)));
+		}
+		for (int i = 0; i < 16; i++) {
+			node3d n = getnode(inel[i]);
+			int x_m = -1, x_p = -1;
+			int y_m = -1, y_p = -1;
+			int z_m = -1, z_p = -1;
+			((xb[0] > 0) == (i%4 < 2) ? x_p : x_m) = inel[4*(i/4)+(i%4+2)%4];
+			(i%2 < 1 ? y_p : y_m) = inel[2*(i/2)+(i%2+1)%2];
+			if (i < 12)
+				z_p = inel[i+4];
+			if (i >= 4)
+				z_m = inel[i-4];
+			n.setneighbours(x_m,x_p,y_m,y_p,z_m,z_p);
+			updatenode(n);
+		}
+		inftype = infX;
+	}
+	void setup_Y(const fset<coord3d> & c) {
+		// Side infinite elements are defined by 4 points in a plane.
+		assert(4 == c.length());
+		assert(c[0].y == c[1].y);
+		assert(c[1].y == c[2].y);
+		assert(c[2].y == c[3].y);
+		double xb[4], yb[4], zb[4];
+		double xt[4], yt[4], zt[4];
+		for (int i = 0; i < 4; i++) {
+			double y = c[0].y;
+			y *= (i%2 < 1 ? 1 : 2);
+			xb[i] = c[(i<2?0:1)].x; yb[i] = y; zb[i] = c[(i<2?0:1)].z;
+			xt[i] = c[(i<2?2:3)].x; yt[i] = y; zt[i] = c[(i<2?2:3)].z;
+		}
+		for (int i = 0; i < 4; i++) {
+			double x = xb[i];
+			double y = yb[i];
+			double z = zb[i];
+			inel.add(addnode(coord3d(x,y,z)));
+		}
+		for (int i = 0; i < 4; i++) {
+			double x = xb[i]+  (xt[i]-xb[i])/3;
+			double y = yb[i]+  (yt[i]-yb[i])/3;
+			double z = zb[i]+  (zt[i]-zb[i])/3;
+			inel.add(addnode(coord3d(x,y,z)));
+		}
+		for (int i = 0; i < 4; i++) {
+			double x = xb[i]+2*(xt[i]-xb[i])/3;
+			double y = yb[i]+2*(yt[i]-yb[i])/3;
+			double z = zb[i]+2*(zt[i]-zb[i])/3;
+			inel.add(addnode(coord3d(x,y,z)));
+		}
+		for (int i = 0; i < 4; i++) {
+			double x = xt[i];
+			double y = yt[i];
+			double z = zt[i];
+			inel.add(addnode(coord3d(x,y,z)));
+		}
+		for (int i = 0; i < 16; i++) {
+			node3d n = getnode(inel[i]);
+			int x_m = -1, x_p = -1;
+			int y_m = -1, y_p = -1;
+			int z_m = -1, z_p = -1;
+			(i%4 < 2 ? x_p : x_m) = inel[4*(i/4)+(i%4+2)%4];
+			((yb[0] > 0) == (i%2 < 1) ? y_p : y_m) = inel[2*(i/2)+(i%2+1)%2];
+			if (i < 12)
+				z_p = inel[i+4];
+			if (i >= 4)
+				z_m = inel[i-4];
+			n.setneighbours(x_m,x_p,y_m,y_p,z_m,z_p);
+			updatenode(n);
+		}
+		inftype = infY;
+	}
+	virtual smatrix_elem * stiffness() const {
+		assert(16 == inel.length());
+		int i, j, k, l, g;
+		double rx, ry, rz;
+		double e = mat.getprop(material_property::emod);
+		double v = mat.getprop(material_property::poissons);
+		double lambda = v*e/(1+v)/(1-2*v);
+		double mu = e/2/(1+v);
+
+		// Build the point stiffness tensor E_abcd
+		tmatrix<double,3,3> E[3][3];
+		pointstiffness<0,0>(E[0][0],lambda,mu);
+		pointstiffness<0,1>(E[0][1],lambda,mu);
+		pointstiffness<0,2>(E[0][2],lambda,mu);
+		pointstiffness<1,0>(E[1][0],lambda,mu);
+		pointstiffness<1,1>(E[1][1],lambda,mu);
+		pointstiffness<1,2>(E[1][2],lambda,mu);
+		pointstiffness<2,0>(E[2][0],lambda,mu);
+		pointstiffness<2,1>(E[2][1],lambda,mu);
+		pointstiffness<2,2>(E[2][2],lambda,mu);
+
+		// Element nodal coords
+		tmatrix<double,16,NDIM> xe;
+		for (i = 0; i < 16; i++) {
+			const coord3d & p = getnode(inel[i]);
+			xe(i,0) = p.x; xe(i,1) = p.y; xe(i,2) = p.z;
+		}
+
+		ksset<point3d,gauss3d> gp(0,16);
+		// XXX: Do we need better integration in the infinite direction?
+		const double gp_2[2][2] = {{-1.0/sqrt(3.0), 1.0},
+		                           {+1.0/sqrt(3.0), 1.0}};
+		//const double gp_3[3][2] = {{-sqrt(3.0/5.0), 5.0/9.0},
+		//                           {             0, 8.0/9.0},
+		//                           {+sqrt(3.0/5.0), 5.0/9.0}};
+		const double gp_4[4][2] =
+			{{-sqrt(525.0+70.0*sqrt(30.0))/35.0, (18.0-sqrt(30.0))/36.0},
+			 {-sqrt(525.0-70.0*sqrt(30.0))/35.0, (18.0+sqrt(30.0))/36.0},
+			 {+sqrt(525.0-70.0*sqrt(30.0))/35.0, (18.0+sqrt(30.0))/36.0},
+			 {+sqrt(525.0+70.0*sqrt(30.0))/35.0, (18.0-sqrt(30.0))/36.0}};
+		for (i = 0; i < 2; i++) {
+			for (j = 0; j < 2; j++) {
+				for (k = 0; k < 4; k++) {
+					gp.add(gauss3d(gp_2[i][0],gp_2[j][0],gp_4[k][0],
+							gp_2[i][1]*gp_2[j][1]*gp_4[k][1]));
+				}
+			}
+		}
+
+		smatrix_elem * _K = new smatrix_elem(16,inel);
+		if (_K == 0) {
+			event_msg(EVENT_ERROR,"Out of memory in element::stiffness()!");
+			return 0;
+		}
+		smatrix_elem & K = *_K;
+
+		const double Mx0[16] = { 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1};
+		const double Mx1[16] = {-2,-2,+1,+1,-2,-2,+1,+1,-2,-2,+1,+1,-2,-2,+1,+1};
+		const double My0[16] = { 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1};
+		const double My1[16] = {-2,+1,-2,+1,-2,+1,-2,+1,-2,+1,-2,+1,-2,+1,-2,+1};
+
+		const double Hx1[16] = {-1,-1,+1,+1,-1,-1,+1,+1,-1,-1,+1,+1,-1,-1,+1,+1};
+		const double Hy1[16] = {-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1};
+		const double Hz0[16] = {-1,-1,-1,-1,+9,+9,+9,+9,+9,+9,+9,+9,-1,-1,-1,-1};
+		const double Hz2[16] = {+9,+9,+9,+9,-9,-9,-9,-9,-9,-9,-9,-9,+9,+9,+9,+9};
+		const double Hz1[16] = {-1,-1,-1,-1,-3,-3,-3,-3,+3,+3,+3,+3,+1,+1,+1,+1};
+
+		for (g = 0; g < gp.length(); g++) {
+			rx = gp[g].x; ry = gp[g].y; rz = gp[g].z;
+			double gw = gp[g].gw;
+			double rxi = 1.0/(1-rx);
+			double ryi = 1.0/(1-ry);
+			tmatrix<double,NDIM,16> dHdr;
+			//tmatrix<double,16,1> H;
+
+			switch (inftype) {
+			case corner:
+				// mapping functions for 16-node corner infinite element:
+				for (l = 0; l < 16; l++) {
+					double Hx = (Mx0[l]+Mx1[l]*rx)*rxi;
+					double dHdx = Hx1[l]*2*rxi*rxi;
+					double Hy = (My0[l]+My1[l]*ry)*ryi;
+					double dHdy = Hy1[l]*2*ryi*ryi;
+					double Hz = (Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/16;
+					double dHdz = ((2*Hz2[l]*rz)*(1+Hz1[l]*rz)
+						+ (Hz0[l]+Hz2[l]*rz*rz)*Hz1[l])/16;
+					dHdr(0,l) = dHdx*Hy*Hz;
+					dHdr(1,l) = Hx*dHdy*Hz;
+					dHdr(2,l) = Hx*Hy*dHdz;
+				}
+				break;
+			case infX:
+				// mapping functions for 16-node x infinite element:
+				for (l = 0; l < 16; l++) {
+					double Hx = (Mx0[l]+Mx1[l]*rx)*rxi;
+					double dHdx = Hx1[l]*2*rxi*rxi;
+					double Hy = (1+Hy1[l]*ry);
+					double dHdy = Hy1[l];
+					double Hz = (Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/16;
+					double dHdz = ((2*Hz2[l]*rz)*(1+Hz1[l]*rz)
+						+ (Hz0[l]+Hz2[l]*rz*rz)*Hz1[l])/16;
+					dHdr(0,l) = dHdx*Hy*Hz;
+					dHdr(1,l) = Hx*dHdy*Hz;
+					dHdr(2,l) = Hx*Hy*dHdz;
+				}
+				break;
+			case infY:
+				// mapping functions for 16-node y infinite element:
+				for (l = 0; l < 16; l++) {
+					double Hx = (1+Hx1[l]*rx);
+					double dHdx = Hx1[l];
+					double Hy = (My0[l]+My1[l]*ry)*ryi;
+					double dHdy = Hy1[l]*2*ryi*ryi;
+					double Hz = (Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/16;
+					double dHdz = ((2*Hz2[l]*rz)*(1+Hz1[l]*rz)
+						+ (Hz0[l]+Hz2[l]*rz*rz)*Hz1[l])/16;
+					dHdr(0,l) = dHdx*Hy*Hz;
+					dHdr(1,l) = Hx*dHdy*Hz;
+					dHdr(2,l) = Hx*Hy*dHdz;
+				}
+				break;
+			}
+			tmatrix<double,NDIM,NDIM> J(dHdr*xe);
+
+			switch (inftype) {
+			case corner:
+				// shape functions for 16-node corner infinite element:
+				for (l = 0; l < 16; l++) {
+					double Hx = (rx*rx+(1-Mx0[l])*rx-Mx0[l])/(-Mx1[l]);
+					double dHdx = (2*rx+(1-Mx0[l]))/(-Mx1[l]);
+					double Hy = (ry*ry+(1-My0[l])*ry-My0[l])/(-My1[l]);
+					double dHdy = (2*ry+(1-My0[l]))/(-My1[l]);
+					double Hz = (Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/16;
+					double dHdz = ((2*Hz2[l]*rz)*(1+Hz1[l]*rz)
+						+ (Hz0[l]+Hz2[l]*rz*rz)*Hz1[l])/16;
+					dHdr(0,l) = dHdx*Hy*Hz;
+					dHdr(1,l) = Hx*dHdy*Hz;
+					dHdr(2,l) = Hx*Hy*dHdz;
+				}
+				break;
+			case infX:
+				// shape functions for 16-node x infinite element:
+				for (l = 0; l < 16; l++) {
+					double Hx = (rx*rx+(1-Mx0[l])*rx-Mx0[l])/(-Mx1[l]);
+					double dHdx = (2*rx+(1-Mx0[l]))/(-Mx1[l]);
+					double Hy = (1+Hy1[l]*ry);
+					double dHdy = Hy1[l];
+					double Hz = (Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/16;
+					double dHdz = ((2*Hz2[l]*rz)*(1+Hz1[l]*rz)
+						+ (Hz0[l]+Hz2[l]*rz*rz)*Hz1[l])/16;
+					dHdr(0,l) = dHdx*Hy*Hz;
+					dHdr(1,l) = Hx*dHdy*Hz;
+					dHdr(2,l) = Hx*Hy*dHdz;
+				}
+				break;
+			case infY:
+				// shape functions for 16-node y infinite element:
+				for (l = 0; l < 16; l++) {
+					double Hx = (1+Hx1[l]*rx);
+					double dHdx = Hx1[l];
+					double Hy = (ry*ry+(1-My0[l])*ry-My0[l])/(-My1[l]);
+					double dHdy = (2*ry+(1-My0[l]))/(-My1[l]);
+					double Hz = (Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/16;
+					double dHdz = ((2*Hz2[l]*rz)*(1+Hz1[l]*rz)
+						+ (Hz0[l]+Hz2[l]*rz*rz)*Hz1[l])/16;
+					dHdr(0,l) = dHdx*Hy*Hz;
+					dHdr(1,l) = Hx*dHdy*Hz;
+					dHdr(2,l) = Hx*Hy*dHdz;
+				}
+				break;
+			}
+			// This returns det(J);
+			// The absolute value is to take care of all of negative
+			// definite Jacobians above.  This is the quickest way to fix up
+			// all of the shape functions.
+			gw *= fabs(inv_mul_gauss(J,dHdr));
+			for (i = 0; i < 16; i++) {
+				for (j = i; j < 16; j++) {
+					for (k = 0; k < 3; k++)
+						for (l = 0; l < 3; l++)
+							K(i,j) += E[k][l]*(dHdr(k,i)*dHdr(l,j)*gw);
+				}
+			}
+		}
+		return _K;
+	}
+
+private:
+	enum infinite_t {
+		corner,
+		infX,
+		infY
+	} inftype;
 };
 
 /*
@@ -1251,6 +1629,9 @@ public:
 		case element::block16:
 			e = new element_block16(this,last,m,c);
 			break;
+		case element::infinite16:
+			e = new element_infinite16(this,last,m,c);
+			break;
 		case element::block34:
 			e = new element_block34(this,last,m,c);
 			if (e != 0 && e->inel.length() == 16) {
@@ -1396,12 +1777,6 @@ public:
 			F(node.getorder(f.n))(f.i) = f.d;
 		}
 		disp_bc.sort();
-		for (i = 0; i < disp_bc.length(); i++)
-			printf("(%f,%f,%f) %i %f\n",
-				double(node[disp_bc[i].n].x),
-				double(node[disp_bc[i].n].y),
-				double(node[disp_bc[i].n].z),
-				disp_bc[i].i,disp_bc[i].d);
 		for (i = 0; i < disp_bc.length(); i++) {
 			if (i+2 < disp_bc.length()
 			 && disp_bc[i].n == disp_bc[i+1].n
@@ -1735,6 +2110,7 @@ main()
 					 && ym < yp && (y >= ym && y < yp)
 					 && z > zm)
 						continue;
+					coord.resize(8);
 					coord[0] = coord3d(x   ,y   ,z);
 					coord[1] = coord3d(x   ,y+dy,z);
 					coord[2] = coord3d(x+dx,y   ,z);
@@ -1744,21 +2120,74 @@ main()
 					coord[6] = coord3d(x+dx,y   ,z-dz);
 					coord[7] = coord3d(x+dx,y+dy,z-dz);
 					FEM.add(element::block34,m,coord);
+					if (x == -DOMAIN) {
+						if (y == -DOMAIN) {
+							coord.resize(2);
+							coord[0] = coord3d(x,y,z);
+							coord[1] = coord3d(x,y,z-dz);
+							FEM.add(element::infinite16,m,coord);
+						} else if (y+dy == DOMAIN) {
+							coord.resize(2);
+							coord[0] = coord3d(x,y+dy,z);
+							coord[1] = coord3d(x,y+dy,z-dz);
+							FEM.add(element::infinite16,m,coord);
+						}
+						if (y+dy < DOMAIN) {
+							coord.resize(4);
+							coord[0] = coord3d(x,y   ,z);
+							coord[1] = coord3d(x,y+dy,z);
+							coord[2] = coord3d(x,y   ,z-dz);
+							coord[3] = coord3d(x,y+dy,z-dz);
+							FEM.add(element::infinite16,m,coord);
+						}
+					} else if (x+dx == DOMAIN) {
+						if (y == -DOMAIN) {
+							coord.resize(2);
+							coord[0] = coord3d(x+dx,y,z);
+							coord[1] = coord3d(x+dx,y,z-dz);
+							FEM.add(element::infinite16,m,coord);
+						} else if (y+dy == DOMAIN) {
+							coord.resize(2);
+							coord[0] = coord3d(x+dx,y+dy,z);
+							coord[1] = coord3d(x+dx,y+dy,z-dz);
+							FEM.add(element::infinite16,m,coord);
+						}
+						if (y+dy < DOMAIN) {
+							coord.resize(4);
+							coord[0] = coord3d(x+dx,y   ,z);
+							coord[1] = coord3d(x+dx,y+dy,z);
+							coord[2] = coord3d(x+dx,y   ,z-dz);
+							coord[3] = coord3d(x+dx,y+dy,z-dz);
+							FEM.add(element::infinite16,m,coord);
+						}
+					}
+					if (x+dx < DOMAIN) {
+						if (y == -DOMAIN) {
+							coord.resize(4);
+							coord[0] = coord3d(x   ,y,z);
+							coord[1] = coord3d(x+dx,y,z);
+							coord[2] = coord3d(x   ,y,z-dz);
+							coord[3] = coord3d(x+dx,y,z-dz);
+							FEM.add(element::infinite16,m,coord);
+						}
+						if (y+dy == DOMAIN) {
+							coord.resize(4);
+							coord[0] = coord3d(x   ,y+dy,z);
+							coord[1] = coord3d(x+dx,y+dy,z);
+							coord[2] = coord3d(x   ,y+dy,z-dz);
+							coord[3] = coord3d(x+dx,y+dy,z-dz);
+							FEM.add(element::infinite16,m,coord);
+						}
+					}
 				}
 			}
 		}
 		xm = -MIN(16*dx,DOMAIN); xp = MIN(16*dx,DOMAIN);
 		ym = -MIN(16*dy,DOMAIN); yp = MIN(16*dy,DOMAIN);
-		delta *= 2;
+		if (xm > -DOMAIN && xp < DOMAIN
+		 && ym > -DOMAIN && xp < DOMAIN)
+			delta *= 2;
 	}
-	FEM.add_bc_plane(mesh::X,mesh::at|mesh::below,-DOMAIN,
-			mesh::X,0.0);
-	FEM.add_bc_plane(mesh::X,mesh::at|mesh::above, DOMAIN,
-			mesh::X,0.0);
-	FEM.add_bc_plane(mesh::Y,mesh::at|mesh::below,-DOMAIN,
-			mesh::Y,0.0);
-	FEM.add_bc_plane(mesh::Y,mesh::at|mesh::above, DOMAIN,
-			mesh::Y,0.0);
 	FEM.add_bc_plane(mesh::Z,mesh::at|mesh::below,zm,
 			mesh::X|mesh::Y|mesh::Z,0.0);
 	FEM.solve();
@@ -1794,7 +2223,7 @@ main()
 		int j = FEM.hasnode(n);
 		double h = hypot(hypot(vx-ux,vy-uy),vz-uz);
 		double v = hypot(hypot(vx,vy),vz);
-		printf("Node %i: (%i,%i,%i) =\t(%4.2f,%4.2f,%4.2f)\t(%4.2f,%4.2f,%4.2f)\t%4.2f\t(%4.2f)\n",j,int(x),int(y),int(z),ux,uy,uz,vx,vy,vz,h,(v == 0.0 ? 0.0 : h/v));
+		printf("Node %6i: (%+6i,%+6i,%+6i) =\t(%4.2f,%4.2f,%4.2f)\t(%4.2f,%4.2f,%4.2f)\t%4.2f\t(%4.2f)\n",j,int(x),int(y),int(z),ux,uy,uz,vx,vy,vz,h,(v == 0.0 ? 0.0 : h/v));
 	}*/
 
 #if !defined(_MSC_VER) && !defined(DARWIN)
@@ -1888,6 +2317,108 @@ main_test()
 		double uy = n.uy;
 		double uz = n.uz;
 		j = FEM.hasnode(n);
+		printf("Node %i: (%i,%i,%i) =\t(%f,%f,%f)\n",j,int(x),int(y),int(z),ux,uy,uz);
+	}
+
+#if !defined(_MSC_VER) && !defined(DARWIN)
+	// calculate run time
+	clock_gettime(CLOCK_PROF,&stop);
+	double run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
+	fprintf(stdout,"%f\n",run_time);
+#endif
+
+	return 0;
+}
+
+int
+main_infinite()
+{
+#if !defined(_MSC_VER) && !defined(DARWIN)
+	// get starting time
+	struct timespec start, stop;
+	clock_gettime(CLOCK_PROF,&start);
+#endif
+
+	material m;
+	m.setprop(material_property::emod,100); // kPa
+	m.setprop(material_property::poissons,0.35);
+	mesh FEM;
+
+	sset<coord3d> coord(0,8);
+
+	coord.empty();
+	coord.add(coord3d(-10,-10,-10));
+	coord.add(coord3d(-10, 10,-10));
+	coord.add(coord3d( 10,-10,-10));
+	coord.add(coord3d( 10, 10,-10));
+	coord.add(coord3d(-10,-10,  0));
+	coord.add(coord3d(-10, 10,  0));
+	coord.add(coord3d( 10,-10,  0));
+	coord.add(coord3d( 10, 10,  0));
+	FEM.add(element::block16,m,coord);
+
+	coord.empty();
+	coord.add(coord3d(-10,-10,-10));
+	coord.add(coord3d(-10,-10,  0));
+	FEM.add(element::infinite16,m,coord);
+	coord.empty();
+	coord.add(coord3d(-10, 10,-10));
+	coord.add(coord3d(-10, 10,  0));
+	FEM.add(element::infinite16,m,coord);
+	coord.empty();
+	coord.add(coord3d(-10,-10,-10));
+	coord.add(coord3d(-10, 10,-10));
+	coord.add(coord3d(-10,-10,  0));
+	coord.add(coord3d(-10, 10,  0));
+	FEM.add(element::infinite16,m,coord);
+	coord.empty();
+	coord.add(coord3d( 10,-10,-10));
+	coord.add(coord3d( 10,-10,  0));
+	FEM.add(element::infinite16,m,coord);
+	coord.empty();
+	coord.add(coord3d( 10, 10,-10));
+	coord.add(coord3d( 10, 10,  0));
+	FEM.add(element::infinite16,m,coord);
+	coord.empty();
+	coord.add(coord3d( 10,-10,-10));
+	coord.add(coord3d( 10, 10,-10));
+	coord.add(coord3d( 10,-10,  0));
+	coord.add(coord3d( 10, 10,  0));
+	FEM.add(element::infinite16,m,coord);
+	coord.empty();
+	coord.add(coord3d(-10,-10,-10));
+	coord.add(coord3d( 10,-10,-10));
+	coord.add(coord3d(-10,-10,  0));
+	coord.add(coord3d( 10,-10,  0));
+	FEM.add(element::infinite16,m,coord);
+	coord.empty();
+	coord.add(coord3d(-10, 10,-10));
+	coord.add(coord3d( 10, 10,-10));
+	coord.add(coord3d(-10, 10,  0));
+	coord.add(coord3d( 10, 10,  0));
+	FEM.add(element::infinite16,m,coord);
+
+	FEM.add_fext(coord3d(-10,-10,  0),mesh::Z,-10);
+	FEM.add_fext(coord3d(-10, 10,  0),mesh::Z,-10);
+	FEM.add_fext(coord3d( 10,-10,  0),mesh::Z,-10);
+	FEM.add_fext(coord3d( 10, 10,  0),mesh::Z,-10);
+
+	FEM.add_bc_plane(mesh::Z,mesh::at|mesh::below,-10,
+			mesh::X|mesh::Y|mesh::Z,0.0);
+
+	FEM.solve();
+	int nnd = FEM.getnodes();
+	for (int i = 0; i < nnd; i++) {
+		const node3d & n = FEM.getorderednode(i);
+		double x = n.x;
+		double y = n.y;
+		double z = n.z;
+		//if (y != 0.0 || x != 0.0)
+		//	continue;
+		double ux = n.ux;
+		double uy = n.uy;
+		double uz = n.uz;
+		int j = FEM.hasnode(n);
 		printf("Node %i: (%i,%i,%i) =\t(%f,%f,%f)\n",j,int(x),int(y),int(z),ux,uy,uz);
 	}
 
