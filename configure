@@ -2080,6 +2080,7 @@ CPPFLAGS="$_CONFIG_H $CPPFLAGS $_DEBUG_DEFINES"
 
 
 
+
 for p in $OP_PROJECTS; do
     eval "OP_PROJECT_${p}=1";
 done;
@@ -2110,7 +2111,7 @@ if test -n "$OP_PROJECT_fem3d"; then
 fi
 
 echo $ac_n "checking if config.h needs rebuilding""... $ac_c" 1>&6
-echo "configure:2114: checking if config.h needs rebuilding" >&5
+echo "configure:2115: checking if config.h needs rebuilding" >&5
 
 echo "$ac_t""done" 1>&6
 
@@ -2296,6 +2297,7 @@ s%@DSO_LDFLAGS@%$DSO_LDFLAGS%g
 s%@OS_LIBS@%$OS_LIBS%g
 s%@RESOLVE_SYMS@%$RESOLVE_SYMS%g
 s%@RCFLAGS@%$RCFLAGS%g
+s%@OP_DEBUG@%$OP_DEBUG%g
 s%@OP_OPTIMIZE@%$OP_OPTIMIZE%g
 s%@OP_VERSION_MAJOR@%$OP_VERSION_MAJOR%g
 s%@OP_VERSION_MINOR@%$OP_VERSION_MINOR%g
