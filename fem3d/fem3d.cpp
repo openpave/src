@@ -439,10 +439,11 @@ public:
 	element_block8(mesh * o, element * p, const material & m,
 			const fset<coord3d> & c)
 	  : element(o,p,block8,m) {
+		int i;
 		assert(8 == c.length());
-		for (int i = 0; i < 8; i++)
+		for (i = 0; i < 8; i++)
 			inel.add(addnode(c[i]));
-		for (int i = 0; i < 8; i++) {
+		for (i = 0; i < 8; i++) {
 			node3d n = getnode(inel[i]);
 			int x_m = -1, x_p = -1;
 			int y_m = -1, y_p = -1;
@@ -540,30 +541,31 @@ public:
 	element_block16(mesh * o, element * p, const material & m,
 			const fset<coord3d> & c)
 	  : element(o,p,block16,m) {
+		int i;
 		assert(8 == c.length());
 		double xb[4], yb[4], zb[4];
 		double xt[4], yt[4], zt[4];
-		for (int i = 0; i < 4; i++) {
+		for (i = 0; i < 4; i++) {
 			xb[i] = c[i  ].x; yb[i] = c[i  ].y; zb[i] = c[i  ].z;
 			xt[i] = c[i+4].x; yt[i] = c[i+4].y; zt[i] = c[i+4].z;
 		}
-		for (int i = 0; i < 4; i++)
+		for (i = 0; i < 4; i++)
 			inel.add(addnode(c[i]));
-		for (int i = 0; i < 4; i++) {
+		for (i = 0; i < 4; i++) {
 			double x = xb[i]+  (xt[i]-xb[i])/3;
 			double y = yb[i]+  (yt[i]-yb[i])/3;
 			double z = zb[i]+  (zt[i]-zb[i])/3;
 			inel.add(addnode(coord3d(x,y,z)));
 		}
-		for (int i = 0; i < 4; i++) {
+		for (i = 0; i < 4; i++) {
 			double x = xb[i]+2*(xt[i]-xb[i])/3;
 			double y = yb[i]+2*(yt[i]-yb[i])/3;
 			double z = zb[i]+2*(zt[i]-zb[i])/3;
 			inel.add(addnode(coord3d(x,y,z)));
 		}
-		for (int i = 0; i < 4; i++)
+		for (i = 0; i < 4; i++)
 			inel.add(addnode(c[i+4]));
-		for (int i = 0; i < 16; i++) {
+		for (i = 0; i < 16; i++) {
 			node3d n = getnode(inel[i]);
 			int x_m = -1, x_p = -1;
 			int y_m = -1, y_p = -1;
@@ -606,7 +608,7 @@ public:
 			xe(i,0) = p.x; xe(i,1) = p.y; xe(i,2) = p.z;
 		}
 
-		ksset<point3d,gauss3d> gp(0,8);
+		ksset<point3d,gauss3d> gp(0,16);
 		const double gp_2[2][2] = {{-1.0/sqrt(3.0), 1.0},
 		                           {+1.0/sqrt(3.0), 1.0}};
 		//const double gp_3[3][2] = {{-sqrt(3.0/5.0), 5.0/9.0},
@@ -795,7 +797,7 @@ public:
 			xe(i,0) = p.x; xe(i,1) = p.y; xe(i,2) = p.z;
 		}
 
-		ksset<point3d,gauss3d> gp(0,8);
+		ksset<point3d,gauss3d> gp(0,64);
 		const double gp_A[4][2] = {{-(1.0+1.0/sqrt(3.0))/2.0, 1.0/2.0},
 		                           {-(1.0-1.0/sqrt(3.0))/2.0, 1.0/2.0},
 		                           {+(1.0-1.0/sqrt(3.0))/2.0, 1.0/2.0},
@@ -1130,11 +1132,14 @@ public:
 				t += ~(p->K)*(p->K);
 				p = p->col_next;
 			}
+			assert(K(0,0) >= t(0,0));
 			K(0,0) = sqrt(K(0,0)-t(0,0));
 			K(0,1) = (K(0,1)-t(0,1))/K(0,0);
 			K(0,2) = (K(0,2)-t(0,2))/K(0,0);
+			assert(K(1,1)-K(0,1)*K(0,1) >= t(1,1));
 			K(1,1) = sqrt(K(1,1)-K(0,1)*K(0,1)-t(1,1));
 			K(1,2) = (K(1,2)-K(0,2)*K(0,1)-t(1,2))/K(1,1);
+			assert(K(2,2)-K(0,2)*K(0,2)-K(1,2)*K(1,2) >= t(2,2));
 			K(2,2) = sqrt(K(2,2)-K(0,2)*K(0,2)-K(1,2)*K(1,2)-t(2,2));
 			K(1,0) = K(2,0) = K(2,1) = 0.0;
 			p = d->row_head;
@@ -1238,7 +1243,6 @@ public:
 
 	bool add(const element::element_t t, const material & m,
 			const fset<coord3d> & c) {
-		assert(8 == c.length());
 		element * e = 0;
 		switch (t) {
 		case element::block8:
@@ -1284,27 +1288,89 @@ public:
 	inline const int hasnode(const coord3d & p) const {
 		return node.haskey(p);
 	}
-	bool add_bc(const coord3d & p, const int i, const double d) {
+
+	// An enum to enable handling the degrees of freedom easily.
+	enum dof {
+		X = 0x0001,
+		Y = 0x0002,
+		Z = 0x0004
+	};
+	// An enum to enable adding planes of BCs.
+	enum bcplane {
+		at    = 0x0001,
+		below = 0x0002,
+		above = 0x0004
+	};
+	bool add_bc(const coord3d & p, const dof f, const double d) {
 		int k = node.haskey(p);
-		assert(i >= 0 && i < NDOF && k >= 0);
+		assert(k >= 0);
 		if (k == -1)
 			return false;
-		disp_bc.add(mesh_bc(k,i,d));
+		if (f & mesh::X)
+			disp_bc.add(mesh_bc(k,0,d));
+		if (f & mesh::Y)
+			disp_bc.add(mesh_bc(k,1,d));
+		if (f & mesh::Z)
+			disp_bc.add(mesh_bc(k,2,d));
 		return true;
 	}
-	bool add_fext(const coord3d & p, const int i, const double d) {
+	bool add_bc_plane(const dof o, const bcplane p, const fixed<7> c,
+			const dof f, const double d) {
+		assert(!((o & mesh::X) && (o && mesh::Y)));
+		assert(!((o & mesh::X) && (o && mesh::Z)));
+		assert(!((o & mesh::Y) && (o && mesh::Z)));
+		for (int i = 0; i < node.length(); i++) {
+			const node3d & n = node[i];
+			switch (o) {
+			case mesh::X:
+				if ((p & mesh::at) && (n.x == c))
+					add_bc(n,f,d);
+				if ((p & mesh::below) && (n.x < c))
+					add_bc(n,f,d);
+				if ((p & mesh::above) && (n.x > c))
+					add_bc(n,f,d);
+				break;
+			case mesh::Y:
+				if ((p & mesh::at) && (n.y == c))
+					add_bc(n,f,d);
+				if ((p & mesh::below) && (n.y < c))
+					add_bc(n,f,d);
+				if ((p & mesh::above) && (n.y > c))
+					add_bc(n,f,d);
+				break;
+			case mesh::Z:
+				if ((p & mesh::at) && (n.z == c))
+					add_bc(n,f,d);
+				if ((p & mesh::below) && (n.z < c))
+					add_bc(n,f,d);
+				if ((p & mesh::above) && (n.z > c))
+					add_bc(n,f,d);
+				break;
+			default:
+				return false;
+			}
+		}
+		return true;
+	}
+	bool add_fext(const coord3d & p, const dof f, const double d) {
 		int k = node.haskey(p);
-		assert(i >= 0 && i < NDOF && k >= 0);
+		assert(k >= 0);
 		if (k == -1)
 			return false;
-		f_ext.add(mesh_bc(k,i,d));
+		if (f & mesh::X)
+			f_ext.add(mesh_bc(k,0,d));
+		if (f & mesh::Y)
+			f_ext.add(mesh_bc(k,1,d));
+		if (f & mesh::Z)
+			f_ext.add(mesh_bc(k,2,d));
 		return true;
 	}
+
 	bool solve() {
 		int i, j, nnd = node.length();
 		printf("Solving with %i nodes!\n",nnd);
 		smatrix K(nnd);
-		svector F(nnd), U(nnd), P(nnd), W(nnd), Z(nnd);
+		svector F(nnd), U(nnd), P(nnd), W(nnd), V(nnd);
 		element * e = this->first;
 		smatrix_diag * d;
 		smatrix_node * p;
@@ -1314,6 +1380,8 @@ public:
 				return false;
 			for (i = 0; i < ke->nnd; i++) {
 				for (j = i; j < ke->nnd; j++) {
+					//K.append(ke->inel[i],
+					//         ke->inel[j],(*ke)(i,j));
 					K.append(node.getorder(ke->inel[i]),
 					         node.getorder(ke->inel[j]),(*ke)(i,j));
 				}
@@ -1324,9 +1392,16 @@ public:
 		f_ext.sort();
 		for (i = 0; i < f_ext.length(); i++) {
 			const mesh_bc & f = f_ext[i];
+			//F(f.n)(f.i) = f.d;
 			F(node.getorder(f.n))(f.i) = f.d;
 		}
 		disp_bc.sort();
+		for (i = 0; i < disp_bc.length(); i++)
+			printf("(%f,%f,%f) %i %f\n",
+				double(node[disp_bc[i].n].x),
+				double(node[disp_bc[i].n].y),
+				double(node[disp_bc[i].n].z),
+				disp_bc[i].i,disp_bc[i].d);
 		for (i = 0; i < disp_bc.length(); i++) {
 			if (i+2 < disp_bc.length()
 			 && disp_bc[i].n == disp_bc[i+1].n
@@ -1334,6 +1409,7 @@ public:
 				const mesh_bc & u0 = disp_bc[i];
 				const mesh_bc & u1 = disp_bc[i+1];
 				const mesh_bc & u2 = disp_bc[i+2];
+				//int n = u0.n;
 				int n = node.getorder(u0.n);
 				F(n)(0) = u0.d; F(n)(1) = u1.d; F(n)(2) = u2.d;
 				d = &(K.diag[n]);
@@ -1367,8 +1443,10 @@ public:
 				d->row_head = 0;
 				free(d->nodes);
 				d->nodes = 0;
+				i += 2; // skip the extra BC's we've used.
 			} else {
 				const mesh_bc & u = disp_bc[i];
+				//int n = u.n;
 				int n = node.getorder(u.n);
 				d = &(K.diag[n]);
 				for (j = 0; j < NDOF; j++) {
@@ -1417,34 +1495,34 @@ public:
 				tmatrix<double,NDOF,1> t(F(i));
 				p = d->col_head;
 				while (p) {
-					t -= ~(p->K)*Z(p->i);
+					t -= ~(p->K)*V(p->i);
 					p = p->col_next;
 				}
 				t(0) = t(0)/d->K(0,0);
 				t(1) = (t(1)-t(0)*d->K(0,1))/d->K(1,1);
 				t(2) = (t(2)-t(0)*d->K(0,2)-t(1)*d->K(1,2))/d->K(2,2);
-				Z(i) = t;
+				V(i) = t;
 			}
 			for (i = nnd-1; i >= 0; i--) {
 				d = &(M.diag[i]);
-				tmatrix<double,NDOF,1> t(Z(i));
+				tmatrix<double,NDOF,1> t(V(i));
 				p = d->row_head;
 				while (p) {
-					t -= (p->K)*Z(p->j);
+					t -= (p->K)*V(p->j);
 					p = p->row_next;
 				}
 				t(2) = t(2)/d->K(2,2);
 				t(1) = (t(1)-t(2)*d->K(1,2))/d->K(1,1);
 				t(0) = (t(0)-t(1)*d->K(0,1)-t(2)*d->K(0,2))/d->K(0,0);
-				Z(i) = t;
+				V(i) = t;
 				r += tmatrix_scalar<double>(~t*F(i));
 			}
 			if (it == 0) {
 				for (i = 0; i < nnd; i++)
-					P(i) = Z(i);
+					P(i) = V(i);
 			} else {
 				for (i = 0; i < nnd; i++)
-					P(i) = Z(i) + (r/ro)*P(i);
+					P(i) = V(i) + (r/ro)*P(i);
 			}
 			double a = 0.0;
 			for (i = 0; i < nnd; i++) {
@@ -1478,6 +1556,7 @@ public:
 		}
 		printf("CG took %i steps with residual %g\n",it,r);
 		for (i = 0; i < nnd; i++) {
+			//node3d n = node[i];
 			node3d n = node.getindex(i);
 			n.setdisp(U(i));
 			node.replace(n);
@@ -1492,6 +1571,28 @@ private:
 	koset<mesh_bc_key,mesh_bc> disp_bc;
 	koset<mesh_bc_key,mesh_bc> f_ext;
 };
+
+inline mesh::dof
+operator| (const mesh::dof l, const mesh::dof r)
+{
+	return static_cast<mesh::dof>(int(l) | int(r));
+}
+inline mesh::dof
+operator& (const mesh::dof l, const mesh::dof r)
+{
+	return static_cast<mesh::dof>(int(l) & int(r));
+}
+
+inline mesh::bcplane
+operator| (const mesh::bcplane l, const mesh::bcplane r)
+{
+	return static_cast<mesh::bcplane>(int(l) | int(r));
+}
+inline mesh::bcplane
+operator& (const mesh::bcplane l, const mesh::bcplane r)
+{
+	return static_cast<mesh::bcplane>(int(l) & int(r));
+}
 
 /*
  * Add a node to the mesh's node list, returning the index.
@@ -1614,7 +1715,7 @@ main()
 			FEM.updatenode(n);
 			double f = F*blockarea(x-dx/2,x+dx/2,y-dy/2,y+dy/2,100.0);
 			if (fabs(f) > 0.0)
-				FEM.add_fext(coord3d(x,y,0.0),2,f);
+				FEM.add_fext(coord3d(x,y,0.0),mesh::Z,f);
 		}
 	}
 
@@ -1643,60 +1744,6 @@ main()
 					coord[6] = coord3d(x+dx,y   ,z-dz);
 					coord[7] = coord3d(x+dx,y+dy,z-dz);
 					FEM.add(element::block34,m,coord);
-					if (x == -DOMAIN) {
-						//FEM.add_bc(coord[0],1,0.0);
-						//FEM.add_bc(coord[1],1,0.0);
-						//FEM.add_bc(coord[4],1,0.0);
-						//FEM.add_bc(coord[5],1,0.0);
-						FEM.add_bc(coord[0],0,0.0);
-						FEM.add_bc(coord[1],0,0.0);
-						FEM.add_bc(coord[4],0,0.0);
-						FEM.add_bc(coord[5],0,0.0);
-					}
-					if (x+dx == DOMAIN) {
-						//FEM.add_bc(coord[2],1,0.0);
-						//FEM.add_bc(coord[3],1,0.0);
-						//FEM.add_bc(coord[6],1,0.0);
-						//FEM.add_bc(coord[7],1,0.0);
-						FEM.add_bc(coord[2],0,0.0);
-						FEM.add_bc(coord[3],0,0.0);
-						FEM.add_bc(coord[6],0,0.0);
-						FEM.add_bc(coord[7],0,0.0);
-					}
-					if (y == -DOMAIN) {
-						//FEM.add_bc(coord[0],0,0.0);
-						//FEM.add_bc(coord[2],0,0.0);
-						//FEM.add_bc(coord[4],0,0.0);
-						//FEM.add_bc(coord[6],0,0.0);
-						FEM.add_bc(coord[0],1,0.0);
-						FEM.add_bc(coord[2],1,0.0);
-						FEM.add_bc(coord[4],1,0.0);
-						FEM.add_bc(coord[6],1,0.0);
-					}
-					if (y+dy == DOMAIN) {
-						//FEM.add_bc(coord[1],0,0.0);
-						//FEM.add_bc(coord[3],0,0.0);
-						//FEM.add_bc(coord[5],0,0.0);
-						//FEM.add_bc(coord[7],0,0.0);
-						FEM.add_bc(coord[1],1,0.0);
-						FEM.add_bc(coord[3],1,0.0);
-						FEM.add_bc(coord[5],1,0.0);
-						FEM.add_bc(coord[7],1,0.0);
-					}
-					if (z < -4000.0) {
-						FEM.add_bc(coord[0],0,0.0);
-						FEM.add_bc(coord[1],0,0.0);
-						FEM.add_bc(coord[2],0,0.0);
-						FEM.add_bc(coord[3],0,0.0);
-						FEM.add_bc(coord[0],1,0.0);
-						FEM.add_bc(coord[1],1,0.0);
-						FEM.add_bc(coord[2],1,0.0);
-						FEM.add_bc(coord[3],1,0.0);
-						FEM.add_bc(coord[0],2,0.0);
-						FEM.add_bc(coord[1],2,0.0);
-						FEM.add_bc(coord[2],2,0.0);
-						FEM.add_bc(coord[3],2,0.0);
-					}
 				}
 			}
 		}
@@ -1704,6 +1751,16 @@ main()
 		ym = -MIN(16*dy,DOMAIN); yp = MIN(16*dy,DOMAIN);
 		delta *= 2;
 	}
+	FEM.add_bc_plane(mesh::X,mesh::at|mesh::below,-DOMAIN,
+			mesh::X,0.0);
+	FEM.add_bc_plane(mesh::X,mesh::at|mesh::above, DOMAIN,
+			mesh::X,0.0);
+	FEM.add_bc_plane(mesh::Y,mesh::at|mesh::below,-DOMAIN,
+			mesh::Y,0.0);
+	FEM.add_bc_plane(mesh::Y,mesh::at|mesh::above, DOMAIN,
+			mesh::Y,0.0);
+	FEM.add_bc_plane(mesh::Z,mesh::at|mesh::below,zm,
+			mesh::X|mesh::Y|mesh::Z,0.0);
 	FEM.solve();
 
 	/*int i, nnd = FEM.getnodes();
@@ -1796,15 +1853,15 @@ main_test()
 		for (j = 0; j <= ndiv[1]; j++) {
 			double x = domain[0][0] + i*dx;
 			double y = domain[1][0] + j*dy;
-			FEM.add_bc(coord3d(x,y,domain[2][0]),2,1.0);
+			FEM.add_bc(coord3d(x,y,domain[2][0]),mesh::Z,1.0);
 		}
 	}
-	//FEM.add_bc(coord3d(0.0,0.0,domain[2][0]),0,0.0);
-	//FEM.add_bc(coord3d(0.0,0.0,domain[2][0]),1,0.0);
-	//FEM.add_bc(coord3d(domain[0][0],0.0,domain[2][0]),1,0.0);
-	FEM.add_bc(coord3d(domain[0][0],domain[1][0],domain[2][0]),0,0.0);
-	FEM.add_bc(coord3d(domain[0][0],domain[1][0],domain[2][0]),1,0.0);
-	FEM.add_bc(coord3d(domain[0][1],domain[1][0],domain[2][0]),1,0.0);
+	//FEM.add_bc(coord3d(0.0,0.0,domain[2][0]),mesh::X,0.0);
+	//FEM.add_bc(coord3d(0.0,0.0,domain[2][0]),mesh::X,0.0);
+	//FEM.add_bc(coord3d(domain[0][0],0.0,domain[2][0]),mesh::Y,0.0);
+	FEM.add_bc(coord3d(domain[0][0],domain[1][0],domain[2][0]),mesh::X,0.0);
+	FEM.add_bc(coord3d(domain[0][0],domain[1][0],domain[2][0]),mesh::Y,0.0);
+	FEM.add_bc(coord3d(domain[0][1],domain[1][0],domain[2][0]),mesh::Y,0.0);
 	double F = -0.15*dx*dy;
 	for (i = 0; i <= ndiv[0]; i++) {
 		for (j = 0; j <= ndiv[1]; j++) {
@@ -1815,7 +1872,7 @@ main_test()
 				f /= 2;
 			if (y == domain[1][0] || y == domain[1][1])
 				f /= 2;
-			FEM.add_fext(coord3d(x,y,domain[2][1]),2,f);
+			FEM.add_fext(coord3d(x,y,domain[2][1]),mesh::Z,f);
 		}
 	}
 	FEM.solve();
