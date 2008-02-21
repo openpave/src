@@ -228,8 +228,10 @@ ifdef CXXSRCS
 else
 	$(CC) $(OS_LDFLAGS) $(OBJS) $(_LIBS) $(OS_LIBS) -o $@
 endif
+ifndef BUILD_DBG
 ifdef BUILD_OPT
 	$(STRIP) $@
+endif
 endif
 endif
 
@@ -259,8 +261,10 @@ ifdef CXXSRCS
 else
 	$(CC) $(DSO_LDFLAGS) $(_LIBS) $(OBJS) $(RES) -o $@
 endif
+ifndef BUILD_DBG
 ifdef BUILD_OPT
 	$(STRIP) $@
+endif
 endif
 endif
 
