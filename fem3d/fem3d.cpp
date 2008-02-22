@@ -2217,7 +2217,7 @@ main()
 
 	int i, nnd = FEM1.getnodes();
 	LEsystem test;
-	test.addlayer(fabs(zm),100e3,0.35);
+	test.addlayer(-zm,100e3,0.35);
 	test.addload(point2d(0.0,0.0),0.0,690.0,100.0);
 	for (i = 0; i < nnd; i++) {
 		const node3d & n = FEM1.getorderednode(i);
