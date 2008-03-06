@@ -218,6 +218,23 @@ struct gauss3d : public point3d {
 };
 
 /*
+ * Gauss Quadrature abscissa and weights.
+ */
+const double gp_2[2][2] = {{-1/sqrt(3), 1},
+                           {+1/sqrt(3), 1}};
+const double gp_3[3][2] = {{-sqrt(3/5), 5/9.0},
+                           {         0, 8/9.0},
+                           {+sqrt(3/5), 5/9.0}};
+const double gp_4[4][2] = {{-sqrt(525+70*sqrt(30))/35, (18-sqrt(30))/36},
+                           {-sqrt(525-70*sqrt(30))/35, (18+sqrt(30))/36},
+                           {+sqrt(525-70*sqrt(30))/35, (18+sqrt(30))/36},
+                           {+sqrt(525+70*sqrt(30))/35, (18-sqrt(30))/36}};
+const double gp_A[4][2] = {{-(1+1/sqrt(3))/2, 1/2.0},
+                           {-(1-1/sqrt(3))/2, 1/2.0},
+                           {+(1-1/sqrt(3))/2, 1/2.0},
+                           {+(1+1/sqrt(3))/2, 1/2.0}};
+
+/*
  * struct node3d - a Node in 3D
  */
 struct node3d : public coord3d {
@@ -485,8 +502,6 @@ public:
 		}
 
 		ksset<point3d,gauss3d> gp(0,8);
-		const double gp_2[2][2] = {{-1.0/sqrt(3.0), 1.0},
-		                           {+1.0/sqrt(3.0), 1.0}};
 		for (i = 0; i < 2; i++) {
 			for (j = 0; j < 2; j++) {
 				for (k = 0; k < 2; k++) {
@@ -610,16 +625,6 @@ public:
 		}
 
 		ksset<point3d,gauss3d> gp(0,16);
-		const double gp_2[2][2] = {{-1.0/sqrt(3.0), 1.0},
-		                           {+1.0/sqrt(3.0), 1.0}};
-		//const double gp_3[3][2] = {{-sqrt(3.0/5.0), 5.0/9.0},
-		//                           {             0, 8.0/9.0},
-		//                           {+sqrt(3.0/5.0), 5.0/9.0}};
-		const double gp_4[4][2] =
-			{{-sqrt(525.0+70.0*sqrt(30.0))/35.0, (18.0-sqrt(30.0))/36.0},
-			 {-sqrt(525.0-70.0*sqrt(30.0))/35.0, (18.0+sqrt(30.0))/36.0},
-			 {+sqrt(525.0-70.0*sqrt(30.0))/35.0, (18.0+sqrt(30.0))/36.0},
-			 {+sqrt(525.0+70.0*sqrt(30.0))/35.0, (18.0-sqrt(30.0))/36.0}};
 		for (i = 0; i < 2; i++) {
 			for (j = 0; j < 2; j++) {
 				for (k = 0; k < 4; k++) {
@@ -886,17 +891,6 @@ public:
 		}
 
 		ksset<point3d,gauss3d> gp(0,64);
-		// XXX: Do we need better integration in the infinite direction?
-		//const double gp_2[2][2] = {{-1.0/sqrt(3.0), 1.0},
-		//                           {+1.0/sqrt(3.0), 1.0}};
-		//const double gp_3[3][2] = {{-sqrt(3.0/5.0), 5.0/9.0},
-		//                           {             0, 8.0/9.0},
-		//                           {+sqrt(3.0/5.0), 5.0/9.0}};
-		const double gp_4[4][2] =
-			{{-sqrt(525.0+70.0*sqrt(30.0))/35.0, (18.0-sqrt(30.0))/36.0},
-			 {-sqrt(525.0-70.0*sqrt(30.0))/35.0, (18.0+sqrt(30.0))/36.0},
-			 {+sqrt(525.0-70.0*sqrt(30.0))/35.0, (18.0+sqrt(30.0))/36.0},
-			 {+sqrt(525.0+70.0*sqrt(30.0))/35.0, (18.0-sqrt(30.0))/36.0}};
 		for (i = 0; i < 4; i++) {
 			for (j = 0; j < 4; j++) {
 				for (k = 0; k < 4; k++) {
@@ -1176,18 +1170,6 @@ public:
 		}
 
 		ksset<point3d,gauss3d> gp(0,64);
-		const double gp_A[4][2] = {{-(1.0+1.0/sqrt(3.0))/2.0, 1.0/2.0},
-		                           {-(1.0-1.0/sqrt(3.0))/2.0, 1.0/2.0},
-		                           {+(1.0-1.0/sqrt(3.0))/2.0, 1.0/2.0},
-		                           {+(1.0+1.0/sqrt(3.0))/2.0, 1.0/2.0}};
-		//const double gp_3[3][2] = {{-sqrt(3.0/5.0), 5.0/9.0},
-		//                           {             0, 8.0/9.0},
-		//                           {+sqrt(3.0/5.0), 5.0/9.0}};
-		const double gp_4[4][2] =
-			{{-sqrt(525.0+70.0*sqrt(30.0))/35.0, (18.0-sqrt(30.0))/36.0},
-			 {-sqrt(525.0-70.0*sqrt(30.0))/35.0, (18.0+sqrt(30.0))/36.0},
-			 {+sqrt(525.0-70.0*sqrt(30.0))/35.0, (18.0+sqrt(30.0))/36.0},
-			 {+sqrt(525.0+70.0*sqrt(30.0))/35.0, (18.0-sqrt(30.0))/36.0}};
 		for (i = 0; i < 4; i++) {
 			for (j = 0; j < 4; j++) {
 				for (k = 0; k < 4; k++) {
