@@ -506,27 +506,27 @@ public:
 		for (g = 0; g < gp.length(); g++) {
 			rx = gp[g].x; ry = gp[g].y; rz = gp[g].z;
 			double gw = gp[g].gw;
-			tmatrix<double,NDIM,8> dHdr;
-			//tmatrix<double,8,1> H;
+			tmatrix<double,NDIM,8> dNdr;
+			//tmatrix<double,8,1> N;
 			// shape functions for 8-node 3D brick:
-			//   H = 1/8*(1+-x)*(1+-y)*(1+-z);
-			const double Hx[8] = {-1, -1, +1, +1, -1, -1, +1, +1};
-			const double Hy[8] = {-1, +1, -1, +1, -1, +1, -1, +1};
-			const double Hz[8] = {-1, -1, -1, -1, +1, +1, +1, +1};
+			//   N = 1/8*(1+-x)*(1+-y)*(1+-z);
+			const double Nx[8] = {-1, -1, +1, +1, -1, -1, +1, +1};
+			const double Ny[8] = {-1, +1, -1, +1, -1, +1, -1, +1};
+			const double Nz[8] = {-1, -1, -1, -1, +1, +1, +1, +1};
 			for (l = 0; l < 8; l++) {
-				dHdr(0,l) = Hx[l]*(1+Hy[l]*ry)*(1+Hz[l]*rz)/8;
-				dHdr(1,l) = Hy[l]*(1+Hx[l]*rx)*(1+Hz[l]*rz)/8;
-				dHdr(2,l) = Hz[l]*(1+Hx[l]*rx)*(1+Hy[l]*ry)/8;
-				//H(0,l) =(1+Hx[l]*rx)*(1+Hy[l]*ry)*(1+Hz[l]*rz)/8;
+				dNdr(0,l) = Nx[l]*(1+Ny[l]*ry)*(1+Nz[l]*rz)/8;
+				dNdr(1,l) = Ny[l]*(1+Nx[l]*rx)*(1+Nz[l]*rz)/8;
+				dNdr(2,l) = Nz[l]*(1+Nx[l]*rx)*(1+Ny[l]*ry)/8;
+				//N(0,l) =(1+Nx[l]*rx)*(1+Ny[l]*ry)*(1+Nz[l]*rz)/8;
 			}
-			tmatrix<double,NDIM,NDIM> J(dHdr*xe);
+			tmatrix<double,NDIM,NDIM> J(dNdr*xe);
 			// This returns det(J);
-			gw *= inv_mul_gauss(J,dHdr);
+			gw *= inv_mul_gauss(J,dNdr);
 			for (i = 0; i < 8; i++) {
 				for (j = i; j < 8; j++) {
 					for (k = 0; k < 3; k++)
 						for (l = 0; l < 3; l++)
-							K(i,j) += E[k][l]*(dHdr(k,i)*dHdr(l,j)*gw);
+							K(i,j) += E[k][l]*(dNdr(k,i)*dNdr(l,j)*gw);
 				}
 			}
 		}
@@ -639,35 +639,35 @@ public:
 		for (g = 0; g < gp.length(); g++) {
 			rx = gp[g].x; ry = gp[g].y; rz = gp[g].z;
 			double gw = gp[g].gw;
-			tmatrix<double,NDIM,16> dHdr;
-			//tmatrix<double,16,1> H;
+			tmatrix<double,NDIM,16> dNdr;
+			//tmatrix<double,16,1> N;
 
 			// shape functions for 16-node 3D brick:
-			const double Hx1[16] = {-1,-1,+1,+1,-1,-1,+1,+1,-1,-1,+1,+1,-1,-1,+1,+1};
-			const double Hy1[16] = {-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1};
-			const double Hz0[16] = {-1,-1,-1,-1,+9,+9,+9,+9,+9,+9,+9,+9,-1,-1,-1,-1};
-			const double Hz2[16] = {+9,+9,+9,+9,-9,-9,-9,-9,-9,-9,-9,-9,+9,+9,+9,+9};
-			const double Hz1[16] = {-1,-1,-1,-1,-3,-3,-3,-3,+3,+3,+3,+3,+1,+1,+1,+1};
+			const double Nx1[16] = {-1,-1,+1,+1,-1,-1,+1,+1,-1,-1,+1,+1,-1,-1,+1,+1};
+			const double Ny1[16] = {-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1};
+			const double Nz0[16] = {-1,-1,-1,-1,+9,+9,+9,+9,+9,+9,+9,+9,-1,-1,-1,-1};
+			const double Nz2[16] = {+9,+9,+9,+9,-9,-9,-9,-9,-9,-9,-9,-9,+9,+9,+9,+9};
+			const double Nz1[16] = {-1,-1,-1,-1,-3,-3,-3,-3,+3,+3,+3,+3,+1,+1,+1,+1};
 
 			for (l = 0; l < 16; l++) {
-				dHdr(0,l) = Hx1[l]*(1+Hy1[l]*ry)
-						*(Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/64;
-				dHdr(1,l) = (1+Hx1[l]*rx)*Hy1[l]
-						*(Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/64;
-				dHdr(2,l) = (1+Hx1[l]*rx)*(1+Hy1[l]*ry)
-						*((2*Hz2[l]*rz)*(1+Hz1[l]*rz)
-					+ (Hz0[l]+Hz2[l]*rz*rz)*Hz1[l])/64;
-				//H(0,l) = (1+Hx1[l]*rx)*(1+Hy1[l]*ry)
-				//		*(Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/64;
+				dNdr(0,l) = Nx1[l]*(1+Ny1[l]*ry)
+						*(Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/64;
+				dNdr(1,l) = (1+Nx1[l]*rx)*Ny1[l]
+						*(Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/64;
+				dNdr(2,l) = (1+Nx1[l]*rx)*(1+Ny1[l]*ry)
+						*((2*Nz2[l]*rz)*(1+Nz1[l]*rz)
+					+ (Nz0[l]+Nz2[l]*rz*rz)*Nz1[l])/64;
+				//N(0,l) = (1+Nx1[l]*rx)*(1+Ny1[l]*ry)
+				//		*(Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/64;
 			}
-			tmatrix<double,NDIM,NDIM> J(dHdr*xe);
+			tmatrix<double,NDIM,NDIM> J(dNdr*xe);
 			// This returns det(J);
-			gw *= inv_mul_gauss(J,dHdr);
+			gw *= inv_mul_gauss(J,dNdr);
 			for (i = 0; i < 16; i++) {
 				for (j = i; j < 16; j++) {
 					for (k = 0; k < 3; k++)
 						for (l = 0; l < 3; l++)
-							K(i,j) += E[k][l]*(dHdr(k,i)*dHdr(l,j)*gw);
+							K(i,j) += E[k][l]*(dNdr(k,i)*dNdr(l,j)*gw);
 				}
 			}
 		}
@@ -918,113 +918,113 @@ public:
 		const double My0[16] = { 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1};
 		const double My1[16] = {-2,+1,-2,+1,-2,+1,-2,+1,-2,+1,-2,+1,-2,+1,-2,+1};
 
-		const double Hx1[16] = {-1,-1,+1,+1,-1,-1,+1,+1,-1,-1,+1,+1,-1,-1,+1,+1};
-		const double Hy1[16] = {-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1};
-		const double Hz0[16] = {-1,-1,-1,-1,+9,+9,+9,+9,+9,+9,+9,+9,-1,-1,-1,-1};
-		const double Hz2[16] = {+9,+9,+9,+9,-9,-9,-9,-9,-9,-9,-9,-9,+9,+9,+9,+9};
-		const double Hz1[16] = {-1,-1,-1,-1,-3,-3,-3,-3,+3,+3,+3,+3,+1,+1,+1,+1};
+		const double Nx1[16] = {-1,-1,+1,+1,-1,-1,+1,+1,-1,-1,+1,+1,-1,-1,+1,+1};
+		const double Ny1[16] = {-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1};
+		const double Nz0[16] = {-1,-1,-1,-1,+9,+9,+9,+9,+9,+9,+9,+9,-1,-1,-1,-1};
+		const double Nz2[16] = {+9,+9,+9,+9,-9,-9,-9,-9,-9,-9,-9,-9,+9,+9,+9,+9};
+		const double Nz1[16] = {-1,-1,-1,-1,-3,-3,-3,-3,+3,+3,+3,+3,+1,+1,+1,+1};
 
 		for (g = 0; g < gp.length(); g++) {
 			rx = gp[g].x; ry = gp[g].y; rz = gp[g].z;
 			double gw = gp[g].gw;
 			double rxi = 1.0/(1-rx);
 			double ryi = 1.0/(1-ry);
-			tmatrix<double,NDIM,16> dHdr;
-			//tmatrix<double,16,1> H;
+			tmatrix<double,NDIM,16> dNdr;
+			//tmatrix<double,16,1> N;
 
 			switch (inftype) {
 			case corner:
 				// mapping functions for 16-node corner infinite element:
 				for (l = 0; l < 16; l++) {
-					double Hx = (Mx0[l]+Mx1[l]*rx)*rxi;
-					double dHdx = Hx1[l]*2*rxi*rxi;
-					double Hy = (My0[l]+My1[l]*ry)*ryi;
-					double dHdy = Hy1[l]*2*ryi*ryi;
-					double Hz = (Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/16;
-					double dHdz = ((2*Hz2[l]*rz)*(1+Hz1[l]*rz)
-						+ (Hz0[l]+Hz2[l]*rz*rz)*Hz1[l])/16;
-					dHdr(0,l) = dHdx*Hy*Hz;
-					dHdr(1,l) = Hx*dHdy*Hz;
-					dHdr(2,l) = Hx*Hy*dHdz;
+					double Nx = (Mx0[l]+Mx1[l]*rx)*rxi;
+					double dNdx = Nx1[l]*2*rxi*rxi;
+					double Ny = (My0[l]+My1[l]*ry)*ryi;
+					double dNdy = Ny1[l]*2*ryi*ryi;
+					double Nz = (Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/16;
+					double dNdz = ((2*Nz2[l]*rz)*(1+Nz1[l]*rz)
+						+ (Nz0[l]+Nz2[l]*rz*rz)*Nz1[l])/16;
+					dNdr(0,l) = dNdx*Ny*Nz;
+					dNdr(1,l) = Nx*dNdy*Nz;
+					dNdr(2,l) = Nx*Ny*dNdz;
 				}
 				break;
 			case infX:
 				// mapping functions for 16-node x infinite element:
 				for (l = 0; l < 16; l++) {
-					double Hx = (Mx0[l]+Mx1[l]*rx)*rxi;
-					double dHdx = Hx1[l]*2*rxi*rxi;
-					double Hy = (1+Hy1[l]*ry);
-					double dHdy = Hy1[l];
-					double Hz = (Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/16;
-					double dHdz = ((2*Hz2[l]*rz)*(1+Hz1[l]*rz)
-						+ (Hz0[l]+Hz2[l]*rz*rz)*Hz1[l])/16;
-					dHdr(0,l) = dHdx*Hy*Hz;
-					dHdr(1,l) = Hx*dHdy*Hz;
-					dHdr(2,l) = Hx*Hy*dHdz;
+					double Nx = (Mx0[l]+Mx1[l]*rx)*rxi;
+					double dNdx = Nx1[l]*2*rxi*rxi;
+					double Ny = (1+Ny1[l]*ry);
+					double dNdy = Ny1[l];
+					double Nz = (Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/16;
+					double dNdz = ((2*Nz2[l]*rz)*(1+Nz1[l]*rz)
+						+ (Nz0[l]+Nz2[l]*rz*rz)*Nz1[l])/16;
+					dNdr(0,l) = dNdx*Ny*Nz;
+					dNdr(1,l) = Nx*dNdy*Nz;
+					dNdr(2,l) = Nx*Ny*dNdz;
 				}
 				break;
 			case infY:
 				// mapping functions for 16-node y infinite element:
 				for (l = 0; l < 16; l++) {
-					double Hx = (1+Hx1[l]*rx);
-					double dHdx = Hx1[l];
-					double Hy = (My0[l]+My1[l]*ry)*ryi;
-					double dHdy = Hy1[l]*2*ryi*ryi;
-					double Hz = (Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/16;
-					double dHdz = ((2*Hz2[l]*rz)*(1+Hz1[l]*rz)
-						+ (Hz0[l]+Hz2[l]*rz*rz)*Hz1[l])/16;
-					dHdr(0,l) = dHdx*Hy*Hz;
-					dHdr(1,l) = Hx*dHdy*Hz;
-					dHdr(2,l) = Hx*Hy*dHdz;
+					double Nx = (1+Nx1[l]*rx);
+					double dNdx = Nx1[l];
+					double Ny = (My0[l]+My1[l]*ry)*ryi;
+					double dNdy = Ny1[l]*2*ryi*ryi;
+					double Nz = (Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/16;
+					double dNdz = ((2*Nz2[l]*rz)*(1+Nz1[l]*rz)
+						+ (Nz0[l]+Nz2[l]*rz*rz)*Nz1[l])/16;
+					dNdr(0,l) = dNdx*Ny*Nz;
+					dNdr(1,l) = Nx*dNdy*Nz;
+					dNdr(2,l) = Nx*Ny*dNdz;
 				}
 				break;
 			}
-			tmatrix<double,NDIM,NDIM> J(dHdr*xe);
+			tmatrix<double,NDIM,NDIM> J(dNdr*xe);
 
 			switch (inftype) {
 			case corner:
 				// shape functions for 16-node corner infinite element:
 				for (l = 0; l < 16; l++) {
-					double Hx = (rx*rx+(1-Mx0[l])*rx-Mx0[l])/(-Mx1[l]);
-					double dHdx = (2*rx+(1-Mx0[l]))/(-Mx1[l]);
-					double Hy = (ry*ry+(1-My0[l])*ry-My0[l])/(-My1[l]);
-					double dHdy = (2*ry+(1-My0[l]))/(-My1[l]);
-					double Hz = (Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/16;
-					double dHdz = ((2*Hz2[l]*rz)*(1+Hz1[l]*rz)
-						+ (Hz0[l]+Hz2[l]*rz*rz)*Hz1[l])/16;
-					dHdr(0,l) = dHdx*Hy*Hz;
-					dHdr(1,l) = Hx*dHdy*Hz;
-					dHdr(2,l) = Hx*Hy*dHdz;
+					double Nx = (rx*rx+(1-Mx0[l])*rx-Mx0[l])/(-Mx1[l]);
+					double dNdx = (2*rx+(1-Mx0[l]))/(-Mx1[l]);
+					double Ny = (ry*ry+(1-My0[l])*ry-My0[l])/(-My1[l]);
+					double dNdy = (2*ry+(1-My0[l]))/(-My1[l]);
+					double Nz = (Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/16;
+					double dNdz = ((2*Nz2[l]*rz)*(1+Nz1[l]*rz)
+						+ (Nz0[l]+Nz2[l]*rz*rz)*Nz1[l])/16;
+					dNdr(0,l) = dNdx*Ny*Nz;
+					dNdr(1,l) = Nx*dNdy*Nz;
+					dNdr(2,l) = Nx*Ny*dNdz;
 				}
 				break;
 			case infX:
 				// shape functions for 16-node x infinite element:
 				for (l = 0; l < 16; l++) {
-					double Hx = (rx*rx+(1-Mx0[l])*rx-Mx0[l])/(-Mx1[l]);
-					double dHdx = (2*rx+(1-Mx0[l]))/(-Mx1[l]);
-					double Hy = (1+Hy1[l]*ry);
-					double dHdy = Hy1[l];
-					double Hz = (Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/16;
-					double dHdz = ((2*Hz2[l]*rz)*(1+Hz1[l]*rz)
-						+ (Hz0[l]+Hz2[l]*rz*rz)*Hz1[l])/16;
-					dHdr(0,l) = dHdx*Hy*Hz;
-					dHdr(1,l) = Hx*dHdy*Hz;
-					dHdr(2,l) = Hx*Hy*dHdz;
+					double Nx = (rx*rx+(1-Mx0[l])*rx-Mx0[l])/(-Mx1[l]);
+					double dNdx = (2*rx+(1-Mx0[l]))/(-Mx1[l]);
+					double Ny = (1+Ny1[l]*ry);
+					double dNdy = Ny1[l];
+					double Nz = (Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/16;
+					double dNdz = ((2*Nz2[l]*rz)*(1+Nz1[l]*rz)
+						+ (Nz0[l]+Nz2[l]*rz*rz)*Nz1[l])/16;
+					dNdr(0,l) = dNdx*Ny*Nz;
+					dNdr(1,l) = Nx*dNdy*Nz;
+					dNdr(2,l) = Nx*Ny*dNdz;
 				}
 				break;
 			case infY:
 				// shape functions for 16-node y infinite element:
 				for (l = 0; l < 16; l++) {
-					double Hx = (1+Hx1[l]*rx);
-					double dHdx = Hx1[l];
-					double Hy = (ry*ry+(1-My0[l])*ry-My0[l])/(-My1[l]);
-					double dHdy = (2*ry+(1-My0[l]))/(-My1[l]);
-					double Hz = (Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/16;
-					double dHdz = ((2*Hz2[l]*rz)*(1+Hz1[l]*rz)
-						+ (Hz0[l]+Hz2[l]*rz*rz)*Hz1[l])/16;
-					dHdr(0,l) = dHdx*Hy*Hz;
-					dHdr(1,l) = Hx*dHdy*Hz;
-					dHdr(2,l) = Hx*Hy*dHdz;
+					double Nx = (1+Nx1[l]*rx);
+					double dNdx = Nx1[l];
+					double Ny = (ry*ry+(1-My0[l])*ry-My0[l])/(-My1[l]);
+					double dNdy = (2*ry+(1-My0[l]))/(-My1[l]);
+					double Nz = (Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/16;
+					double dNdz = ((2*Nz2[l]*rz)*(1+Nz1[l]*rz)
+						+ (Nz0[l]+Nz2[l]*rz*rz)*Nz1[l])/16;
+					dNdr(0,l) = dNdx*Ny*Nz;
+					dNdr(1,l) = Nx*dNdy*Nz;
+					dNdr(2,l) = Nx*Ny*dNdz;
 				}
 				break;
 			}
@@ -1032,12 +1032,12 @@ public:
 			// The absolute value is to take care of all of negative
 			// definite Jacobians above.  This is the quickest way to fix up
 			// all of the shape functions.
-			gw *= fabs(inv_mul_gauss(J,dHdr));
+			gw *= fabs(inv_mul_gauss(J,dNdr));
 			for (i = 0; i < 16; i++) {
 				for (j = i; j < 16; j++) {
 					for (k = 0; k < 3; k++)
 						for (l = 0; l < 3; l++)
-							K(i,j) += E[k][l]*(dHdr(k,i)*dHdr(l,j)*gw);
+							K(i,j) += E[k][l]*(dNdr(k,i)*dNdr(l,j)*gw);
 				}
 			}
 		}
@@ -1207,57 +1207,57 @@ public:
 		for (g = 0; g < gp.length(); g++) {
 			rx = gp[g].x; ry = gp[g].y; rz = gp[g].z;
 			double gw = gp[g].gw;
-			matrix_dense dHdr(NDIM,nnd);
-			//matrix_dense H(nnd,1);
+			matrix_dense dNdr(NDIM,nnd);
+			//matrix_dense N(nnd,1);
 
 			// shape functions for 16/34-node 3D brick:
 			const double Sxy[16] = { 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0};
-			const double Hx1[16] = {-1,-1,+1,+1,-1,-1,+1,+1,-1,-1,+1,+1,-1,-1,+1,+1};
-			const double Hy1[16] = {-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1};
-			const double Hz0[16] = {-1,-1,-1,-1,+9,+9,+9,+9,+9,+9,+9,+9,-1,-1,-1,-1};
-			const double Hz2[16] = {+9,+9,+9,+9,-9,-9,-9,-9,-9,-9,-9,-9,+9,+9,+9,+9};
-			const double Hz1[16] = {-1,-1,-1,-1,-3,-3,-3,-3,+3,+3,+3,+3,+1,+1,+1,+1};
+			const double Nx1[16] = {-1,-1,+1,+1,-1,-1,+1,+1,-1,-1,+1,+1,-1,-1,+1,+1};
+			const double Ny1[16] = {-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1,-1,+1};
+			const double Nz0[16] = {-1,-1,-1,-1,+9,+9,+9,+9,+9,+9,+9,+9,-1,-1,-1,-1};
+			const double Nz2[16] = {+9,+9,+9,+9,-9,-9,-9,-9,-9,-9,-9,-9,+9,+9,+9,+9};
+			const double Nz1[16] = {-1,-1,-1,-1,-3,-3,-3,-3,+3,+3,+3,+3,+1,+1,+1,+1};
 
 			for (l = 0; l < 16; l++) {
-				dHdr(0,l) = Hx1[l]*(1+Hy1[l]*ry)
-						*(Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/64;
-				dHdr(1,l) = (1+Hx1[l]*rx)*Hy1[l]
-						*(Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/64;
-				dHdr(2,l) = (1+Hx1[l]*rx)*(1+Hy1[l]*ry)
-						*((2*Hz2[l]*rz)*(1+Hz1[l]*rz)
-					+ (Hz0[l]+Hz2[l]*rz*rz)*Hz1[l])/64;
-				//H(l) = (1+Hx1[l]*rx)*(1+Hy1[l]*ry)
-				//		*(Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/64;
+				dNdr(0,l) = Nx1[l]*(1+Ny1[l]*ry)
+						*(Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/64;
+				dNdr(1,l) = (1+Nx1[l]*rx)*Ny1[l]
+						*(Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/64;
+				dNdr(2,l) = (1+Nx1[l]*rx)*(1+Ny1[l]*ry)
+						*((2*Nz2[l]*rz)*(1+Nz1[l]*rz)
+					+ (Nz0[l]+Nz2[l]*rz*rz)*Nz1[l])/64;
+				//N(l) = (1+Nx1[l]*rx)*(1+Ny1[l]*ry)
+				//		*(Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/64;
 			}
 			for (l = 0; l < 16; l++) {
 				if ((i = mask[l]) == 0)
 					continue;
-				dHdr(0,i) = (Sxy[l] ? -SGN(rx) : Hx1[l])
-				        *(1+(!Sxy[l] ? -fabs(ry) : Hy1[l]*ry))
-						*(Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/32;
-				dHdr(1,i) = (1+(Sxy[l] ? -fabs(rx) : Hx1[l]*rx))
-				        *(!Sxy[l] ? -SGN(ry) : Hy1[l])
-						*(Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/32;
-				dHdr(2,i) = (1+(Sxy[l] ? -fabs(rx) : Hx1[l]*rx))
-				        *(1+(!Sxy[l] ? -fabs(ry) : Hy1[l]*ry))
-						*((2*Hz2[l]*rz)*(1+Hz1[l]*rz)
-					+ (Hz0[l]+Hz2[l]*rz*rz)*Hz1[l])/32;
-				//H(i) = (1+(Sxy[l] ? -fabs(rx) : Hx1[l]*rx))
-				//      *(1+(!Sxy[l] ? -fabs(ry) : Hy1[l]*ry))
-				//		*(Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/32;
+				dNdr(0,i) = (Sxy[l] ? -SGN(rx) : Nx1[l])
+				        *(1+(!Sxy[l] ? -fabs(ry) : Ny1[l]*ry))
+						*(Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/32;
+				dNdr(1,i) = (1+(Sxy[l] ? -fabs(rx) : Nx1[l]*rx))
+				        *(!Sxy[l] ? -SGN(ry) : Ny1[l])
+						*(Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/32;
+				dNdr(2,i) = (1+(Sxy[l] ? -fabs(rx) : Nx1[l]*rx))
+				        *(1+(!Sxy[l] ? -fabs(ry) : Ny1[l]*ry))
+						*((2*Nz2[l]*rz)*(1+Nz1[l]*rz)
+					+ (Nz0[l]+Nz2[l]*rz*rz)*Nz1[l])/32;
+				//N(i) = (1+(Sxy[l] ? -fabs(rx) : Nx1[l]*rx))
+				//      *(1+(!Sxy[l] ? -fabs(ry) : Ny1[l]*ry))
+				//		*(Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/32;
 			}
 			for (l = 0; l < 16; l += 12) {
 				if ((i = mask[(l == 0 ? 16 : 17)]) == 0)
 					continue;
-				dHdr(0,i) = -SGN(rx)*(1-fabs(ry))
-						*(Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/16;
-				dHdr(1,i) = -(1-fabs(rx))*SGN(ry)
-						*(Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/16;
-				dHdr(2,i) = (1-fabs(rx))*(1-fabs(ry))
-						*((2*Hz2[l]*rz)*(1+Hz1[l]*rz)
-					+ (Hz0[l]+Hz2[l]*rz*rz)*Hz1[l])/16;
-				//H(i) = (1-fabs(rx))*(1-fabs(ry))
-				//		*(Hz0[l]+Hz2[l]*rz*rz)*(1+Hz1[l]*rz)/16;
+				dNdr(0,i) = -SGN(rx)*(1-fabs(ry))
+						*(Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/16;
+				dNdr(1,i) = -(1-fabs(rx))*SGN(ry)
+						*(Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/16;
+				dNdr(2,i) = (1-fabs(rx))*(1-fabs(ry))
+						*((2*Nz2[l]*rz)*(1+Nz1[l]*rz)
+					+ (Nz0[l]+Nz2[l]*rz*rz)*Nz1[l])/16;
+				//N(i) = (1-fabs(rx))*(1-fabs(ry))
+				//		*(Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/16;
 			}
 			for (l = 0; l < 16; l++) {
 				switch (l%4) {
@@ -1268,42 +1268,42 @@ public:
 				}
 				for (i = 0; i < 3; i++) {
 					if (mask[l])
-						dHdr(i,l) -= dHdr(i,mask[l])/2;
+						dNdr(i,l) -= dNdr(i,mask[l])/2;
 					if (mask[l+j])
-						dHdr(i,l) -= dHdr(i,mask[l+j])/2;
+						dNdr(i,l) -= dNdr(i,mask[l+j])/2;
 					if (l < 4 && mask[16])
-						dHdr(i,l) += dHdr(i,mask[16])/4;
+						dNdr(i,l) += dNdr(i,mask[16])/4;
 					if (l >= 12 && mask[17])
-						dHdr(i,l) += dHdr(i,mask[17])/4;
+						dNdr(i,l) += dNdr(i,mask[17])/4;
 				}
 				//if (mask[l])
-				//	H(l) -= H(mask[l])/2;
+				//	N(l) -= N(mask[l])/2;
 				//if (mask[l+j])
-				//	H(l) -= H(mask[l+j])/2;
+				//	N(l) -= N(mask[l+j])/2;
 				//if (l < 4 && mask[16])
-				//	H(l) += H(mask[16])/4;
+				//	N(l) += N(mask[16])/4;
 				//if (l >= 12 && mask[17])
-				//	H(l) += H(mask[17])/4;
+				//	N(l) += N(mask[17])/4;
 			}
 			for (l = 0; mask[16] && l < 4; l++) {
 				for (i = 0; i < 3; i++)
-					dHdr(i,mask[l]) -= dHdr(i,mask[16])/2;
-				//H(mask[l]) -= H(mask[16])/2;
+					dNdr(i,mask[l]) -= dNdr(i,mask[16])/2;
+				//N(mask[l]) -= N(mask[16])/2;
 			}
 			for (l = 12; mask[17] && l < 16; l++) {
 				for (i = 0; i < 3; i++)
-					dHdr(i,mask[l]) -= dHdr(i,mask[17])/2;
-				//H(mask[l]) -= H(mask[17])/2;
+					dNdr(i,mask[l]) -= dNdr(i,mask[17])/2;
+				//N(mask[l]) -= N(mask[17])/2;
 			}
 
-			matrix_dense J(dHdr*xe);
+			matrix_dense J(dNdr*xe);
 			// This returns det(J);
-			gw *= inv_mul_gauss(NDIM,nnd,&J(0,0),&dHdr(0,0));
+			gw *= inv_mul_gauss(NDIM,nnd,&J(0,0),&dNdr(0,0));
 			for (i = 0; i < nnd; i++) {
 				for (j = i; j < nnd; j++) {
 					for (k = 0; k < 3; k++)
 						for (l = 0; l < 3; l++)
-							K(i,j) += E[k][l]*(dHdr(k,i)*dHdr(l,j)*gw);
+							K(i,j) += E[k][l]*(dNdr(k,i)*dNdr(l,j)*gw);
 				}
 			}
 		}
