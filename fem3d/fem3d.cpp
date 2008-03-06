@@ -447,6 +447,19 @@ protected:
 	inline int addnode(const coord3d & c) const;
 	inline void updatenode(const node3d & n) const;
 	inline const node3d & getnode(const int i) const;
+	inline void setup(const int nz, 
+	                  const double * xb, const double * xt,
+	                  const double * yb, const double * yt,
+	                  const double * zb, const double * zt) {
+		for (int i = 0; i < nz; i++) {
+			for (int j = 0; j < 4; j++) {
+				double x = xb[j]+i*(xt[j]-xb[j])/(nz-1);
+				double y = yb[j]+i*(yt[j]-yb[j])/(nz-1);
+				double z = zb[j]+i*(zt[j]-zb[j])/(nz-1);
+				inel.add(addnode(coord3d(x,y,z)));
+			}
+		}
+	}
 };
 
 /*
@@ -457,11 +470,15 @@ public:
 	element_block8(mesh * o, element * p, const material & m,
 			const fset<coord3d> & c)
 	  : element(o,p,block8,m) {
-		int i;
 		assert(8 == c.length());
-		for (i = 0; i < 8; i++)
-			inel.add(addnode(c[i]));
-		for (i = 0; i < 8; i++) {
+		double xb[4], yb[4], zb[4];
+		double xt[4], yt[4], zt[4];
+		for (int i = 0; i < 4; i++) {
+			xb[i] = c[i  ].x; yb[i] = c[i  ].y; zb[i] = c[i  ].z;
+			xt[i] = c[i+4].x; yt[i] = c[i+4].y; zt[i] = c[i+4].z;
+		}
+		setup(2,xb,xt,yb,yt,zb,zt);
+		for (int i = 0; i < 8; i++) {
 			node3d n = getnode(inel[i]);
 			int x_m = -1, x_p = -1;
 			int y_m = -1, y_p = -1;
@@ -557,31 +574,15 @@ public:
 	element_block16(mesh * o, element * p, const material & m,
 			const fset<coord3d> & c)
 	  : element(o,p,block16,m) {
-		int i;
 		assert(8 == c.length());
 		double xb[4], yb[4], zb[4];
 		double xt[4], yt[4], zt[4];
-		for (i = 0; i < 4; i++) {
+		for (int i = 0; i < 4; i++) {
 			xb[i] = c[i  ].x; yb[i] = c[i  ].y; zb[i] = c[i  ].z;
 			xt[i] = c[i+4].x; yt[i] = c[i+4].y; zt[i] = c[i+4].z;
 		}
-		for (i = 0; i < 4; i++)
-			inel.add(addnode(c[i]));
-		for (i = 0; i < 4; i++) {
-			double x = xb[i]+  (xt[i]-xb[i])/3;
-			double y = yb[i]+  (yt[i]-yb[i])/3;
-			double z = zb[i]+  (zt[i]-zb[i])/3;
-			inel.add(addnode(coord3d(x,y,z)));
-		}
-		for (i = 0; i < 4; i++) {
-			double x = xb[i]+2*(xt[i]-xb[i])/3;
-			double y = yb[i]+2*(yt[i]-yb[i])/3;
-			double z = zb[i]+2*(zt[i]-zb[i])/3;
-			inel.add(addnode(coord3d(x,y,z)));
-		}
-		for (i = 0; i < 4; i++)
-			inel.add(addnode(c[i+4]));
-		for (i = 0; i < 16; i++) {
+		setup(4,xb,xt,yb,yt,zb,zt);
+		for (int i = 0; i < 16; i++) {
 			node3d n = getnode(inel[i]);
 			int x_m = -1, x_p = -1;
 			int y_m = -1, y_p = -1;
@@ -714,30 +715,7 @@ public:
 			xb[i] = x; yb[i] = y; zb[i] = c[0].z;
 			xt[i] = x; yt[i] = y; zt[i] = c[1].z;
 		}
-		for (int i = 0; i < 4; i++) {
-			double x = xb[i];
-			double y = yb[i];
-			double z = zb[i];
-			inel.add(addnode(coord3d(x,y,z)));
-		}
-		for (int i = 0; i < 4; i++) {
-			double x = xb[i]+  (xt[i]-xb[i])/3;
-			double y = yb[i]+  (yt[i]-yb[i])/3;
-			double z = zb[i]+  (zt[i]-zb[i])/3;
-			inel.add(addnode(coord3d(x,y,z)));
-		}
-		for (int i = 0; i < 4; i++) {
-			double x = xb[i]+2*(xt[i]-xb[i])/3;
-			double y = yb[i]+2*(yt[i]-yb[i])/3;
-			double z = zb[i]+2*(zt[i]-zb[i])/3;
-			inel.add(addnode(coord3d(x,y,z)));
-		}
-		for (int i = 0; i < 4; i++) {
-			double x = xt[i];
-			double y = yt[i];
-			double z = zt[i];
-			inel.add(addnode(coord3d(x,y,z)));
-		}
+		setup(4,xb,xt,yb,yt,zb,zt);
 		for (int i = 0; i < 16; i++) {
 			node3d n = getnode(inel[i]);
 			int x_m = -1, x_p = -1;
@@ -768,30 +746,7 @@ public:
 			xb[i] = x; yb[i] = c[i%2  ].y; zb[i] = c[i%2  ].z;
 			xt[i] = x; yt[i] = c[i%2+2].y; zt[i] = c[i%2+2].z;
 		}
-		for (int i = 0; i < 4; i++) {
-			double x = xb[i];
-			double y = yb[i];
-			double z = zb[i];
-			inel.add(addnode(coord3d(x,y,z)));
-		}
-		for (int i = 0; i < 4; i++) {
-			double x = xb[i]+  (xt[i]-xb[i])/3;
-			double y = yb[i]+  (yt[i]-yb[i])/3;
-			double z = zb[i]+  (zt[i]-zb[i])/3;
-			inel.add(addnode(coord3d(x,y,z)));
-		}
-		for (int i = 0; i < 4; i++) {
-			double x = xb[i]+2*(xt[i]-xb[i])/3;
-			double y = yb[i]+2*(yt[i]-yb[i])/3;
-			double z = zb[i]+2*(zt[i]-zb[i])/3;
-			inel.add(addnode(coord3d(x,y,z)));
-		}
-		for (int i = 0; i < 4; i++) {
-			double x = xt[i];
-			double y = yt[i];
-			double z = zt[i];
-			inel.add(addnode(coord3d(x,y,z)));
-		}
+		setup(4,xb,xt,yb,yt,zb,zt);
 		for (int i = 0; i < 16; i++) {
 			node3d n = getnode(inel[i]);
 			int x_m = -1, x_p = -1;
@@ -822,30 +777,7 @@ public:
 			xb[i] = c[(i<2?0:1)].x; yb[i] = y; zb[i] = c[(i<2?0:1)].z;
 			xt[i] = c[(i<2?2:3)].x; yt[i] = y; zt[i] = c[(i<2?2:3)].z;
 		}
-		for (int i = 0; i < 4; i++) {
-			double x = xb[i];
-			double y = yb[i];
-			double z = zb[i];
-			inel.add(addnode(coord3d(x,y,z)));
-		}
-		for (int i = 0; i < 4; i++) {
-			double x = xb[i]+  (xt[i]-xb[i])/3;
-			double y = yb[i]+  (yt[i]-yb[i])/3;
-			double z = zb[i]+  (zt[i]-zb[i])/3;
-			inel.add(addnode(coord3d(x,y,z)));
-		}
-		for (int i = 0; i < 4; i++) {
-			double x = xb[i]+2*(xt[i]-xb[i])/3;
-			double y = yb[i]+2*(yt[i]-yb[i])/3;
-			double z = zb[i]+2*(zt[i]-zb[i])/3;
-			inel.add(addnode(coord3d(x,y,z)));
-		}
-		for (int i = 0; i < 4; i++) {
-			double x = xt[i];
-			double y = yt[i];
-			double z = zt[i];
-			inel.add(addnode(coord3d(x,y,z)));
-		}
+		setup(4,xb,xt,yb,yt,zb,zt);
 		for (int i = 0; i < 16; i++) {
 			node3d n = getnode(inel[i]);
 			int x_m = -1, x_p = -1;
@@ -1062,22 +994,7 @@ public:
 			xb[i] = c[i  ].x; yb[i] = c[i  ].y; zb[i] = c[i  ].z;
 			xt[i] = c[i+4].x; yt[i] = c[i+4].y; zt[i] = c[i+4].z;
 		}
-		for (i = 0; i < 4; i++)
-			inel.add(addnode(c[i]));
-		for (i = 0; i < 4; i++) {
-			double x = xb[i]+  (xt[i]-xb[i])/3;
-			double y = yb[i]+  (yt[i]-yb[i])/3;
-			double z = zb[i]+  (zt[i]-zb[i])/3;
-			inel.add(addnode(coord3d(x,y,z)));
-		}
-		for (i = 0; i < 4; i++) {
-			double x = xb[i]+2*(xt[i]-xb[i])/3;
-			double y = yb[i]+2*(yt[i]-yb[i])/3;
-			double z = zb[i]+2*(zt[i]-zb[i])/3;
-			inel.add(addnode(coord3d(x,y,z)));
-		}
-		for (i = 0; i < 4; i++)
-			inel.add(addnode(c[i+4]));
+		setup(4,xb,xt,yb,yt,zb,zt);
 
 		for (i = 0; i < 18; i++)
 			mask[i] = -1;
@@ -2021,7 +1938,7 @@ blockarea(double x1, double x2, double y1, double y2, double r)
  * to get some work done...
  */
 int
-main_real()
+main()
 {
 #if !defined(_MSC_VER) && !defined(DARWIN)
 	// get starting time
@@ -2226,7 +2143,7 @@ main_real()
 }
 
 int
-main()
+main_test()
 {
 #if !defined(_MSC_VER) && !defined(DARWIN)
 	// get starting time
