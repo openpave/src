@@ -1430,6 +1430,8 @@ class smatrix_diag {
 
 	tmatrix<double,NDOF,NDOF> K;
 	int nnz, nnd;
+	bool isfixed;
+	bool nonzero;
 	smatrix_node * col_head;
 	smatrix_node * row_head;
 	smatrix_node * nodes;
@@ -1754,27 +1756,17 @@ public:
 		element * e = this->first;
 		smatrix_diag * d;
 		smatrix_node * p;
-		while (e) {
-			smatrix_elem * ke = e->stiffness();
-			if (ke == 0)
-				return false;
-			for (i = 0; i < ke->nnd; i++) {
-				for (j = i; j < ke->nnd; j++) {
-					//K.append(ke->inel[i],
-					//         ke->inel[j],(*ke)(i,j));
-					K.append(node.getorder(ke->inel[i]),
-					         node.getorder(ke->inel[j]),(*ke)(i,j));
-				}
-			}
-			delete ke;
-			e = e->next;
-		}
+
+		// Start by building the force vector.
 		f_ext.sort();
 		for (i = 0; i < f_ext.length(); i++) {
 			const mesh_bc & f = f_ext[i];
 			//F(f.n)(f.i) = f.d;
 			F(node.getorder(f.n))(f.i) = f.d;
 		}
+
+		// Now check for totally fixed nodes.  We're going to skip these in
+		// the later steps...
 		disp_bc.sort();
 		for (i = 0; i < disp_bc.length(); i++) {
 			if (i+2 < disp_bc.length()
@@ -1787,70 +1779,78 @@ public:
 				int n = node.getorder(u0.n);
 				F(n)(0) = u0.d; F(n)(1) = u1.d; F(n)(2) = u2.d;
 				d = &(K.diag[n]);
+				d->isfixed = true;
+				if (u0.d != 0.0 || u1.d != 0.0 || u2.d != 0.0)
+					d->nonzero = true;
 				d->K = tmatrix<double,NDOF,NDOF>(1.0,true);
-				p = d->col_head;
-				while (p) {
-					if (u0.d != 0.0 || u1.d != 0.0 || u2.d != 0.0)
-						F(p->i) -= p->K*F(n);
-					if (p->row_prev) {
-						p->row_prev->row_next = p->row_next;
-					} else {
-						K.diag[p->i].row_head = p->row_next;
-					}
-					if (p->row_next)
-						p->row_next->row_prev = p->row_prev;
-					p = p->col_next;
-				}
-				d->col_head = 0;
-				p = d->row_head;
-				while (p) {
-					if (u0.d != 0.0 || u1.d != 0.0 || u2.d != 0.0)
-						F(p->j) -= ~(p->K)*F(n);
-					if (p->col_prev)
-						p->col_prev->col_next = p->col_next;
-					else
-						p->col_diag->col_head = p->col_next;
-					if (p->col_next)
-						p->col_next->col_prev = p->col_prev;
-					p = p->row_next;
-				}
-				d->row_head = 0;
-				free(d->nodes);
-				d->nodes = 0;
-				i += 2; // skip the extra BC's we've used.
-			} else {
-				const mesh_bc & u = disp_bc[i];
-				//int n = u.n;
-				int n = node.getorder(u.n);
-				d = &(K.diag[n]);
-				for (j = 0; j < NDOF; j++) {
-					if (j == u.i)
-						continue;
-					if (u.d != 0.0)
-						F(n)(j) -= d->K(j,u.i)*u.d;
-					d->K(u.i,j) = 0.0; d->K(j,u.i) = 0.0;
-				}
-				d->K(u.i,u.i) = 1.0;
-				p = d->col_head;
-				while (p) {
-					for (j = 0; j < NDOF; j++) {
-						if (u.d != 0.0)
-							F(p->i)(j) -= p->K(j,u.i)*u.d;
-						p->K(j,u.i) = 0.0;
-					}
-					p = p->col_next;
-				}
-				p = d->row_head;
-				while (p) {
-					for (j = 0; j < NDOF; j++) {
-						if (u.d != 0.0)
-							F(p->j)(j) -= p->K(u.i,j)*u.d;
-						p->K(u.i,j) = 0.0;
-					}
-					p = p->row_next;
-				}
-				F(n)(u.i) = u.d;
+				i += 2; // skip the two BC's we just checked.
 			}
+		}
+		while (e) {
+			smatrix_elem * ke = e->stiffness();
+			if (ke == 0)
+				return false;
+			for (i = 0; i < ke->nnd; i++) {
+				//int gi = ke->inel[i];
+				int gi = node.getorder(ke->inel[i]);
+				if (K.diag[gi].isfixed) {
+					for (j = 0; K.diag[gi].nonzero && j < ke->nnd; j++) {
+						//int gj = ke->inel[j];
+						int gj = node.getorder(ke->inel[j]);
+						if (i == j)
+							continue;
+						if ((j < i) == (gj < gi))
+							F(gj) -= ~(*ke)(i,j)*F(gi);
+						else
+							F(gj) -=  (*ke)(j,i)*F(gi);
+					}
+				} else {
+					for (j = i; j < ke->nnd; j++) {
+						//int gj = ke->inel[j];
+						int gj = node.getorder(ke->inel[j]);
+						K.append(gi,gj,(*ke)(i,j));
+					}
+				}
+			}
+			delete ke;
+			e = e->next;
+		}
+		for (i = 0; i < disp_bc.length(); i++) {
+			const mesh_bc & u = disp_bc[i];
+			//int n = u.n;
+			int n = node.getorder(u.n);
+			d = &(K.diag[n]);
+			if (d->isfixed) {
+				i += 2; // we know the next two can be skipped.
+				continue;
+			}
+			for (j = 0; j < NDOF; j++) {
+				if (j == u.i)
+					continue;
+				if (u.d != 0.0)
+					F(n)(j) -= d->K(j,u.i)*u.d;
+				d->K(u.i,j) = 0.0; d->K(j,u.i) = 0.0;
+			}
+			d->K(u.i,u.i) = 1.0;
+			p = d->col_head;
+			while (p) {
+				for (j = 0; j < NDOF; j++) {
+					if (u.d != 0.0)
+						F(p->i)(j) -= p->K(j,u.i)*u.d;
+					p->K(j,u.i) = 0.0;
+				}
+				p = p->col_next;
+			}
+			p = d->row_head;
+			while (p) {
+				for (j = 0; j < NDOF; j++) {
+					if (u.d != 0.0)
+						F(p->j)(j) -= p->K(u.i,j)*u.d;
+					p->K(u.i,j) = 0.0;
+				}
+				p = p->row_next;
+			}
+			F(n)(u.i) = u.d;
 		}
 
 		smatrix M(K);
@@ -2039,7 +2039,7 @@ blockarea(double x1, double x2, double y1, double y2, double r)
  * to get some work done...
  */
 int
-main()
+main_real()
 {
 #if !defined(_MSC_VER) && !defined(DARWIN)
 	// get starting time
@@ -2244,7 +2244,7 @@ main()
 }
 
 int
-main_test()
+main()
 {
 #if !defined(_MSC_VER) && !defined(DARWIN)
 	// get starting time
