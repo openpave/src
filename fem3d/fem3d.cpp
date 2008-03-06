@@ -2187,6 +2187,14 @@ main()
 		 && ym > -DOMAIN && xp < DOMAIN)
 			delta *= 2;
 	}
+	//FEM.add_bc_plane(mesh::X,mesh::at|mesh::below,-DOMAIN,
+	//		mesh::X,0.0);
+	//FEM.add_bc_plane(mesh::X,mesh::at|mesh::above, DOMAIN,
+	//		mesh::X,0.0);
+	//FEM.add_bc_plane(mesh::Y,mesh::at|mesh::below,-DOMAIN,
+	//		mesh::Y,0.0);
+	//FEM.add_bc_plane(mesh::Y,mesh::at|mesh::above, DOMAIN,
+	//		mesh::Y,0.0);
 	FEM.add_bc_plane(mesh::Z,mesh::at|mesh::below,zm,
 			mesh::X|mesh::Y|mesh::Z,0.0);
 	FEM.solve();
@@ -2200,7 +2208,7 @@ main()
 		x = n.x; y = n.y; z = n.z;
 		if (!(x == 0 || y == 0 || z == 0))
 			continue;
-		if (z <= zm)
+		if (x < xm || x > xp || y < ym || y > yp || z <= zm)
 			continue;
 		test.addpoint(point3d(x,y,-z));
 	}
@@ -2210,7 +2218,7 @@ main()
 		x = n.x; y = n.y; z = n.z;
 		if (!(x == 0 || y == 0 || z == 0))
 			continue;
-		if (z <= zm)
+		if (x < xm || x > xp || y < ym || y > yp || z <= zm)
 			continue;
 		const pavedata & d = test.result(point3d(x,y,-z));
 		double ux = n.ux;
@@ -2222,7 +2230,7 @@ main()
 		int j = FEM.hasnode(n);
 		double h = hypot(hypot(vx-ux,vy-uy),vz-uz);
 		double v = hypot(hypot(vx,vy),vz);
-		printf("Node %6i: (%+6i,%+6i,%+6i) =\t(%4.2f,%4.2f,%4.2f)\t(%4.2f,%4.2f,%4.2f)\t%4.2f\t(%4.2f)\n",j,int(x),int(y),int(z),ux,uy,uz,vx,vy,vz,h,(v == 0.0 ? 0.0 : h/v));
+		printf("Node %6i: (%+6i,%+6i,%+6i) =\t(%8.2g,%8.2g,%8.2g)\t(%8.2g,%8.2g,%8.2g)\t%8.2g\t(%8.2g)\n",j,int(x),int(y),int(z),vx,vy,vz,ux,uy,uz,h,(v == 0.0 ? 0.0 : h/v));
 	}
 
 #if !defined(_MSC_VER) && !defined(DARWIN)
