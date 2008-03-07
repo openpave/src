@@ -466,14 +466,21 @@ protected:
 //   N = 1/8*(1+-x)*(1+-y)*(1+-z);
 const double H2x[4] = {-1,-1,+1,+1};
 const double H2y[4] = {-1,+1,-1,+1};
-// shape functions for 16/34-node 3D brick:
+// horizontal shape functions for 16/34-node 3D brick:
 const int    Sxy[4] = { 0, 1, 1, 0};
 const int    Jxy[4] = {+2,-1,+1,-2};
-// Mapping functions for infinite elements.
+// mapping functions for infinite elements.
 const double Mx0[16] = { 0, 0, 1, 1};
 const double Mx1[16] = {-2,-2,+1,+1};
 const double My0[16] = { 0, 1, 0, 1};
 const double My1[16] = {-2,+1,-2,+1};
+
+// vertical shape functions for 8-node 3D brick:
+const double V2z[2] = {-1,+1};
+// vertical shape functions for 16-node 3D brick:
+const double V4z0[4] = {-1,+9,+9,-1};
+const double V4z2[4] = {+9,-9,-9,+9};
+const double V4z1[4] = {-1,-3,+3,+1};
 
 /*
  * class element_block8 - a finite element
@@ -552,13 +559,13 @@ public:
 			rx = gp[g].x; ry = gp[g].y; rz = gp[g].z;
 			double gw = gp[g].gw;
 			tmatrix<double,NDIM,8> dNdr;
-			//tmatrix<double,8,1> N;
-			const double Nz[8] = {-1, -1, -1, -1, +1, +1, +1, +1};
 			for (l = 0; l < 8; l++) {
-				dNdr(0,l) = H2x[l%4]*(1+H2y[l%4]*ry)*(1+Nz[l]*rz)/8;
-				dNdr(1,l) = H2y[l%4]*(1+H2x[l%4]*rx)*(1+Nz[l]*rz)/8;
-				dNdr(2,l) = Nz[l]*(1+H2x[l%4]*rx)*(1+H2y[l%4]*ry)/8;
-				//N(0,l) =(1+H2x[l%4]*rx)*(1+H2y[l%4]*ry)*(1+Nz[l]*rz)/8;
+				double Nx = (1+H2x[l%4]*rx)/2; double dNdx = H2x[l%4]/2;
+				double Ny = (1+H2y[l%4]*ry)/2; double dNdy = H2y[l%4]/2;
+				double Nz = (1+V2z[l/4]*rz)/2; double dNdz = V2z[l/4]/2;
+				dNdr(0,l) = dNdx*Ny*Nz;
+				dNdr(1,l) = Nx*dNdy*Nz;
+				dNdr(2,l) = Nx*Ny*dNdz;
 			}
 			tmatrix<double,NDIM,NDIM> J(dNdr*xe);
 			// This returns det(J);
@@ -655,23 +662,15 @@ public:
 			rx = gp[g].x; ry = gp[g].y; rz = gp[g].z;
 			double gw = gp[g].gw;
 			tmatrix<double,NDIM,16> dNdr;
-			//tmatrix<double,16,1> N;
-
-			// shape functions for 16-node 3D brick:
-			const double Nz0[16] = {-1,-1,-1,-1,+9,+9,+9,+9,+9,+9,+9,+9,-1,-1,-1,-1};
-			const double Nz2[16] = {+9,+9,+9,+9,-9,-9,-9,-9,-9,-9,-9,-9,+9,+9,+9,+9};
-			const double Nz1[16] = {-1,-1,-1,-1,-3,-3,-3,-3,+3,+3,+3,+3,+1,+1,+1,+1};
-
 			for (l = 0; l < 16; l++) {
-				dNdr(0,l) = H2x[l%4]*(1+H2y[l%4]*ry)
-						*(Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/64;
-				dNdr(1,l) = (1+H2x[l%4]*rx)*H2y[l%4]
-						*(Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/64;
-				dNdr(2,l) = (1+H2x[l%4]*rx)*(1+H2y[l%4]*ry)
-						*((2*Nz2[l]*rz)*(1+Nz1[l]*rz)
-					+ (Nz0[l]+Nz2[l]*rz*rz)*Nz1[l])/64;
-				//N(0,l) = (1+H2x[l%4]*rx)*(1+H2y[l%4]*ry)
-				//		*(Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/64;
+				double Nx = (1+H2x[l%4]*rx)/2; double dNdx = H2x[l%4]/2;
+				double Ny = (1+H2y[l%4]*ry)/2; double dNdy = H2y[l%4]/2;
+				double Nz = (V4z0[l/4]+V4z2[l/4]*rz*rz)*(1+V4z1[l/4]*rz)/16;
+				double dNdz = ((2*V4z2[l/4]*rz)*(1+V4z1[l/4]*rz)
+					+ (V4z0[l/4]+V4z2[l/4]*rz*rz)*V4z1[l/4])/16;
+				dNdr(0,l) = dNdx*Ny*Nz;
+				dNdr(1,l) = Nx*dNdy*Nz;
+				dNdr(2,l) = Nx*Ny*dNdz;
 			}
 			tmatrix<double,NDIM,NDIM> J(dNdr*xe);
 			// This returns det(J);
@@ -846,113 +845,77 @@ public:
 		}
 		smatrix_elem & K = *_K;
 
-		const double Nz0[16] = {-1,-1,-1,-1,+9,+9,+9,+9,+9,+9,+9,+9,-1,-1,-1,-1};
-		const double Nz2[16] = {+9,+9,+9,+9,-9,-9,-9,-9,-9,-9,-9,-9,+9,+9,+9,+9};
-		const double Nz1[16] = {-1,-1,-1,-1,-3,-3,-3,-3,+3,+3,+3,+3,+1,+1,+1,+1};
-
 		for (g = 0; g < gp.length(); g++) {
 			rx = gp[g].x; ry = gp[g].y; rz = gp[g].z;
 			double gw = gp[g].gw;
 			double rxi = 1.0/(1-rx);
 			double ryi = 1.0/(1-ry);
 			tmatrix<double,NDIM,16> dNdr;
-			//tmatrix<double,16,1> N;
 
-			switch (inftype) {
-			case corner:
-				// mapping functions for 16-node corner infinite element:
-				for (l = 0; l < 16; l++) {
-					double Nx = (Mx0[l%4]+Mx1[l%4]*rx)*rxi;
-					double dNdx = H2x[l%4]*2*rxi*rxi;
-					double Ny = (My0[l%4]+My1[l%4]*ry)*ryi;
-					double dNdy = H2y[l%4]*2*ryi*ryi;
-					double Nz = (Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/16;
-					double dNdz = ((2*Nz2[l]*rz)*(1+Nz1[l]*rz)
-						+ (Nz0[l]+Nz2[l]*rz*rz)*Nz1[l])/16;
-					dNdr(0,l) = dNdx*Ny*Nz;
-					dNdr(1,l) = Nx*dNdy*Nz;
-					dNdr(2,l) = Nx*Ny*dNdz;
+			// mapping functions for 16-node corner infinite element:
+			for (l = 0; l < 16; l++) {
+				double Nx = 0.0, dNdx = 0.0, Ny = 0.0, dNdy = 0.0;
+				switch (inftype) {
+				case corner:
+				case infX:
+					Nx = (Mx0[l%4]+Mx1[l%4]*rx)*rxi;
+					dNdx = H2x[l%4]*2*rxi*rxi;
+					break;
+				case infY:
+					Nx = (1+H2x[l%4]*rx);
+					dNdx = H2x[l%4];
+					break;
 				}
-				break;
-			case infX:
-				// mapping functions for 16-node x infinite element:
-				for (l = 0; l < 16; l++) {
-					double Nx = (Mx0[l%4]+Mx1[l%4]*rx)*rxi;
-					double dNdx = H2x[l%4]*2*rxi*rxi;
-					double Ny = (1+H2y[l%4]*ry);
-					double dNdy = H2y[l%4];
-					double Nz = (Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/16;
-					double dNdz = ((2*Nz2[l]*rz)*(1+Nz1[l]*rz)
-						+ (Nz0[l]+Nz2[l]*rz*rz)*Nz1[l])/16;
-					dNdr(0,l) = dNdx*Ny*Nz;
-					dNdr(1,l) = Nx*dNdy*Nz;
-					dNdr(2,l) = Nx*Ny*dNdz;
+				switch (inftype) {
+				case corner:
+				case infY:
+					Ny = (My0[l%4]+My1[l%4]*ry)*ryi;
+					dNdy = H2y[l%4]*2*ryi*ryi;
+					break;
+				case infX:
+					Ny = (1+H2y[l%4]*ry);
+					dNdy = H2y[l%4];
+					break;
 				}
-				break;
-			case infY:
-				// mapping functions for 16-node y infinite element:
-				for (l = 0; l < 16; l++) {
-					double Nx = (1+H2x[l%4]*rx);
-					double dNdx = H2x[l%4];
-					double Ny = (My0[l%4]+My1[l%4]*ry)*ryi;
-					double dNdy = H2y[l%4]*2*ryi*ryi;
-					double Nz = (Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/16;
-					double dNdz = ((2*Nz2[l]*rz)*(1+Nz1[l]*rz)
-						+ (Nz0[l]+Nz2[l]*rz*rz)*Nz1[l])/16;
-					dNdr(0,l) = dNdx*Ny*Nz;
-					dNdr(1,l) = Nx*dNdy*Nz;
-					dNdr(2,l) = Nx*Ny*dNdz;
-				}
-				break;
+				double Nz = (V4z0[l/4]+V4z2[l/4]*rz*rz)*(1+V4z1[l/4]*rz)/16;
+				double dNdz = ((2*V4z2[l/4]*rz)*(1+V4z1[l/4]*rz)
+					+ (V4z0[l/4]+V4z2[l/4]*rz*rz)*V4z1[l/4])/16;
+				dNdr(0,l) = dNdx*Ny*Nz;
+				dNdr(1,l) = Nx*dNdy*Nz;
+				dNdr(2,l) = Nx*Ny*dNdz;
 			}
 			tmatrix<double,NDIM,NDIM> J(dNdr*xe);
 
-			switch (inftype) {
-			case corner:
-				// shape functions for 16-node corner infinite element:
-				for (l = 0; l < 16; l++) {
-					double Nx = (rx*rx+(1-Mx0[l%4])*rx-Mx0[l%4])/(-Mx1[l%4]);
-					double dNdx = (2*rx+(1-Mx0[l%4]))/(-Mx1[l%4]);
-					double Ny = (ry*ry+(1-My0[l%4])*ry-My0[l%4])/(-My1[l%4]);
-					double dNdy = (2*ry+(1-My0[l%4]))/(-My1[l%4]);
-					double Nz = (Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/16;
-					double dNdz = ((2*Nz2[l]*rz)*(1+Nz1[l]*rz)
-						+ (Nz0[l]+Nz2[l]*rz*rz)*Nz1[l])/16;
-					dNdr(0,l) = dNdx*Ny*Nz;
-					dNdr(1,l) = Nx*dNdy*Nz;
-					dNdr(2,l) = Nx*Ny*dNdz;
+			for (l = 0; l < 16; l++) {
+				double Nx = 0.0, dNdx = 0.0, Ny = 0.0, dNdy = 0.0;
+				switch (inftype) {
+				case corner:
+				case infX:
+					Nx = (rx*rx+(1-Mx0[l%4])*rx-Mx0[l%4])/(-Mx1[l%4]);
+					dNdx = (2*rx+(1-Mx0[l%4]))/(-Mx1[l%4]);
+					break;
+				case infY:
+					Nx = (1+H2x[l%4]*rx);
+					dNdx = H2x[l%4];
+					break;
 				}
-				break;
-			case infX:
-				// shape functions for 16-node x infinite element:
-				for (l = 0; l < 16; l++) {
-					double Nx = (rx*rx+(1-Mx0[l%4])*rx-Mx0[l%4])/(-Mx1[l%4]);
-					double dNdx = (2*rx+(1-Mx0[l%4]))/(-Mx1[l%4]);
-					double Ny = (1+H2y[l%4]*ry);
-					double dNdy = H2y[l%4];
-					double Nz = (Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/16;
-					double dNdz = ((2*Nz2[l]*rz)*(1+Nz1[l]*rz)
-						+ (Nz0[l]+Nz2[l]*rz*rz)*Nz1[l])/16;
-					dNdr(0,l) = dNdx*Ny*Nz;
-					dNdr(1,l) = Nx*dNdy*Nz;
-					dNdr(2,l) = Nx*Ny*dNdz;
+				switch (inftype) {
+				case corner:
+				case infY:
+					Ny = (ry*ry+(1-My0[l%4])*ry-My0[l%4])/(-My1[l%4]);
+					dNdy = (2*ry+(1-My0[l%4]))/(-My1[l%4]);
+					break;
+				case infX:
+					Ny = (1+H2y[l%4]*ry);
+					dNdy = H2y[l%4];
+					break;
 				}
-				break;
-			case infY:
-				// shape functions for 16-node y infinite element:
-				for (l = 0; l < 16; l++) {
-					double Nx = (1+H2x[l%4]*rx);
-					double dNdx = H2x[l%4];
-					double Ny = (ry*ry+(1-My0[l%4])*ry-My0[l%4])/(-My1[l%4]);
-					double dNdy = (2*ry+(1-My0[l%4]))/(-My1[l%4]);
-					double Nz = (Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/16;
-					double dNdz = ((2*Nz2[l]*rz)*(1+Nz1[l]*rz)
-						+ (Nz0[l]+Nz2[l]*rz*rz)*Nz1[l])/16;
-					dNdr(0,l) = dNdx*Ny*Nz;
-					dNdr(1,l) = Nx*dNdy*Nz;
-					dNdr(2,l) = Nx*Ny*dNdz;
-				}
-				break;
+				double Nz = (V4z0[l/4]+V4z2[l/4]*rz*rz)*(1+V4z1[l/4]*rz)/16;
+				double dNdz = ((2*V4z2[l/4]*rz)*(1+V4z1[l/4]*rz)
+					+ (V4z0[l/4]+V4z2[l/4]*rz*rz)*V4z1[l/4])/16;
+				dNdr(0,l) = dNdx*Ny*Nz;
+				dNdr(1,l) = Nx*dNdy*Nz;
+				dNdr(2,l) = Nx*Ny*dNdz;
 			}
 			// This returns det(J);
 			// The absolute value is to take care of all of negative
@@ -1107,83 +1070,73 @@ public:
 			rx = gp[g].x; ry = gp[g].y; rz = gp[g].z;
 			double gw = gp[g].gw;
 			matrix_dense dNdr(NDIM,nnd);
-			//matrix_dense N(nnd,1);
-
-			// shape functions for 16/34-node 3D brick:
-			const double Nz0[16] = {-1,-1,-1,-1,+9,+9,+9,+9,+9,+9,+9,+9,-1,-1,-1,-1};
-			const double Nz2[16] = {+9,+9,+9,+9,-9,-9,-9,-9,-9,-9,-9,-9,+9,+9,+9,+9};
-			const double Nz1[16] = {-1,-1,-1,-1,-3,-3,-3,-3,+3,+3,+3,+3,+1,+1,+1,+1};
-
 			for (l = 0; l < 16; l++) {
-				dNdr(0,l) = H2x[l%4]*(1+H2y[l%4]*ry)
-						*(Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/64;
-				dNdr(1,l) = (1+H2x[l%4]*rx)*H2y[l%4]
-						*(Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/64;
-				dNdr(2,l) = (1+H2x[l%4]*rx)*(1+H2y[l%4]*ry)
-						*((2*Nz2[l]*rz)*(1+Nz1[l]*rz)
-					+ (Nz0[l]+Nz2[l]*rz*rz)*Nz1[l])/64;
-				//N(l) = (1+H2x[l%4]*rx)*(1+H2y[l%4]*ry)
-				//		*(Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/64;
+				double Nx = (1+H2x[l%4]*rx)/2; double dNdx = H2x[l%4]/2;
+				double Ny = (1+H2y[l%4]*ry)/2; double dNdy = H2y[l%4]/2;
+				double Nz = (V4z0[l/4]+V4z2[l/4]*rz*rz)*(1+V4z1[l/4]*rz)/16;
+				double dNdz = ((2*V4z2[l/4]*rz)*(1+V4z1[l/4]*rz)
+					+ (V4z0[l/4]+V4z2[l/4]*rz*rz)*V4z1[l/4])/16;
+				dNdr(0,l) = dNdx*Ny*Nz;
+				dNdr(1,l) = Nx*dNdy*Nz;
+				dNdr(2,l) = Nx*Ny*dNdz;
 			}
 			for (l = 0; l < 16; l++) {
 				if ((i = mask[l]) == 0)
 					continue;
-				dNdr(0,i) = (Sxy[l%4] ? -SGN(rx) : H2x[l%4])
-				        *(1+(!Sxy[l%4] ? -fabs(ry) : H2y[l%4]*ry))
-						*(Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/32;
-				dNdr(1,i) = (1+(Sxy[l%4] ? -fabs(rx) : H2x[l%4]*rx))
-				        *(!Sxy[l%4] ? -SGN(ry) : H2y[l%4])
-						*(Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/32;
-				dNdr(2,i) = (1+(Sxy[l%4] ? -fabs(rx) : H2x[l%4]*rx))
-				        *(1+(!Sxy[l%4] ? -fabs(ry) : H2y[l%4]*ry))
-						*((2*Nz2[l]*rz)*(1+Nz1[l]*rz)
-					+ (Nz0[l]+Nz2[l]*rz*rz)*Nz1[l])/32;
-				//N(i) = (1+(Sxy[l%4] ? -fabs(rx) : H2x[l%4]*rx))
-				//      *(1+(!Sxy[l%4] ? -fabs(ry) : H2y[l%4]*ry))
-				//		*(Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/32;
+				double Nx = (1+( Sxy[l%4] ? -fabs(rx) : H2x[l%4]*rx));
+				double dNdx = ( Sxy[l%4] ? -SGN(rx) : H2x[l%4]);
+				double Ny = (1+(!Sxy[l%4] ? -fabs(ry) : H2y[l%4]*ry));
+				double dNdy = (!Sxy[l%4] ? -SGN(ry) : H2y[l%4]);
+				double Nz = (V4z0[l/4]+V4z2[l/4]*rz*rz)*(1+V4z1[l/4]*rz)/32;
+				double dNdz = ((2*V4z2[l/4]*rz)*(1+V4z1[l/4]*rz)
+					+ (V4z0[l/4]+V4z2[l/4]*rz*rz)*V4z1[l/4])/32;
+				dNdr(0,i) = dNdx*Ny*Nz;
+				dNdr(1,i) = Nx*dNdy*Nz;
+				dNdr(2,i) = Nx*Ny*dNdz;
 			}
 			for (l = 0; l < 16; l += 12) {
 				if ((i = mask[(l == 0 ? 16 : 17)]) == 0)
 					continue;
-				dNdr(0,i) = -SGN(rx)*(1-fabs(ry))
-						*(Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/16;
-				dNdr(1,i) = -(1-fabs(rx))*SGN(ry)
-						*(Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/16;
-				dNdr(2,i) = (1-fabs(rx))*(1-fabs(ry))
-						*((2*Nz2[l]*rz)*(1+Nz1[l]*rz)
-					+ (Nz0[l]+Nz2[l]*rz*rz)*Nz1[l])/16;
-				//N(i) = (1-fabs(rx))*(1-fabs(ry))
-				//		*(Nz0[l]+Nz2[l]*rz*rz)*(1+Nz1[l]*rz)/16;
+				double Nx = 1-fabs(rx); double dNdx = -SGN(rx);
+				double Ny = 1-fabs(ry);	double dNdy = -SGN(ry);
+				double Nz = (V4z0[l/4]+V4z2[l/4]*rz*rz)*(1+V4z1[l/4]*rz)/16;
+				double dNdz = ((2*V4z2[l/4]*rz)*(1+V4z1[l/4]*rz)
+					+ (V4z0[l/4]+V4z2[l/4]*rz*rz)*V4z1[l/4])/16;
+				dNdr(0,i) = dNdx*Ny*Nz;
+				dNdr(1,i) = Nx*dNdy*Nz;
+				dNdr(2,i) = Nx*Ny*dNdz;
 			}
 			for (l = 0; l < 16; l++) {
-				for (i = 0; i < 3; i++) {
-					if (mask[l])
-						dNdr(i,l) -= dNdr(i,mask[l])/2;
-					if (mask[l+Jxy[l%4]])
-						dNdr(i,l) -= dNdr(i,mask[l+Jxy[l%4]])/2;
-					if (l < 4 && mask[16])
-						dNdr(i,l) += dNdr(i,mask[16])/4;
-					if (l >= 12 && mask[17])
-						dNdr(i,l) += dNdr(i,mask[17])/4;
+				if (mask[l] != 0) {
+					dNdr(0,l) -= dNdr(0,mask[l])/2;
+					dNdr(1,l) -= dNdr(1,mask[l])/2;
+					dNdr(2,l) -= dNdr(2,mask[l])/2;
 				}
-				//if (mask[l])
-				//	N(l) -= N(mask[l])/2;
-				//if (mask[l+Jxy[l%4]])
-				//	N(l) -= N(mask[l+Jxy[l%4]])/2;
-				//if (l < 4 && mask[16])
-				//	N(l) += N(mask[16])/4;
-				//if (l >= 12 && mask[17])
-				//	N(l) += N(mask[17])/4;
+				if (mask[l+Jxy[l%4]] != 0) {
+					dNdr(0,l) -= dNdr(0,mask[l+Jxy[l%4]])/2;
+					dNdr(1,l) -= dNdr(1,mask[l+Jxy[l%4]])/2;
+					dNdr(2,l) -= dNdr(2,mask[l+Jxy[l%4]])/2;
+				}
+				if (l < 4 && mask[16] != 0) {
+					dNdr(0,l) += dNdr(0,mask[16])/4;
+					dNdr(1,l) += dNdr(1,mask[16])/4;
+					dNdr(2,l) += dNdr(2,mask[16])/4;
+				}
+				if (l >= 12 && mask[17] != 0) {
+					dNdr(0,l) += dNdr(0,mask[17])/4;
+					dNdr(1,l) += dNdr(1,mask[17])/4;
+					dNdr(2,l) += dNdr(2,mask[17])/4;
+				}
 			}
-			for (l = 0; mask[16] && l < 4; l++) {
-				for (i = 0; i < 3; i++)
-					dNdr(i,mask[l]) -= dNdr(i,mask[16])/2;
-				//N(mask[l]) -= N(mask[16])/2;
+			for (l = 0; mask[16] != 0 && l < 4; l++) {
+				dNdr(0,mask[l]) -= dNdr(0,mask[16])/2;
+				dNdr(1,mask[l]) -= dNdr(1,mask[16])/2;
+				dNdr(2,mask[l]) -= dNdr(2,mask[16])/2;
 			}
-			for (l = 12; mask[17] && l < 16; l++) {
-				for (i = 0; i < 3; i++)
-					dNdr(i,mask[l]) -= dNdr(i,mask[17])/2;
-				//N(mask[l]) -= N(mask[17])/2;
+			for (l = 12; mask[17] != 0 && l < 16; l++) {
+				dNdr(0,mask[l]) -= dNdr(0,mask[17])/2;
+				dNdr(1,mask[l]) -= dNdr(1,mask[17])/2;
+				dNdr(2,mask[l]) -= dNdr(2,mask[17])/2;
 			}
 
 			matrix_dense J(dNdr*xe);
