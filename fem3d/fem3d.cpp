@@ -1167,7 +1167,7 @@ class smatrix_node {
 	explicit smatrix_node(const int I, const int J,
 			const tmatrix<double,NDOF,NDOF> & t, smatrix_diag * d)
 	  : K(t), i(I), j(J), col_next(0), col_prev(0), col_diag(d),
-			row_prev(0), row_next(0) {
+			row_next(0) {
 	}
 	void *operator new(size_t, void * p) {
 		return p;
@@ -1182,7 +1182,6 @@ class smatrix_node {
 	smatrix_node * col_next;
 	smatrix_node * col_prev;
 	smatrix_diag * col_diag;
-	smatrix_node * row_prev;
 	smatrix_node * row_next;
 };
 
@@ -1208,27 +1207,19 @@ class smatrix_diag {
 				return false;
 			}
 			if (nodes != temp) {
-				nodes = temp;
-				for (int k = 1; k < nnz; k++) {
-					for (int l = k; l > 0
-							&& nodes[l-1].j > nodes[l].j; l--) {
-						memcpy(&nodes[nnz],&nodes[l-1],sizeof(smatrix_node));
-						memcpy(&nodes[l-1],&nodes[l]  ,sizeof(smatrix_node));
-						memcpy(&nodes[l]  ,&nodes[nnz],sizeof(smatrix_node));
-					}
-				}
 				if (row_head)
-					row_head = nodes;
+					row_head += (temp-nodes);
 				for (int k = 0; k < nnz; k++) {
-					nodes[k].row_prev = (k > 0     ? &nodes[k-1] : 0);
-					nodes[k].row_next = (k < nnz-1 ? &nodes[k+1] : 0);
-					if (nodes[k].col_prev)
-						nodes[k].col_prev->col_next = &nodes[k];
+					if (temp[k].row_next)
+						temp[k].row_next += (temp-nodes);
+					if (temp[k].col_prev)
+						temp[k].col_prev->col_next += (temp-nodes);
 					else
-						nodes[k].col_diag->col_head = &nodes[k];
-					if (nodes[k].col_next)
-						nodes[k].col_next->col_prev = &nodes[k];
+						temp[k].col_diag->col_head += (temp-nodes);
+					if (temp[k].col_next)
+						temp[k].col_next->col_prev += (temp-nodes);
 				}
+				nodes = temp;
 			}
 		}
 		new(&nodes[nnz]) smatrix_node(i,j,t,d);
@@ -1239,14 +1230,11 @@ class smatrix_diag {
 		}
 		if (o == 0)
 			row_head = &nodes[nnz];
-		else {
+		else
 			o->row_next = &nodes[nnz];
-			nodes[nnz].row_prev = o;
-		}
 		if (p != 0) {
 			assert(p->j > j);
 			nodes[nnz].row_next = p;
-			p->row_prev = &nodes[nnz];
 		}
 		// Fix up the column refereces.
 		p = d->col_head; o = 0;
@@ -1302,6 +1290,14 @@ public:
 		}
 		for (int i = 0; i < nnd; i++) {
 			smatrix_diag * d = &(A.diag[i]);
+			// Pre-allocate the space.
+			diag[i].nodes = static_cast<smatrix_node *>
+					(malloc(d->nnz*sizeof(smatrix_node)));
+			if (diag[i].nodes == 0) {
+				event_msg(EVENT_ERROR,"Out of memory in smatrix::smatrix()!");
+				return;
+			}
+			diag[i].nnd = d->nnz;
 			append(i,i,d->K);
 			smatrix_node * p = d->row_head;
 			while (p) {
@@ -1317,7 +1313,6 @@ public:
 			free(diag);
 		}
 	}
-
 	bool append(int i, int j, const tmatrix<double,NDOF,NDOF> & t) {
 		if (i == j) {
 			diag[i].K += t;
@@ -1340,7 +1335,36 @@ public:
 			p->K += n;
 		return true;
 	}
-
+	void tidy() {
+		void * temp = malloc(sizeof(smatrix_node));
+		if (temp == 0) {
+			event_msg(EVENT_ERROR,"Out of memory in smatrix::tidy()!");
+			return;
+		}
+		for (int i = 0; i < nnd; i++) {
+			smatrix_node * nodes = diag[i].nodes;
+			for (int j = 1; j < diag[i].nnz; j++) {
+				for (int k = j; k > 0
+						&& nodes[k-1].j > nodes[k].j; k--) {
+					memcpy(temp       ,&nodes[k-1],sizeof(smatrix_node));
+					memcpy(&nodes[k-1],&nodes[k]  ,sizeof(smatrix_node));
+					memcpy(&nodes[k]  ,temp       ,sizeof(smatrix_node));
+				}
+			}
+			if (diag[i].row_head)
+				diag[i].row_head = nodes;
+			for (int j = 0; j < diag[i].nnz; j++) {
+				nodes[j].row_next = (j < diag[i].nnz-1 ? &nodes[j+1] : 0);
+				if (nodes[j].col_prev)
+					nodes[j].col_prev->col_next = &nodes[j];
+				else
+					nodes[j].col_diag->col_head = &nodes[j];
+				if (nodes[j].col_next)
+					nodes[j].col_next->col_prev = &nodes[j];
+			}
+		}
+		free(temp);
+	}
 	bool chol() {
 		int i, j;
 		smatrix_diag * d;
@@ -1591,7 +1615,7 @@ public:
 			f_ext.add(mesh_bc(k,2,d));
 		return true;
 	}
-	bool solve() {
+	bool solve(const double tol) {
 		int i, j, nnd = node.length();
 		printf("Solving with %i nodes!\n",nnd);
 		smatrix K(nnd);
@@ -1696,6 +1720,7 @@ public:
 			F(n)(u.i) = u.d;
 		}
 
+		K.tidy();
 		smatrix M(K);
 		M.chol();
 
@@ -1705,7 +1730,7 @@ public:
 		for (i = 0; i < nnd; i++)
 			r += tmatrix_scalar<double>(~F(i)*F(i));
 		double ri = r;
-		while (r > 1e-30*ri && it < nnd*NDOF) {
+		while (r > tol*ri && it < nnd*NDOF) {
 			r = 0.0;
 			for (i = 0; i < nnd; i++) {
 				d = &(M.diag[i]);
@@ -1882,7 +1907,7 @@ blockarea(double x1, double x2, double y1, double y2, double r)
  * to get some work done...
  */
 int
-main()
+main_real()
 {
 #if !defined(_MSC_VER) && !defined(DARWIN)
 	// get starting time
@@ -2040,9 +2065,9 @@ main()
 	//		mesh::Y,0.0);
 	FEM.add_bc_plane(mesh::Z,mesh::at|mesh::below,zm,
 			mesh::X|mesh::Y|mesh::Z,0.0);
-	FEM.solve();
+	FEM.solve(1e-20);
 
-	int i, nnd = FEM.getnodes();
+	/*int i, nnd = FEM.getnodes();
 	LEsystem test;
 	test.addlayer(-zm,100e3,0.35);
 	test.addload(point2d(0.0,0.0),0.0,690.0,100.0);
@@ -2074,7 +2099,7 @@ main()
 		double h = hypot(hypot(vx-ux,vy-uy),vz-uz);
 		double v = hypot(hypot(vx,vy),vz);
 		printf("Node %6i: (%+6i,%+6i,%+6i) =\t(%8.2g,%8.2g,%8.2g)\t(%8.2g,%8.2g,%8.2g)\t%8.2g\t(%8.2g)\n",j,int(x),int(y),int(z),vx,vy,vz,ux,uy,uz,h,(v == 0.0 ? 0.0 : h/v));
-	}
+	}*/
 
 #if !defined(_MSC_VER) && !defined(DARWIN)
 	// calculate run time
@@ -2087,7 +2112,7 @@ main()
 }
 
 int
-main_test()
+main()
 {
 #if !defined(_MSC_VER) && !defined(DARWIN)
 	// get starting time
@@ -2100,7 +2125,7 @@ main_test()
 	m.setprop(material_property::poissons,0.2);
 
 	const double domain[3][2] = {{-10, 10}, {-10, 10}, {-10, 0}};
-	const int ndiv[3] = {8, 8, 4};
+	const int ndiv[3] = {80, 80, 50};
 	int i, j, k;
 	mesh FEM;
 
@@ -2132,7 +2157,7 @@ main_test()
 		for (j = 0; j <= ndiv[1]; j++) {
 			double x = domain[0][0] + i*dx;
 			double y = domain[1][0] + j*dy;
-			FEM.add_bc(coord3d(x,y,domain[2][0]),mesh::Z,1.0);
+			FEM.add_bc(coord3d(x,y,domain[2][0]),mesh::Z,0.0);
 		}
 	}
 	//FEM.add_bc(coord3d(0.0,0.0,domain[2][0]),mesh::X,0.0);
@@ -2154,7 +2179,7 @@ main_test()
 			FEM.add_fext(coord3d(x,y,domain[2][1]),mesh::Z,f);
 		}
 	}
-	FEM.solve();
+	FEM.solve(1e-12);
 	int nnd = FEM.getnodes();
 	for (i = 0; i < nnd; i++) {
 		const node3d & n = FEM.getorderednode(i);
@@ -2256,7 +2281,7 @@ main_infinite()
 	FEM.add_bc_plane(mesh::Z,mesh::at|mesh::below,-10,
 			mesh::X|mesh::Y|mesh::Z,0.0);
 
-	FEM.solve();
+	FEM.solve(1e-30);
 	int nnd = FEM.getnodes();
 	for (int i = 0; i < nnd; i++) {
 		const node3d & n = FEM.getorderednode(i);
