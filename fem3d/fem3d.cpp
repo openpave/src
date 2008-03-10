@@ -1166,8 +1166,7 @@ class smatrix;
 class smatrix_node {
 	explicit smatrix_node(const int I, const int J,
 			const tmatrix<double,NDOF,NDOF> & t, smatrix_diag * d)
-	  : K(t), i(I), j(J), col_next(0), col_prev(0), col_diag(d),
-			row_next(0) {
+	  : K(t), i(I), j(J), col_next(0), col_prev(0), row_next(0) {
 	}
 	void *operator new(size_t, void * p) {
 		return p;
@@ -1181,7 +1180,6 @@ class smatrix_node {
 	int i, j;
 	smatrix_node * col_next;
 	smatrix_node * col_prev;
-	smatrix_diag * col_diag;
 	smatrix_node * row_next;
 };
 
@@ -1214,8 +1212,11 @@ class smatrix_diag {
 						temp[k].row_next += (temp-nodes);
 					if (temp[k].col_prev)
 						temp[k].col_prev->col_next += (temp-nodes);
-					else
-						temp[k].col_diag->col_head += (temp-nodes);
+					else {
+						smatrix_diag * col_diag = this
+								- temp[k].i + temp[k].j;
+						col_diag->col_head += (temp-nodes);
+					}
 					if (temp[k].col_next)
 						temp[k].col_next->col_prev += (temp-nodes);
 				}
@@ -1358,7 +1359,7 @@ public:
 				if (nodes[j].col_prev)
 					nodes[j].col_prev->col_next = &nodes[j];
 				else
-					nodes[j].col_diag->col_head = &nodes[j];
+					diag[nodes[j].j].col_head = &nodes[j];
 				if (nodes[j].col_next)
 					nodes[j].col_next->col_prev = &nodes[j];
 			}
