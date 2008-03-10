@@ -275,7 +275,7 @@ struct node3d : public coord3d {
 			zp = z_p;
 		}
 	}
-	void setdisp(const tmatrix<float,NDIM,1> & t) {
+	void setdisp(const tmatrix<double,NDIM,1> & t) {
 		ux = t(0);
 		uy = t(1);
 		uz = t(2);
@@ -296,14 +296,14 @@ static inline int delta()
  */
 template<unsigned I, unsigned J, unsigned K, unsigned L>
 struct meta_stiffness {
-	static inline void assignR(tmatrix<float,3,3> & E, const double & l,
+	static inline void assignR(tmatrix<double,3,3> & E, const double & l,
 			const double & m) {
 		E(J,L) = l*delta<I,J>()*delta<K,L>()
 				+ m*(delta<I,K>()*delta<J,L>()
 				   + delta<I,L>()*delta<J,K>());
 		meta_stiffness<I,J,K,L-1>::assignR(E,l,m);
 	}
-	static inline void assign(tmatrix<float,3,3> & E, const double & l,
+	static inline void assign(tmatrix<double,3,3> & E, const double & l,
 			const double & m) {
 		meta_stiffness<I,J,K,L>::assignR(E,l,m);
 		meta_stiffness<I,J-1,K,L>::assign(E,l,m);
@@ -311,12 +311,12 @@ struct meta_stiffness {
 };
 template<unsigned I, unsigned J, unsigned K>
 struct meta_stiffness<I,J,K,-1> {
-	static inline void assignR(tmatrix<float,3,3> &, const double &,
+	static inline void assignR(tmatrix<double,3,3> &, const double &,
 			const double &) {}
 };
 template<unsigned I, unsigned K, unsigned L>
 struct meta_stiffness<I,-1,K,L> {
-	static inline void assign(tmatrix<float,3,3> &, const double &,
+	static inline void assign(tmatrix<double,3,3> &, const double &,
 			const double &) {}
 };
 
@@ -325,7 +325,7 @@ struct meta_stiffness<I,-1,K,L> {
  */
 #if (NDOF == 3 && NDIM == 3)
 template<int I, int K>
-static inline void pointstiffness(tmatrix<float,3,3> & E,
+static inline void pointstiffness(tmatrix<double,3,3> & E,
 		const double lamba, const double nu)
 {
 	meta_stiffness<I,2,K,2>::assign(E,lamba,nu);
@@ -343,8 +343,8 @@ class smatrix_elem {
 public:
 	explicit smatrix_elem(const int n, const fset<int> & in)
 	  : nnd(n), inel(in), K(0) {
-		K = static_cast<tmatrix<float,NDOF,NDOF> *>
-				(calloc(size(),sizeof(tmatrix<float,NDOF,NDOF>)));
+		K = static_cast<tmatrix<double,NDOF,NDOF> *>
+				(calloc(size(),sizeof(tmatrix<double,NDOF,NDOF>)));
 		if (K == 0)
 			event_msg(EVENT_ERROR,"Out of memory in smatrix_elem::smatrix_elem()!");
 	}
@@ -352,7 +352,7 @@ public:
 		if (K)
 			free(K);
 	}
-	inline tmatrix<float,NDOF,NDOF> & operator() (int i, int j) const {
+	inline tmatrix<double,NDOF,NDOF> & operator() (int i, int j) const {
 		if (i < j)
 			swap(i,j);
 		return K[index(i,j)];
@@ -362,7 +362,7 @@ private:
 	friend class mesh;
 	const int nnd;
 	const fset<int> & inel;
-	tmatrix<float,NDOF,NDOF> * K;
+	tmatrix<double,NDOF,NDOF> * K;
 
 	// Size of the triangular matrix storage
 	inline int size() const {
@@ -520,7 +520,7 @@ public:
 		double mu = e/2/(1+v);
 
 		// Build the point stiffness tensor E_abcd
-		tmatrix<float,3,3> E[3][3];
+		tmatrix<double,3,3> E[3][3];
 		pointstiffness<0,0>(E[0][0],lambda,mu);
 		pointstiffness<0,1>(E[0][1],lambda,mu);
 		pointstiffness<0,2>(E[0][2],lambda,mu);
@@ -574,7 +574,7 @@ public:
 				for (j = i; j < 8; j++) {
 					for (k = 0; k < 3; k++)
 						for (l = 0; l < 3; l++)
-							K(i,j) += E[k][l]*float(dNdr(k,i)*dNdr(l,j)*gw);
+							K(i,j) += E[k][l]*(dNdr(k,i)*dNdr(l,j)*gw);
 				}
 			}
 		}
@@ -623,7 +623,7 @@ public:
 		double mu = e/2/(1+v);
 
 		// Build the point stiffness tensor E_abcd
-		tmatrix<float,3,3> E[3][3];
+		tmatrix<double,3,3> E[3][3];
 		pointstiffness<0,0>(E[0][0],lambda,mu);
 		pointstiffness<0,1>(E[0][1],lambda,mu);
 		pointstiffness<0,2>(E[0][2],lambda,mu);
@@ -679,7 +679,7 @@ public:
 				for (j = i; j < 16; j++) {
 					for (k = 0; k < 3; k++)
 						for (l = 0; l < 3; l++)
-							K(i,j) += E[k][l]*float(dNdr(k,i)*dNdr(l,j)*gw);
+							K(i,j) += E[k][l]*(dNdr(k,i)*dNdr(l,j)*gw);
 				}
 			}
 		}
@@ -810,7 +810,7 @@ public:
 		double mu = e/2/(1+v);
 
 		// Build the point stiffness tensor E_abcd
-		tmatrix<float,3,3> E[3][3];
+		tmatrix<double,3,3> E[3][3];
 		pointstiffness<0,0>(E[0][0],lambda,mu);
 		pointstiffness<0,1>(E[0][1],lambda,mu);
 		pointstiffness<0,2>(E[0][2],lambda,mu);
@@ -926,7 +926,7 @@ public:
 				for (j = i; j < 16; j++) {
 					for (k = 0; k < 3; k++)
 						for (l = 0; l < 3; l++)
-							K(i,j) += E[k][l]*float(dNdr(k,i)*dNdr(l,j)*gw);
+							K(i,j) += E[k][l]*(dNdr(k,i)*dNdr(l,j)*gw);
 				}
 			}
 		}
@@ -1031,7 +1031,7 @@ public:
 		double mu = e/2/(1+v);
 
 		// Build the point stiffness tensor E_abcd
-		tmatrix<float,3,3> E[3][3];
+		tmatrix<double,3,3> E[3][3];
 		pointstiffness<0,0>(E[0][0],lambda,mu);
 		pointstiffness<0,1>(E[0][1],lambda,mu);
 		pointstiffness<0,2>(E[0][2],lambda,mu);
@@ -1146,7 +1146,7 @@ public:
 				for (j = i; j < nnd; j++) {
 					for (k = 0; k < 3; k++)
 						for (l = 0; l < 3; l++)
-							K(i,j) += E[k][l]*float(dNdr(k,i)*dNdr(l,j)*gw);
+							K(i,j) += E[k][l]*(dNdr(k,i)*dNdr(l,j)*gw);
 				}
 			}
 		}
@@ -1165,7 +1165,7 @@ class smatrix;
  */
 class smatrix_node {
 	explicit smatrix_node(const int I, const int J,
-			const tmatrix<float,NDOF,NDOF> & t, smatrix_diag * d)
+			const tmatrix<double,NDOF,NDOF> & t, smatrix_diag * d)
 	  : K(t), i(I), j(J), col_next(0), col_prev(0), col_diag(d),
 			row_next(0) {
 	}
@@ -1177,7 +1177,7 @@ class smatrix_node {
 	friend class smatrix;
 	friend class mesh;
 
-	tmatrix<float,NDOF,NDOF> K;
+	tmatrix<double,NDOF,NDOF> K;
 	int i, j;
 	smatrix_node * col_next;
 	smatrix_node * col_prev;
@@ -1195,7 +1195,7 @@ class smatrix_diag {
 			// smatrix_nodes dont have a destructor...
 			free(nodes);
 	}
-	bool insert(int i, int j, const tmatrix<float,NDOF,NDOF> & t,
+	bool insert(int i, int j, const tmatrix<double,NDOF,NDOF> & t,
 			smatrix_diag * d) {
 		if (nnz+1 > nnd) {
 			nnd = nnz+1;
@@ -1259,7 +1259,7 @@ class smatrix_diag {
 	friend class smatrix;
 	friend class mesh;
 
-	tmatrix<float,NDOF,NDOF> K;
+	tmatrix<double,NDOF,NDOF> K;
 	int nnz, nnd;
 	bool isfixed;
 	bool nonzero;
@@ -1313,12 +1313,12 @@ public:
 			free(diag);
 		}
 	}
-	bool append(int i, int j, const tmatrix<float,NDOF,NDOF> & t) {
+	bool append(int i, int j, const tmatrix<double,NDOF,NDOF> & t) {
 		if (i == j) {
 			diag[i].K += t;
 			return true;
 		}
-		tmatrix<float,NDOF,NDOF> n;
+		tmatrix<double,NDOF,NDOF> n;
 		if (j < i) {
 			swap(i,j);
 			n = ~t;
@@ -1372,8 +1372,8 @@ public:
 
 		for (i = 0; i < nnd; i++) {
 			d = &(diag[i]);
-			tmatrix<float,NDOF,NDOF> & K = d->K;
-			tmatrix<float,NDOF,NDOF> t(0.0);
+			tmatrix<double,NDOF,NDOF> & K = d->K;
+			tmatrix<double,NDOF,NDOF> t(0.0);
 			p = d->col_head;
 			while (p) {
 				t += ~(p->K)*(p->K);
@@ -1391,7 +1391,7 @@ public:
 			K(1,0) = K(2,0) = K(2,1) = 0.0;
 			p = d->row_head;
 			while (p) {
-				tmatrix<float,NDOF,NDOF> & J = p->K;
+				tmatrix<double,NDOF,NDOF> & J = p->K;
 				smatrix_node * pi = d->col_head;
 				smatrix_node * pj = diag[p->j].col_head;
 				while (pi && pj) {
@@ -1430,8 +1430,8 @@ class svector {
 public:
 	inline explicit svector(const int n)
 	  : nnd(n), V(0) {
-		V = static_cast<tmatrix<float,NDOF,1> *>
-				(calloc(nnd,sizeof(tmatrix<float,NDOF,1>)));
+		V = static_cast<tmatrix<double,NDOF,1> *>
+				(calloc(nnd,sizeof(tmatrix<double,NDOF,1>)));
 		if (V == 0)
 			event_msg(EVENT_ERROR,"Out of memory in svector::svector()!");
 	}
@@ -1439,16 +1439,16 @@ public:
 		if (V)
 			free(V);
 	}
-	inline const tmatrix<float,NDOF,1> & operator() (const int i) const {
+	inline const tmatrix<double,NDOF,1> & operator() (const int i) const {
 		return V[i];
 	}
-	inline tmatrix<float,NDOF,1> & operator() (const int i) {
+	inline tmatrix<double,NDOF,1> & operator() (const int i) {
 		return V[i];
 	}
 
 private:
 	int nnd;
-	tmatrix<float,NDOF,1> * V;
+	tmatrix<double,NDOF,1> * V;
 };
 
 /*
@@ -1649,7 +1649,7 @@ public:
 				d->isfixed = true;
 				if (u0.d != 0.0 || u1.d != 0.0 || u2.d != 0.0)
 					d->nonzero = true;
-				d->K = tmatrix<float,NDOF,NDOF>(1.0,true);
+				d->K = tmatrix<double,NDOF,NDOF>(1.0,true);
 				i += 2; // skip the two BC's we just checked.
 			}
 		}
@@ -1726,15 +1726,15 @@ public:
 
 		// CG solution
 		int it = 0;
-		float r = 0.0, ro = 0.0;
+		double r = 0.0, ro = 0.0;
 		for (i = 0; i < nnd; i++)
-			r += tmatrix_scalar<float>(~F(i)*F(i));
+			r += tmatrix_scalar<double>(~F(i)*F(i));
 		double ri = r;
 		while (r > tol*ri && it < nnd*NDOF) {
 			r = 0.0;
 			for (i = 0; i < nnd; i++) {
 				d = &(M.diag[i]);
-				tmatrix<float,NDOF,1> t(F(i));
+				tmatrix<double,NDOF,1> t(F(i));
 				p = d->col_head;
 				while (p) {
 					t -= ~(p->K)*V(p->i);
@@ -1747,7 +1747,7 @@ public:
 			}
 			for (i = nnd-1; i >= 0; i--) {
 				d = &(M.diag[i]);
-				tmatrix<float,NDOF,1> t(V(i));
+				tmatrix<double,NDOF,1> t(V(i));
 				p = d->row_head;
 				while (p) {
 					t -= (p->K)*V(p->j);
@@ -1757,7 +1757,7 @@ public:
 				t(1) = (t(1)-t(2)*d->K(1,2))/d->K(1,1);
 				t(0) = (t(0)-t(1)*d->K(0,1)-t(2)*d->K(0,2))/d->K(0,0);
 				V(i) = t;
-				r += tmatrix_scalar<float>(~t*F(i));
+				r += tmatrix_scalar<double>(~t*F(i));
 			}
 			if (it == 0) {
 				for (i = 0; i < nnd; i++)
@@ -1766,10 +1766,10 @@ public:
 				for (i = 0; i < nnd; i++)
 					P(i) = V(i) + (r/ro)*P(i);
 			}
-			float a = 0.0;
+			double a = 0.0;
 			for (i = 0; i < nnd; i++) {
 				d = &(K.diag[i]);
-				tmatrix<float,NDOF,1> t(d->K*P(i));
+				tmatrix<double,NDOF,1> t(d->K*P(i));
 				p = d->col_head;
 				while (p) {
 					t += ~(p->K)*P(p->i);
@@ -1781,7 +1781,7 @@ public:
 					p = p->row_next;
 				}
 				W(i) = t;
-				a += tmatrix_scalar<float>(~t*P(i));
+				a += tmatrix_scalar<double>(~t*P(i));
 			}
 			if (a <= 0) {
 				event_msg(EVENT_ERROR,"negative curvature!");
@@ -1791,7 +1791,7 @@ public:
 			for (i = 0; i < nnd; i++) {
 				U(i) += (ro/a)*P(i);
 				F(i) -= (ro/a)*W(i);
-				r += tmatrix_scalar<float>(~F(i)*F(i));
+				r += tmatrix_scalar<double>(~F(i)*F(i));
 			}
 			it++;
 			printf("CG step %i with residual %g\n",it,r);
