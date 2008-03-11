@@ -105,83 +105,32 @@ private:
 };
 
 /*
- * A mesh coordinate point (in 2D).
+ * A mesh point in 3D space.
  */
-struct coord2d {
-	fixed<7> x, y;
+struct coord3d {
+	double x, y, z;
 
-	coord2d() {
-	}
-	coord2d(double px, double py)
-	  : x(px), y(py) {
-	}
-	coord2d(const coord2d & p)
-	  : x(p.x), y(p.y) {
-	}
-	coord2d(const point2d & p)
-	  : x(p.x), y(p.y) {
-	}
-	~coord2d () {
-	}
-	inline double distance(const coord2d & p) {
-		return hypot(double(x-p.x),double(y-p.y));
-	}
-	int compare(const coord2d & p) const {
-		if (x == p.x && y == p.y)
-			return 0;
-		if (x < p.x)
-			return -1;
-		if (x > p.x)
-			return 1;
-		return (y < p.y ? -1 : 1);
-	}
-	inline bool operator == (const coord2d & p) const {
-		return (x == p.x && y == p.y ? true : false);
-	}
-	inline bool operator != (const coord2d & p) const {
-		return (x != p.x || y != p.y ? true : false);
-	}
-	inline bool operator > (const coord2d & p) const {
-		return (compare(p) == 1 ? true : false);
-	}
-	inline bool operator >= (const coord2d & p) const {
-		return (compare(p) != -1 ? true : false);
-	}
-	inline bool operator < (const coord2d & p) const {
-		return (compare(p) == -1 ? true : false);
-	}
-	inline bool operator <= (const coord2d & p) const {
-		return (compare(p) != 1 ? true : false);
-	}
-};
-
-/*
- * A simple point in 3D space.
- */
-struct coord3d : public coord2d {
-	fixed<7> z;
-
-	coord3d() : coord2d() {
+	coord3d() {
 	}
 	coord3d(double px, double py, double pz)
-	  : coord2d(px,py), z(pz) {
+	  : x(px), y(py), z(pz) {
 	}
 	coord3d(const coord3d & p)
-	  : coord2d(p), z(p.z) {
+	  : x(p.x), y(p.y), z(p.z) {
 	}
 	coord3d(const point3d & p)
-	  : coord2d(p), z(p.z) {
+	  : x(p.x), y(p.y), z(p.z) {
 	}
 	~coord3d () {
 	}
 	int compare(const coord3d & p) const {
 		if (x == p.x && y == p.y && z == p.z)
 			return 0;
-		if (z < p.z)
-			return -1;
-		if (z > p.z)
-			return 1;
-		return coord2d::compare(static_cast<const coord2d &>(p));
+		if (z < p.z) return -1;
+		if (z > p.z) return  1;
+		if (x < p.x) return -1;
+		if (x > p.x) return  1;
+		return (y < p.y ? -1 : 1);
 	}
 	bool operator == (const coord3d & p) const {
 		return (x == p.x && y == p.y && z == p.z ? true : false);
@@ -341,8 +290,8 @@ class mesh;
  */
 class smatrix_elem {
 public:
-	explicit smatrix_elem(const int n, const fset<int> & in)
-	  : nnd(n), inel(in), K(0) {
+	explicit smatrix_elem(const int n)
+	  : nnd(n), K(0) {
 		K = static_cast<tmatrix<double,NDOF,NDOF> *>
 				(calloc(size(),sizeof(tmatrix<double,NDOF,NDOF>)));
 		if (K == 0)
@@ -361,7 +310,6 @@ public:
 private:
 	friend class mesh;
 	const int nnd;
-	const fset<int> & inel;
 	tmatrix<double,NDOF,NDOF> * K;
 
 	// Size of the triangular matrix storage
@@ -548,7 +496,7 @@ public:
 			}
 		}
 
-		smatrix_elem * _K = new smatrix_elem(8,inel);
+		smatrix_elem * _K = new smatrix_elem(8);
 		if (_K == 0) {
 			event_msg(EVENT_ERROR,"Out of memory in element::stiffness()!");
 			return 0;
@@ -651,7 +599,7 @@ public:
 			}
 		}
 
-		smatrix_elem * _K = new smatrix_elem(16,inel);
+		smatrix_elem * _K = new smatrix_elem(16);
 		if (_K == 0) {
 			event_msg(EVENT_ERROR,"Out of memory in element::stiffness()!");
 			return 0;
@@ -838,7 +786,7 @@ public:
 			}
 		}
 
-		smatrix_elem * _K = new smatrix_elem(16,inel);
+		smatrix_elem * _K = new smatrix_elem(16);
 		if (_K == 0) {
 			event_msg(EVENT_ERROR,"Out of memory in element::stiffness()!");
 			return 0;
@@ -1059,7 +1007,7 @@ public:
 			}
 		}
 
-		smatrix_elem * _K = new smatrix_elem(nnd,inel);
+		smatrix_elem * _K = new smatrix_elem(nnd);
 		if (_K == 0) {
 			event_msg(EVENT_ERROR,"Out of memory in element::stiffness()!");
 			return 0;
@@ -1565,7 +1513,7 @@ public:
 			disp_bc.add(mesh_bc(k,2,d));
 		return true;
 	}
-	bool add_bc_plane(const dof o, const bcplane p, const fixed<7> c,
+	bool add_bc_plane(const dof o, const bcplane p, const double c,
 			const dof f, const double d) {
 		assert(!((o & mesh::X) && (o & mesh::Y)));
 		assert(!((o & mesh::X) && (o & mesh::Z)));
@@ -1659,12 +1607,12 @@ public:
 			if (ke == 0)
 				return false;
 			for (i = 0; i < ke->nnd; i++) {
-				//int gi = ke->inel[i];
-				int gi = node.getorder(ke->inel[i]);
+				//int gi = e->inel[i];
+				int gi = node.getorder(e->inel[i]);
 				if (K.diag[gi].isfixed) {
 					for (j = 0; K.diag[gi].nonzero && j < ke->nnd; j++) {
-						//int gj = ke->inel[j];
-						int gj = node.getorder(ke->inel[j]);
+						//int gj = e->inel[j];
+						int gj = node.getorder(e->inel[j]);
 						if (i == j)
 							continue;
 						if ((j < i) == (gj < gi))
@@ -1675,7 +1623,7 @@ public:
 				} else {
 					for (j = i; j < ke->nnd; j++) {
 						//int gj = ke->inel[j];
-						int gj = node.getorder(ke->inel[j]);
+						int gj = node.getorder(e->inel[j]);
 						K.append(gi,gj,(*ke)(i,j));
 					}
 				}
@@ -2126,7 +2074,7 @@ main()
 	m.setprop(material_property::poissons,0.2);
 
 	const double domain[3][2] = {{-10, 10}, {-10, 10}, {-10, 0}};
-	const int ndiv[3] = {80, 80, 50};
+	const int ndiv[3] = {80, 80, 40};
 	int i, j, k;
 	mesh FEM;
 
