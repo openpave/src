@@ -23,6 +23,33 @@
 
 	Contributor(s): Jeremy Lea <reg@openpave.org>.
 
+	Design:
+		This is a 3D Finite Element Method (FEM) code, which is designed
+		for pavements problems.  Specifically, it is designed for my
+		thesis work, which requires and fast linear elastic 3D FEM
+		analysis.  The code is fast.  It does most of the maths using
+		expression templates, and to aid that uses small 3x3 matrices to
+		store the DOF level data.  This works because the math for the
+		FEM is really a tensor based math, with the matrix and vectors
+		being a simplification.  In essence, this code solves it as two
+		nested matrices, to make a forth order tensor.  This also has an
+		advantage in the matrix storage, because we can manage less.
+		
+		The code follows the classic structure of finite elements for
+		linear elasticity.  The solution is built of elements, which are
+		connected to a global nodes.  These elements are integrated to
+		obtain a element stiffness matrix, which is done by doing
+		gaussian integration over the point stifness matrix, with the
+		approriate transforms.  The element stiffness matrix is then
+		assembled into a global stifness matrix.  A nodal force vector is
+		assembled, and the bondary conditions are applied, and then the
+		global stiffness matrix is inverted to find the nodal
+		displacements.  These are then used to get the final results.
+		
+		The inversion is not done directly, but via a conjugate gradient
+		itterative solver, with an incomplete Cholesky decompostion as a
+		preconditioner.
+
 	History:
 		2007/09/07 - Created by Jeremy Lea <reg@openpave.org>
 
@@ -44,23 +71,61 @@
 #define NDIM 3
 
 /*
- * struct material property
+ * Templated Kronecker delta
+ */
+template<int I, int J>
+static inline int delta()
+{
+	return (I == J ? 1 : 0);
+}
+
+/*
+ * struct meta_stiffness - template meta class to assign the stiffness
+ * tensor based on lambda and mu.  DO NOT PLAY WITH THIS.
+ */
+template<unsigned I, unsigned J, unsigned K, unsigned L>
+struct meta_stiffness
+{
+	static inline void assignR(tmatrix<double,NDOF,NDOF> & E,
+			const double & l, const double & m) {
+		E(J,L) = l*delta<I,J>()*delta<K,L>()
+				+ m*(delta<I,K>()*delta<J,L>()
+				   + delta<I,L>()*delta<J,K>());
+		meta_stiffness<I,J,K,L-1>::assignR(E,l,m);
+	}
+	static inline void assign(tmatrix<double,NDOF,NDOF> & E,
+			const double & l, const double & m) {
+		meta_stiffness<I,J,K,L>::assignR(E,l,m);
+		meta_stiffness<I,J-1,K,L>::assign(E,l,m);
+	}
+};
+template<unsigned I, unsigned J, unsigned K>
+struct meta_stiffness<I,J,K,-1>
+{
+	static inline void assignR(tmatrix<double,NDOF,NDOF> &,
+			const double &, const double &) {}
+};
+template<unsigned I, unsigned K, unsigned L>
+struct meta_stiffness<I,-1,K,L>
+{
+	static inline void assign(tmatrix<double,NDOF,NDOF> &,
+			const double &, const double &) {}
+};
+
+/*
+ * struct material_property
  *
  * A simple wrapper class around an enum of material property names,
  * to enable them to be used in a set, so we can add more properties
- * as we go.  The next set will be to work on how to make this a 3D
+ * as we go.  The next step will be to work on how to make this a 3D
  * spatial estimator.
  */
 struct material_property {
 	enum property_t {
-		null,
 		emod,
 		poissons,
 	} property;
 
-	inline material_property()
-	  : property(null) {
-	}
 	inline material_property(const property_t p)
 	  : property(p) {
 	}
@@ -69,12 +134,16 @@ struct material_property {
 	}
 };
 
-struct material_property_value : public material_property {
+/*
+ * struct material_property_value.
+ *
+ * A simple class to store the properties value (as a double).
+ */
+struct material_property_value
+  : public material_property
+{
 	double value;
 
-	inline material_property_value()
-	  : material_property(), value(0.0) {
-	}
 	inline material_property_value(
 		const material_property::property_t p, const double & v)
 	  : material_property(p), value(v) {
@@ -84,12 +153,19 @@ struct material_property_value : public material_property {
 	}
 };
 
+/*
+ * class material
+ *
+ * This class represents a material.  It will eventually grow to
+ * support a wide variety of material types.  At the moment it
+ * really is overkill...
+ */
 class material {
 public:
 	inline material() {
 	}
 	inline void setprop(const material_property::property_t p,
-		const double & v) {
+			const double & v) {
 		props.add(material_property_value(p,v));
 	}
 	inline bool hasprop(const material_property::property_t p) const {
@@ -100,15 +176,40 @@ public:
 			event_msg(EVENT_ERROR,"Access to undefined material property!");
 		return double(props[material_property(p)]);
 	}
+
+	// Get the point stiffness matrix.  This should be made to cache
+	// the result.
+	inline void pointstiffness(
+			tmatrix<double,NDOF,NDOF> (& E)[NDIM][NDIM]) const {
+		double e = getprop(material_property::emod);
+		double v = getprop(material_property::poissons);
+		double lambda = v*e/(1+v)/(1-2*v);
+		double mu = e/2/(1+v);
+
+		meta_stiffness<0,2,0,2>::assign(E[0][0],lambda,mu);
+		meta_stiffness<0,2,1,2>::assign(E[0][1],lambda,mu);
+		meta_stiffness<0,2,2,2>::assign(E[0][2],lambda,mu);
+		meta_stiffness<1,2,0,2>::assign(E[1][0],lambda,mu);
+		meta_stiffness<1,2,1,2>::assign(E[1][1],lambda,mu);
+		meta_stiffness<1,2,2,2>::assign(E[1][2],lambda,mu);
+		meta_stiffness<2,2,0,2>::assign(E[2][0],lambda,mu);
+		meta_stiffness<2,2,1,2>::assign(E[2][1],lambda,mu);
+		meta_stiffness<2,2,2,2>::assign(E[2][2],lambda,mu);
+	}
+
 private:
 	ksset<material_property,material_property_value> props;
 };
 
 /*
- * A mesh point in 3D space.
+ * struct coord3d
+ *
+ * A mesh point in 3D space.  This is not a point3d for to reasons:
+ * 1. It sorts differently.
+ * 2. We use a fixed point type to make sure the nodes line up.
  */
 struct coord3d {
-	double x, y, z;
+	fixed<8> x, y, z;
 
 	coord3d() {
 	}
@@ -153,7 +254,11 @@ struct coord3d {
 };
 
 /*
- * struct gauss3d - a Gauss Point in 3D
+ * struct gauss3d
+ *
+ * A Gauss Point in 3D.  This uses point3d to get full double accuracy. 
+ * This should grow to support a material property list for local
+ * properties.
  */
 struct gauss3d : public point3d {
 	double gw;
@@ -172,7 +277,7 @@ struct gauss3d : public point3d {
 const double gp_2[2][2] = {{-1/sqrt(3.0), 1},
                            {+1/sqrt(3.0), 1}};
 const double gp_3[3][2] = {{-sqrt(3/5.0), 5/9.0},
-                           {         0, 8/9.0},
+                           {           0, 8/9.0},
                            {+sqrt(3/5.0), 5/9.0}};
 const double gp_4[4][2] = {{-sqrt(525+70*sqrt(30.0))/35, (18-sqrt(30.0))/36},
                            {-sqrt(525-70*sqrt(30.0))/35, (18+sqrt(30.0))/36},
@@ -184,21 +289,29 @@ const double gp_A[4][2] = {{-(1+1/sqrt(3.0))/2, 1/2.0},
                            {+(1+1/sqrt(3.0))/2, 1/2.0}};
 
 /*
- * struct node3d - a Node in 3D
+ * struct node3d
+ *
+ * A node in 3D, based on coord3d.  This stores the meshes neighbours,
+ * so it can keep track of points for the variable node elements.
  */
 struct node3d : public coord3d {
-	int xm, xp, ym, yp, zm, zp;
-	double ux, uy, uz;
+	union {
+		struct {
+			int xm, xp, ym, yp, zm, zp;
+		};
+		struct {
+			double ux, uy, uz;
+		};
+	};
 
 	node3d()
-	  : coord3d(), xm(-1), xp(-1), ym(-1), yp(-1), zm(-1), zp(-1),
-			ux(0.0), uy(0.0), uz(0.0) {
+	  : coord3d(), xm(-1), xp(-1), ym(-1), yp(-1), zm(-1), zp(-1) {
 	}
 	node3d(const coord3d & c)
-	  : coord3d(c), xm(-1), xp(-1), ym(-1), yp(-1), zm(-1), zp(-1),
-			ux(0.0), uy(0.0), uz(0.0) {
+	  : coord3d(c), xm(-1), xp(-1), ym(-1), yp(-1), zm(-1), zp(-1) {
 	}
-	void setneighbours(int x_m, int x_p, int y_m, int y_p, int z_m, int z_p) {
+	void setneighbours(const int x_m, const int x_p, const int y_m,
+			const int y_p, const int z_m, const int z_p) {
 		if (x_m != -1) {
 			assert(xm == -1 || xm == x_m);
 			xm = x_m;
@@ -231,59 +344,7 @@ struct node3d : public coord3d {
 	}
 };
 
-/*
- * Templated Kronecker delta
- */
-template<int I, int J>
-static inline int delta()
-{
-	return (I == J ? 1 : 0);
-}
-
-/*
- * struct meta_stiffness - template meta class to assign the stiffness tensor
- */
-template<unsigned I, unsigned J, unsigned K, unsigned L>
-struct meta_stiffness {
-	static inline void assignR(tmatrix<double,3,3> & E, const double & l,
-			const double & m) {
-		E(J,L) = l*delta<I,J>()*delta<K,L>()
-				+ m*(delta<I,K>()*delta<J,L>()
-				   + delta<I,L>()*delta<J,K>());
-		meta_stiffness<I,J,K,L-1>::assignR(E,l,m);
-	}
-	static inline void assign(tmatrix<double,3,3> & E, const double & l,
-			const double & m) {
-		meta_stiffness<I,J,K,L>::assignR(E,l,m);
-		meta_stiffness<I,J-1,K,L>::assign(E,l,m);
-	}
-};
-template<unsigned I, unsigned J, unsigned K>
-struct meta_stiffness<I,J,K,-1> {
-	static inline void assignR(tmatrix<double,3,3> &, const double &,
-			const double &) {}
-};
-template<unsigned I, unsigned K, unsigned L>
-struct meta_stiffness<I,-1,K,L> {
-	static inline void assign(tmatrix<double,3,3> &, const double &,
-			const double &) {}
-};
-
-/*
- * pointstiff - Determine the consitutive level stiffness
- */
-#if (NDOF == 3 && NDIM == 3)
-template<int I, int K>
-static inline void pointstiffness(tmatrix<double,3,3> & E,
-		const double lamba, const double nu)
-{
-	meta_stiffness<I,2,K,2>::assign(E,lamba,nu);
-}
-#else
-#error "We're only coded for 3D!"
-#endif
-
-class mesh;
+class mesh;                            // Forward declare.
 
 /*
  * class smatrix_elem - an element stiffness matrix
@@ -302,8 +363,7 @@ public:
 			free(K);
 	}
 	inline tmatrix<double,NDOF,NDOF> & operator() (int i, int j) const {
-		if (i < j)
-			swap(i,j);
+		assert(j >= i);
 		return K[index(i,j)];
 	}
 
@@ -318,117 +378,305 @@ private:
 	}
 	// Index into the triangular matrix storage
 	inline int index(const int i, const int j) const {
-		return i*(i+1)/2 + j;
+		return j*(j+1)/2 + i;
 	}
 };
 
-/*
- * Special tmatrix version of this...
- */
-template<unsigned N, unsigned M>
-double
-inv_mul_gauss(tmatrix<double,N,N> & A, tmatrix<double,N,M> & B)
-{
-	double det = 1.0;
-	unsigned i, j, k;
-
-	for (i = 0; i < N; i++) {
-		double pvt = A(i,i);
-		if (fabs(pvt) < DBL_EPSILON) {
-			for (j = i+1; j < N; j++) {
-				if (fabs(pvt = A(j,i)) >= DBL_EPSILON)
-					break;
-			}
-			if (j == N) {
-				event_msg(EVENT_ERROR,"Singular matrix in inv_mul_gauss()!");
-				det = 0.0;
-				goto abort;
-			}
-			for (k = 0; k < N; k++)
-				swap(A(j,k),A(i,k));
-			for (k = 0; k < M; k++)
-				swap(B(j,k),B(i,k));
-		}
-		det *= pvt;
-		for (k = N-1; k > i; k--) {
-			double tmp = A(k,i)/pvt;
-			for (j = N-1; j > i; j--)
-				A(k,j) -= tmp*A(i,j);
-			for (j = 0; j < M; j++)
-				B(k,j) -= tmp*B(i,j);
-		}
-	}
-	for (i = N; i > 0; ) {
-		for (--i, j = N-1; j > i; j--)
-			for (k = 0; k < M; k++)
-				B(i,k) -= A(i,j)*B(j,k);
-		for (k = 0; k < M; k++)
-			B(i,k) /= A(i,i);
-	}
-abort:
-	return det;
-}
+const double H2x[4] = {-1,-1,+1,+1};
+const double H2y[4] = {-1,+1,-1,+1};
+const double V2z[2] = {-1,+1};
+const double V4z0[4] = {-1,+9,+9,-1};
+const double V4z2[4] = {+9,-9,-9,+9};
+const double V4z1[4] = {-1,-3,+3,+1};
 
 /*
  * class element - a finite element
  */
 class element : public listelement_o<mesh,element> {
 public:
-	const enum element_t {
+	enum element_t {
 		block8,
 		block16,
-		infinite16,
-		block34
-	} etype;
+		block34,
+		infinite16
+	};
+	enum shape_t {
+		linear,
+		quadratic,
+		cubic,
+		absolute,
+		inf_pos,
+		inf_neg
+	};
 
-	element(mesh * o, element * p, const element_t t,
-			const material & m)
-	  : listelement_o<mesh,element>(o,p), etype(t), mat(m), inel(0,8) {
+	element(mesh * o, element * p, const shape_t x, const shape_t y,
+			const shape_t z, const material & m)
+	  : listelement_o<mesh,element>(o,p), sx(x), sy(y), sz(z), mat(m),
+	  		inel(0,8) {
 	}
 	virtual smatrix_elem * stiffness() const = 0;
 
 protected:
 	friend class mesh;
+
+	shape_t sx, sy, sz;
 	const material & mat;
 	sset<int> inel;
 
 	inline int addnode(const coord3d & c) const;
 	inline void updatenode(const node3d & n) const;
 	inline const node3d & getnode(const int i) const;
-	inline void setup(const int nz, 
-	                  const double * xb, const double * xt,
-	                  const double * yb, const double * yt,
-	                  const double * zb, const double * zt) {
+	inline void setup(const fset<coord3d> & c, int * mask = 0) {
+		assert(8 == c.length());
+		const int nz = getnz(sz);
 		for (int i = 0; i < nz; i++) {
 			for (int j = 0; j < 4; j++) {
-				double x = xb[j]+i*(xt[j]-xb[j])/(nz-1);
-				double y = yb[j]+i*(yt[j]-yb[j])/(nz-1);
-				double z = zb[j]+i*(zt[j]-zb[j])/(nz-1);
+				double x = double(c[j].x)+i*double(c[j+4].x-c[j].x)/(nz-1);
+				double y = double(c[j].y)+i*double(c[j+4].y-c[j].y)/(nz-1);
+				double z = double(c[j].z)+i*double(c[j+4].z-c[j].z)/(nz-1);
 				inel.add(addnode(coord3d(x,y,z)));
 			}
 		}
+		for (int i = 0; mask && i < 4*nz+2; i++)
+			mask[i] = -1;
+		for (int i = 0; i < 4*nz; i++) {
+			node3d n = getnode(inel[i]);
+			int x_m = -1, x_p = -1;
+			int y_m = -1, y_p = -1;
+			int z_m = -1, z_p = -1;
+			(i%4 < 2 ? x_p : x_m) = inel[4*(i/4)+(i%4+2)%4];
+			(i%2 < 1 ? y_p : y_m) = inel[2*(i/2)+(i%2+1)%2];
+			if (i < 4*(nz-1))
+				z_p = inel[i+4];
+			if (i >= 4)
+				z_m = inel[i-4];
+			if (mask) {
+				switch (i%4) {
+				case 0:
+					if (n.xp != -1 && n.xp != x_p) {
+						mask[i+2] = x_p = n.xp;
+					}
+					if (n.yp != -1 && n.yp != y_p) {
+						mask[i] = y_p = n.yp;
+						if ((i == 0 || i == 12)) {
+							const node3d & mid = getnode(n.yp);
+							if (mid.xp != -1)
+								mask[i == 0 ? 16 : 17] = mid.xp;
+						}
+					}
+					break;
+				case 1:
+					if (n.xp != -1 && n.xp != x_p)
+						x_p = n.xp;
+					if (n.ym != -1 && n.ym != y_m)
+						y_m = n.ym;
+					break;
+				case 2:
+					if (n.xm != -1 && n.xm != x_m)
+						x_m = n.xm;
+					if (n.yp != -1 && n.yp != y_p)
+						y_p = n.yp;
+					break;
+				case 3:
+					if (n.xm != -1 && n.xm != x_m) {
+						mask[i-2] = x_m = n.xm;
+					}
+					if (n.ym != -1 && n.ym != y_m) {
+						mask[i] = y_m = n.ym;
+					}
+					break;
+				}
+			}
+			n.setneighbours(x_m,x_p,y_m,y_p,z_m,z_p);
+			updatenode(n);
+		}
+		for (int i = 0; mask && i < 4*nz+2; i++) {
+			if (mask[i] != -1) {
+				inel.add(mask[i]);
+				mask[i] = inel.length()-1;
+			} else
+				mask[i] = 0;
+		}
+	}
+	void buildxe(matrix_dense & xe) const {
+		assert(xe.rows() == inel.length());
+		for (int i = 0; i < inel.length(); i++) {
+			const coord3d & p = getnode(inel[i]);
+			xe(i,0) = p.x; xe(i,1) = p.y; xe(i,2) = p.z;
+		}
+	}
+	void buildgp(ksset<point3d,gauss3d> & gp) const {
+		int nx = 0, ny = 0, nz = 0;
+		const double (* gx)[2] = 0, (* gy)[2] = 0, (* gz)[2] = 0;
+		
+		getgauss(sx,nx,gx);
+		getgauss(sy,ny,gy);
+		getgauss(sz,nz,gz);
+		for (int i = 0; i < nx; i++) {
+			for (int j = 0; j < ny; j++) {
+				for (int k = 0; k < nz; k++) {
+					gp.add(gauss3d(gx[i][0],gy[j][0],gz[k][0],
+							gx[i][1]*gy[j][1]*gz[k][1]));
+				}
+			}
+		}
+	}
+	void builddNdr(const point3d & gp,
+			matrix_dense & dNdr, const int * mask = 0) const {
+		int nz = getnz(sz);
+		double rx = gp.x, ry = gp.y, rz = gp.z;
+		double Nx = 0, Ny = 0, Nz = 0, dNdx = 0, dNdy = 0, dNdz = 0;
+
+		assert(dNdr.cols() == inel.length());
+		assert(mask != 0 || dNdr.cols() == 4*nz);
+
+		for (int i = 0, j; i < nz; i++) {
+			switch (sz) {
+			case linear:
+				Nz = (1+V2z[i]*rz)/2; dNdz = V2z[i]/2;
+				break;
+			case cubic:
+				Nz = (V4z0[i]+V4z2[i]*rz*rz)*(1+V4z1[i]*rz)/16;
+				dNdz = ((2*V4z2[i]*rz)*(1+V4z1[i]*rz)
+					+ (V4z0[i]+V4z2[i]*rz*rz)*V4z1[i])/16;
+				break;
+			case quadratic:
+			case absolute:
+			case inf_pos:
+			case inf_neg:
+				assert(false);
+				break;
+			}
+			for (int l = 0; l < 4; l++) {
+				Nx = (1+H2x[l]*rx)/2; dNdx = H2x[l]/2;
+				Ny = (1+H2y[l]*ry)/2; dNdy = H2y[l]/2;
+				dNdr(0,i*4+l) = dNdx*Ny*Nz;
+				dNdr(1,i*4+l) = Nx*dNdy*Nz;
+				dNdr(2,i*4+l) = Nx*Ny*dNdz;
+			}
+			if (!mask)
+				continue;
+			for (int l = 0; l < 4; l++) {
+				if ((j = mask[i*4+l]) == 0)
+					continue;
+				const int Sxy[4] = { 0, 1, 1, 0};
+				Nx = (1+( Sxy[l] ? -fabs(rx) : H2x[l]*rx));
+				dNdx = ( Sxy[l] ? -SGN(rx) : H2x[l]);
+				Ny = (1+(!Sxy[l] ? -fabs(ry) : H2y[l]*ry));
+				dNdy = (!Sxy[l] ? -SGN(ry) : H2y[l]);
+				dNdr(0,j) = dNdx*Ny*Nz/2;
+				dNdr(1,j) = Nx*dNdy*Nz/2;
+				dNdr(2,j) = Nx*Ny*dNdz/2;
+			}
+			if (i > 0 && i < nz-1)
+				continue;
+			if ((j = mask[(i == 0 ? 4*nz : 4*nz+1)]) == 0)
+				continue;
+			Nx = 1-fabs(rx); dNdx = -SGN(rx);
+			Ny = 1-fabs(ry); dNdy = -SGN(ry);
+			dNdr(0,j) = dNdx*Ny*Nz;
+			dNdr(1,j) = Nx*dNdy*Nz;
+			dNdr(2,j) = Nx*Ny*dNdz;
+		}
+		if (!mask)
+			return;
+		for (int l = 0; l < 4*nz; l++) {
+			if (mask[l] != 0) {
+				dNdr(0,l) -= dNdr(0,mask[l])/2;
+				dNdr(1,l) -= dNdr(1,mask[l])/2;
+				dNdr(2,l) -= dNdr(2,mask[l])/2;
+			}
+			const int Jxy[4] = {+2,-1,+1,-2};
+			if (mask[l+Jxy[l%4]] != 0) {
+				dNdr(0,l) -= dNdr(0,mask[l+Jxy[l%4]])/2;
+				dNdr(1,l) -= dNdr(1,mask[l+Jxy[l%4]])/2;
+				dNdr(2,l) -= dNdr(2,mask[l+Jxy[l%4]])/2;
+			}
+			if (l < 4 && mask[4*nz] != 0) {
+				dNdr(0,l) += dNdr(0,mask[4*nz])/4;
+				dNdr(1,l) += dNdr(1,mask[4*nz])/4;
+				dNdr(2,l) += dNdr(2,mask[4*nz])/4;
+			}
+			if (l >= 12 && mask[4*nz+1] != 0) {
+				dNdr(0,l) += dNdr(0,mask[4*nz+1])/4;
+				dNdr(1,l) += dNdr(1,mask[4*nz+1])/4;
+				dNdr(2,l) += dNdr(2,mask[4*nz+1])/4;
+			}
+		}
+		for (int l = 0; mask[4*nz] != 0 && l < 4; l++) {
+			dNdr(0,mask[l]) -= dNdr(0,mask[4*nz])/2;
+			dNdr(1,mask[l]) -= dNdr(1,mask[4*nz])/2;
+			dNdr(2,mask[l]) -= dNdr(2,mask[4*nz])/2;
+		}
+		for (int l = 4*(nz-1); mask[4*nz+1] != 0 && l < 4*nz; l++) {
+			dNdr(0,mask[l]) -= dNdr(0,mask[4*nz+1])/2;
+			dNdr(1,mask[l]) -= dNdr(1,mask[4*nz+1])/2;
+			dNdr(2,mask[l]) -= dNdr(2,mask[4*nz+1])/2;
+		}
+	}
+	smatrix_elem * buildKe(const int * mask = 0) const {
+		int i, j, k, l, g, nnd = inel.length();
+
+		// Build the point stiffness tensor E_abcd
+		tmatrix<double,NDOF,NDOF> E[NDIM][NDIM];
+		mat.pointstiffness(E);
+
+		// Element nodal coords
+		matrix_dense xe(nnd,NDIM);
+		buildxe(xe);
+
+		ksset<point3d,gauss3d> gp(0,8);
+		buildgp(gp);
+
+		smatrix_elem * K = new smatrix_elem(nnd);
+		if (K == 0) {
+			event_msg(EVENT_ERROR,"Out of memory in element::stiffness()!");
+			return 0;
+		}
+
+		matrix_dense dNdr(NDIM,nnd);
+		matrix_dense J(NDIM,NDIM);
+		for (g = 0; g < gp.length(); g++) {
+			double gw = gp[g].gw;
+			builddNdr(gp[g],dNdr,mask);
+			J = dNdr*xe;
+			// This returns det(J);
+			gw *= inv_mul_gauss(NDIM,nnd,&J(0,0),&dNdr(0,0));
+			for (i = 0; i < nnd; i++) {
+				for (j = i; j < nnd; j++) {
+					for (k = 0; k < NDIM; k++)
+						for (l = 0; l < NDIM; l++)
+							(*K)(i,j) += E[k][l]*(dNdr(k,i)*dNdr(l,j)*gw);
+				}
+			}
+		}
+		return K;
+	}
+
+private:
+	static const int getnz(const shape_t z) {
+		switch (z) {
+		case linear:    return 2;
+		case cubic:     return 4;
+		case quadratic:
+		case absolute:
+		case inf_pos:
+		case inf_neg:   break;
+		}
+		assert(false);  return 0;
+	}
+	static void getgauss(const shape_t t, int & n,
+			const double (*& g)[2]) {
+		switch (t) {
+			case linear:    n = 2; g = gp_2; return;
+			case quadratic: n = 3; g = gp_3; return;
+			case cubic:     n = 4; g = gp_4; return;
+			case absolute:  n = 4; g = gp_A; return;
+			case inf_pos:
+			case inf_neg:   n = 4; g = gp_4; return;
+		}
 	}
 };
-
-// shape functions for 8-node 3D brick:
-//   N = 1/8*(1+-x)*(1+-y)*(1+-z);
-const double H2x[4] = {-1,-1,+1,+1};
-const double H2y[4] = {-1,+1,-1,+1};
-// horizontal shape functions for 16/34-node 3D brick:
-const int    Sxy[4] = { 0, 1, 1, 0};
-const int    Jxy[4] = {+2,-1,+1,-2};
-// mapping functions for infinite elements.
-const double Mx0[16] = { 0, 0, 1, 1};
-const double Mx1[16] = {-2,-2,+1,+1};
-const double My0[16] = { 0, 1, 0, 1};
-const double My1[16] = {-2,+1,-2,+1};
-
-// vertical shape functions for 8-node 3D brick:
-const double V2z[2] = {-1,+1};
-// vertical shape functions for 16-node 3D brick:
-const double V4z0[4] = {-1,+9,+9,-1};
-const double V4z2[4] = {+9,-9,-9,+9};
-const double V4z1[4] = {-1,-3,+3,+1};
 
 /*
  * class element_block8 - a finite element
@@ -437,96 +685,12 @@ class element_block8 : public element {
 public:
 	element_block8(mesh * o, element * p, const material & m,
 			const fset<coord3d> & c)
-	  : element(o,p,block8,m) {
-		assert(8 == c.length());
-		double xb[4], yb[4], zb[4];
-		double xt[4], yt[4], zt[4];
-		for (int i = 0; i < 4; i++) {
-			xb[i] = c[i  ].x; yb[i] = c[i  ].y; zb[i] = c[i  ].z;
-			xt[i] = c[i+4].x; yt[i] = c[i+4].y; zt[i] = c[i+4].z;
-		}
-		setup(2,xb,xt,yb,yt,zb,zt);
-		for (int i = 0; i < 8; i++) {
-			node3d n = getnode(inel[i]);
-			int x_m = -1, x_p = -1;
-			int y_m = -1, y_p = -1;
-			int z_m = -1, z_p = -1;
-			(i%4 < 2 ? x_p : x_m) = inel[4*(i/4)+(i%4+2)%4];
-			(i%2 < 1 ? y_p : y_m) = inel[2*(i/2)+(i%2+1)%2];
-			(i   < 4 ? z_p : z_m) = inel[(i+4)%8];
-			n.setneighbours(x_m,x_p,y_m,y_p,z_m,z_p);
-			updatenode(n);
-		}
+	  : element(o,p,linear,linear,linear,m) {
+		setup(c);
 	}
 	virtual smatrix_elem * stiffness() const {
 		assert(8 == inel.length());
-		int i, j, k, l, g;
-		double rx, ry, rz;
-		double e = mat.getprop(material_property::emod);
-		double v = mat.getprop(material_property::poissons);
-		double lambda = v*e/(1+v)/(1-2*v);
-		double mu = e/2/(1+v);
-
-		// Build the point stiffness tensor E_abcd
-		tmatrix<double,3,3> E[3][3];
-		pointstiffness<0,0>(E[0][0],lambda,mu);
-		pointstiffness<0,1>(E[0][1],lambda,mu);
-		pointstiffness<0,2>(E[0][2],lambda,mu);
-		pointstiffness<1,0>(E[1][0],lambda,mu);
-		pointstiffness<1,1>(E[1][1],lambda,mu);
-		pointstiffness<1,2>(E[1][2],lambda,mu);
-		pointstiffness<2,0>(E[2][0],lambda,mu);
-		pointstiffness<2,1>(E[2][1],lambda,mu);
-		pointstiffness<2,2>(E[2][2],lambda,mu);
-
-		// Element nodal coords
-		tmatrix<double,8,NDIM> xe;
-		for (i = 0; i < 8; i++) {
-			const coord3d & p = getnode(inel[i]);
-			xe(i,0) = p.x; xe(i,1) = p.y; xe(i,2) = p.z;
-		}
-
-		ksset<point3d,gauss3d> gp(0,8);
-		for (i = 0; i < 2; i++) {
-			for (j = 0; j < 2; j++) {
-				for (k = 0; k < 2; k++) {
-					gp.add(gauss3d(gp_2[i][0],gp_2[j][0],gp_2[k][0],
-							gp_2[i][1]*gp_2[j][1]*gp_2[k][1]));
-				}
-			}
-		}
-
-		smatrix_elem * _K = new smatrix_elem(8);
-		if (_K == 0) {
-			event_msg(EVENT_ERROR,"Out of memory in element::stiffness()!");
-			return 0;
-		}
-		smatrix_elem & K = *_K;
-
-		for (g = 0; g < gp.length(); g++) {
-			rx = gp[g].x; ry = gp[g].y; rz = gp[g].z;
-			double gw = gp[g].gw;
-			tmatrix<double,NDIM,8> dNdr;
-			for (l = 0; l < 8; l++) {
-				double Nx = (1+H2x[l%4]*rx)/2; double dNdx = H2x[l%4]/2;
-				double Ny = (1+H2y[l%4]*ry)/2; double dNdy = H2y[l%4]/2;
-				double Nz = (1+V2z[l/4]*rz)/2; double dNdz = V2z[l/4]/2;
-				dNdr(0,l) = dNdx*Ny*Nz;
-				dNdr(1,l) = Nx*dNdy*Nz;
-				dNdr(2,l) = Nx*Ny*dNdz;
-			}
-			tmatrix<double,NDIM,NDIM> J(dNdr*xe);
-			// This returns det(J);
-			gw *= inv_mul_gauss(J,dNdr);
-			for (i = 0; i < 8; i++) {
-				for (j = i; j < 8; j++) {
-					for (k = 0; k < 3; k++)
-						for (l = 0; l < 3; l++)
-							K(i,j) += E[k][l]*(dNdr(k,i)*dNdr(l,j)*gw);
-				}
-			}
-		}
-		return _K;
+		return buildKe();
 	}
 };
 
@@ -537,102 +701,31 @@ class element_block16 : public element {
 public:
 	element_block16(mesh * o, element * p, const material & m,
 			const fset<coord3d> & c)
-	  : element(o,p,block16,m) {
-		assert(8 == c.length());
-		double xb[4], yb[4], zb[4];
-		double xt[4], yt[4], zt[4];
-		for (int i = 0; i < 4; i++) {
-			xb[i] = c[i  ].x; yb[i] = c[i  ].y; zb[i] = c[i  ].z;
-			xt[i] = c[i+4].x; yt[i] = c[i+4].y; zt[i] = c[i+4].z;
-		}
-		setup(4,xb,xt,yb,yt,zb,zt);
-		for (int i = 0; i < 16; i++) {
-			node3d n = getnode(inel[i]);
-			int x_m = -1, x_p = -1;
-			int y_m = -1, y_p = -1;
-			int z_m = -1, z_p = -1;
-			(i%4 < 2 ? x_p : x_m) = inel[4*(i/4)+(i%4+2)%4];
-			(i%2 < 1 ? y_p : y_m) = inel[2*(i/2)+(i%2+1)%2];
-			if (i < 12)
-				z_p = inel[i+4];
-			if (i >= 4)
-				z_m = inel[i-4];
-			n.setneighbours(x_m,x_p,y_m,y_p,z_m,z_p);
-			updatenode(n);
-		}
+	  : element(o,p,linear,linear,cubic,m) {
+		setup(c);
 	}
 	virtual smatrix_elem * stiffness() const {
 		assert(16 == inel.length());
-		int i, j, k, l, g;
-		double rx, ry, rz;
-		double e = mat.getprop(material_property::emod);
-		double v = mat.getprop(material_property::poissons);
-		double lambda = v*e/(1+v)/(1-2*v);
-		double mu = e/2/(1+v);
-
-		// Build the point stiffness tensor E_abcd
-		tmatrix<double,3,3> E[3][3];
-		pointstiffness<0,0>(E[0][0],lambda,mu);
-		pointstiffness<0,1>(E[0][1],lambda,mu);
-		pointstiffness<0,2>(E[0][2],lambda,mu);
-		pointstiffness<1,0>(E[1][0],lambda,mu);
-		pointstiffness<1,1>(E[1][1],lambda,mu);
-		pointstiffness<1,2>(E[1][2],lambda,mu);
-		pointstiffness<2,0>(E[2][0],lambda,mu);
-		pointstiffness<2,1>(E[2][1],lambda,mu);
-		pointstiffness<2,2>(E[2][2],lambda,mu);
-
-		// Element nodal coords
-		tmatrix<double,16,NDIM> xe;
-		for (i = 0; i < 16; i++) {
-			const coord3d & p = getnode(inel[i]);
-			xe(i,0) = p.x; xe(i,1) = p.y; xe(i,2) = p.z;
-		}
-
-		ksset<point3d,gauss3d> gp(0,16);
-		for (i = 0; i < 2; i++) {
-			for (j = 0; j < 2; j++) {
-				for (k = 0; k < 4; k++) {
-					gp.add(gauss3d(gp_2[i][0],gp_2[j][0],gp_4[k][0],
-							gp_2[i][1]*gp_2[j][1]*gp_4[k][1]));
-				}
-			}
-		}
-
-		smatrix_elem * _K = new smatrix_elem(16);
-		if (_K == 0) {
-			event_msg(EVENT_ERROR,"Out of memory in element::stiffness()!");
-			return 0;
-		}
-		smatrix_elem & K = *_K;
-
-		for (g = 0; g < gp.length(); g++) {
-			rx = gp[g].x; ry = gp[g].y; rz = gp[g].z;
-			double gw = gp[g].gw;
-			tmatrix<double,NDIM,16> dNdr;
-			for (l = 0; l < 16; l++) {
-				double Nx = (1+H2x[l%4]*rx)/2; double dNdx = H2x[l%4]/2;
-				double Ny = (1+H2y[l%4]*ry)/2; double dNdy = H2y[l%4]/2;
-				double Nz = (V4z0[l/4]+V4z2[l/4]*rz*rz)*(1+V4z1[l/4]*rz)/16;
-				double dNdz = ((2*V4z2[l/4]*rz)*(1+V4z1[l/4]*rz)
-					+ (V4z0[l/4]+V4z2[l/4]*rz*rz)*V4z1[l/4])/16;
-				dNdr(0,l) = dNdx*Ny*Nz;
-				dNdr(1,l) = Nx*dNdy*Nz;
-				dNdr(2,l) = Nx*Ny*dNdz;
-			}
-			tmatrix<double,NDIM,NDIM> J(dNdr*xe);
-			// This returns det(J);
-			gw *= inv_mul_gauss(J,dNdr);
-			for (i = 0; i < 16; i++) {
-				for (j = i; j < 16; j++) {
-					for (k = 0; k < 3; k++)
-						for (l = 0; l < 3; l++)
-							K(i,j) += E[k][l]*(dNdr(k,i)*dNdr(l,j)*gw);
-				}
-			}
-		}
-		return _K;
+		return buildKe();
 	}
+};
+
+/*
+ * class element_block34 - a finite element
+ */
+class element_block34 : public element {
+public:
+	element_block34(mesh * o, element * p, const material & m,
+			const fset<coord3d> & c)
+	  : element(o,p,absolute,absolute,cubic,m) {
+		setup(c,mask);
+	}
+	virtual smatrix_elem * stiffness() const {
+		return buildKe(mask);
+	}
+
+protected:
+	int mask[18];
 };
 
 /*
@@ -642,187 +735,125 @@ class element_infinite16 : public element {
 public:
 	element_infinite16(mesh * o, element * p, const material & m,
 			const fset<coord3d> & c)
-	  : element(o,p,infinite16,m), inftype(corner) {
-		// XXX: Should deal with each of these as a different class?
+	  : element(o,p,linear,linear,cubic,m) {
+		fset<coord3d> cc(8);
 		if (c.length() == 2) {
-			setup_XY(c);
+			// Corner infinite elements are defined by 2 points in
+			// a line, which must be vertical.
+			assert(c[0].x == c[1].x);
+			assert(c[0].y == c[1].y);
+			for (int i = 0; i < 4; i++) {
+				double x = c[0].x, y = c[0].y;
+				x *= ((x > 0) == (i%4 < 2) ? 1 : 2);
+				y *= ((y > 0) == (i%2 < 1) ? 1 : 2);
+				cc[i  ].x = x; cc[i  ].y = y; cc[i  ].z = c[0].z;
+				cc[i+4].x = x; cc[i+4].y = y; cc[i+4].z = c[1].z;
+			}
+			sx = (double(c[0].x) > 0 ? inf_pos : inf_neg);
+			sy = (double(c[0].y) > 0 ? inf_pos : inf_neg);
 		} else {
+			// Side infinite elements are defined by 4 points in a plane.
 			assert(4 == c.length());
-			if (c[0].x == c[3].x)
-				setup_X(c);
-			else
-				setup_Y(c);
+			if (c[0].x == c[3].x) {
+				assert(c[0].x == c[1].x);
+				assert(c[1].x == c[2].x);
+				assert(c[2].x == c[3].x);
+				for (int i = 0; i < 4; i++) {
+					double x = c[0].x;
+					x *= ((x > 0) == (i%4 < 2) ? 1 : 2);
+					cc[i  ] = c[i%2  ]; cc[i  ].x = x;
+					cc[i+4] = c[i%2+2]; cc[i+4].x = x;
+				}
+				sx = (double(c[0].x) > 0 ? inf_pos : inf_neg);
+			} else {
+				assert(c[0].y == c[1].y);
+				assert(c[1].y == c[2].y);
+				assert(c[2].y == c[3].y);
+				for (int i = 0; i < 4; i++) {
+					double y = c[0].y;
+					y *= ((y > 0) == (i%2 < 1) ? 1 : 2);
+					cc[i  ] = c[(i<2?0:1)]; cc[i  ].y = y;
+					cc[i+4] = c[(i<2?2:3)]; cc[i+4].y = y;
+				}
+				sy = (double(c[0].y) > 0 ? inf_pos : inf_neg);
+			}
 		}
-	}
-	void setup_XY(const fset<coord3d> & c) {
-		// Corner infinite elements are defined by 2 points in
-		// a line, which must be vertical.
-		assert(2 == c.length());
-		assert(c[0].x == c[1].x);
-		assert(c[0].y == c[1].y);
-		double xb[4], yb[4], zb[4];
-		double xt[4], yt[4], zt[4];
-		for (int i = 0; i < 4; i++) {
-			double x = c[0].x, y = c[0].y;
-			x *= (i%4 < 2 ? 1 : 2);
-			y *= (i%2 < 1 ? 1 : 2);
-			xb[i] = x; yb[i] = y; zb[i] = c[0].z;
-			xt[i] = x; yt[i] = y; zt[i] = c[1].z;
-		}
-		setup(4,xb,xt,yb,yt,zb,zt);
-		for (int i = 0; i < 16; i++) {
-			node3d n = getnode(inel[i]);
-			int x_m = -1, x_p = -1;
-			int y_m = -1, y_p = -1;
-			int z_m = -1, z_p = -1;
-			((xb[0] > 0) == (i%4 < 2) ? x_p : x_m) = inel[4*(i/4)+(i%4+2)%4];
-			((yb[0] > 0) == (i%2 < 1) ? y_p : y_m) = inel[2*(i/2)+(i%2+1)%2];
-			if (i < 12)
-				z_p = inel[i+4];
-			if (i >= 4)
-				z_m = inel[i-4];
-			n.setneighbours(x_m,x_p,y_m,y_p,z_m,z_p);
-			updatenode(n);
-		}
-		inftype = corner;
-	}
-	void setup_X(const fset<coord3d> & c) {
-		// Side infinite elements are defined by 4 points in a plane.
-		assert(4 == c.length());
-		assert(c[0].x == c[1].x);
-		assert(c[1].x == c[2].x);
-		assert(c[2].x == c[3].x);
-		double xb[4], yb[4], zb[4];
-		double xt[4], yt[4], zt[4];
-		for (int i = 0; i < 4; i++) {
-			double x = c[0].x;
-			x *= (i%4 < 2 ? 1 : 2);
-			xb[i] = x; yb[i] = c[i%2  ].y; zb[i] = c[i%2  ].z;
-			xt[i] = x; yt[i] = c[i%2+2].y; zt[i] = c[i%2+2].z;
-		}
-		setup(4,xb,xt,yb,yt,zb,zt);
-		for (int i = 0; i < 16; i++) {
-			node3d n = getnode(inel[i]);
-			int x_m = -1, x_p = -1;
-			int y_m = -1, y_p = -1;
-			int z_m = -1, z_p = -1;
-			((xb[0] > 0) == (i%4 < 2) ? x_p : x_m) = inel[4*(i/4)+(i%4+2)%4];
-			(i%2 < 1 ? y_p : y_m) = inel[2*(i/2)+(i%2+1)%2];
-			if (i < 12)
-				z_p = inel[i+4];
-			if (i >= 4)
-				z_m = inel[i-4];
-			n.setneighbours(x_m,x_p,y_m,y_p,z_m,z_p);
-			updatenode(n);
-		}
-		inftype = infX;
-	}
-	void setup_Y(const fset<coord3d> & c) {
-		// Side infinite elements are defined by 4 points in a plane.
-		assert(4 == c.length());
-		assert(c[0].y == c[1].y);
-		assert(c[1].y == c[2].y);
-		assert(c[2].y == c[3].y);
-		double xb[4], yb[4], zb[4];
-		double xt[4], yt[4], zt[4];
-		for (int i = 0; i < 4; i++) {
-			double y = c[0].y;
-			y *= (i%2 < 1 ? 1 : 2);
-			xb[i] = c[(i<2?0:1)].x; yb[i] = y; zb[i] = c[(i<2?0:1)].z;
-			xt[i] = c[(i<2?2:3)].x; yt[i] = y; zt[i] = c[(i<2?2:3)].z;
-		}
-		setup(4,xb,xt,yb,yt,zb,zt);
-		for (int i = 0; i < 16; i++) {
-			node3d n = getnode(inel[i]);
-			int x_m = -1, x_p = -1;
-			int y_m = -1, y_p = -1;
-			int z_m = -1, z_p = -1;
-			(i%4 < 2 ? x_p : x_m) = inel[4*(i/4)+(i%4+2)%4];
-			((yb[0] > 0) == (i%2 < 1) ? y_p : y_m) = inel[2*(i/2)+(i%2+1)%2];
-			if (i < 12)
-				z_p = inel[i+4];
-			if (i >= 4)
-				z_m = inel[i-4];
-			n.setneighbours(x_m,x_p,y_m,y_p,z_m,z_p);
-			updatenode(n);
-		}
-		inftype = infY;
+		setup(cc);
 	}
 	virtual smatrix_elem * stiffness() const {
 		assert(16 == inel.length());
 		int i, j, k, l, g;
 		double rx, ry, rz;
-		double e = mat.getprop(material_property::emod);
-		double v = mat.getprop(material_property::poissons);
-		double lambda = v*e/(1+v)/(1-2*v);
-		double mu = e/2/(1+v);
 
 		// Build the point stiffness tensor E_abcd
-		tmatrix<double,3,3> E[3][3];
-		pointstiffness<0,0>(E[0][0],lambda,mu);
-		pointstiffness<0,1>(E[0][1],lambda,mu);
-		pointstiffness<0,2>(E[0][2],lambda,mu);
-		pointstiffness<1,0>(E[1][0],lambda,mu);
-		pointstiffness<1,1>(E[1][1],lambda,mu);
-		pointstiffness<1,2>(E[1][2],lambda,mu);
-		pointstiffness<2,0>(E[2][0],lambda,mu);
-		pointstiffness<2,1>(E[2][1],lambda,mu);
-		pointstiffness<2,2>(E[2][2],lambda,mu);
+		tmatrix<double,NDOF,NDOF> E[NDIM][NDIM];
+		mat.pointstiffness(E);
 
-		// Element nodal coords
-		tmatrix<double,16,NDIM> xe;
-		for (i = 0; i < 16; i++) {
-			const coord3d & p = getnode(inel[i]);
-			xe(i,0) = p.x; xe(i,1) = p.y; xe(i,2) = p.z;
-		}
+		matrix_dense xe(16,NDIM);
+		buildxe(xe);
 
 		ksset<point3d,gauss3d> gp(0,64);
-		for (i = 0; i < 4; i++) {
-			for (j = 0; j < 4; j++) {
-				for (k = 0; k < 4; k++) {
-					gp.add(gauss3d(gp_4[i][0],gp_4[j][0],gp_4[k][0],
-							gp_4[i][1]*gp_4[j][1]*gp_4[k][1]));
-				}
-			}
-		}
+		buildgp(gp);
 
-		smatrix_elem * _K = new smatrix_elem(16);
-		if (_K == 0) {
+		smatrix_elem * K = new smatrix_elem(16);
+		if (K == 0) {
 			event_msg(EVENT_ERROR,"Out of memory in element::stiffness()!");
 			return 0;
 		}
-		smatrix_elem & K = *_K;
 
+		// mapping functions for infinite elements.
+		const double Mx0[16] = { 0, 0, 1, 1};
+		const double Mx1[16] = {-2,-2,+1,+1};
+		const double My0[16] = { 0, 1, 0, 1};
+		const double My1[16] = {-2,+1,-2,+1};
+
+		matrix_dense dNdr(NDIM,16);
+		matrix_dense J(NDIM,NDIM);
 		for (g = 0; g < gp.length(); g++) {
 			rx = gp[g].x; ry = gp[g].y; rz = gp[g].z;
 			double gw = gp[g].gw;
-			double rxi = 1.0/(1-rx);
-			double ryi = 1.0/(1-ry);
-			tmatrix<double,NDIM,16> dNdr;
-
-			// mapping functions for 16-node corner infinite element:
 			for (l = 0; l < 16; l++) {
 				double Nx = 0.0, dNdx = 0.0, Ny = 0.0, dNdy = 0.0;
-				switch (inftype) {
-				case corner:
-				case infX:
-					Nx = (Mx0[l%4]+Mx1[l%4]*rx)*rxi;
-					dNdx = H2x[l%4]*2*rxi*rxi;
-					break;
-				case infY:
+				switch (sx) {
+				case linear:
+				case absolute:
 					Nx = (1+H2x[l%4]*rx);
 					dNdx = H2x[l%4];
 					break;
-				}
-				switch (inftype) {
-				case corner:
-				case infY:
-					Ny = (My0[l%4]+My1[l%4]*ry)*ryi;
-					dNdy = H2y[l%4]*2*ryi*ryi;
+				case inf_pos: {
+						double rxi = 1.0/(1-rx);
+						Nx = (Mx0[l%4]+Mx1[l%4]*rx)*rxi;
+						dNdx = H2x[l%4]*2*rxi*rxi;
+					} break;
+				case inf_neg: {
+						double rxi = 1.0/(1-rx);
+						Nx = (Mx0[(l+2)%4]+Mx1[(l+2)%4]*rx)*rxi;
+						dNdx = H2x[(l+2)%4]*2*rxi*rxi;
+					} break;
+				case quadratic:
+				case cubic:
+					assert(false);
 					break;
-				case infX:
+				}
+				switch (sy) {
+				case linear:
+				case absolute:
 					Ny = (1+H2y[l%4]*ry);
 					dNdy = H2y[l%4];
+					break;
+				case inf_pos: {
+						double ryi = 1.0/(1-ry);
+						Ny = (My0[l%4]+My1[l%4]*ry)*ryi;
+						dNdy = H2y[l%4]*2*ryi*ryi;
+					} break;
+				case inf_neg: {
+						double ryi = 1.0/(1-ry);
+						Ny = (My0[(l+1)%4]+My1[(l+1)%4]*ry)*ryi;
+						dNdy = H2y[(l+1)%4]*2*ryi*ryi;
+					} break;
+				case quadratic:
+				case cubic:
+					assert(false);
 					break;
 				}
 				double Nz = (V4z0[l/4]+V4z2[l/4]*rz*rz)*(1+V4z1[l/4]*rz)/16;
@@ -832,30 +863,46 @@ public:
 				dNdr(1,l) = Nx*dNdy*Nz;
 				dNdr(2,l) = Nx*Ny*dNdz;
 			}
-			tmatrix<double,NDIM,NDIM> J(dNdr*xe);
+			J = dNdr*xe;
 
 			for (l = 0; l < 16; l++) {
 				double Nx = 0.0, dNdx = 0.0, Ny = 0.0, dNdy = 0.0;
-				switch (inftype) {
-				case corner:
-				case infX:
-					Nx = (rx*rx+(1-Mx0[l%4])*rx-Mx0[l%4])/(-Mx1[l%4]);
-					dNdx = (2*rx+(1-Mx0[l%4]))/(-Mx1[l%4]);
-					break;
-				case infY:
+				switch (sx) {
+				case linear:
+				case absolute:
 					Nx = (1+H2x[l%4]*rx);
 					dNdx = H2x[l%4];
 					break;
+				case inf_pos:
+					Nx = (rx*rx+(1-Mx0[l%4])*rx-Mx0[l%4])/(-Mx1[l%4]);
+					dNdx = (2*rx+(1-Mx0[l%4]))/(-Mx1[l%4]);
+					break;
+				case inf_neg:
+					Nx = (rx*rx+(1-Mx0[(l+2)%4])*rx-Mx0[(l+2)%4])/(-Mx1[(l+2)%4]);
+					dNdx = (2*rx+(1-Mx0[(l+2)%4]))/(-Mx1[(l+2)%4]);
+					break;
+				case quadratic:
+				case cubic:
+					assert(false);
+					break;
 				}
-				switch (inftype) {
-				case corner:
-				case infY:
+				switch (sy) {
+				case linear:
+				case absolute:
+					Ny = (1+H2y[l%4]*ry);
+					dNdy = H2y[l%4];
+					break;
+				case inf_pos:
 					Ny = (ry*ry+(1-My0[l%4])*ry-My0[l%4])/(-My1[l%4]);
 					dNdy = (2*ry+(1-My0[l%4]))/(-My1[l%4]);
 					break;
-				case infX:
-					Ny = (1+H2y[l%4]*ry);
-					dNdy = H2y[l%4];
+				case inf_neg:
+					Ny = (ry*ry+(1-My0[(l+1)%4])*ry-My0[(l+1)%4])/(-My1[(l+1)%4]);
+					dNdy = (2*ry+(1-My0[(l+1)%4]))/(-My1[(l+1)%4]);
+					break;
+				case quadratic:
+				case cubic:
+					assert(false);
 					break;
 				}
 				double Nz = (V4z0[l/4]+V4z2[l/4]*rz*rz)*(1+V4z1[l/4]*rz)/16;
@@ -869,240 +916,17 @@ public:
 			// The absolute value is to take care of all of negative
 			// definite Jacobians above.  This is the quickest way to fix up
 			// all of the shape functions.
-			gw *= fabs(inv_mul_gauss(J,dNdr));
+			gw *= fabs(inv_mul_gauss(NDIM,16,&J(0,0),&dNdr(0,0)));
 			for (i = 0; i < 16; i++) {
 				for (j = i; j < 16; j++) {
-					for (k = 0; k < 3; k++)
-						for (l = 0; l < 3; l++)
-							K(i,j) += E[k][l]*(dNdr(k,i)*dNdr(l,j)*gw);
+					for (k = 0; k < NDIM; k++)
+						for (l = 0; l < NDIM; l++)
+							(*K)(i,j) += E[k][l]*(dNdr(k,i)*dNdr(l,j)*gw);
 				}
 			}
 		}
-		return _K;
+		return K;
 	}
-
-private:
-	enum infinite_t {
-		corner,
-		infX,
-		infY
-	} inftype;
-};
-
-/*
- * class element_block34 - a finite element
- */
-class element_block34 : public element {
-public:
-	element_block34(mesh * o, element * p, const material & m,
-			const fset<coord3d> & c)
-	  : element(o,p,block34,m) {
-		assert(8 == c.length());
-		int i;
-		double xb[4], yb[4], zb[4];
-		double xt[4], yt[4], zt[4];
-		for (i = 0; i < 4; i++) {
-			xb[i] = c[i  ].x; yb[i] = c[i  ].y; zb[i] = c[i  ].z;
-			xt[i] = c[i+4].x; yt[i] = c[i+4].y; zt[i] = c[i+4].z;
-		}
-		setup(4,xb,xt,yb,yt,zb,zt);
-
-		for (i = 0; i < 18; i++)
-			mask[i] = -1;
-		for (i = 0; i < 16; i++) {
-			node3d n = getnode(inel[i]);
-			int x_m = -1, x_p = -1;
-			int y_m = -1, y_p = -1;
-			int z_m = -1, z_p = -1;
-			(i%4 < 2 ? x_p : x_m) = inel[4*(i/4)+(i%4+2)%4];
-			(i%2 < 1 ? y_p : y_m) = inel[2*(i/2)+(i%2+1)%2];
-			if (i < 12)
-				z_p = inel[i+4];
-			if (i >= 4)
-				z_m = inel[i-4];
-			switch (i%4) {
-			case 0:
-				if (n.xp != -1 && n.xp != x_p) {
-					x_p = n.xp;
-					mask[i+2] = x_p;
-				}
-				if (n.yp != -1 && n.yp != y_p) {
-					y_p = n.yp;
-					mask[i] = y_p;
-					if ((i == 0 || i == 12)) {
-						const node3d & mid = getnode(n.yp);
-						if (mid.xp != -1)
-							mask[i == 0 ? 16 : 17] = mid.xp;
-					}
-				}
-				break;
-			case 1:
-				if (n.xp != -1 && n.xp != x_p)
-					x_p = n.xp;
-				if (n.ym != -1 && n.ym != y_m)
-					y_m = n.ym;
-				break;
-			case 2:
-				if (n.xm != -1 && n.xm != x_m)
-					x_m = n.xm;
-				if (n.yp != -1 && n.yp != y_p)
-					y_p = n.yp;
-				break;
-			case 3:
-				if (n.xm != -1 && n.xm != x_m) {
-					x_m = n.xm;
-					mask[i-2] = x_m;
-				}
-				if (n.ym != -1 && n.ym != y_m) {
-					y_m = n.ym;
-					mask[i] = y_m;
-				}
-				break;
-			}
-			n.setneighbours(x_m,x_p,y_m,y_p,z_m,z_p);
-			updatenode(n);
-		}
-		for (i = 0; i < 18; i++) {
-			if (mask[i] != -1) {
-				inel.add(mask[i]);
-				mask[i] = inel.length()-1;
-			} else
-				mask[i] = 0;
-		}
-	}
-	virtual smatrix_elem * stiffness() const {
-		int i, j, k, l, g, nnd = inel.length();
-		double rx, ry, rz;
-		double e = mat.getprop(material_property::emod);
-		double v = mat.getprop(material_property::poissons);
-		double lambda = v*e/(1+v)/(1-2*v);
-		double mu = e/2/(1+v);
-
-		// Build the point stiffness tensor E_abcd
-		tmatrix<double,3,3> E[3][3];
-		pointstiffness<0,0>(E[0][0],lambda,mu);
-		pointstiffness<0,1>(E[0][1],lambda,mu);
-		pointstiffness<0,2>(E[0][2],lambda,mu);
-		pointstiffness<1,0>(E[1][0],lambda,mu);
-		pointstiffness<1,1>(E[1][1],lambda,mu);
-		pointstiffness<1,2>(E[1][2],lambda,mu);
-		pointstiffness<2,0>(E[2][0],lambda,mu);
-		pointstiffness<2,1>(E[2][1],lambda,mu);
-		pointstiffness<2,2>(E[2][2],lambda,mu);
-
-		// Element nodal coords
-		matrix_dense xe(nnd,NDIM);
-		for (i = 0; i < nnd; i++) {
-			const coord3d & p = getnode(inel[i]);
-			xe(i,0) = p.x; xe(i,1) = p.y; xe(i,2) = p.z;
-		}
-
-		ksset<point3d,gauss3d> gp(0,64);
-		for (i = 0; i < 4; i++) {
-			for (j = 0; j < 4; j++) {
-				for (k = 0; k < 4; k++) {
-					gp.add(gauss3d(gp_A[i][0],gp_A[j][0],gp_4[k][0],
-							gp_A[i][1]*gp_A[j][1]*gp_4[k][1]));
-				}
-			}
-		}
-
-		smatrix_elem * _K = new smatrix_elem(nnd);
-		if (_K == 0) {
-			event_msg(EVENT_ERROR,"Out of memory in element::stiffness()!");
-			return 0;
-		}
-		smatrix_elem & K = *_K;
-
-		for (g = 0; g < gp.length(); g++) {
-			rx = gp[g].x; ry = gp[g].y; rz = gp[g].z;
-			double gw = gp[g].gw;
-			matrix_dense dNdr(NDIM,nnd);
-			for (l = 0; l < 16; l++) {
-				double Nx = (1+H2x[l%4]*rx)/2; double dNdx = H2x[l%4]/2;
-				double Ny = (1+H2y[l%4]*ry)/2; double dNdy = H2y[l%4]/2;
-				double Nz = (V4z0[l/4]+V4z2[l/4]*rz*rz)*(1+V4z1[l/4]*rz)/16;
-				double dNdz = ((2*V4z2[l/4]*rz)*(1+V4z1[l/4]*rz)
-					+ (V4z0[l/4]+V4z2[l/4]*rz*rz)*V4z1[l/4])/16;
-				dNdr(0,l) = dNdx*Ny*Nz;
-				dNdr(1,l) = Nx*dNdy*Nz;
-				dNdr(2,l) = Nx*Ny*dNdz;
-			}
-			for (l = 0; l < 16; l++) {
-				if ((i = mask[l]) == 0)
-					continue;
-				double Nx = (1+( Sxy[l%4] ? -fabs(rx) : H2x[l%4]*rx));
-				double dNdx = ( Sxy[l%4] ? -SGN(rx) : H2x[l%4]);
-				double Ny = (1+(!Sxy[l%4] ? -fabs(ry) : H2y[l%4]*ry));
-				double dNdy = (!Sxy[l%4] ? -SGN(ry) : H2y[l%4]);
-				double Nz = (V4z0[l/4]+V4z2[l/4]*rz*rz)*(1+V4z1[l/4]*rz)/32;
-				double dNdz = ((2*V4z2[l/4]*rz)*(1+V4z1[l/4]*rz)
-					+ (V4z0[l/4]+V4z2[l/4]*rz*rz)*V4z1[l/4])/32;
-				dNdr(0,i) = dNdx*Ny*Nz;
-				dNdr(1,i) = Nx*dNdy*Nz;
-				dNdr(2,i) = Nx*Ny*dNdz;
-			}
-			for (l = 0; l < 16; l += 12) {
-				if ((i = mask[(l == 0 ? 16 : 17)]) == 0)
-					continue;
-				double Nx = 1-fabs(rx); double dNdx = -SGN(rx);
-				double Ny = 1-fabs(ry);	double dNdy = -SGN(ry);
-				double Nz = (V4z0[l/4]+V4z2[l/4]*rz*rz)*(1+V4z1[l/4]*rz)/16;
-				double dNdz = ((2*V4z2[l/4]*rz)*(1+V4z1[l/4]*rz)
-					+ (V4z0[l/4]+V4z2[l/4]*rz*rz)*V4z1[l/4])/16;
-				dNdr(0,i) = dNdx*Ny*Nz;
-				dNdr(1,i) = Nx*dNdy*Nz;
-				dNdr(2,i) = Nx*Ny*dNdz;
-			}
-			for (l = 0; l < 16; l++) {
-				if (mask[l] != 0) {
-					dNdr(0,l) -= dNdr(0,mask[l])/2;
-					dNdr(1,l) -= dNdr(1,mask[l])/2;
-					dNdr(2,l) -= dNdr(2,mask[l])/2;
-				}
-				if (mask[l+Jxy[l%4]] != 0) {
-					dNdr(0,l) -= dNdr(0,mask[l+Jxy[l%4]])/2;
-					dNdr(1,l) -= dNdr(1,mask[l+Jxy[l%4]])/2;
-					dNdr(2,l) -= dNdr(2,mask[l+Jxy[l%4]])/2;
-				}
-				if (l < 4 && mask[16] != 0) {
-					dNdr(0,l) += dNdr(0,mask[16])/4;
-					dNdr(1,l) += dNdr(1,mask[16])/4;
-					dNdr(2,l) += dNdr(2,mask[16])/4;
-				}
-				if (l >= 12 && mask[17] != 0) {
-					dNdr(0,l) += dNdr(0,mask[17])/4;
-					dNdr(1,l) += dNdr(1,mask[17])/4;
-					dNdr(2,l) += dNdr(2,mask[17])/4;
-				}
-			}
-			for (l = 0; mask[16] != 0 && l < 4; l++) {
-				dNdr(0,mask[l]) -= dNdr(0,mask[16])/2;
-				dNdr(1,mask[l]) -= dNdr(1,mask[16])/2;
-				dNdr(2,mask[l]) -= dNdr(2,mask[16])/2;
-			}
-			for (l = 12; mask[17] != 0 && l < 16; l++) {
-				dNdr(0,mask[l]) -= dNdr(0,mask[17])/2;
-				dNdr(1,mask[l]) -= dNdr(1,mask[17])/2;
-				dNdr(2,mask[l]) -= dNdr(2,mask[17])/2;
-			}
-
-			matrix_dense J(dNdr*xe);
-			// This returns det(J);
-			gw *= inv_mul_gauss(NDIM,nnd,&J(0,0),&dNdr(0,0));
-			for (i = 0; i < nnd; i++) {
-				for (j = i; j < nnd; j++) {
-					for (k = 0; k < 3; k++)
-						for (l = 0; l < 3; l++)
-							K(i,j) += E[k][l]*(dNdr(k,i)*dNdr(l,j)*gw);
-				}
-			}
-		}
-		return _K;
-	}
-
-protected:
-	int mask[18];
 };
 
 class smatrix_diag;
@@ -1113,8 +937,13 @@ class smatrix;
  */
 class smatrix_node {
 	explicit smatrix_node(const int I, const int J,
-			const tmatrix<double,NDOF,NDOF> & t, smatrix_diag * d)
+			const tmatrix<double,NDOF,NDOF> & t)
 	  : K(t), i(I), j(J), col_next(0), col_prev(0), row_next(0) {
+	}
+ 	explicit smatrix_node(const int I, const int J,
+			const tmatrix_expr<double,tmatrix_expr_trans<double,
+				tmatrix<double,NDOF,NDOF> >,NDOF,NDOF> & t)
+	  : K(t), i(J), j(I), col_next(0), col_prev(0), row_next(0) {
 	}
 	void *operator new(size_t, void * p) {
 		return p;
@@ -1141,8 +970,7 @@ class smatrix_diag {
 			// smatrix_nodes dont have a destructor...
 			free(nodes);
 	}
-	bool insert(int i, int j, const tmatrix<double,NDOF,NDOF> & t,
-			smatrix_diag * d) {
+	bool insert(int i, int j, const tmatrix<double,NDOF,NDOF> & t) {
 		if (nnz+1 > nnd) {
 			nnd = nnz+1;
 			smatrix_node * temp =
@@ -1161,9 +989,9 @@ class smatrix_diag {
 					if (temp[k].col_prev)
 						temp[k].col_prev->col_next += (temp-nodes);
 					else {
-						smatrix_diag * col_diag = this
+						smatrix_diag * d = this
 								- temp[k].i + temp[k].j;
-						col_diag->col_head += (temp-nodes);
+						d->col_head += (temp-nodes);
 					}
 					if (temp[k].col_next)
 						temp[k].col_next->col_prev += (temp-nodes);
@@ -1171,7 +999,11 @@ class smatrix_diag {
 				nodes = temp;
 			}
 		}
-		new(&nodes[nnz]) smatrix_node(i,j,t,d);
+		if (j < i) {
+			new(&nodes[nnz]) smatrix_node(i,j,~t);
+			swap(i,j);
+		} else
+			new(&nodes[nnz]) smatrix_node(i,j,t);
 		// Fix up the row references.
 		smatrix_node * p = row_head, * o = 0;
 		while (p && p->j < j) {
@@ -1186,6 +1018,7 @@ class smatrix_diag {
 			nodes[nnz].row_next = p;
 		}
 		// Fix up the column refereces.
+		smatrix_diag * d = this - i + j;
 		p = d->col_head; o = 0;
 		while (p && p->i < i) {
 			o = p, p = p->col_next;
@@ -1267,21 +1100,25 @@ public:
 			diag[i].K += t;
 			return true;
 		}
-		tmatrix<double,NDOF,NDOF> n;
 		if (j < i) {
-			swap(i,j);
-			n = ~t;
+			smatrix_node * p = diag[j].row_head;
+			while (p && p->j < i)
+				p = p->row_next;
+			if (p == 0 || p->j > i) {
+				if (!diag[j].insert(i,j,t))
+					return false;
+			} else
+				p->K += ~t;
 		} else {
-			n = t;
+			smatrix_node * p = diag[i].row_head;
+			while (p && p->j < j)
+				p = p->row_next;
+			if (p == 0 || p->j > j) {
+				if (!diag[i].insert(i,j,t))
+					return false;
+			} else
+				p->K += t;
 		}
-		smatrix_node * p = diag[i].row_head;
-		while (p && p->j < j)
-			p = p->row_next;
-		if (p == 0 || p->j > j) {
-			if (!diag[i].insert(i,j,n,&diag[j]))
-				return false;
-		} else
-			p->K += n;
 		return true;
 	}
 	void tidy() {
@@ -1513,7 +1350,7 @@ public:
 			disp_bc.add(mesh_bc(k,2,d));
 		return true;
 	}
-	bool add_bc_plane(const dof o, const bcplane p, const double c,
+	bool add_bc_plane(const dof o, const bcplane p, const fixed<8> c,
 			const dof f, const double d) {
 		assert(!((o & mesh::X) && (o & mesh::Y)));
 		assert(!((o & mesh::X) && (o & mesh::Z)));
@@ -1856,7 +1693,7 @@ blockarea(double x1, double x2, double y1, double y2, double r)
  * to get some work done...
  */
 int
-main_real()
+main()
 {
 #if !defined(_MSC_VER) && !defined(DARWIN)
 	// get starting time
@@ -1869,14 +1706,17 @@ main_real()
 	m.setprop(material_property::poissons,0.35);
 
 	int x, y, z;
-	int dx, dy, dz, delta = 4;
+	int dx, dy, dz, delta = 4, step = 1;
 	mesh FEM;
 	fset<coord3d> coord(8);
 
+	// Find the step size, which depends on our tyre.
+	while ((step-2)*delta < 100)
+		step *= 2;
 	// Start with the tyre grid.
 	dx = delta; dy = delta;
-	for (x = -30*dx; x < 30*dx; x += 2*dx) {
-		for (y = -30*dy; y < 30*dy; y += 2*dy) {
+	for (x = -(step-2)*dx; x < (step-2)*dx; x += 2*dx) {
+		for (y = -(step-2)*dy; y < (step-2)*dy; y += 2*dy) {
 			if (blockarea(x,x+2*dx,y,y+2*dx,100) == 0.0)
 				continue;
 			FEM.addnode(coord3d(x     ,y     ,0.0));
@@ -1892,8 +1732,8 @@ main_real()
 	}
 	// Add the tire loads
 	double F = -690;
-	for (x = -30*dx; x <= 30*dx; x += dx) {
-		for (y = -30*dy; y <= 30*dy; y += dy) {
+	for (x = -(step-2)*dx; x <= (step-2)*dx; x += dx) {
+		for (y = -(step-2)*dy; y <= (step-2)*dy; y += dy) {
 			int p = FEM.hasnode(coord3d(x,y,0.0));
 			if (p == -1)
 				continue;
@@ -1909,22 +1749,25 @@ main_real()
 				FEM.add_fext(coord3d(x,y,0.0),mesh::Z,f);
 		}
 	}
+	step /= 2;
 
 #define DOMAIN (4096+2048)
 
 	// Now add the elements from below the tyre, working outwards.
-	int xm = 0, xp = 0, ym = 0, yp = 0, zm = 0;
-	while (zm > -4000) {
-		dz = MIN(-30,zm), zm += dz;
+	int xm = 0, xp = 0, ym = 0, yp = 0, zp = 0, zm = 0;
+	while (zp > -4000 || xp < DOMAIN) {
+		zp += MIN(-30,zp);
 		dx = delta*2; dy = delta*2;
 		z = 0;
-		while (z > zm) {
-			dz = MIN(-30,z), z += dz;
+		while (z > zp) {
+			dz = MIN(-30,z);
+			z += dz;
+			//printf("%i\t%i\t%i\t%i\t%i\n",MIN(16*dx,DOMAIN),xp,zm,z,zp);
 			for (x = -MIN(16*dx,DOMAIN); x < MIN(16*dx,DOMAIN); x += dx) {
 				for (y = -MIN(16*dy,DOMAIN); y < MIN(16*dy,DOMAIN); y += dy) {
 					if (xm < xp && (x >= xm && x < xp)
 					 && ym < yp && (y >= ym && y < yp)
-					 && z > zm)
+					 && z >= zm)
 						continue;
 					coord.resize(8);
 					coord[0] = coord3d(x   ,y   ,z);
@@ -1998,11 +1841,12 @@ main_real()
 				}
 			}
 		}
-		xm = -MIN(16*dx,DOMAIN); xp = MIN(16*dx,DOMAIN);
-		ym = -MIN(16*dy,DOMAIN); yp = MIN(16*dy,DOMAIN);
+		xm = -MIN(step*dx,DOMAIN); xp = MIN(step*dx,DOMAIN);
+		ym = -MIN(step*dy,DOMAIN); yp = MIN(step*dy,DOMAIN);
 		if (xm > -DOMAIN && xp < DOMAIN
 		 && ym > -DOMAIN && xp < DOMAIN)
 			delta *= 2;
+		zm = z;
 	}
 	//FEM.add_bc_plane(mesh::X,mesh::at|mesh::below,-DOMAIN,
 	//		mesh::X,0.0);
@@ -2016,7 +1860,7 @@ main_real()
 			mesh::X|mesh::Y|mesh::Z,0.0);
 	FEM.solve(1e-20);
 
-	/*int i, nnd = FEM.getnodes();
+	int i, nnd = FEM.getnodes();
 	LEsystem test;
 	test.addlayer(-zm,100e3,0.35);
 	test.addload(point2d(0.0,0.0),0.0,690.0,100.0);
@@ -2048,7 +1892,7 @@ main_real()
 		double h = hypot(hypot(vx-ux,vy-uy),vz-uz);
 		double v = hypot(hypot(vx,vy),vz);
 		printf("Node %6i: (%+6i,%+6i,%+6i) =\t(%8.2g,%8.2g,%8.2g)\t(%8.2g,%8.2g,%8.2g)\t%8.2g\t(%8.2g)\n",j,int(x),int(y),int(z),vx,vy,vz,ux,uy,uz,h,(v == 0.0 ? 0.0 : h/v));
-	}*/
+	}
 
 #if !defined(_MSC_VER) && !defined(DARWIN)
 	// calculate run time
@@ -2061,7 +1905,7 @@ main_real()
 }
 
 int
-main()
+main_test()
 {
 #if !defined(_MSC_VER) && !defined(DARWIN)
 	// get starting time
@@ -2074,7 +1918,7 @@ main()
 	m.setprop(material_property::poissons,0.2);
 
 	const double domain[3][2] = {{-10, 10}, {-10, 10}, {-10, 0}};
-	const int ndiv[3] = {80, 80, 40};
+	const int ndiv[3] = {8, 8, 4};
 	int i, j, k;
 	mesh FEM;
 
@@ -2083,35 +1927,28 @@ main()
 	double dz = (domain[2][1]-domain[2][0])/ndiv[2];
 	fset<coord3d> coord(8);
 
-	for (j = 0; j < ndiv[1]; j++) {
-		double y = domain[1][0] + j*dy;
-		for (i = 0; i < ndiv[0]; i++) {
-			double x = domain[0][0] + i*dx;
-			for (k = 0; k < ndiv[2]; k++) {
-				double z = domain[2][0] + k*dz;
-				coord[0] = coord3d(x   ,y   ,z   );
-				coord[1] = coord3d(x   ,y+dy,z   );
-				coord[2] = coord3d(x+dx,y   ,z   );
-				coord[3] = coord3d(x+dx,y+dy,z   );
-				coord[4] = coord3d(x   ,y   ,z+dz);
-				coord[5] = coord3d(x   ,y+dy,z+dz);
-				coord[6] = coord3d(x+dx,y   ,z+dz);
-				coord[7] = coord3d(x+dx,y+dy,z+dz);
+	for (k = 0; k < ndiv[2]; k++) {
+		double z = domain[2][1] - k*dz;
+		int p = (1 << k); // 1; 
+		for (j = 0; j < ndiv[1]; j += p) {
+			double y = domain[1][0] + j*dy;
+			for (i = 0; i < ndiv[0]; i += p) {
+				double x = domain[0][0] + i*dx;
+				coord[0] = coord3d(x     ,y     ,z-dz);
+				coord[1] = coord3d(x     ,y+p*dy,z-dz);
+				coord[2] = coord3d(x+p*dx,y     ,z-dz);
+				coord[3] = coord3d(x+p*dx,y+p*dy,z-dz);
+				coord[4] = coord3d(x     ,y     ,z   );
+				coord[5] = coord3d(x     ,y+p*dy,z   );
+				coord[6] = coord3d(x+p*dx,y     ,z   );
+				coord[7] = coord3d(x+p*dx,y+p*dy,z   );
 				//printf("%4.2f\t%4.2f\t%4.2f\n",x,y,z);
-				FEM.add(element::block8,m,coord);
+				//FEM.add(element::block16,m,coord);
+				FEM.add(element::block34,m,coord);
 			}
 		}
 	}
-	for (i = 0; i <= ndiv[0]; i++) {
-		for (j = 0; j <= ndiv[1]; j++) {
-			double x = domain[0][0] + i*dx;
-			double y = domain[1][0] + j*dy;
-			FEM.add_bc(coord3d(x,y,domain[2][0]),mesh::Z,0.0);
-		}
-	}
-	//FEM.add_bc(coord3d(0.0,0.0,domain[2][0]),mesh::X,0.0);
-	//FEM.add_bc(coord3d(0.0,0.0,domain[2][0]),mesh::X,0.0);
-	//FEM.add_bc(coord3d(domain[0][0],0.0,domain[2][0]),mesh::Y,0.0);
+	FEM.add_bc_plane(mesh::Z,mesh::at|mesh::below,domain[2][0],mesh::Z,0.0);
 	FEM.add_bc(coord3d(domain[0][0],domain[1][0],domain[2][0]),mesh::X,0.0);
 	FEM.add_bc(coord3d(domain[0][0],domain[1][0],domain[2][0]),mesh::Y,0.0);
 	FEM.add_bc(coord3d(domain[0][1],domain[1][0],domain[2][0]),mesh::Y,0.0);
