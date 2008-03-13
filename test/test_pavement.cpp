@@ -146,7 +146,7 @@ main()
  * layer pavement, and compares the three basic solutions for this
  * problem (accurate, normal, numerical).
  */
-#ifdef BUILD
+#ifdef NOBUILD
 int
 main()
 {
@@ -210,6 +210,44 @@ main()
 		//printf("\t%+0.8e",e);
 		printf("\t%+0.8e",b.result(pavedata::deflct,pavedata::zz));
 		printf("\t%+0.8e",s.result(pavedata::deflct,pavedata::zz));
+		printf("\t%+0.8e",f.result(pavedata::deflct,pavedata::zz));
+		printf("\n");
+	}
+}
+#endif
+
+#ifdef NOBUILD
+int
+main()
+{
+	cset<point3d> p(0,100);
+	LEsystem pave;
+	int i, j;
+
+	for (i = 0; i < 9; i++)
+		pave.addlayer(0.1,1.0,0.5);
+	pave.addlayer(0.0,1.0,0.5);
+
+	pave.addload(point2d(0.0,0.0),0,1.0,1.0);
+	
+	for (j = 0; j < 20; j++) {
+		double z = j*0.05;
+		p.add(point3d(0,0,z));
+		p.add(point3d(1,0,z));
+		for (i = 0; i < 15; i++) {
+			double r = 1+pow(10,-3.0*(25-i)/25);
+			p.add(point3d(r,0,z));
+			p.add(point3d(1.0/r,0,z));
+		}
+	}
+	p.sort();
+	for (i = 0; i < p.length(); i++)
+		pave.addpoint(p[i]);
+	pave.calculate(LEsystem::fast);
+
+	for (i = 0; i < p.length(); i++) {
+		const pavedata & f = pave.result(p[i]);
+		printf("%8.4g",p[i].x);
 		printf("\t%+0.8e",f.result(pavedata::deflct,pavedata::zz));
 		printf("\n");
 	}
@@ -315,7 +353,7 @@ redo:
 	Test.removelayers();
 	Fast.removelayers();
 	for (i = 0; i < 4; i++) {
-		t = 25.0+50.0*(i+1)*((double)(rand())/(double)(RAND_MAX));
+		t = 25.0+RAND(0,50.0*(i+1));
 		Test.addlayer( t,1000.0,0.5);
 		Fast.addlayer( t,1000.0,0.5);
 		//printf("%0.4g\n",t);
@@ -333,9 +371,9 @@ redo:
 
 	double T[5];
 	for (i = 0; i < Test.layers(); i++) {
-		T[i] = pow(10,4.0+3.0*(double)(rand())/(double)(RAND_MAX));
+		T[i] = pow(10,RAND(4.0,7.0));
 		while (i > 0 && (T[i] > 20*T[i-1] || T[i] < T[i-1]/20.0))
-			T[i] = pow(10,4.0+3.0*(double)(rand())/(double)(RAND_MAX));
+			T[i] = pow(10,RAND(4.0,7.0)));
 		Test.layer(i).emod(T[i]);
 		Fast.layer(i).emod(T[i]);
 		//printf("%0.4e\t%g\n",log10(T[i]),T[i]);

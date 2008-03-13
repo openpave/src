@@ -33,19 +33,26 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#ifdef NOBUILD
+#ifdef BUILD
 int
-main(int argc, char* argv[])
+main()
 {
 	int i, l;
 	LEbackcalc Bowl;
+	cset<point3d> p;
+	p.add(point3d(   0.0,0.0,  0.0));
+	p.add(point3d( 200.0,0.0,  0.0));
+	p.add(point3d( 300.0,0.0,  0.0));
+	p.add(point3d( 460.0,0.0,  0.0));
+	p.add(point3d( 610.0,0.0,  0.0));
+	p.add(point3d( 910.0,0.0,  0.0));
+	p.add(point3d(1525.0,0.0,  0.0));
 
 	//srand((unsigned)time(NULL));
-	double T[5];
-	double h[5], v[5], mz[7], t, f;
+	double T[5], h[5], v[5], mz[7], t, err;
 
 redo:
-	l = (int)floor(RAND(2,6));
+	l = int(floor(RAND(2,6)));
 	//Bowl.setup(0.0,0.0,1e-6,5);
 	Bowl.setup(0.0001,0.0005,1e-4,5);
 
@@ -65,18 +72,12 @@ redo:
 	Bowl.addload(point2d(0.0,0.0),40*1e6,0.0,150.0);
 
 	Bowl.removepoints();
-	Bowl.addpoint(point3d(   0.0,0.0,  0.0));
-	Bowl.addpoint(point3d( 200.0,0.0,  0.0));
-	Bowl.addpoint(point3d( 300.0,0.0,  0.0));
-	Bowl.addpoint(point3d( 460.0,0.0,  0.0));
-	Bowl.addpoint(point3d( 610.0,0.0,  0.0));
-	Bowl.addpoint(point3d( 910.0,0.0,  0.0));
-	Bowl.addpoint(point3d(1525.0,0.0,  0.0));
+	for (i = 0; i < p.length(); i++)
+		Bowl.addpoint(p[i]);
 
 	Bowl.calculate(LEsystem::disp);
-	for (i = 0; i < Bowl.data.length(); i++) {
-		point3d & p = Bowl.data[i];
-		mz[i] = Bowl.result(p).result(pavedata::deflct,pavedata::zz);
+	for (i = 0; i < p.length(); i++) {
+		mz[i] = Bowl.result(p[i]).result(pavedata::deflct,pavedata::zz);
 		printf("Measured defl. at position %d = %f\n",i+1,mz[i]);
 		if (mz[i] < 0.0) {
 			printf("Not a nice pavement! Bailing...\n");
@@ -84,17 +85,15 @@ redo:
 		}
 	}
 
-	Bowl.callcount = 0;
 	Bowl.removedeflections();
 	printf("M! ");
 	for (i = 0; i < Bowl.layers(); i++)
 		printf(" %0.4g",log10(Bowl.layer(i).emod()));
-	for (i = 0; i < Bowl.data.length(); i++) {
-		point3d & p = Bowl.data[i];
-		f = t = Bowl.result(p).result(pavedata::deflct,pavedata::zz);
-		t += RAND(2,5)*0.0001*random_normal();
-		t = ROUND(t/0.0001)*0.0001;
-		Bowl.adddefl(p,t);
+	for (i = 0; i < p.length(); i++) {
+		t = Bowl.result(p[i]).result(pavedata::deflct,pavedata::zz);
+		t += RAND(2,5)*0.0001*stdnormal_rnd();
+		t = round(t/0.0001)*0.0001;
+		Bowl.adddefl(p[i],t);
 		printf(" %0.4g",t);
 	}
 	printf("\n");
@@ -102,7 +101,7 @@ redo:
 		Bowl.layer(i).emod(0.0);
 
 	bool rv = Bowl.backcalc();
-	printf("\n%s! (with %i calls for %i layers)\n",(rv?"DONE":"FAILED"),Bowl.callcount,l);
+	printf("\n%s! (with %i layers)\n",(rv?"DONE":"FAILED"),l);
 
 	for (i = 0; i < Bowl.layers(); i++) {
 		t = log10(Bowl.layer(i).emod()/T[i]);
@@ -121,11 +120,14 @@ redo:
 		}
 		printf("%g\n",(Bowl.layer(i).emod()/T[i]));
 	}
-	printf("\nAbsolute error in backcalculation = %f\n",Bowl.bowlerror(i,0,0,0));
-	for (i = 0; i < Bowl.defl.length(); i++) {
+	for (i = 0, err = 0.0; i < p.length(); i++) {
+		const defldata & d = Bowl.getdefl(i);
 		printf("Calculated vs. measured defl. at position %d = %f vs %f (%f)\n",
-			i+1,Bowl.defl[i].calculated,Bowl.defl[i].measured,mz[i]);
+			i+1,d.calculated,d.measured,mz[i]);
+		err += pow(d.measured-d.calculated,2);
 	}
+	err = sqrt(err/p.length());
+	printf("\nRMSE in backcalculation = %f\n\n\n",err);
 	goto redo;
 	return 0;
 }
@@ -133,7 +135,7 @@ redo:
 
 #ifdef NOBUILD
 int
-main(int argc, char* argv[])
+main()
 {
 	int i;
 
@@ -155,11 +157,31 @@ double Ebad[17][5] = {
 	{ 4232.885833, 2459.175446,  153.045334,  279.037000,   14.379712}, 
 	{ 1240.509997, 2480.000309,  203.603987,  806.573371,   76.893795}, 
 	{  567.332552,  113.212841,  304.356563,   17.424377,   28.011755},
-}
+};
 
 	LEbackcalc Bowl;
+	cset<point3d> p;
+	p.add(point3d(   0.0,175.0,0.0));
+	p.add(point3d( 100.0,175.0,0.0));
+	p.add(point3d( 200.0,175.0,0.0));
+	p.add(point3d( 400.0,175.0,0.0));
+	p.add(point3d( 600.0,175.0,0.0));
+	p.add(point3d( 900.0,175.0,0.0));
+	p.add(point3d(1200.0,175.0,0.0));
+	//for (i = 0; i < 256; i++)
+	//	p.add(point3d(   26.5*(i-100),175.0,  0.0));
+	//p.add(point3d(   0.0,175.0,  0.0));
+	//p.add(point3d(   0.0,175.0, 50.0));
+	//p.add(point3d(   0.0,175.0,150.0));
+	//p.add(point3d(   0.0,175.0,300.0));
+	//p.add(point3d(   0.0,175.0,500.0));
+	//p.add(point3d(   0.0,  0.0,  0.0));
+	//p.add(point3d(   0.0,  0.0, 50.0));
+	//p.add(point3d(   0.0,  0.0,150.0));
+	//p.add(point3d(   0.0,  0.0,300.0));
+	//p.add(point3d(   0.0,  0.0,500.0));
 
-	srand((unsigned)time(NULL));
+	//srand((unsigned)time(NULL));
 	Bowl.addlayer( 50.0,800000.0,0.5);
 	Bowl.addlayer(100.0,400000.0,0.5);
 	Bowl.addlayer(150.0,200000.0,0.5);
@@ -169,15 +191,13 @@ double Ebad[17][5] = {
 	Bowl.addload(point2d(0.0,  0.0),20*1e6,520);
 	Bowl.addload(point2d(0.0,350.0),20*1e6,520);
 
-	double T[5];
-	double mz;
-	int bad = 10;
+	double T[5], mz, err;
+	int bad = 0;
 
 redo:
 	for (i = 0; i < Bowl.layers(); i++) {
-		T[i] = Bowl.layer(i).emod();
 		//do {
-		//	T[i] = pow(10,4.0+3.0*(double)(rand())/(double)(RAND_MAX));
+		//	T[i] = pow(10,RAND(4.0,7.0));
 		//} while (i > 0 && (T[i] > 20.0*T[i-1] || T[i] < T[i-1]/20.0));
 		//printf("Layer %d: E=%0.0f\n",i+1,T[i]/1e3);
 		//Bowl.layer(i).emod(T[i]);
@@ -185,26 +205,10 @@ redo:
 		printf("Layer %d: E=%0.0f\n",i+1,T[i]/1e3);
 		Bowl.layer(i).emod(T[i]);
 	}
-
-	//for (i = 0; i < 256; i++)
-	//	Bowl.addpoint(point3d(   26.5*(i-100),175.0,  0.0));
-	Bowl.addpoint(point3d(   0.0,175.0,  0.0));
-	Bowl.addpoint(point3d( 100.0,175.0,  0.0));
-	Bowl.addpoint(point3d( 200.0,175.0,  0.0));
-	Bowl.addpoint(point3d( 400.0,175.0,  0.0));
-	Bowl.addpoint(point3d( 600.0,175.0,  0.0));
-	Bowl.addpoint(point3d( 900.0,175.0,  0.0));
-	Bowl.addpoint(point3d(1200.0,175.0,  0.0));
-	//Bowl.addpoint(point3d(   0.0,175.0,  0.0));
-	//Bowl.addpoint(point3d(   0.0,175.0, 50.0));
-	//Bowl.addpoint(point3d(   0.0,175.0,150.0));
-	//Bowl.addpoint(point3d(   0.0,175.0,300.0));
-	//Bowl.addpoint(point3d(   0.0,175.0,500.0));
-	//Bowl.addpoint(point3d(   0.0,  0.0,  0.0));
-	//Bowl.addpoint(point3d(   0.0,  0.0, 50.0));
-	//Bowl.addpoint(point3d(   0.0,  0.0,150.0));
-	//Bowl.addpoint(point3d(   0.0,  0.0,300.0));
-	//Bowl.addpoint(point3d(   0.0,  0.0,500.0));
+	
+	Bowl.removepoints();
+	for (i = 0; i < p.length(); i++)
+		Bowl.addpoint(p[i]);
 
 	Bowl.calculate(LEsystem::disp);
 	//Bowl.odemark(true);
@@ -214,17 +218,17 @@ redo:
 	printf("M! ");
 	for (i = 0; i < Bowl.layers(); i++)
 		printf(" %0.4e",log10(Bowl.layer(i).emod()));
-	for (i = 0; i < Bowl.data.length(); i++) {
-		point3d & p = Bowl.data[i];
-		mz = Bowl.result(p).result(pavedata::deflct,pavedata::zz);
-		//mz += 0.01*random_normal();
-		Bowl.adddefl(p,mz);
+	for (i = 0; i < p.length(); i++) {
+		mz = Bowl.result(p[i]).result(pavedata::deflct,pavedata::zz);
+		//mz += 0.01*stdnormal_rnd();
+		Bowl.adddefl(p[i],mz);
 		printf(" %0.4e",mz);
 	}
 	printf("\n");
 	Bowl.removepoints();
-	for (i = 0; i < Bowl.defl.length(); i++) {
-		printf("Measured defl. at position %d = %f\n",i+1,Bowl.defl[i].measured);
+	for (i = 0; i < p.length(); i++) {
+		const defldata & d = Bowl.getdefl(i);
+		printf("Measured defl. at position %d = %f\n",i+1,d.measured);
 	}
 	for (i = 0; i < Bowl.layers(); i++)
 		Bowl.layer(i).emod(0.0);
@@ -232,21 +236,24 @@ redo:
 	bool rv = Bowl.backcalc();
 	printf("\nDONE!\n\n");
 	
-	for (i = 0, mz = 0.0; i < Bowl.layers(); i++) {
-		mz += (Bowl.layer(i).emod()/T[i])-1;
+	for (i = 0, err = 0.0; i < Bowl.layers(); i++) {
+		err += (Bowl.layer(i).emod()/T[i])-1;
 		printf("E-modulus for layer %d = %f (%f)\n",i+1,Bowl.layer(i).emod()/1000,T[i]/1000);
 	}
 	if (rv) {
-		if (mz > 0.1)
+		if (err > 0.1)
 			printf("\nBUT I FAILED!\n\n");
 	} else {
 		printf("\nFAILED TO CONVERGE!\n\n");
 	}
-	printf("\nAbsolute error in backcalculation = %f\n",Bowl.bowlerror(i,0,0,0));
-	for (i = 0; i < Bowl.defl.length(); i++) {
+	for (i = 0, err = 0.0; i < p.length(); i++) {
+		const defldata & d = Bowl.getdefl(i);
 		printf("Calculated vs. measured defl. at position %d = %f vs %f\n",
-			i+1,Bowl.defl[i].calculated,Bowl.defl[i].measured);
+			i+1,d.calculated,d.measured);
+		err += pow(d.measured-d.calculated,2);
 	}
+	err = sqrt(err/p.length());
+	printf("\nRMSE in backcalculation = %f\n\n\n",err);
 	if (++bad < 17)
 		goto redo;
 	return 0;
@@ -255,10 +262,11 @@ redo:
 
 #ifdef NOBUILD
 int
-main(int argc, char* argv[])
+main()
 {
 	int line = 0;
 	int i;
+	double err;
 
 // PengCheng's Redbluff data
 /*
@@ -413,27 +421,27 @@ double data[LINES][DEFLS+1] = {
 	Bowl.addlayer(213.0,0.0,0.35);
 	Bowl.addlayer(  0.0,0.0,0.35);
 
-
-redo:
+	cset<point3d> p;
 	// PengCheng's Redbluff data
-	//Bowl.addpoint(point3d(   0.0,0.0,  0.0));
-	//Bowl.addpoint(point3d( 200.0,0.0,  0.0));
-	//Bowl.addpoint(point3d( 300.0,0.0,  0.0));
-	//Bowl.addpoint(point3d( 460.0,0.0,  0.0));
-	//Bowl.addpoint(point3d( 610.0,0.0,  0.0));
-	//Bowl.addpoint(point3d( 910.0,0.0,  0.0));
-	//Bowl.addpoint(point3d(1525.0,0.0,  0.0));
+	//p.add(point3d(   0.0,0.0,  0.0));
+	//p.add(point3d( 200.0,0.0,  0.0));
+	//p.add(point3d( 300.0,0.0,  0.0));
+	//p.add(point3d( 460.0,0.0,  0.0));
+	//p.add(point3d( 610.0,0.0,  0.0));
+	//p.add(point3d( 910.0,0.0,  0.0));
+	//p.add(point3d(1525.0,0.0,  0.0));
 
 	// CTMETWG Data Set 1
-	Bowl.addpoint(point3d(   0.0,0.0,  0.0));
-	Bowl.addpoint(point3d( 203.0,0.0,  0.0));
-	Bowl.addpoint(point3d( 305.0,0.0,  0.0));
-	Bowl.addpoint(point3d( 457.0,0.0,  0.0));
-	Bowl.addpoint(point3d( 610.0,0.0,  0.0));
-	Bowl.addpoint(point3d( 914.0,0.0,  0.0));
-	Bowl.addpoint(point3d(1219.0,0.0,  0.0));
-	Bowl.addpoint(point3d(1525.0,0.0,  0.0));
+	p.add(point3d(   0.0,0.0,  0.0));
+	p.add(point3d( 203.0,0.0,  0.0));
+	p.add(point3d( 305.0,0.0,  0.0));
+	p.add(point3d( 457.0,0.0,  0.0));
+	p.add(point3d( 610.0,0.0,  0.0));
+	p.add(point3d( 914.0,0.0,  0.0));
+	p.add(point3d(1219.0,0.0,  0.0));
+	p.add(point3d(1525.0,0.0,  0.0));
 
+redo:
 	Bowl.removeloads();
 	Bowl.addload(point2d(0.0,  0.0),0.0,data[line][DEFLS],150.0);
 	//for (double E1 = 4.0; E1 <= 7.0; E1 += 0.01) {
@@ -443,8 +451,8 @@ redo:
 	//		Bowl.calculate(LEsystem::disp);
 	//		printf("%0.4g\t%0.4g",E1,E2);
 	//		double mz;
-	//		for (i = 0; i < Bowl.data.length(); i++) {
-	//			mz = Bowl.data[i].result(pavedata::deflct,pavedata::zz);
+	//		for (i = 0; i < DEFLS; i++) {
+	//			mz = Bowl.getdefl(i).result(pavedata::deflct,pavedata::zz);
 	//			printf("\t%0.16e",mz);
 	//		}
 	//		printf("\n");
@@ -453,26 +461,22 @@ redo:
 	//exit(1);
 
 	Bowl.removedeflections();
-	for (i = 0; i < Bowl.data.length(); i++) {
-		point3d & p = Bowl.data[i];
-		Bowl.adddefl(p,data[line][i]);
-	}
+	for (i = 0; i < DEFLS; i++)
+		Bowl.adddefl(p[i],data[line][i]);
 	for (i = 0; i < Bowl.layers(); i++)
 		Bowl.layer(i).emod(0.0);
 
 	bool rv = Bowl.backcalc();
-	printf("Line %2i: ", line+1);
-	if (rv) {
-		printf("DONE!   ");
-	} else {
-		printf("FAILED! ");
-	}
-	printf("(err=%5.1f) ",Bowl.bowlerror(i,0,0,0)*1000);
+	printf("Line %2i: %s",line+1,rv ? "DONE!   " : "FAILED! ");
 	for (i = 0; i < Bowl.layers(); i++)
 		printf(" %7.1f",Bowl.layer(i).emod()/1000);
-	for (i = 0; i < Bowl.defl.length(); i++)
-		printf(" %6.1f",Bowl.defl[i].calculated*1000);
-	printf("\n");
+	for (i = 0, err = 0.0; i < p.length(); i++) {
+		const defldata & d = Bowl.getdefl(i);
+		printf(" %6.1f",d.calculated*1000);
+		err += pow(d.measured-d.calculated,2);
+	}
+	err = sqrt(err/p.length());
+	printf("(err=%5.1f)\n",err*1000);
 	while (++line < LINES)
 		goto redo;
 	return 0;
@@ -481,12 +485,12 @@ redo:
 
 #ifdef NOBUILD
 int
-main(int argc, char* argv[])
+main()
 {
 	int i;
 	LEbackcalc Bowl;
 
-	Bowl.setup(0.0001,1e-4,5);
+	Bowl.setup(0.0001,0.0,1e-4,5);
 
 	Bowl.addlayer( 40.0,0.0,0.45);
 	Bowl.addlayer(143.0,0.0,0.35);
@@ -504,8 +508,8 @@ main(int argc, char* argv[])
 	Bowl.adddefl(point3d(1219.0,0.0,0.0), 0.0676);
 	Bowl.adddefl(point3d(1524.0,0.0,0.0), 0.0516);
 
-	for (i = 0; i < Bowl.defl.length(); i++) {
-		printf("Measured defl. at position %d = %f\n",i+1,Bowl.defl[i].measured);
+	for (i = 0; i < Bowl.deflections(); i++) {
+		printf("Measured defl. at position %d = %f\n",i+1,Bowl.getdefl(i).measured);
 	}
 
 	if (Bowl.backcalc()) {
@@ -513,14 +517,18 @@ main(int argc, char* argv[])
 	} else {
 		printf("\nFAILED TO CONVERGE!\n\n");
 	}
-	printf("\nAbsolute error in backcalculation = %f\n",Bowl.bowlerror(i,0,0,0));
 	for (i = 0; i < Bowl.layers(); i++) {
 		printf("E-modulus for layer %d = %f\n",i+1,Bowl.layer(i).emod()/1000);
 	}
-	for (i = 0; i < Bowl.defl.length(); i++) {
+	double err = 0.0;
+	for (i = 0; i < Bowl.deflections(); i++) {
+		const defldata & d = Bowl.getdefl(i);
 		printf("Calculated vs. measured defl. at position %d = %f vs %f\n",
-			i+1,Bowl.defl[i].calculated,Bowl.defl[i].measured);
+			i+1,d.calculated,d.measured);
+		err += pow(d.measured-d.calculated,2);
 	}
+	err = sqrt(err/i);
+	printf("\nAbsolute error in backcalculation = %f\n",err);
 	return 0;
 }
 #endif
@@ -555,8 +563,8 @@ main()
 	Bowl.calculate(LEsystem::disp);
 
 	//printf("%8.6g\t%8.6g\t",log10(T[0]),log10(T[1]));
-	for (i = 0; i < Bowl.data.length(); i++) {
-		point3d & p = Bowl.data[i];
+	for (i = 0; i < Bowl.results(); i++) {
+		const point3d & p = Bowl.result(i);
 		mz = Bowl.result(p).result(pavedata::deflct,pavedata::zz);
 		Bowl.adddefl(p,mz);
 		//printf("%0.16e\t",mz);
@@ -570,8 +578,8 @@ main()
 	//		Bowl.calculate(LEsystem::disp);
 	//		printf("%0.4g\t%0.4g",E1,E2);
 	//		double err = 0.0;
-	//		for (i = 0; i < Bowl.defl.length(); i++) {
-	//			point3d & p = Bowl.defl[i];
+	//		for (i = 0; i < Bowl.deflections(); i++) {
+	//			point3d & p = Bowl.getdefl(i);
 	//			mz = Bowl.result(p).result(pavedata::deflct,pavedata::zz);
 	//			printf("\t%0.16e",mz);
 	//			err += pow(mz-Bowl.defl[i].measured,2);
@@ -588,7 +596,6 @@ main()
 		Bowl.layer(i).emod(pow(10,S2[i]));
 	Bowl.backcalc();
 	static double S3[2] = {0, 0};
-	Bowl.seed(Bowl.layers(),S3);
 	for (i = 0; i < Bowl.layers(); i++)
 		Bowl.layer(i).emod(pow(10,S3[i]));
 	Bowl.backcalc();
@@ -599,8 +606,8 @@ main()
 	//Bowl.calculate(LEsystem::dispgrad);
 
 	//printf("%8.6g\t%8.6g\t",log10(T[0]),log10(T[1]));
-	//for (i = 0; i < Bowl.data.length(); i++) {
-	//	point3d & p = Bowl.data[i];
+	//for (i = 0; i < Bowl.deflections(); i++) {
+	//	point3d & p = Bowl.getdefl(i);
 	//	mz = Bowl.result(p).result(pavedata::deflct,pavedata::zz);
 	//	//Bowl.adddefl(p,mz);
 	//	printf("%0.16e\n",mz);
@@ -647,17 +654,16 @@ main()
 	Bowl.addpoint(point3d(1200.0,175.0,  0.0));
 
 	Bowl.calculate(LEsystem::disp);
-	for (i = 0; i < Bowl.data.length(); i++) {
-		point3d & p = Bowl.data[i];
-		mz[i] = Bowl.result(p).result(pavedata::deflct,pavedata::zz);
+	for (i = 0; i < Bowl.results(); i++) {
+		mz[i] = Bowl.result(i).result(pavedata::deflct,pavedata::zz);
 	}
 
 redo:
 	Bowl.removedeflections();
-	for (i = 0; i < Bowl.data.length(); i++) {
-		point3d & p = Bowl.data[i];
+	for (i = 0; i < Bowl.results(); i++) {
+		const point3d & p = Bowl.result(i);
 		t = mz[i] + RAND(2,6)*0.0001*stdnormal_rnd();
-		t = ROUND(t/0.0001)*0.0001;
+		t = round(t/0.0001)*0.0001;
 		Bowl.adddefl(p,t);
 	}
 
