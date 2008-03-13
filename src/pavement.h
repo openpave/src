@@ -393,8 +393,14 @@ public:
 	bool calc_odemark();
 	bool calc_fastnum();
 
+	const int results() const {
+		return data.length();
+	}
 	const pavedata & result(const point3d & p) const {
 		return data[p];
+	}
+	const pavedata & result(const int i) const {
+		return data[i];
 	}
 	const int inline layers() const {
 		return length();
@@ -403,16 +409,13 @@ public:
 
 	LEsystem()
 		: list_owned<LEsystem,LElayer>(), data(), load() {
-		callcount = 0;
 	}
 	LEsystem(LEsystem & p)
 		: list_owned<LEsystem,LElayer>(p), data(p.data), load(p.load) {
-		callcount = 0;
 	}
 	~LEsystem() {
 	}
 private:
-	int callcount;
 	ksset<point3d,pavedata> data;
 	sset<paveload> load;
 	friend class listelement_o<LEsystem, LElayer>;
@@ -436,10 +439,8 @@ struct defldata : point3d {
 	}
 	~defldata() {
 	}
-private:
 	double measured;
 	double calculated;
-	friend class LEbackcalc;
 };
 
 /*
@@ -452,6 +453,12 @@ public:
 	}
 	bool adddefl(const defldata & d) {
 		return defl.add(d);
+	}
+	const int deflections() {
+		return defl.length();
+	}
+	const defldata & getdefl(const int i) {
+		return defl[i];
 	}
 	bool removedeflections() {
 		return defl.empty();
