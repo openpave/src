@@ -45,8 +45,8 @@ double stdnormal_rnd() {
 	double r[2];
 
 	if (i == 1) {
-		r[0] = sqrt(-2*log(double(rand()+1)/double(RAND_MAX+1)));
-		r[1] = M_2PI*double(rand()+1)/double(RAND_MAX+1);
+		r[0] = sqrt(-2*log((double(rand())+1)/(double(RAND_MAX)+1)));
+		r[1] = M_2PI*(double(rand())+1)/(double(RAND_MAX)+1);
 		u[0] = r[0]*sin(r[1]);
 		u[1] = r[0]*cos(r[1]);
 		i = 0;
