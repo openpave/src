@@ -2073,13 +2073,16 @@ fi
     ;;
 esac
 
+if test "$USING_CC" = "intel"; then
+        DEFINES="$DEFINES NEED_FMA"
+else
 echo $ac_n "checking for fma()""... $ac_c" 1>&6
-echo "configure:2078: checking for fma()" >&5
+echo "configure:2081: checking for fma()" >&5
 if eval "test \"`echo '$''{'ac_cv_func_fma'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 2083 "configure"
+#line 2086 "configure"
 #include "confdefs.h"
 
         #include <math.h>
@@ -2088,7 +2091,7 @@ int main() {
 double foo = fma(1.0,1.0,1.0)
 ; return 0; }
 EOF
-if { (eval echo configure:2092: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+if { (eval echo configure:2095: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
   rm -rf conftest*
   ac_cv_func_fma=yes
 else
@@ -2104,6 +2107,7 @@ fi
 echo "$ac_t""$ac_cv_func_fma" 1>&6
 if test "$ac_cv_func_fma" = "no"; then
     DEFINES="$DEFINES NEED_FMA"
+fi
 fi
 
 if test -n "$_SAVE_OPTIMIZE_FLAGS"; then
@@ -2196,7 +2200,7 @@ if test -n "$OP_PROJECT_fem3d"; then
 fi
 
 echo $ac_n "checking if config.h needs rebuilding""... $ac_c" 1>&6
-echo "configure:2200: checking if config.h needs rebuilding" >&5
+echo "configure:2204: checking if config.h needs rebuilding" >&5
 
 echo "$ac_t""done" 1>&6
 
@@ -2546,26 +2550,30 @@ _EOF
 #define __attribute__(x)
 #endif
 
-#define OP_PRINTF(n,m)	__attribute__ ((__format__(__printf__,n,m)))
+#define OP_PRINTF(n,m)   __attribute__ ((__format__(__printf__,n,m)))
 
 #if defined(WIN32) || defined(_MSC_VER) || defined(__CYGWIN__)
 #ifdef BUILD_DLL
-#define OP_EXPORT 	__declspec(dllexport) __stdcall
+#define OP_EXPORT        __declspec(dllexport) __stdcall
 #else
-#define OP_EXPORT	__declspec(dllimport) __stdcall
+#define OP_EXPORT        __declspec(dllimport) __stdcall
 #endif
 #define OP_HIDDEN
 #else
 #if defined(GCC_VISIBILITY) && !defined(__sun)
-#define OP_EXPORT	__attribute__ ((visibility("default")))
-#define OP_HIDDEN	__attribute__ ((visibility("hidden")))
+#define OP_EXPORT        __attribute__ ((visibility("default")))
+#define OP_HIDDEN        __attribute__ ((visibility("hidden")))
 #elif defined(__SUNPRO_C) && (__SUNPRO_C >= 0x550)
 #define OP_EXPORT
-#define OP_HIDDEN	__hidden
+#define OP_HIDDEN        __hidden
 #else
 #define OP_EXPORT
 #define OP_HIDDEN
 #endif
+#endif
+
+#if defined(DEBUG) || defined(__INTEL_COMPILER)
+#define MO_METAPROGS
 #endif
 
 #if defined(_MSC_VER)
