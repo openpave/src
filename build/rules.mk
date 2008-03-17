@@ -55,7 +55,7 @@ ifdef LIBRARY_NAME
 LIBRARY		= lib$(LIBRARY_NAME).$(LIB_SUFFIX)
 ifndef ONLY_STATIC_LIB
 OS_CPPFLAGS += -DBUILD_DLL
-ifdef MSC_VER
+ifdef WIN32
 LIBRARY		= lib$(LIBRARY_NAME)_s.$(LIB_SUFFIX)
 SHARED_LIBRARY	= lib$(LIBRARY_NAME).$(DLL_SUFFIX)
 IMPORT_LIBRARY	= lib$(LIBRARY_NAME).$(LIB_SUFFIX)
@@ -68,7 +68,7 @@ echo-lib-deps:
 ifdef ONLY_STATIC_LIB
 	@echo $(LIB_PATH)/$(LIBRARY)
 else
-ifdef MSC_VER
+ifdef WIN32
 	@echo $(LIB_PATH)/$(IMPORT_LIBARY)
 else
 	@echo $(LIB_PATH)/$(SHARED_LIBARY)
@@ -217,7 +217,7 @@ Makefile: $(srcdir)/Makefile.in
 	$(MAKE) -C $(topsrcdir) -f openpave.mk configure
 
 $(PROGRAM): $(OBJS) $(_LIB_DEPS)
-ifdef MSC_VER
+ifdef WIN32
 	@sh $(topsrcdir)/build/cygwin-wrapper \
 		$(CC) $(OBJS) -Fe$@ -link $(OS_LDFLAGS) \
 		$(patsubst -l%,lib%.$(LIB_SUFFIX),$(subst -L,/LIBPATH:,$(_LIBS))) \
@@ -237,7 +237,7 @@ endif
 
 $(LIBRARY): $(OBJS)
 	@rm -f $@
-ifdef MSC_VER
+ifdef WIN32
 	@sh $(topsrcdir)/build/cygwin-wrapper \
 		$(AR) $(ARFLAGS) -OUT:"$@" $(OBJS) $(AR_EXTRA_ARGS)
 else
@@ -249,7 +249,7 @@ endif
 
 $(SHARED_LIBRARY): $(_LIB_DEPS) $(OBJS) $(RES)
 	@rm -f $@
-ifdef MSC_VER
+ifdef WIN32
 	@sh $(topsrcdir)/build/cygwin-wrapper \
 		$(LD) $(DSO_LDFLAGS) $(patsubst -l%,lib%.$(LIB_SUFFIX),$(subst -L,-LIBPATH:,$(_LIBS))) \
 	      -OUT:"$@" $(OBJS) $(RES)
@@ -271,7 +271,7 @@ endif
 ifdef RC
 $(RES): $(RESNAME)
 # The resource compiler does not understand the -U option.
-ifdef MSC_VER
+ifdef WIN32
 	@sh $(topsrcdir)/build/cygwin-wrapper \
 		$(RC) $(RCFLAGS) $(filter-out -U%,$(DEFINES)) $(INCLUDES) -Fo$@ $<
 else
@@ -284,12 +284,12 @@ endif
 # debuggers under Windows to find source files automatically.
 #
 
-ifdef MSC_VER
+ifdef WIN32
 abspath = $(if $(findstring :,$(1)),$(1),$(if $(filter /%,$(1)),$(1),$(PWD)/$(1)))
 endif
 
 %.$(OBJ_SUFFIX): %.cpp
-ifdef MSC_VER
+ifdef WIN32
 	@echo $@ ": \\" > $@.d 
 	@sh $(topsrcdir)/build/cygwin-wrapper -quiet \
 		$(CXX) -EP -showIncludes $(OS_CXXFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<) 2>&1 \
@@ -301,7 +301,7 @@ else
 endif
 
 %.$(OBJ_SUFFIX): %.c
-ifdef MSC_VER
+ifdef WIN32
 	@echo $< ": \\" > $@.d 
 	@sh $(topsrcdir)/build/cygwin-wrapper -quiet \
 		$(CC) -EP -showIncludes $(OS_CFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<) 2>&1 \
@@ -318,7 +318,7 @@ endif
 	$(CPP) -C $(OS_CPPFLAGS) $(DEFINES) $(INCLUDES) $< > $@
 
 ifneq (,$(OBJS))
-ifdef MSC_VER
+ifdef WIN32
 -include $(OBJS:.$(OBJ_SUFFIX)=.$(OBJ_SUFFIX).d)
 else
 -include $(OBJS:.$(OBJ_SUFFIX)=.d)

@@ -39,9 +39,15 @@
 
 #include <float.h>
 #include <limits.h>
-#include <math.h>
 #if defined(_MSC_VER)
-#include <ymath.h>
+ #if defined(__INTEL_COMPILER)
+  #include <mathimf.h>
+ #else
+  #include <math.h>
+  #include <ymath.h>
+ #endif 
+#else
+ #include <math.h>
 #endif
 #include <stdlib.h>
 
@@ -131,7 +137,7 @@
 #define RAND(a,b)	((a)+((b)-(a))*(double(rand())+1.0)/(double(RAND_MAX)+2.0))
 
 // Make some protable names for the bessel functions.
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && !defined(__INTEL_COMPILER)
 #define	j0(x)		_j0(x)
 #define j1(x)		_j1(x)
 #define hypot(a,b)	_hypot((a),(b))
