@@ -1835,7 +1835,7 @@ LEbackcalc::backcalc()
 			layer(i).emod(pow(10,P[i]));
 		calculate((speed == fast ? LEsystem::fastgrad : LEsystem::dispgrad));
 		oerr = derr, derr = (precision > 0.0
-			? round(bowlerror()/precision)*precision : bowlerror());
+			? ROUND(bowlerror()/precision)*precision : bowlerror());
 		//printf("K%s ",speed == fast ? "*" : speed == slow ? "!" : "@");
 		//printf("err = %g ",derr);
 		//if (oerr + FLT_EPSILON < derr && ++ns > 2) { // Ooops, our error increased...

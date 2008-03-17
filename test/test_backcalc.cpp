@@ -92,7 +92,7 @@ redo:
 	for (i = 0; i < p.length(); i++) {
 		t = Bowl.result(p[i]).result(pavedata::deflct,pavedata::zz);
 		t += RAND(2,5)*0.0001*stdnormal_rnd();
-		t = round(t/0.0001)*0.0001;
+		t = ROUND(t/0.0001)*0.0001;
 		Bowl.adddefl(p[i],t);
 		printf(" %0.4g",t);
 	}
