@@ -39,15 +39,9 @@
 
 #include <float.h>
 #include <limits.h>
+#include <math.h>
 #if defined(_MSC_VER)
- #if defined(__INTEL_COMPILER)
-  #include <mathimf.h>
- #else
-  #include <math.h>
-  #include <ymath.h>
- #endif 
-#else
- #include <math.h>
+#include <ymath.h>
 #endif
 #include <stdlib.h>
 

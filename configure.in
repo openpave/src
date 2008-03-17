@@ -557,6 +557,10 @@ case "$host" in
     ;;
 esac
 
+if test "$USING_CC" = "intel"; then
+    dnl Intel auto optimises fma(), so we must avoid it.
+    DEFINES="$DEFINES NEED_FMA"
+else
 AC_CACHE_CHECK(
     [for fma()],
     ac_cv_func_fma,
@@ -569,6 +573,7 @@ AC_CACHE_CHECK(
     ])
 if test "$ac_cv_func_fma" = "no"; then
     DEFINES="$DEFINES NEED_FMA"
+fi
 fi
 
 dnl If the user passed in arg to --enable-optimize or --enable-debug,
@@ -710,26 +715,30 @@ _EOF
 #define __attribute__(x)
 #endif
 
-#define OP_PRINTF(n,m)	__attribute__ ((__format__(__printf__,n,m)))
+#define OP_PRINTF(n,m)   __attribute__ ((__format__(__printf__,n,m)))
 
 #if defined(WIN32) || defined(_MSC_VER) || defined(__CYGWIN__)
 #ifdef BUILD_DLL
-#define OP_EXPORT 	__declspec(dllexport) __stdcall
+#define OP_EXPORT        __declspec(dllexport) __stdcall
 #else
-#define OP_EXPORT	__declspec(dllimport) __stdcall
+#define OP_EXPORT        __declspec(dllimport) __stdcall
 #endif
 #define OP_HIDDEN
 #else
 #if defined(GCC_VISIBILITY) && !defined(__sun)
-#define OP_EXPORT	__attribute__ ((visibility("default")))
-#define OP_HIDDEN	__attribute__ ((visibility("hidden")))
+#define OP_EXPORT        __attribute__ ((visibility("default")))
+#define OP_HIDDEN        __attribute__ ((visibility("hidden")))
 #elif defined(__SUNPRO_C) && (__SUNPRO_C >= 0x550)
 #define OP_EXPORT
-#define OP_HIDDEN	__hidden
+#define OP_HIDDEN        __hidden
 #else
 #define OP_EXPORT
 #define OP_HIDDEN
 #endif
+#endif
+
+#if defined(DEBUG) || defined(__INTEL_COMPILER)
+#define MO_METAPROGS
 #endif
 
 #if defined(_MSC_VER)
