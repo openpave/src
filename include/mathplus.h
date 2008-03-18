@@ -131,7 +131,7 @@
 #define RAND(a,b)	((a)+((b)-(a))*(double(rand())+1.0)/(double(RAND_MAX)+2.0))
 
 // Make some protable names for the bessel functions.
-#if defined(_MSC_VER) && !defined(__INTEL_COMPILER)
+#if defined(_MSC_VER)
 #define	j0(x)		_j0(x)
 #define j1(x)		_j1(x)
 #define hypot(a,b)	_hypot((a),(b))
