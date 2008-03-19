@@ -1953,7 +1953,7 @@ test -n "$RC" || RC=":"
         if test "$CC_VER" -le "1200"; then
             DSO_LDFLAGS="$DSO_LDFLAGS -PDB:NONE"
         fi
-    else
+    elif test "$USING_CC" = "intel"; then
         CXXFLAGS="$CXXFLAGS -Zc:wchar_t-"
         DEFINES="$DEFINES _CRT_SECURE_NO_WARNINGS"
         DEFINES="$DEFINES _CRT_NONSTDC_NO_WARNINGS"
@@ -2572,8 +2572,8 @@ _EOF
 #endif
 #endif
 
-#if defined(DEBUG) || defined(__INTEL_COMPILER)
-#define MO_METAPROGS
+#if defined(DEBUG)
+#define NO_METAPROGS
 #endif
 
 #if defined(_MSC_VER)
