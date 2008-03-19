@@ -177,11 +177,12 @@ case "$host" in
 *-cygwin*|*-mingw*|*-msvc*|*-mks*)
     # Check to see if we are really running in a msvc environment
     if test -z "$CC"; then
-        AC_CHECK_PROGS(CC, icl.exe)
-        if test -n "$CC"; then
+        AC_CHECK_PROGS(ICC, icl.exe)
+        if test -n "$ICC"; then
             echo 'main() { return 0; }' > dummy.c
-            ${CC} -o dummy dummy.c >/dev/null 2>&1
+            ${ICC} -o dummy dummy.c >/dev/null 2>&1
             if test $? = 0; then
+                CC="$ICC"
                 USING_CC=intel
                 WIN32=1
             else
@@ -191,11 +192,12 @@ case "$host" in
         fi
     fi
     if test -z "$CC"; then
-        AC_CHECK_PROGS(CC, cl.exe)
-        if test -n "$CC"; then
+        AC_CHECK_PROGS(MSVC, cl.exe)
+        if test -n "$MSVC"; then
             echo 'main() { return 0; }' > dummy.c
-            ${CC} -o dummy dummy.c >/dev/null 2>&1
+            ${MSVC} -o dummy dummy.c >/dev/null 2>&1
             if test $? = 0; then
+                CC="$MSVC"
                 USING_CC=ms
                 WIN32=1
             else
