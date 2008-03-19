@@ -22,7 +22,6 @@ INCLUDES = \
 	$(NULL)
 
 CXXSRCS = \
-	traffic.cpp         \
 	matrix.cpp          \
 	pavement.cpp        \
 	reliability.cpp     \
