@@ -83,11 +83,11 @@ class fixed {
 		return *this;
 	}
 	inline fixed & operator *= (const fixed & f) {
-		value *= f.value;
+		*this = double(*this) * double(f);
 		return *this;
 	}
 	inline fixed & operator /= (const fixed & f) {
-		value /= f.value;
+		*this = double(*this) / double(f);
 		return *this;
 	}
 	
@@ -148,13 +148,11 @@ class fixed {
 		return t;
 	}
 	inline fixed operator * (const fixed<P> & f) const {
-		fixed t;
-		t.value = value * f.value;
+		fixed t = double(*this) * double(f);
 		return t;
 	}
 	inline fixed operator / (const fixed<P> & f) const {
-		fixed t;
-		t.value = value / f.value;
+		fixed t = double(*this) / double(f);
 		return t;
 	}
 
