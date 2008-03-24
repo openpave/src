@@ -26,13 +26,13 @@
 	Design:
 		This is a 3D Finite Element Method (FEM) code, which is designed
 		for pavements problems.  Specifically, it is designed for my
-		thesis work, which requires and fast linear elastic 3D FEM
-		analysis.  The code is fast.  It does most of the maths using
-		expression templates, and to aid that uses small 3x3 matrices to
-		store the DOF level data.  This works because the math for the
-		FEM is really a tensor based math, with the matrix and vectors
-		being a simplification.  In essence, this code solves it as two
-		nested matrices, to make a forth order tensor.  This also has an
+		thesis work, which requires fast linear elastic 3D FEM analysis. 
+		The code is fast.  It does most of the maths using expression
+		templates, and to aid that uses small 3x3 matrices to store the
+		DOF level data.  This works because the math for the FEM is really
+		a tensor based math, with the matrix and vectors being a
+		simplification.  In essence, this code solves it as two nested
+		matrices, to make a forth order tensor.  This also has an
 		advantage in the matrix storage, because we can manage less.
 		
 		The code follows the classic structure of finite elements for
@@ -211,18 +211,18 @@ private:
 struct coord3d {
 	fixed<8> x, y, z;
 
-	coord3d() {
+	inline coord3d() {
 	}
-	coord3d(double px, double py, double pz)
+	inline coord3d(double px, double py, double pz)
 	  : x(px), y(py), z(pz) {
 	}
-	coord3d(const coord3d & p)
+	inline coord3d(const coord3d & p)
 	  : x(p.x), y(p.y), z(p.z) {
 	}
-	coord3d(const point3d & p)
+	inline coord3d(const point3d & p)
 	  : x(p.x), y(p.y), z(p.z) {
 	}
-	~coord3d () {
+	inline ~coord3d () {
 	}
 	int compare(const coord3d & p) const {
 		if (x == p.x && y == p.y && z == p.z)
@@ -263,9 +263,6 @@ struct coord3d {
 struct gauss3d : public point3d {
 	double gw;
 
-	gauss3d()
-	  : point3d() {
-	}
 	gauss3d(double px, double py, double pz, double w)
 	  : point3d(px,py,pz), gw(w) {
 	}
@@ -295,21 +292,27 @@ const double gp_A[4][2] = {{-(1+1/sqrt(3.0))/2, 1/2.0},
  * so it can keep track of points for the variable node elements.
  */
 struct node3d : public coord3d {
+	
+	// These are a union to save space.  We only need the neighbours while
+	// building the mesh.  Once we start to solve, they are no longer
+	// needed and can be replaced by the displacements
 	union {
+		// Neighbour in (x,y,z) plus/minus directions.
+		// -1 if not there...
 		struct {
 			int xm, xp, ym, yp, zm, zp;
 		};
+		// Final results.
 		struct {
 			double ux, uy, uz;
 		};
 	};
 
-	node3d()
-	  : coord3d(), xm(-1), xp(-1), ym(-1), yp(-1), zm(-1), zp(-1) {
-	}
 	node3d(const coord3d & c)
 	  : coord3d(c), xm(-1), xp(-1), ym(-1), yp(-1), zm(-1), zp(-1) {
 	}
+	// Set new neighbours.  If this conflicts with what we know, we
+	// complain (if we're debugging).
 	void setneighbours(const int x_m, const int x_p, const int y_m,
 			const int y_p, const int z_m, const int z_p) {
 		if (x_m != -1) {
@@ -337,6 +340,7 @@ struct node3d : public coord3d {
 			zp = z_p;
 		}
 	}
+	// Set our results.
 	void setdisp(const tmatrix<double,NDIM,1> & t) {
 		ux = t(0);
 		uy = t(1);
@@ -347,19 +351,24 @@ struct node3d : public coord3d {
 class mesh;                            // Forward declare.
 
 /*
- * class smatrix_elem - an element stiffness matrix
+ * class smatrix_elem
+ *
+ * Element stiffness matrix, which is an upper triangular matrix,
+ * so we only store one side.  This is only used to transfer the
+ * information.
  */
 class smatrix_elem {
 public:
 	explicit smatrix_elem(const int n)
 	  : nnd(n), K(0) {
+		// calloc() to zero the memory...
 		K = static_cast<tmatrix<double,NDOF,NDOF> *>
 				(calloc(size(),sizeof(tmatrix<double,NDOF,NDOF>)));
 		if (K == 0)
 			event_msg(EVENT_ERROR,"Out of memory in smatrix_elem::smatrix_elem()!");
 	}
 	inline ~smatrix_elem() {
-		if (K)
+		if (K != 0)
 			free(K);
 	}
 	inline tmatrix<double,NDOF,NDOF> & operator() (int i, int j) const {
@@ -369,6 +378,7 @@ public:
 
 private:
 	friend class mesh;
+
 	const int nnd;
 	tmatrix<double,NDOF,NDOF> * K;
 
@@ -382,11 +392,27 @@ private:
 	}
 };
 
+class smatrix;
+
 /*
- * class element - a finite element
+ * class element
+ *
+ * A finite element.  This base class does all the work for the
+ * special element classes, which basically just exist to set things
+ * up right...
+ *
+ * This class assumes a 3D rectangular geometry with shape functions in the
+ * same shape functions in x and y, and a different function in the z
+ * direction.
+ *
+ * XXX: This class is implemented as an item in a doublely linked list, with
+ * an owner.  This is wasteful, because we can pass in the info that the
+ * elements need, and we could achieve the same thing without all the
+ * pointers.
  */
 class element : public listelement_o<mesh,element> {
 public:
+	// The types of elements.
 	enum element_t {
 		block8,
 		block12,
@@ -398,6 +424,7 @@ public:
 		infinite12,
 		infinite16
 	};
+	// The types of shape functions.
 	enum shape_t {
 		linear,
 		quadratic,
@@ -421,35 +448,42 @@ protected:
 	const material & mat;
 	sset<int> inel;
 
+	// These are declared later, once we can access our mesh's node list,
+	// without the problem of having the classes depend on one another.
 	inline int addnode(const coord3d & c) const;
 	inline void updatenode(const node3d & n) const;
 	inline const node3d & getnode(const int i) const;
+	
+	// This is the core routine for creating elements.  It is passed a set
+	// of eight corners, and adds the required nodes.  It also sets up the
+	// mask of optional nodes when we are dropping nodes.
 	inline void setup(const fset<coord3d> & c, int * mask = 0) {
 		assert(8 == c.length());
 		const int nz = getnz();
 		fset<coord3d> cc(c);
-		double xp, xm, yp, ym, zp, zm;
+		coord3d p, m;
 		
+		// First, sort the corners into the order we expect.
 		do {
-			xm = cc[0].x + cc[1].x + cc[4].x + cc[5].x;
-			xp = cc[2].x + cc[3].x + cc[6].x + cc[7].x;
-			ym = cc[0].y + cc[2].y + cc[4].y + cc[6].y;
-			yp = cc[1].y + cc[3].y + cc[5].y + cc[7].y;
-			zm = cc[0].z + cc[1].z + cc[2].z + cc[3].z;
-			zp = cc[4].z + cc[5].z + cc[6].z + cc[7].z;
-			if (xp > xm && yp > ym && zp > zm)
+			m.x = cc[0].x + cc[1].x + cc[4].x + cc[5].x;
+			p.x = cc[2].x + cc[3].x + cc[6].x + cc[7].x;
+			m.y = cc[0].y + cc[2].y + cc[4].y + cc[6].y;
+			p.y = cc[1].y + cc[3].y + cc[5].y + cc[7].y;
+			m.z = cc[0].z + cc[1].z + cc[2].z + cc[3].z;
+			p.z = cc[4].z + cc[5].z + cc[6].z + cc[7].z;
+			if (p.x > m.x && p.y > m.y && p.z > m.z)
 				break;
-			if (xp < xm) {
+			if (p.x < m.x) {
 				swap(cc[0],cc[2]); swap(cc[4],cc[6]);
 				swap(cc[1],cc[3]); swap(cc[5],cc[7]);
 				continue;
 			}
-			if (yp < ym) {
+			if (p.y < m.y) {
 				swap(cc[0],cc[1]); swap(cc[4],cc[5]);
 				swap(cc[2],cc[3]); swap(cc[6],cc[7]);
 				continue;
 			}
-			if (zp < zm) {
+			if (p.z < m.z) {
 				swap(cc[0],cc[4]); swap(cc[2],cc[6]);
 				swap(cc[1],cc[5]); swap(cc[3],cc[7]);
 				continue;
@@ -458,6 +492,7 @@ protected:
 			return;
 		} while(true);
 		
+		// Add the corner nodes.
 		for (int i = 0; i < nz; i++) {
 			for (int j = 0; j < 4; j++) {
 				double x = double(cc[j].x)+i*double(cc[j+4].x-cc[j].x)/(nz-1);
@@ -466,8 +501,10 @@ protected:
 				inel.add(addnode(coord3d(x,y,z)));
 			}
 		}
-		for (int i = 0; mask && i < 4*nz+2; i++)
-			mask[i] = -1;
+		// If we have a mask, initialise it.
+		if (mask != 0)
+			memset(mask,0xff,(4*nz+2)*sizeof(int));
+		// Loop over the nodes, setting the neighbours.
 		for (int i = 0; i < 4*nz; i++) {
 			node3d n = getnode(inel[i]);
 			int x_m = -1, x_p = -1;
@@ -480,6 +517,7 @@ protected:
 			if (i >= 4)
 				z_m = inel[i-4];
 			if (mask) {
+				// Check for nodes in the middle, and set the mask.
 				switch (i%4) {
 				case 0:
 					if (n.xp != -1 && n.xp != x_p) {
@@ -487,6 +525,7 @@ protected:
 					}
 					if (n.yp != -1 && n.yp != y_p) {
 						mask[i] = y_p = n.yp;
+						// Check the center for the top and bottom.
 						if ((i == 0 || i == 4*(nz-1))) {
 							const node3d & mid = getnode(n.yp);
 							if (mid.xp != -1)
@@ -519,6 +558,8 @@ protected:
 			n.setneighbours(x_m,x_p,y_m,y_p,z_m,z_p);
 			updatenode(n);
 		}
+		// Add the extra nodes to our list and set the mask from the global
+		// node number to the item number in the list.
 		for (int i = 0; mask && i < 4*nz+2; i++) {
 			if (mask[i] != -1) {
 				inel.add(mask[i]);
@@ -527,6 +568,11 @@ protected:
 				mask[i] = 0;
 		}
 	}
+	// For infinite elements we first have to find the eight corners, based
+	// on the line or plane given.  Then we can set up the rest.
+	//
+	// XXX: need to use mask to make dropping nodes on infinite elements
+	// possible.
 	void setup_infinite(const fset<coord3d> & c, int * mask = 0) {
 		fset<coord3d> cc(8);
 		if (c.length() == 2) {
@@ -572,6 +618,7 @@ protected:
 		}
 		setup(cc,mask);
 	}
+	// Build a matrix of the nodal coordinates.
 	void buildxe(matrix_dense & xe) const {
 		assert(xe.rows() == inel.length());
 		for (int i = 0; i < inel.length(); i++) {
@@ -579,6 +626,8 @@ protected:
 			xe(i,0) = p.x; xe(i,1) = p.y; xe(i,2) = p.z;
 		}
 	}
+	// Build a list of gauss points.  This will need to be stored
+	// in the element when we do plastic models with history.
 	void buildgp(ksset<point3d,gauss3d> & gp) const {
 		int nx = 0, ny = 0, nz = 0;
 		const double (* gx)[2] = 0, (* gy)[2] = 0, (* gz)[2] = 0;
@@ -595,6 +644,7 @@ protected:
 			}
 		}
 	}
+	// build the shape function derivative matrix.
 	void builddNdr(const bool mapping, const point3d & gp,
 			matrix_dense & dNdr, const int * mask = 0) const {
 		const int nz = getnz();
@@ -604,8 +654,10 @@ protected:
 		assert(dNdr.cols() == inel.length());
 		assert(mask != 0 || dNdr.cols() == 4*nz);
 
+		// Loop over each level in the element.
 		for (int i = 0, j; i < nz; i++) {
 			Nz = N(mapping,sz,i,rz); dNdz = dN(mapping,sz,i,rz);
+			// Start with the corners.
 			for (int l = 0; l < 4; l++) {
 				Nx = N(mapping,sx,l/2,rx); dNdx = dN(mapping,sx,l/2,rx);
 				Ny = N(mapping,sy,l%2,ry); dNdy = dN(mapping,sy,l%2,ry);
@@ -613,8 +665,10 @@ protected:
 				dNdr(1,i*4+l) = Nx*dNdy*Nz;
 				dNdr(2,i*4+l) = Nx*Ny*dNdz;
 			}
+			// If we don't have extra nodes we're done.
 			if (!mask)
 				continue;
+			// Build the extra nodes at the half points.
 			for (int l = 0; l < 4; l++) {
 				if ((j = mask[i*4+l]) == 0)
 					continue;
@@ -632,6 +686,8 @@ protected:
 				dNdr(1,j) = Nx*dNdy*Nz;
 				dNdr(2,j) = Nx*Ny*dNdz;
 			}
+			// If we're not the top or bottom we're done.  Else, build
+			// those.
 			if (i > 0 && i < nz-1)
 				continue;
 			if ((j = mask[(i == 0 ? 4*nz : 4*nz+1)]) == 0)
@@ -644,6 +700,8 @@ protected:
 		}
 		if (!mask)
 			return;
+		// Correct the shape functions for the corners and sides,
+		// depending on the existance of the extra nodes.
 		for (int i = 0; i < 3; i++) {
 			for (int l = 0; l < 4*nz; l++) {
 				if (mask[l] != 0)
@@ -662,6 +720,7 @@ protected:
 				dNdr(i,mask[l]) -= dNdr(i,mask[4*nz+1])/2;
 		}
 	}
+	// Build the element stiffness matrix.
 	smatrix_elem * buildKe(const int * mask = 0) const {
 		int i, j, k, l, g, nnd = inel.length();
 
@@ -706,6 +765,7 @@ protected:
 	}
 
 private:
+	// nz is the number of levels of nodes in the element.
 	const int getnz() const {
 		switch (sz) {
 		case linear:    return 2;
@@ -717,6 +777,7 @@ private:
 		}
 		assert(false);  return 0;
 	}
+	// This gets the right gauss function based on the shape function.
 	static void getgauss(const shape_t t, int & n,
 			const double (*& g)[2]) {
 		switch (t) {
@@ -728,6 +789,7 @@ private:
 			case inf_neg:   n = 4; g = gp_4; return;
 		}
 	}
+	// Linear shape function.
 	static double N_2(const int n, const double r) {
 		switch (n) {
 		case 0: return 0.5*(1.0-r);
@@ -740,6 +802,7 @@ private:
 		case 1: return  0.5;
 		} assert(false); return 0.0;
 	}
+	// Quadratic shape function.
 	static double N_3(const int n, const double r) {
 		switch (n) {
 		case 0: return 0.5*r*(r-1);
@@ -754,6 +817,7 @@ private:
 		case 2: return r+0.5;
 		} assert(false); return 0.0;
 	}
+	// Cubic shape function.
 	static double N_4(const int n, const double r) {
 		switch (n) {
 		case 0: return 0.0625*(-1+9*r*r)*(1-1*r);
@@ -783,12 +847,6 @@ private:
 		case 1: return  2/((1-r)*(1-r));
 		} assert(false); return 0.0;
 	}
-	static double Npi(const int n, const double r) {
-		return N_3(n,r);
-	}
-	static double dNpi(const int n, const double r) {
-		return dN_3(n,r);
-	}
 	static double Mni(const int n, const double r) {
 		switch (n) {
 		case 0: return (1-r)/(1+r);
@@ -801,12 +859,21 @@ private:
 		case 1: return  2/((1+r)*(1+r));
 		} assert(false); return 0.0;
 	}
+	// Shape functions for infinite elements are quadratic.
+	static double Npi(const int n, const double r) {
+		return N_3(n,r);
+	}
+	static double dNpi(const int n, const double r) {
+		return dN_3(n,r);
+	}
+	// Shift the negative nodes to (0,+1).
 	static double Nni(const int n, const double r) {
 		return N_3(n+1,r);
 	}
 	static double dNni(const int n, const double r) {
 		return dN_3(n+1,r);
 	}
+	// Build the shape/mapping function based on the type of function.
 	static double N(const bool mapping, const shape_t s,
 			const int n, const double r) {
 		switch (s) {
@@ -983,107 +1050,30 @@ public:
 	}
 };
 
-class smatrix_diag;
-class smatrix;
-
 /*
  * class smatrix_node - a node in a stiffness matrix
  */
 class smatrix_node {
-	friend class smatrix_diag;
 	friend class smatrix;
 	friend class mesh;
 
 	tmatrix<double,NDOF,NDOF> K;
-	int i, j;
+	int i;
 	smatrix_node * col_next;
-	smatrix_node * col_prev;
-	smatrix_node * row_next;
 };
 
 /*
  * class smatrix_diag - a diagonal in a stiffness matrix
  */
 class smatrix_diag {
-	bool insert(int i, int j, const tmatrix<double,NDOF,NDOF> & t) {
-		if (nnz+1 > nnd) {
-			nnd = nnz+1;
-			smatrix_node * temp =
-					static_cast<smatrix_node *>
-					(realloc(nodes,nnd*sizeof(smatrix_node)));
-			if (temp == 0) {
-				event_msg(EVENT_ERROR,"Out of memory in smatrix_diag::insert()!");
-				return false;
-			}
-			if (nodes != temp) {
-				if (row_head)
-					row_head = temp + (row_head-nodes);
-				for (int k = 0; k < nnz; k++) {
-					smatrix_node & n = temp[k];
-					if (n.row_next)
-						n.row_next = temp + (n.row_next-nodes);
-					if (n.col_prev)
-						n.col_prev->col_next = temp
-								+ (n.col_prev->col_next-nodes);
-					else {
-						smatrix_diag * d = this - n.i + n.j;
-						d->col_head = temp + (d->col_head-nodes);
-					}
-					if (n.col_next)
-						n.col_next->col_prev = temp
-								+ (n.col_next->col_prev-nodes);
-				}
-				nodes = temp;
-			}
-		}
-	  	if (j < i) {
-	  		nodes[nnz].K = ~t;
-	  		swap(i,j);
-	  	} else
-	  		nodes[nnz].K = t;
-	  	nodes[nnz].i = i;
-	  	nodes[nnz].j = j;
-		// Fix up the row references.
-		smatrix_node * p = row_head, * o = 0;
-		while (p && p->j < j) {
-			o = p; p = p->row_next;
-		}
-		if (o == 0)
-			row_head = &nodes[nnz];
-		else
-			o->row_next = &nodes[nnz];
-		assert(p == 0 || p->j > j);
-		nodes[nnz].row_next = p;
-		// Fix up the column refereces.
-		smatrix_diag * d = this - i + j;
-		p = d->col_head; o = 0;
-		while (p != 0 && p->i < i) {
-			o = p, p = p->col_next;
-		}
-		if (o == 0)
-			d->col_head = &nodes[nnz];
-		else
-			o->col_next = &nodes[nnz];
-		nodes[nnz].col_prev = o;
-		if (p != 0) {
-			assert(p->i > i);
-			p->col_prev = &nodes[nnz];
-		}
-		nodes[nnz].col_next = p;
-		nnz++;
-		return true;
-	}
-
 	friend class smatrix;
 	friend class mesh;
 
 	tmatrix<double,NDOF,NDOF> K;
 	smatrix_node * col_head;
-	smatrix_node * row_head;
 	smatrix_node * nodes;
 	unsigned short nnz, nnd;
-	bool isfixed:1;
-	bool nonzero:1;
+	unsigned fixed;                    // Bitmask of fixed DOFs
 };
 
 /*
@@ -1091,6 +1081,7 @@ class smatrix_diag {
  */
 class smatrix {
 public:
+	// Create the matrix empty.
 	inline explicit smatrix(const int n)
 	  : nnd(n), diag(0) {
 		diag = static_cast<smatrix_diag *>
@@ -1098,6 +1089,7 @@ public:
 		if (diag == 0)
 			event_msg(EVENT_ERROR,"Out of memory in smatrix::smatrix()!");
 	}
+	// Copy a matrix.
 	inline explicit smatrix(const smatrix & A)
 	  : nnd(A.nnd), diag(0) {
 		diag = static_cast<smatrix_diag *>
@@ -1117,123 +1109,167 @@ public:
 			}
 			diag[i].nnd = d->nnz;
 			append(i,i,d->K);
-			smatrix_node * p = d->row_head;
+			smatrix_node * p = d->col_head;
 			while (p) {
-				append(p->i,p->j,p->K);
-				p = p->row_next;
+				append(p->i,i,p->K);
+				p = p->col_next;
 			}
 		}
 	}
 	inline ~smatrix() {
 		if (diag) {
 			for (int i = 0; i < nnd; i++) {
+				// smatrix_nodes don't have a destructor...
 				if (diag[i].nodes)
-					// smatrix_nodes dont have a destructor...
 					free(diag[i].nodes);
 			}
 			free(diag);
 		}
 	}
 	bool append(int i, int j, const tmatrix<double,NDOF,NDOF> & t) {
+		// If we're appending to the diagonal, just do it.
 		if (i == j) {
 			diag[i].K += t;
 			return true;
 		}
-		smatrix_node * p = diag[MIN(i,j)].row_head;
-		while (p != 0 && p->j < MAX(i,j))
-			p = p->row_next;
-		if (p == 0 || p->j > MAX(i,j)) {
-			// This knows how to handle i and j.
-			if (!diag[MIN(i,j)].insert(i,j,t))
-				return false;
-		} else {
+		// Here we don't know if we're above or below the diagonal,
+		// so we must use MIN/MAX.  We start by trying to find the
+		// node which is in a row greater than or equal to the one
+		// we're adding.
+		smatrix_diag * d = &diag[MAX(i,j)];
+		smatrix_node * n, * o, * p = d->col_head;
+		while (p != 0 && p->i < MIN(i,j))
+			p = p->col_next;
+		// If we found a match, add to it.
+		if (p != 0 && p->i == MIN(i,j)) {
 			if (j < i)
 				p->K += ~t;
 			else
 				p->K += t;
+			return true;
 		}
+		// We've either run off the end, or we don't have a matching
+		// node.  In this case we need to add one.
+		if (d->nnz+1 > d->nnd) {
+			// We're out of space, so allocate more.
+			d->nnd = d->nnz+1;
+			smatrix_node * temp =
+					static_cast<smatrix_node *>
+					(realloc(d->nodes,d->nnd*sizeof(smatrix_node)));
+			if (temp == 0) {
+				event_msg(EVENT_ERROR,"Out of memory in smatrix_diag::insert()!");
+				return false;
+			}
+			// If realloc moved us we need to fix up everyone's pointers.
+			// This is finds the offset into the old array, and then adds
+			// that to the new array.
+			if (d->nodes != temp) {
+				if (d->col_head != 0)
+					d->col_head = temp + (d->col_head - d->nodes);
+				for (int k = 0; k < d->nnz; k++) {
+					n = &(temp[k]);
+					if (n->col_next != 0)
+						n->col_next = temp + (n->col_next - d->nodes);
+				}
+				d->nodes = temp;
+			}
+		}
+		// Now fill in the new element.
+		n = &(d->nodes[(d->nnz)++]);
+	  	if (j < i) {
+	  		n->K = ~t;
+	  		swap(i,j);
+	  	} else
+	  		n->K = t;
+	  	n->i = i;
+		// Fix up the column references.
+		p = d->col_head, o = 0;
+		while (p != 0 && p->i < i)
+			o = p, p = p->col_next;
+		assert(p == 0 || p->i > i);
+		if (o == 0)
+			d->col_head = n;
+		else
+			o->col_next = n;
+		n->col_next = p;
 		return true;
 	}
+	// This just makes things faster by sorting the node lists.
 	void tidy() {
-		void * temp = malloc(sizeof(smatrix_node));
-		if (temp == 0) {
-			event_msg(EVENT_ERROR,"Out of memory in smatrix::tidy()!");
-			return;
-		}
+		// We need somewhere to store the switched data.
+		smatrix_node temp;
+		
 		for (int i = 0; i < nnd; i++) {
 			smatrix_node * nodes = diag[i].nodes;
+			// Insertion sort the column of nodes.
 			for (int j = 1; j < diag[i].nnz; j++) {
 				for (int k = j; k > 0
-						&& nodes[k-1].j > nodes[k].j; k--) {
-					memcpy(temp       ,&nodes[k-1],sizeof(smatrix_node));
+						&& nodes[k-1].i > nodes[k].i; k--) {
+					memcpy(&temp      ,&nodes[k-1],sizeof(smatrix_node));
 					memcpy(&nodes[k-1],&nodes[k]  ,sizeof(smatrix_node));
-					memcpy(&nodes[k]  ,temp       ,sizeof(smatrix_node));
+					memcpy(&nodes[k]  ,&temp      ,sizeof(smatrix_node));
 				}
 			}
-			if (diag[i].row_head)
-				diag[i].row_head = nodes;
-			for (int j = 0; j < diag[i].nnz; j++) {
-				nodes[j].row_next = (j < diag[i].nnz-1 ? &nodes[j+1] : 0);
-				if (nodes[j].col_prev)
-					nodes[j].col_prev->col_next = &nodes[j];
-				else
-					diag[nodes[j].j].col_head = &nodes[j];
-				if (nodes[j].col_next)
-					nodes[j].col_next->col_prev = &nodes[j];
-			}
+			// Now fix up the pointers.
+			if (diag[i].col_head != 0)
+				diag[i].col_head = nodes;
+			for (int j = 0; j < diag[i].nnz; j++)
+				nodes[j].col_next = (j < diag[i].nnz-1 ? &nodes[j+1] : 0);
 		}
-		free(temp);
 	}
-	bool chol() {
-		int i, j;
+	// Incomplete Cholesky decompostion, by block.  Look at the small
+	// internal version to understand what the whole thing is doing.
+	void chol() {
 		smatrix_diag * d;
 		smatrix_node * p;
 
-		for (i = 0; i < nnd; i++) {
-			d = &(diag[i]);
-			tmatrix<double,NDOF,NDOF> & K = d->K;
-			tmatrix<double,NDOF,NDOF> t(0.0);
+		for (int n = 0; n < nnd; n++) {
+			d = &(diag[n]);
 			p = d->col_head;
-			while (p) {
-				t += ~(p->K)*(p->K);
-				p = p->col_next;
-			}
-			assert(K(0,0) >= t(0,0));
-			K(0,0) = sqrt(K(0,0)-t(0,0));
-			K(0,1) = (K(0,1)-t(0,1))/K(0,0);
-			K(0,2) = (K(0,2)-t(0,2))/K(0,0);
-			assert(K(1,1)-K(0,1)*K(0,1) >= t(1,1));
-			K(1,1) = sqrt(K(1,1)-K(0,1)*K(0,1)-t(1,1));
-			K(1,2) = (K(1,2)-K(0,2)*K(0,1)-t(1,2))/K(1,1);
-			assert(K(2,2)-K(0,2)*K(0,2)-K(1,2)*K(1,2) >= t(2,2));
-			K(2,2) = sqrt(K(2,2)-K(0,2)*K(0,2)-K(1,2)*K(1,2)-t(2,2));
-			K(1,0) = K(2,0) = K(2,1) = 0.0;
-			p = d->row_head;
-			while (p) {
-				tmatrix<double,NDOF,NDOF> & J = p->K;
-				smatrix_node * pi = d->col_head;
-				smatrix_node * pj = diag[p->j].col_head;
-				while (pi && pj) {
+			while (p != 0) {
+				smatrix_node * pi = diag[p->i].col_head;
+				smatrix_node * pj = d->col_head;
+				// We need to have blocks in both columns.  So skip the
+				// missing ones.
+				while (pi != 0 && pj != 0) {
 					if (pi->i > pj->i)
 						pj = pj->col_next;
 					else if (pi->i < pj->i)
 						pi = pi->col_next;
 					else {
-						J -= ~(pi->K)*(pj->K);
+						p->K -= ~(pi->K)*(pj->K);
 						pi = pi->col_next;
 						pj = pj->col_next;
 					}
 				}
-				for (j = 0; j < NDOF; j++)
-					J(0,j) /= K(0,0);
-				for (j = 0; j < NDOF; j++)
-					J(1,j) = (J(1,j)-K(0,1)*J(0,j))/K(1,1);
-				for (j = 0; j < NDOF; j++)
-					J(2,j) = (J(2,j)-K(0,2)*J(0,j)-K(1,2)*J(1,j))/K(2,2);
-				p = p->row_next;
+				// Do the block Cholesky decomposition for an off diagonal
+				// element.
+				for (int i = 0; i < NDOF; i++) {
+					for (int j = 0; j < NDOF; j++) {
+						for (int k = 0; k < i; k++)
+							p->K(i,j) -= diag[p->i].K(k,i)*p->K(k,j);
+						p->K(i,j) *= diag[p->i].K(i,i);
+					}
+				}
+				d->K -= ~(p->K)*(p->K);
+				p = p->col_next;
+			}
+			// Cholesky decompostion of the diagonal.
+			for (int i = 0; i < NDOF; i++) {
+				for (int k = 0; k < i; k++)
+					d->K(i,i) -= d->K(k,i)*d->K(k,i);
+				assert(d->K(i,i) > 0.0);
+				// NOTE: We store the inverse of the diagonal to avoid
+				// divisions.
+				d->K(i,i) = 1.0/sqrt(d->K(i,i));
+				for (int j = i+1; j < NDOF; j++) {
+					for (int k = 0; k < i; k++)
+						d->K(i,j) -= d->K(k,i)*d->K(k,j);
+					d->K(i,j) *= d->K(i,i);
+					d->K(j,i) = 0.0;
+				}
 			}
 		}
-		return true;
 	}
 
 private:
@@ -1281,6 +1317,7 @@ struct mesh_bc_key {
 	mesh_bc_key(int N, int I)
 	  : n(N), i(I) {
 	}
+	// Provide these for sorting.
 	bool operator== (const mesh_bc_key & k) const {
 		return (n == k.n && i == k.i);
 	}
@@ -1303,10 +1340,12 @@ struct mesh_bc : public mesh_bc_key {
  */
 class mesh : private list_owned<mesh,element> {
 public:
+	// Create an empty mesh.
 	explicit mesh()
 	  : list_owned<mesh,element>(), node(), disp_bc(), f_ext() {
 	}
 
+	// Add an element, returning a pointer if successful.
 	const element * add(const element::element_t t, const material & m,
 			const fset<coord3d> & c) {
 		element * e = 0;
@@ -1391,6 +1430,7 @@ public:
 		below = 0x0002,
 		above = 0x0004
 	};
+	// Add a constraint at a single point.
 	bool add_bc(const coord3d & p, const dof f, const double d) {
 		int k = node.haskey(p);
 		assert(k >= 0);
@@ -1404,6 +1444,7 @@ public:
 			disp_bc.add(mesh_bc(k,2,d));
 		return true;
 	}
+	// Add constrints along a plane.
 	bool add_bc_plane(const dof o, const bcplane p, const double c,
 			const dof f, const double d) {
 		assert(!((o & mesh::X) && (o & mesh::Y)));
@@ -1443,6 +1484,7 @@ public:
 		}
 		return true;
 	}
+	// Add an external force at a node.
 	bool add_fext(const coord3d & p, const dof f, const double d) {
 		int k = node.haskey(p);
 		assert(k >= 0);
@@ -1456,8 +1498,9 @@ public:
 			f_ext.add(mesh_bc(k,2,d));
 		return true;
 	}
+	// Finally, solve the system.
 	bool solve(const double tol) {
-		int i, j, nnd = node.length();
+		int i, j, n, nnd = node.length();
 		printf("Solving with %i nodes!\n",nnd);
 		smatrix K(nnd);
 		svector F(nnd), U(nnd), P(nnd), W(nnd), V(nnd);
@@ -1473,27 +1516,22 @@ public:
 			F(node.getorder(f.n))(f.i) = f.d;
 		}
 
-		// Now check for totally fixed nodes.  We're going to skip these in
-		// the later steps...
 		disp_bc.sort();
 		for (i = 0; i < disp_bc.length(); i++) {
-			if (i+2 < disp_bc.length()
-			 && disp_bc[i].n == disp_bc[i+1].n
-			 && disp_bc[i+1].n == disp_bc[i+2].n) {
-				const mesh_bc & u0 = disp_bc[i];
-				const mesh_bc & u1 = disp_bc[i+1];
-				const mesh_bc & u2 = disp_bc[i+2];
-				//int n = u0.n;
-				int n = node.getorder(u0.n);
-				F(n)(0) = u0.d; F(n)(1) = u1.d; F(n)(2) = u2.d;
-				d = &(K.diag[n]);
-				d->isfixed = true;
-				if (u0.d != 0.0 || u1.d != 0.0 || u2.d != 0.0)
-					d->nonzero = true;
-				d->K = tmatrix<double,NDOF,NDOF>(1.0,true);
-				i += 2; // skip the two BC's we just checked.
+			const mesh_bc & u = disp_bc[i];
+			//n = u.n;
+			n = node.getorder(u.n);
+			d = &(K.diag[n]);
+			// Each bit in fixed means that DOF is fixed.
+			d->fixed |= (1 << u.i);
+			if (u.d != 0.0) {
+				// The last bit means at least one DOF is non-zero.
+				d->fixed |= (1 << NDOF);
+				P(n)(u.i) = u.d;
 			}
 		}
+
+		// Loop over the elements building the stiffness matrix.
 		while (e) {
 			smatrix_elem * ke = e->stiffness();
 			if (ke == 0)
@@ -1501,23 +1539,62 @@ public:
 			for (i = 0; i < ke->nnd; i++) {
 				//int gi = e->inel[i];
 				int gi = node.getorder(e->inel[i]);
-				if (K.diag[gi].isfixed) {
-					for (j = 0; K.diag[gi].nonzero && j < ke->nnd; j++) {
+				d = &(K.diag[gi]);
+				// At least one of P(gi) is non-zero, so apply the
+				// fixup to F for this element.
+				if (d->fixed & (1 << NDOF)) {
+					for (j = 0; j < ke->nnd; j++) {
 						//int gj = e->inel[j];
 						int gj = node.getorder(e->inel[j]);
-						if (i == j)
+						if (j < i) {
+							if (gj < gi)
+								F(gj) -=  (*ke)(j,i)*P(gi);
+							else
+								F(gj) -= ~(*ke)(j,i)*P(gi);
+						} else {
+							if (gj < gi)
+								F(gj) -=  (*ke)(i,j)*P(gi);
+							else
+								F(gj) -= ~(*ke)(i,j)*P(gi);
+						}
+					}
+				}
+				// If this node is free or fixed, we're done.
+				if (d->fixed & ((1<<NDOF)-1) == 0
+				 || d->fixed & ((1<<NDOF)-1) == ((1<<NDOF)-1))
+					continue;
+				// Zero out the columns which are fixed.
+				for (j = 0; j <= i; j++) {
+					for (int k = 0; k < NDOF; k++) {
+						if ((d->fixed & (1<<k)) == 0)
 							continue;
-						if ((j < i) == (gj < gi))
-							F(gj) -= ~(*ke)(i,j)*F(gi);
-						else
-							F(gj) -=  (*ke)(j,i)*F(gi);
+						for (int l = 0; l < NDOF; l++)
+							(*ke)(j,i)(l,k) = 0.0;
 					}
-				} else {
-					for (j = i; j < ke->nnd; j++) {
-						//int gj = ke->inel[j];
-						int gj = node.getorder(e->inel[j]);
-						K.append(gi,gj,(*ke)(i,j));
+				}
+				for (j = i; j < ke->nnd; j++) {
+					for (int k = 0; k < NDOF; k++) {
+						if ((d->fixed & (1<<k)) == 0)
+							continue;
+						for (int l = 0; l < NDOF; l++)
+							(*ke)(i,j)(k,l) = 0.0;
 					}
+				}
+			}
+			for (i = 0; i < ke->nnd; i++) {
+				//int gi = e->inel[i];
+				int gi = node.getorder(e->inel[i]);
+				d = &(K.diag[gi]);
+				// If this node is completly fixed, don't add anything.
+				if (d->fixed & ((1<<NDOF)-1) == ((1<<NDOF)-1))
+					continue;
+				for (j = i; j < ke->nnd; j++) {
+					//int gj = ke->inel[j];
+					int gj = node.getorder(e->inel[j]);
+					d = &(K.diag[gj]);
+					if (d->fixed & ((1<<NDOF)-1) == ((1<<NDOF)-1))
+						continue;
+					K.append(gi,gj,(*ke)(i,j));
 				}
 			}
 			delete ke;
@@ -1525,40 +1602,11 @@ public:
 		}
 		for (i = 0; i < disp_bc.length(); i++) {
 			const mesh_bc & u = disp_bc[i];
-			//int n = u.n;
-			int n = node.getorder(u.n);
-			d = &(K.diag[n]);
-			if (d->isfixed) {
-				i += 2; // we know the next two can be skipped.
-				continue;
-			}
-			for (j = 0; j < NDOF; j++) {
-				if (j == u.i)
-					continue;
-				if (u.d != 0.0)
-					F(n)(j) -= d->K(j,u.i)*u.d;
-				d->K(u.i,j) = 0.0; d->K(j,u.i) = 0.0;
-			}
-			d->K(u.i,u.i) = 1.0;
-			p = d->col_head;
-			while (p) {
-				for (j = 0; j < NDOF; j++) {
-					if (u.d != 0.0)
-						F(p->i)(j) -= p->K(j,u.i)*u.d;
-					p->K(j,u.i) = 0.0;
-				}
-				p = p->col_next;
-			}
-			p = d->row_head;
-			while (p) {
-				for (j = 0; j < NDOF; j++) {
-					if (u.d != 0.0)
-						F(p->j)(j) -= p->K(u.i,j)*u.d;
-					p->K(u.i,j) = 0.0;
-				}
-				p = p->row_next;
-			}
+			//n = u.n;
+			n = node.getorder(u.n);
 			F(n)(u.i) = u.d;
+			d = &(K.diag[n]);
+			d->K(u.i,u.i) = 1.0;
 		}
 
 		K.tidy();
@@ -1570,36 +1618,40 @@ public:
 		double r = 0.0, ro = 0.0;
 		for (i = 0; i < nnd; i++)
 			r += tmatrix_scalar<double>(~F(i)*F(i));
-		double ri = r;
-		while (r > tol*ri && it < nnd*NDOF) {
-			r = 0.0;
-			for (i = 0; i < nnd; i++) {
-				d = &(M.diag[i]);
-				tmatrix<double,NDOF,1> t(F(i));
+		double ri = r, a;
+		while (r > tol*ri && it < nnd) {
+			for (n = 0; n < nnd; n++) {
+				d = &(M.diag[n]);
+				tmatrix<double,NDOF,1> t(F(n));
 				p = d->col_head;
 				while (p) {
 					t -= ~(p->K)*V(p->i);
 					p = p->col_next;
 				}
-				t(0) = t(0)/d->K(0,0);
-				t(1) = (t(1)-t(0)*d->K(0,1))/d->K(1,1);
-				t(2) = (t(2)-t(0)*d->K(0,2)-t(1)*d->K(1,2))/d->K(2,2);
-				V(i) = t;
-			}
-			for (i = nnd-1; i >= 0; i--) {
-				d = &(M.diag[i]);
-				tmatrix<double,NDOF,1> t(V(i));
-				p = d->row_head;
-				while (p) {
-					t -= (p->K)*V(p->j);
-					p = p->row_next;
+				for (i = 0; i < NDOF; i++) {
+					for (j = 0; j < i; j++)
+						t(i) -= t(j)*d->K(j,i);
+					t(i) *= d->K(i,i);
 				}
-				t(2) = t(2)/d->K(2,2);
-				t(1) = (t(1)-t(2)*d->K(1,2))/d->K(1,1);
-				t(0) = (t(0)-t(1)*d->K(0,1)-t(2)*d->K(0,2))/d->K(0,0);
-				V(i) = t;
-				r += tmatrix_scalar<double>(~t*F(i));
+				V(n) = t;
 			}
+			for (n = nnd-1; n >= 0; n--) {
+				d = &(M.diag[n]);
+				tmatrix<double,NDOF,1> t(V(n));
+				for (i = NDOF-1; i >= 0; i--) {
+					for (j = i+1; j < NDOF; j++)
+						t(i) -= t(j)*d->K(i,j);
+					t(i) *= d->K(i,i);
+				}
+				V(n) = t;
+				p = d->col_head;
+				while (p) {
+					V(p->i) -= (p->K)*t;
+					p = p->col_next;
+				}
+			}
+			for (i = 0, r = 0.0; i < nnd; i++)
+				r += tmatrix_scalar<double>(~V(i)*F(i));
 			if (it == 0) {
 				for (i = 0; i < nnd; i++)
 					P(i) = V(i);
@@ -1607,27 +1659,19 @@ public:
 				for (i = 0; i < nnd; i++)
 					P(i) = V(i) + (r/ro)*P(i);
 			}
-			double a = 0.0;
 			for (i = 0; i < nnd; i++) {
 				d = &(K.diag[i]);
-				tmatrix<double,NDOF,1> t(d->K*P(i));
+				W(i) = d->K*P(i);
 				p = d->col_head;
 				while (p) {
-					t += ~(p->K)*P(p->i);
+					   W(i) += ~(p->K)*P(p->i);
+					W(p->i) +=  (p->K)*P(i);
 					p = p->col_next;
 				}
-				p = d->row_head;
-				while (p) {
-					t += (p->K)*P(p->j);
-					p = p->row_next;
-				}
-				W(i) = t;
-				a += tmatrix_scalar<double>(~t*P(i));
 			}
-			if (a <= 0) {
-				event_msg(EVENT_ERROR,"negative curvature!");
-				return false;
-			}
+			for (i = 0, a = 0.0; i < nnd; i++)
+				a += tmatrix_scalar<double>(~W(i)*P(i));
+			assert(a > 0.0);
 			ro = r; r = 0.0;
 			for (i = 0; i < nnd; i++) {
 				U(i) += (ro/a)*P(i);
@@ -1639,10 +1683,10 @@ public:
 		}
 		printf("CG took %i steps with residual %g\n",it,r);
 		for (i = 0; i < nnd; i++) {
-			//node3d n = node[i];
-			node3d n = node.getindex(i);
-			n.setdisp(U(i));
-			node.replace(n);
+			//node3d u = node[i];
+			node3d u = node.getindex(i);
+			u.setdisp(U(i));
+			node.replace(u);
 		}
 		return true;
 	}
@@ -1748,7 +1792,7 @@ blockarea(double x1, double x2, double y1, double y2, double r)
  * to get some work done...
  */
 int
-main()
+main_real()
 {
 #if !defined(_MSC_VER) && !defined(DARWIN)
 	// get starting time
@@ -1835,13 +1879,13 @@ main()
 					coord[7] = coord3d(x+dx,y+dy,z-dz);
 					FEM.add(element::block34,m,coord);
 					for (int i = 0; i < 8; i++)
-						coord[i].x *= -1;
+						coord[i].x = -coord[i].x;
 					FEM.add(element::block34,m,coord);
 					for (int i = 0; i < 8; i++)
-						coord[i].y *= -1;
+						coord[i].y = -coord[i].y;
 					FEM.add(element::block34,m,coord);
 					for (int i = 0; i < 8; i++)
-						coord[i].x *= -1;
+						coord[i].x = -coord[i].x;
 					FEM.add(element::block34,m,coord);
 					if (x+dx == DOMAIN) {
 						if (y+dy == DOMAIN) {
@@ -1850,13 +1894,13 @@ main()
 							coord[1] = coord3d(x+dx,y+dy,z-dz);
 							FEM.add(element::infinite16,m,coord);
 							for (int i = 0; i < 2; i++)
-								coord[i].x *= -1;
+								coord[i].x = -coord[i].x;
 							FEM.add(element::infinite16,m,coord);
 							for (int i = 0; i < 2; i++)
-								coord[i].y *= -1;
+								coord[i].y = -coord[i].y;
 							FEM.add(element::infinite16,m,coord);
 							for (int i = 0; i < 2; i++)
-								coord[i].x *= -1;
+								coord[i].x = -coord[i].x;
 							FEM.add(element::infinite16,m,coord);
 						}
 						coord.resize(4);
@@ -1866,13 +1910,13 @@ main()
 						coord[3] = coord3d(x+dx,y+dy,z-dz);
 						FEM.add(element::infinite16,m,coord);
 						for (int i = 0; i < 4; i++)
-							coord[i].x *= -1;
+							coord[i].x = -coord[i].x;
 						FEM.add(element::infinite16,m,coord);
 						for (int i = 0; i < 4; i++)
-							coord[i].y *= -1;
+							coord[i].y = -coord[i].y;
 						FEM.add(element::infinite16,m,coord);
 						for (int i = 0; i < 4; i++)
-							coord[i].x *= -1;
+							coord[i].x = -coord[i].x;
 						FEM.add(element::infinite16,m,coord);
 					}
 					if (y+dy == DOMAIN) {
@@ -1883,13 +1927,13 @@ main()
 						coord[3] = coord3d(x+dx,y+dy,z-dz);
 						FEM.add(element::infinite16,m,coord);
 						for (int i = 0; i < 4; i++)
-							coord[i].x *= -1;
+							coord[i].x = -coord[i].x;
 						FEM.add(element::infinite16,m,coord);
 						for (int i = 0; i < 4; i++)
-							coord[i].y *= -1;
+							coord[i].y = -coord[i].y;
 						FEM.add(element::infinite16,m,coord);
 						for (int i = 0; i < 4; i++)
-							coord[i].x *= -1;
+							coord[i].x = -coord[i].x;
 						FEM.add(element::infinite16,m,coord);
 					}
 				}
@@ -1959,7 +2003,7 @@ main()
 }
 
 int
-main_test()
+main()
 {
 #if !defined(_MSC_VER) && !defined(DARWIN)
 	// get starting time
@@ -1972,7 +2016,7 @@ main_test()
 	m.setprop(material_property::poissons,0.2);
 
 	const double cube[3][2] = {{-10, 10}, {-10, 10}, {-10, 0}};
-	const int ndiv[3] = {8, 8, 4};
+	const int ndiv[3] = {80, 80, 50};
 	int i, j, k;
 	mesh FEM;
 
