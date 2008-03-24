@@ -158,8 +158,8 @@ protected:
 		return (first == 0 ? true : false);
 	}
 	// Figure out the length of the list.
-	int length() const {
-		int s = 0;
+	unsigned length() const {
+		unsigned s = 0;
 		T * t = first;
 		while (t != 0) {
 			t = t->next;
