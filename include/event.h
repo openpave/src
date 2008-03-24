@@ -131,13 +131,16 @@ void event_progress(const int type, const int marker,
 		event_progress_bar(level,0.0,fmt,args);
 		break;
 	case EVENT_PROGRESS_UPDATE:
-		if (level < 3) {
+		if (level < 0) {
+			event_msg(EVENT_ERROR,"Event updated called on unstarted progress indicator!");
+		} else if (level < 3) {
 			double p = 0.0, m = 1.0;
 			mark[level] = marker;
-			for (int i = 0; i <= level; i++) {
+			for (int i = 0; level >= 0 && i < level; i++) {
 				p += m*double(mark[i])/double(max[i]);
 				m *= 1.0/double(max[i]);
 			}
+			p += m*double(mark[level])/double(max[level]);
 			event_progress_bar(level,p,fmt,args);
 		}
 		break;
