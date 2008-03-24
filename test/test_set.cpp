@@ -58,7 +58,7 @@ struct value {
 template<class T>
 void fset_print(const fset<T> & t) {
 	printf("t = {");
-	for (int i = 0; i < t.length(); i++)
+	for (unsigned i = 0; i < t.length(); i++)
 		printf("%i%s",t[i],(i == t.length()-1 ? "" : ","));
 	printf("}\n");
 }
@@ -101,7 +101,7 @@ test_set1a()
 template<class K, class V>
 void kfset_print(const kfset<K,V> & t) {
 	printf("k = {");
-	for (int i = 0; i < t.length(); i++) {
+	for (unsigned i = 0; i < t.length(); i++) {
 		K & k = t[i];
 		printf("%i:%4.2f%s",k.i,t[k].d,(i == t.length()-1 ? "" : ","));
 	}
@@ -126,7 +126,7 @@ test_set1b()
 template<class K, class V>
 void kiset_print(const kiset<K,V> & t) {
 	printf("i = {");
-	for (int i = 0; i < t.length(); i++) {
+	for (unsigned i = 0; i < t.length(); i++) {
 		const K & k = t.getindex(i);
 		printf("%i:%i %4.2f%s",i,k.i,t[k].d,(i == t.length()-1 ? "" : ","));
 	}
@@ -148,7 +148,7 @@ test_set1c()
 template<class K, class V>
 void afset_print(const afset<K,V> & t) {
 	printf("a = {");
-	for (int i = 0; i < t.length(); i++) {
+	for (unsigned i = 0; i < t.length(); i++) {
 		K & k = t.getkey(i);
 		printf("%i:%4.2f%s",k.i,t[k].d,(i == t.length()-1 ? "" : ","));
 	}
@@ -174,7 +174,7 @@ test_set1d()
 void
 test_set2()
 {
-	int i, j, l = 10;
+	unsigned i, j, l = 10;
 	oset<double> t(0,N);
 	while (l-- > 0) {
 		t.empty();
@@ -188,7 +188,7 @@ test_set2()
 		for (i = 1; i < N; i++) {
 			if (t[i-1] > t[i]) {
 				printf("Failed! (%i)\n",i);
-				for (j = MAX(i-2,0); j <= MIN(i+2,N-1); j++)
+				for (j = (i<2?0:i-2); j <= MIN(i+2,N-1); j++)
 					printf("%4.2f\n",t[j]);
 			}
 		}
@@ -198,7 +198,7 @@ test_set2()
 void
 test_set3()
 {
-	int i, j, l = 10;
+	unsigned i, j, l = 10;
 	iset<double> t(0,N);
 	while (l-- > 0) {
 		t.empty();
@@ -211,7 +211,7 @@ test_set3()
 		for (i = 1; i < N; i++) {
 			if (t.getindex(i-1) > t.getindex(i)) {
 				printf("Failed! (%i)\n",i);
-				for (j = MAX(i-2,0); j <= MIN(i+2,N-1); j++)
+				for (j = (i<2?0:i-2); j <= MIN(i+2,N-1); j++)
 					printf("%4.2f\n",t[j]);
 			}
 		}
@@ -221,7 +221,7 @@ test_set3()
 void
 test_set4()
 {
-	int i, l = 100;
+	unsigned i, l = 100;
 	kiset<key,pair> t(0,N);
 
 	while (l-- > 0) {
@@ -246,18 +246,26 @@ test_set4()
 	}
 }
 
-#ifdef NOBUILD
+#ifdef BUILD
 
 int
 main()
 {
+	printf("Test 1a:\n");
 	test_set1a();
+	printf("\nTest 1b:\n");
 	test_set1b();
+	printf("\nTest 1c:\n");
 	test_set1c();
+	printf("\nTest 1d:\n");
 	test_set1d();
+	printf("\nTest 2:\n");
 	test_set2();
+	printf("\nTest 3:\n");
 	test_set3();
+	printf("\nTest 4:\n");
 	test_set4();
+	printf("\n");
 	return 0;
 }
 
