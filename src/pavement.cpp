@@ -41,7 +41,7 @@
 void
 pavedata::principle(double v, double E)
 {
-	int k1, k2;
+	unsigned k1, k2;
 	double t1, t2;
 
 	for (k1 = 0; k1 < 3; k1++) {
@@ -124,10 +124,11 @@ pavedata::principle(double v, double E)
 }
 
 bool
-LEsystem::addlayer(double h, double e, const double v, const double s, const int p)
+LEsystem::addlayer(double h, double e, const double v, const double s,
+		const unsigned p)
 {
-	LElayer * pl =
-			new LElayer(this,(p < 0 ? last : &layer(p)),h,e,v,s);
+	LElayer * pl = new LElayer(this,
+			(p == UINT_MAX ? last : &layer(p)),h,e,v,s);
 	if (pl == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in LEsystem::addlayer()!");
 		return false;
@@ -143,13 +144,11 @@ LEsystem::removelayers()
 }
 
 bool
-LEsystem::removelayer(const int l)
+LEsystem::removelayer(const unsigned l)
 {
 	LElayer * pl = first;
-	int i = 0;
+	unsigned i = 0;
 
-	if (l < 0)
-		return false;
 	while (i++ < l && pl != 0)
 		pl = pl->next;
 	if (pl != 0) {
@@ -166,7 +165,7 @@ LEsystem::removeloads()
 }
 
 bool
-LEsystem::removeload(const int i)
+LEsystem::removeload(const unsigned i)
 {
 	return load.remove(i);
 }
@@ -178,17 +177,17 @@ LEsystem::addpoint(const point3d & p)
 }
 	
 bool
-LEsystem::addgrid(const int nx, const double * xp,
-                  const int ny, const double * yp,
-                  const int nz, const double * zp)
+LEsystem::addgrid(const unsigned nx, const double * xp,
+                  const unsigned ny, const double * yp,
+                  const unsigned nz, const double * zp)
 {
 	pavedata * pd = new pavedata[nx*ny*nz];
 	if (pd == 0)
 		return false;
 	memset(pd,0,nx*ny*nz*sizeof(pavedata));
-	for (int ix = 0; ix < nx; ix++) {
-		for (int iy = 0; iy < ny; iy++) {
-			for (int iz = 0; iz < nz; iz++) {
+	for (unsigned ix = 0; ix < nx; ix++) {
+		for (unsigned iy = 0; iy < ny; iy++) {
+			for (unsigned iz = 0; iz < nz; iz++) {
 				pavedata & pde = pd[ix*ny*nz+iy*nz+iz];
 				pde.x = xp[ix], pde.y = yp[iy], pde.z = zp[iz];
 			}
@@ -212,10 +211,10 @@ LEsystem::removepoint(const point3d & p)
 }
 
 LElayer &
-LEsystem::layer(const int l)
+LEsystem::layer(const unsigned l)
 {
 	LElayer * pl = first;
-	int i = 0;
+	unsigned i = 0;
 	while (i++ < l && pl->next != 0)
 		pl = pl->next;
 	return *pl;
@@ -228,20 +227,20 @@ LEsystem::layer(const int l)
 bool
 LEsystem::check()
 {
-	int il, ixy;
+	unsigned il;
 	const LElayer * pl;
 
-	if (layers() <= 0) {
+	if (layers() == 0) {
 		event_msg(EVENT_WARN,
 			"Cannot calculate a pavement without any layers!");
 		return false;
 	}
-	if (load.length() <= 0) {
+	if (load.length() == 0) {
 		event_msg(EVENT_WARN,
 			"Cannot calculate a pavement without any loads!");
 		return false;
 	}
-	if (data.length() <= 0) {
+	if (data.length() == 0) {
 		event_msg(EVENT_WARN,
 			"Cannot calculate a pavement without any evaluation points!");
 		return false;
@@ -284,12 +283,12 @@ LEsystem::check()
 				"Error: Layer %d's bonding coefficent will be clamped to 0.0!", il);
 		}
 	}
-	if (last->bottom() > 0.0  && last->poissons() == 0.75) {
+	if (last->bottom() > 0.0 && last->poissons() == 0.75) {
  		event_msg(EVENT_WARN,
 			"Error: Last layer cannot have a Poisson's ratio of 0.75!");
 		return false;
 	}
-	for (ixy = 0; ixy < data.length(); ixy++) {
+	for (unsigned ixy = 0; ixy < data.length(); ixy++) {
 		// Ignore evaluation points above the surface
 		// or below the rigid interface.
 		const pavedata & d = data[ixy];
@@ -345,7 +344,7 @@ static double gf[NGQP+1][NGQP];
  */
 static void
 initarrays() {
-	int ib;
+	unsigned ib;
 	static bool done = false;
 
 	if (done)
@@ -353,7 +352,7 @@ initarrays() {
 	memset(gu,0,sizeof(double)*(NGQP+1)*NGQP);
 	memset(gf,0,sizeof(double)*(NGQP+1)*NGQP);
 	for (ib = 1; ib <= NGQP; ib++) {
-		for (int j, i = 0; i < (ib+1)/2; i++) {
+		for (unsigned j, i = 0; i < (ib+1)/2; i++) {
 			double p1, p2, p3, pp, z = cos(M_PI*(i+0.75)/(ib+0.5));
 			do {
 				p1 = 1.0, p2 = 0.0;
@@ -368,7 +367,7 @@ initarrays() {
 	//memset(lu,0,sizeof(double)*(NLQP+1)*NLQP);
 	//memset(lf,0,sizeof(double)*(NLQP+1)*NLQP);
 	//for (ib = 2; ib <= NLQP; ib++) {
-	//	for (int j, i = 0; i < (ib+1)/2; i++) {
+	//	for (unsigned j, i = 0; i < (ib+1)/2; i++) {
 	//		double p1, p2, p3, z = cos(M_PI*i/(ib-1));
 	//		do {
 	//			p2 = 1.0, p1 = z;
@@ -467,11 +466,11 @@ refine_m1(double ma, double mb, double a, double r)
  * values where the integrals are exact.
  */
 static void
-stoppingpoints(const int nbz, const double a, const double r,
+stoppingpoints(const unsigned nbz, const double a, const double r,
                double * m0, double * m1)
 {
-	int ib;
-	double ra = r/a, r1 = fabs(ra-1);
+	unsigned ib;
+	double ra = r/a, r1 = fabs(ra-1.0);
 
 	// At r=0 or r=a just use the last root.
 	*m0 = j0r[nbz]/a, *m1 = (ra == 0.0 ? 0.0 : j0r[nbz]/a);
@@ -531,11 +530,11 @@ stoppingpoints(const int nbz, const double a, const double r,
  * used above is singular.
  */
 static void
-buildabcd_full(const double m, const int nl, const double * h,
+buildabcd_full(const double m, const unsigned nl, const double * h,
 			   const double * v, const double * E,
 			   const double * f, double (* ABCD)[4])
 {
-	int k1, k2, il = (nl-1);
+	unsigned k1, k2, il = (nl-1);
 
 	memset(ABCD,0,(nl*4)*sizeof(double));
 	if (m <= 0.0)
@@ -667,10 +666,10 @@ buildabcd_full(const double m, const int nl, const double * h,
 			B[k2] -= tmp*B[il];
 		}
 	}
-	for (il = nl*4-1; il >= 0; il--) {
-		for (k1 = nl*4-1; k1 > il; k1--)
-			B[il] -= A[il*(nl*4)+k1]*B[k1];
-		B[il] /= A[il*(nl*4)+il];
+	for (il = nl*4; il > 0; il--) {
+		for (k1 = nl*4; k1 > il; k1--)
+			B[il-1] -= A[(il-1)*(nl*4)+(k1-1)]*B[k1-1];
+		B[il-1] /= A[(il-1)*(nl*4)+(il-1)];
 	}
 	for (il = 0; il < nl; il++) {
 		printf("%g\t%g\t%g\t%0.16g\t%0.16g\t%0.16g\t%0.16g\n",m,h[il],E[il],ABCD[il][0],ABCD[il][1],ABCD[il][2],ABCD[il][3]);
@@ -683,12 +682,12 @@ abort:
  * This build the ABCD matrix, based on the structure.
  */
 static void
-buildabcd(const double m, const int nl, const double * h,
+buildabcd(const double m, const unsigned nl, const double * h,
           const double * v, const double * E,
           const double * f, double (* __restrict R)[4][2],
           double (* __restrict ABCD)[4])
 {
-	int k1, k2, il;
+	unsigned k1, k2, il;
 	double B1[2][4], X[4][4], F[4][4], D[4][4];
 	double CDi[4] = {0, 0, 0, 0};
 	double mi = 1.0/m;
@@ -816,14 +815,14 @@ buildabcd(const double m, const int nl, const double * h,
 bool
 LEsystem::calc_accurate()
 {
-	int ixy, ild, ib, igp, il;
+	unsigned ixy, ild, ib, igp, il;
 	const LElayer * pl;
 	bool rv = true;
 	
 	initarrays();
 	if (!check())
 		return false;
-	int nl = layers();
+	unsigned nl = layers();
 
 	// The integration constants, per layer.
 	double (* R)[4][2] = new double[nl][4][2];
@@ -993,7 +992,7 @@ abort:
 bool
 LEsystem::calculate(resulttype res, double * Q)
 {
-	int ixy, nr, ir, nz, iz, ild, ia, ib, igp, il;
+	unsigned ixy, nr, ir, nz, iz, ild, ia, ib, igp, il;
 	const LElayer * pl;
 	double x1, x2;
 	bool rv = false, interpolate = false;
@@ -1001,7 +1000,7 @@ LEsystem::calculate(resulttype res, double * Q)
 	initarrays();
 	if (!check())
 		return false;
-	int ngqp = NGQP, nbz = NBZ, gl = -1, nl = layers();
+	unsigned ngqp = NGQP, nbz = NBZ, gl = UINT_MAX, nl = layers();
 	if ((res & mask) == dirty) {
 		ngqp = MIN(NGQP,7);
 		nbz = MIN(NBZ,32);
@@ -1025,7 +1024,7 @@ LEsystem::calculate(resulttype res, double * Q)
 	double * E = new double[nl];
 	// Some place to store our data...
 	cset<double> z, a, r, bm;
-	sset<int> zl;
+	sset<unsigned> zl;
 	fset<double> m0(data.length()), m1(data.length()); 
 	fset<axialdata> ax(data.length()); 
 	if (R == 0 || ABCD == 0 || h == 0 || f == 0 || v == 0 || E == 0)
@@ -1104,16 +1103,15 @@ LEsystem::calculate(resulttype res, double * Q)
 
 		// Account for big r's by adding extra integration intervals...
 		x1 = 0.0, x2 = 0.0;
-		for (ir = nr-1; ir >= 0 &&
-				r[ir] > a[ia]*MAX(4,ngqp-6); ir--) {
-			for (int k1 = MAX(4,ngqp-6);
+		for (ir = nr; ir > 0 && r[ir-1] > a[ia]*MAX(4,ngqp-6); ir--) {
+			for (unsigned k1 = MAX(4,ngqp-6);
 					k1 <= nbz; k1 += MAX(4,ngqp-6)) {
-				if ((x1 = j1r[k1]/r[ir]) < x2)
+				if ((x1 = j1r[k1]/r[ir-1]) < x2)
 					continue;
 				for (ib = 1; ib < bm.length() && bm[ib] < x1; ib++)
 					;
 				if (ib == bm.length() ||
-						MIN(x1-bm[ib-1],bm[ib]-x1)*r[ir]
+						MIN(x1-bm[ib-1],bm[ib]-x1)*r[ir-1]
 							< MAX(4,ngqp-6)*M_PI_4)
 					continue;
 				if (!bm.add(ib,x2 = x1))
@@ -1124,14 +1122,15 @@ LEsystem::calculate(resulttype res, double * Q)
 		// magnitude for exp(-7).  Add 5 intervals, so we drop 15 orders
 		// of magnitude.
 		x1 = 0.0, x2 = 0.0;
-		for (iz = nz-1; iz >= 0 && z[iz] > 0.0; iz--) {
-			for (int k1 = 1; k1 <= 5 && k1*7*a[ia] < j0r[0]*z[iz]; k1++) {
-				if ((x1 = k1*7*a[ia]/z[iz]) < x2)
+		for (iz = nz; iz > 0 && z[iz-1] > 0.0; iz--) {
+			for (unsigned k1 = 1; k1 <= 5
+					&& k1*7*a[ia] < j0r[0]*z[iz-1]; k1++) {
+				if ((x1 = k1*7*a[ia]/z[iz-1]) < x2)
 					continue;
 				for (ib = 1; ib < bm.length() && bm[ib] < x1; ib++)
 					;
 				if (ib == bm.length() ||
-						MIN(x1-bm[ib-1],bm[ib]-x1)*z[iz] < 5*a[ia])
+						MIN(x1-bm[ib-1],bm[ib]-x1)*z[iz-1] < 5*a[ia])
 					continue;
 				if (!bm.add(ib,x2 = x1))
 					goto abort;
@@ -1160,7 +1159,7 @@ gradloop:
 		for (ib = 1; ib < bm.length(); ib++) {
 			bool alldone = true;
 			bool firstpanel = (bm[ib]*a[ia] <= j1r[1]);
-			int agqp = (firstpanel && (res & mask) != dirty ? NGQP : ngqp);
+			unsigned agqp = (firstpanel && (res & mask) != dirty ? NGQP : ngqp);
 			if (interpolate) {
 				if (!firstpanel)
 					memcpy(&ABCD[2*nl][0],&ABCD[nl][0],nl*4*sizeof(double));
@@ -1178,7 +1177,7 @@ gradloop:
 					buildabcd(m,nl,h,v,E,f,R,ABCD);
 				} else {
 					for (il = 0; il < nl; il++) {
-						for (int k1 = 0; k1 < 4; k1++)
+						for (unsigned k1 = 0; k1 < 4; k1++)
 							ABCD[il][k1] = ABCD[nl+il][k1] -
 								(ABCD[nl+il][k1]-ABCD[2*nl+il][k1])*
 								(bm[ib]-m)/(bm[ib]-bm[ib-1]);
@@ -1324,7 +1323,7 @@ gradloop:
 						d.data[4][1] += p*sint*s.rdp;
 					}
 				}
-				if (gl != -1)
+				if (gl != UINT_MAX)
 					d.deflgrad[gl] += p*s.vdp;
 				else
 					d.data[4][2] += p*s.vdp;
@@ -1332,7 +1331,8 @@ gradloop:
 		}
 		if (res & grad) {
 			res = LEsystem::resulttype(res | disp);
-			if (++gl != nl) {
+			gl = (gl == UINT_MAX ? 0 : gl+1);
+			if (gl != nl) {
 				// Deflection gradients are calculated in a log(E) space.
 				for (pl = first, il = 0; pl != 0; pl = pl->next, il++) {
 					E[il] = pl->emod();
@@ -1343,7 +1343,7 @@ gradloop:
 				}
 				goto gradloop;
 			}
-			gl = -1;
+			gl = UINT_MAX;
 		}
 	}
 	// After everything, loop through the answers, and calculate the
@@ -1392,7 +1392,7 @@ abort:
 bool
 LEsystem::calc_odemark()
 {
-	int ixy, ild;
+	unsigned ixy, ild;
 	LElayer * pl;
 	double de = 0.0;
 
@@ -1522,10 +1522,10 @@ quad8_vdp(double r, double z, double a, double v, double A = 0.0,
 	const double w[9] = {3956, 23552, -3712, 41984, -18160, 41984,
 						-3712, 23552, 3956};
 	const double dw = 14175;
-	static int level = -1;
+	static unsigned level = 0;
 	static double tol = 1e-6;
 	register double h, t, Q1 = 0.0, Q2 = 0.0;
-	register int i;
+	register unsigned i;
 
 	if (a == 0.0)
 		return 0.0;
@@ -1575,7 +1575,7 @@ quad8_vdp(double r, double z, double a, double v, double A = 0.0,
 		tol = tol*2;
 	}
 	level--;
-	if (level == -1)
+	if (level == 0)
 		return (Q1 + Q2)/M_PI;
 	else
 		return (Q1 + Q2);
@@ -1589,10 +1589,10 @@ quad8_vse(double r, double z, double a, double A = 0.0,
 	const double w[9] = {3956, 23552, -3712, 41984, -18160, 41984,
 						-3712, 23552, 3956};
 	const double dw = 14175;
-	static int level = -1;
+	static unsigned level = 0;
 	static double tol = 1e-6;
 	register double h, t, t1, Q1 = 0.0, Q2 = 0.0;
-	register int i;
+	register unsigned i;
 
 	if (a == 0.0)
 		return 0.0;
@@ -1626,7 +1626,7 @@ quad8_vse(double r, double z, double a, double A = 0.0,
 		tol = tol*2;
 	}
 	level--;
-	if (level == -1)
+	if (level == 0)
 		return (Q1 + Q2)/M_PI;
 	else
 		return (Q1 + Q2);
@@ -1646,13 +1646,13 @@ quad8_vse(double r, double z, double a, double A = 0.0,
 bool
 LEsystem::calc_fastnum()
 {
-	int ixy, ild, il;
+	unsigned ixy, ild, il;
 	LElayer * pl;
 	bool rv = true;
 
 	if (!check())
 		return false;
-	int nl = layers();
+	unsigned nl = layers();
 	double * h = new double[nl];
 	double * v = new double[nl];
 	double * E = new double[nl];
@@ -1723,13 +1723,22 @@ abort:
 bool
 LEbackcalc::backcalc()
 {
-	int i, j, ns = 0, nl = layers();
+	unsigned i, j, nl = layers();
+	unsigned steps = 0;
 	double derr = DBL_MAX, oerr = 0.0;
 	double astep, tstep = 0.0, step = 1.0;
 	bool seeded = true, badstep = false;
 	calctype speed = (precision >= 1e-4 ? fast : slow);
 	ksset<point3d,pavedata> orig(data);
 
+	if (nl == 0) {
+		event_msg(EVENT_ERROR,"LEbackcalc::backcalc() called without layers!");
+		return false;
+	}
+	if (defl.length() == 0) {
+		event_msg(EVENT_ERROR,"LEbackcalc::backcalc() called without deflections!");
+		return false;
+	}
 	double * P = new double[nl];
 	double * T = new double[nl];
 	double * O = new double[nl];
@@ -1774,7 +1783,9 @@ LEbackcalc::backcalc()
 	// Now settle into our true minimisation algorithm.
 	// First we start by using the deflection gradient in
 	// emod space, since it converges faster...
-	for (j = 0; j < maxsteps*nl; j++) {
+	while (true) {
+		if (++steps > maxsteps*nl)
+			break;
 		memcpy(T,P,sizeof(double)*nl);
 		astep = step, tstep += step = deflgrad(nl,P,Q,speed);
 		//printf("E%s ",speed == fast ? "*" : speed == slow ? "!" : "@");
@@ -1830,7 +1841,9 @@ LEbackcalc::backcalc()
 		//	break;
 	}
 	// Now change to the Kalman filter to converge in deflection space
-	for (ns = 0; j < maxsteps*nl; j++) {
+	while (true) {
+		if (++steps > maxsteps*nl)
+			break;
 		for (i = 0; i < nl; i++)
 			layer(i).emod(pow(10,P[i]));
 		calculate((speed == fast ? LEsystem::fastgrad : LEsystem::dispgrad));
@@ -1859,8 +1872,8 @@ LEbackcalc::backcalc()
 	for (i = 0; i < nl; i++)
 		layer(i).emod(pow(10,P[i]));
 	calculate(LEsystem::disp);
-	for (j = 0; j < defl.length(); j++) {
-		defldata & d = defl[j];
+	for (i = 0; i < defl.length(); i++) {
+		defldata & d = defl[i];
 		d.calculated = result(d).result(pavedata::deflct, pavedata::zz);
 	}
 	// Restore original evaluation points...
@@ -1877,10 +1890,10 @@ abort:
  * E mod seeding algorithm.
  */
 bool
-LEbackcalc::seed(int nl, double * P)
+LEbackcalc::seed(unsigned nl, double * P)
 {
 	double E = 0.0, v = layer(nl-1).poissons();
-	int i, j;
+	unsigned i, j;
 	bool negdefl = false;
 
 	// Calculate the average surface modulus based on each deflection.
@@ -1924,11 +1937,11 @@ LEbackcalc::seed(int nl, double * P)
  * See the ICAP 2006 paper for details.
  */
 double
-LEbackcalc::deflgrad(int nl, double * P, double * Q,
+LEbackcalc::deflgrad(unsigned nl, double * P, double * Q,
                      calctype cl)
 {
 	double step = 0.0, dgg = 0.0, gg = 0.0, dd = 0.0;
-	int i, j, k, dl = defl.length();
+	unsigned i, j, k, dl = defl.length();
 
 	// Initial setup.
 	double * PG = new double[dl*nl];
@@ -2028,9 +2041,9 @@ abort:
  * Gauss-Newton approach.
  */
 double
-LEbackcalc::gaussnewton(int nl, double * P, calctype cl)
+LEbackcalc::gaussnewton(unsigned nl, double * P, calctype cl)
 {
-	int i, j, k, dl = defl.length();
+	unsigned i, j, k, dl = defl.length();
 	double step = 0.0;
 
 	// Initial setup.
@@ -2083,8 +2096,8 @@ abort:
  * Rongzong Wu <wurong@berkeley.edu>.  Filter implementation based
  * on Wikipedia article.
  */
-double LEbackcalc::kalman(int nl, double * P) {
-	int i, j, k, dl = defl.length();
+double LEbackcalc::kalman(unsigned nl, double * P) {
+	unsigned i, j, k, dl = defl.length();
 	double step = 0.0;
 
 	// Initial setup.
@@ -2152,10 +2165,10 @@ abort:
  * prediction at distance s along the vector D.
  */
 double
-LEbackcalc::bowlerror(int nl, const double * P, const double s,
+LEbackcalc::bowlerror(unsigned nl, const double * P, const double s,
                       const double * D)
 {
-	int i;
+	unsigned i;
 	double err;
 	
 	for (i = 0; P != 0 && i < nl; i++)
@@ -2184,7 +2197,7 @@ LEbackcalc::bowlerror(int nl, const double * P, const double s,
  * Once we have bracketed the minimum we close in on the final minimum.
  */
 double
-LEbackcalc::brent(int nl, double * P, double * D)
+LEbackcalc::brent(unsigned nl, double * P, double * D)
 {
 	const double GC = (3.0-sqrt(5.0))/2.0;
 	const double GR = 1/(1-GC);
@@ -2192,7 +2205,7 @@ LEbackcalc::brent(int nl, double * P, double * D)
 
 	double A, B, C, X, Y, Z, a, b, c, x, y, z;
 	double r, q;
-	int i;
+	unsigned i;
 	
 	b = 0.0, B = bowlerror(nl,P,b,D);
 	// To start with we only have one modulus.  We need three,
@@ -2281,10 +2294,10 @@ LEbackcalc::brent(int nl, double * P, double * D)
  * completely.  The routine is entirely self contained, since it works
  * better if it can keep track of its last direction.  It is slow.
  */
-double LEbackcalc::conjgrad(int nl, double * P) {
+double LEbackcalc::conjgrad(unsigned nl, double * P) {
 	double step = 1.0, dgg = 0.0, gg = 0.0;
 	double derr = DBL_MAX, oerr = 0.0;
-	int i, j, k, dl = defl.length();
+	unsigned i, j, k, dl = defl.length();
 
 	// Initial setup.
 	double * D = new double[nl];
@@ -2296,7 +2309,7 @@ double LEbackcalc::conjgrad(int nl, double * P) {
 	}
 	memcpy(W,P,sizeof(double)*nl);
 	memset(D,0,sizeof(double)*nl);
-	for (k = 0; k <= nl*maxsteps; k++) {
+	for (k = 0; k <= maxsteps*nl; k++) {
 		if (dgg != 0.0)
 			step = dgg*brent(nl,W,D);
 		for (i = 0; i < nl; i++)

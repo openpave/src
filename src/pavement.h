@@ -78,13 +78,13 @@ struct point2d {
 	}
 	~point2d () {
 	}
-	inline double r() const {
+	double r() const {
 		return sqrt(x*x+y*y);
 	}
-	inline double theta() const {
+	double theta() const {
 		return (y >= 0.0 ? acos(x/r()) : M_2PI - acos(x/r()));
 	}
-	inline double distance(const point2d & p) {
+	double distance(const point2d & p) const {
 		return sqrt((x-p.x)*(x-p.x)+(y-p.y)*(y-p.y));
 	}
 	int compare(const point2d & p) const {
@@ -103,22 +103,22 @@ struct point2d {
 		else
 			return 1;
 	}
-	inline bool operator == (const point2d & p) const {
+	bool operator == (const point2d & p) const {
 		return (x == p.x && y == p.y ? true : false);
 	}
-	inline bool operator != (const point2d & p) const {
+	bool operator != (const point2d & p) const {
 		return (x != p.x || y != p.y ? true : false);
 	}
-	inline bool operator > (const point2d & p) const {
+	bool operator > (const point2d & p) const {
 		return (compare(p) == 1 ? true : false);
 	}
-	inline bool operator >= (const point2d & p) const {
+	bool operator >= (const point2d & p) const {
 		return (compare(p) != -1 ? true : false);
 	}
-	inline bool operator < (const point2d & p) const {
+	bool operator < (const point2d & p) const {
 		return (compare(p) == -1 ? true : false);
 	}
-	inline bool operator <= (const point2d & p) const {
+	bool operator <= (const point2d & p) const {
 		return (compare(p) != 1 ? true : false);
 	}
 };
@@ -155,16 +155,16 @@ struct point3d : public point2d {
 	bool operator != (const point3d & p) const {
 		return (x != p.x || y != p.y || z != p.z ? true : false);
 	}
-	inline bool operator > (const point3d & p) const {
+	bool operator > (const point3d & p) const {
 		return (compare(p) == 1 ? true : false);
 	}
-	inline bool operator >= (const point3d & p) const {
+	bool operator >= (const point3d & p) const {
 		return (compare(p) != -1 ? true : false);
 	}
-	inline bool operator < (const point3d & p) const {
+	bool operator < (const point3d & p) const {
 		return (compare(p) == -1 ? true : false);
 	}
-	inline bool operator <= (const point3d & p) const {
+	bool operator <= (const point3d & p) const {
 		return (compare(p) != 1 ? true : false);
 	}
 };
@@ -240,16 +240,16 @@ private:
  * class paveload - A load on the pavement structure.
  */
 struct paveload : point2d {
-	double inline force() const {
+	double force() const {
 		return f;
 	}
-	double inline pressure() const {
+	double pressure() const {
 		return p;
 	}
-	double inline radius() const {
+	double radius() const {
 		return (p == 0.0 ? 0.0 : sqrt(f/p/M_PI));
 	}
-	double inline area() const {
+	double area() const {
 		return f/p;
 	}
 	paveload() : point2d() {
@@ -354,8 +354,8 @@ private:
 class LEsystem : private list_owned<LEsystem, LElayer> {
 public:
 	bool addlayer(const double h, const double e, const double v,
-	              const double s = 1.0, const int p = -1);
-	bool removelayer(const int l);
+	              const double s = 1.0, const unsigned p = UINT_MAX);
+	bool removelayer(const unsigned l);
 	bool removelayers();
 	bool addload(const point2d & l, double f, double p, double r = 0) {
 		return load.add(paveload(l,f,p,r));
@@ -363,12 +363,12 @@ public:
 	bool addload(const paveload & l) {
 		return load.add(l);
 	}
-	bool removeload(const int i);
+	bool removeload(const unsigned i);
 	bool removeloads();
 	bool addpoint(const point3d & p);
-	bool addgrid(const int nx, const double * xp,
-				 const int ny, const double * yp,
-				 const int nz, const double * zp);
+	bool addgrid(const unsigned nx, const double * xp,
+				 const unsigned ny, const double * yp,
+				 const unsigned nz, const double * zp);
 	bool removepoints();
 	bool removepoint(const point3d & p);
 
@@ -393,19 +393,19 @@ public:
 	bool calc_odemark();
 	bool calc_fastnum();
 
-	const int results() const {
+	const unsigned results() const {
 		return data.length();
 	}
 	const pavedata & result(const point3d & p) const {
 		return data[p];
 	}
-	const pavedata & result(const int i) const {
+	const pavedata & result(const unsigned i) const {
 		return data[i];
 	}
-	const int inline layers() const {
+	const unsigned layers() const {
 		return length();
 	}
-	LElayer & layer(const int l);
+	LElayer & layer(const unsigned l);
 
 	LEsystem()
 		: list_owned<LEsystem,LElayer>(), data(), load() {
@@ -454,10 +454,10 @@ public:
 	bool adddefl(const defldata & d) {
 		return defl.add(d);
 	}
-	const int deflections() {
+	const unsigned deflections() {
 		return defl.length();
 	}
-	const defldata & getdefl(const int i) {
+	const defldata & getdefl(const unsigned i) {
 		return defl[i];
 	}
 	bool removedeflections() {
@@ -485,18 +485,18 @@ private:
 	double precision;
 	double noise;
 	double tolerance;
-	int	maxsteps;
+	int maxsteps;
 
 	enum calctype {slow, fast, reuse};
-	bool seed(int nl, double * P);
-	double deflgrad(int nl, double * P, double * Q,
+	bool seed(unsigned nl, double * P);
+	double deflgrad(unsigned nl, double * P, double * Q,
 			calctype cl = slow);
-	double gaussnewton(int nl, double * P, calctype cl = slow);
-	double kalman(int nl, double * P);
-	double bowlerror(int nl = 0, const double * P = 0,
+	double gaussnewton(unsigned nl, double * P, calctype cl = slow);
+	double kalman(unsigned nl, double * P);
+	double bowlerror(unsigned nl = 0, const double * P = 0,
 			const double s = 0.0, const double * D = 0);
-	double brent(int nl, double * P, double * D);
-	double conjgrad(int nl, double * P);
+	double brent(unsigned nl, double * P, double * D);
+	double conjgrad(unsigned nl, double * P);
 };
 
 #endif // PAVEMENT_H
