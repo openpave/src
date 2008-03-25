@@ -56,66 +56,66 @@ template<unsigned I, unsigned J>
 struct meta_assign {
 	template<class A, class E>
 	static inline void assignR(A & lhs, const E & rhs) {
-	    lhs(I,J) = rhs(I,J);
 	    meta_assign<I,J-1>::assignR(lhs,rhs);
+	    lhs(I-1,J-1) = rhs(I-1,J-1);
 	}
 	template<class A, class E>
 	static inline void assign(A & lhs, const E & rhs) {
-	    meta_assign<I,J>::assignR(lhs,rhs);
 	    meta_assign<I-1,J>::assign(lhs,rhs);
+	    meta_assign<I,J>::assignR(lhs,rhs);
 	}
 	template<class A, class E>
 	static inline void assignR_add(A & lhs, const E & rhs) {
-	    lhs(I,J) += rhs(I,J);
 	    meta_assign<I,J-1>::assignR_add(lhs,rhs);
+	    lhs(I-1,J-1) += rhs(I-1,J-1);
 	}
 	template<class A, class E>
 	static inline void assign_add(A & lhs, const E & rhs) {
-	    meta_assign<I,J>::assignR_add(lhs,rhs);
 	    meta_assign<I-1,J>::assign_add(lhs,rhs);
+	    meta_assign<I,J>::assignR_add(lhs,rhs);
 	}
 	template<class A, class E>
 	static inline void assignR_sub(A & lhs, const E & rhs) {
-	    lhs(I,J) -= rhs(I,J);
 	    meta_assign<I,J-1>::assignR_sub(lhs,rhs);
+	    lhs(I-1,J-1) -= rhs(I-1,J-1);
 	}
 	template<class A, class E>
 	static inline void assign_sub(A & lhs, const E & rhs) {
-	    meta_assign<I,J>::assignR_sub(lhs,rhs);
 	    meta_assign<I-1,J>::assign_sub(lhs,rhs);
+	    meta_assign<I,J>::assignR_sub(lhs,rhs);
 	}
 	template<class A, typename T>
 	static inline void assignR_d(A & lhs, const T & d) {
-	    lhs(I,J) = d;
 	    meta_assign<I,J-1>::assignR_d(lhs,d);
+	    lhs(I-1,J-1) = d;
 	}
 	template<class A, typename T>
 	static inline void assign_d(A & lhs, const T & d) {
-	    meta_assign<I,J>::assignR_d(lhs,d);
 	    meta_assign<I-1,J>::assign_d(lhs,d);
+	    meta_assign<I,J>::assignR_d(lhs,d);
 	}
 	template<class A, typename T>
 	static inline void assignR_add_d(A & lhs, const T & d) {
-	    lhs(I,J) += d;
 	    meta_assign<I,J-1>::assignR_add_d(lhs,d);
+	    lhs(I-1,J-1) += d;
 	}
 	template<class A, typename T>
 	static inline void assign_add_d(A & lhs, const T & d) {
-	    meta_assign<I,J>::assignR_add_d(lhs,d);
 	    meta_assign<I-1,J>::assign_add_d(lhs,d);
+	    meta_assign<I,J>::assignR_add_d(lhs,d);
 	}
 	template<class A, typename T>
 	static inline void assignR_mul_d(A & lhs, const T & d) {
-	    lhs(I,J) *= d;
 	    meta_assign<I,J-1>::assignR_mul_d(lhs,d);
+	    lhs(I-1,J-1) *= d;
 	}
 	template<class A, typename T>
 	static inline void assign_mul_d(A & lhs, const T & d) {
-	    meta_assign<I,J>::assignR_mul_d(lhs,d);
 	    meta_assign<I-1,J>::assign_mul_d(lhs,d);
+	    meta_assign<I,J>::assignR_mul_d(lhs,d);
 	}
 };
-template<unsigned I> struct meta_assign<I,-1> {
+template<unsigned I> struct meta_assign<I,0> {
 	template<class A, class E>
 	static inline void assignR(A &, const E &) {}
 	template<class A, class E>
@@ -129,7 +129,7 @@ template<unsigned I> struct meta_assign<I,-1> {
 	template<class A, typename T>
 	static inline void assignR_mul_d(A &, const T & d) {}
 };
-template<unsigned J> struct meta_assign<-1,J> {
+template<unsigned J> struct meta_assign<0,J> {
 	template<class A, class E>
 	static inline void assign(A &, const E &) {}
 	template<class A, class E>
@@ -154,7 +154,7 @@ struct tmatrix_expr {
 	inline T operator() (const unsigned i, const unsigned j) const {
 		return m_e(i,j);
 	}
-	inline T operator() (const int i) const {
+	inline T operator() (const unsigned i) const {
 		return m_e(i/N,i%N);
 	}
 private:
@@ -182,7 +182,7 @@ public:
 #if defined(NO_METAPROGS)
 		memcpy(data,m.data,M*N*sizeof(T));
 #else
-		meta_assign<M-1,N-1>::assign(*this,m);
+		meta_assign<M,N>::assign(*this,m);
 #endif
 	}
 	template<class E>
@@ -192,7 +192,7 @@ public:
 			for (unsigned j = 0; j < N; j++)
 				data[i][j] = m(i,j);
 #else
-		meta_assign<M-1,N-1>::assign(*this,m);
+		meta_assign<M,N>::assign(*this,m);
 #endif
 	}
 	~tmatrix() {
@@ -202,7 +202,7 @@ public:
 #if defined(NO_METAPROGS)
 		memcpy(data,m.data,M*N*sizeof(T));
 #else
-		meta_assign<M-1,N-1>::assign(*this,m);
+		meta_assign<M,N>::assign(*this,m);
 #endif
 		return *this;
 	}
@@ -212,7 +212,7 @@ public:
 			for (unsigned j = 0; j < N; j++)
 				data[i][j] = d;
 #else
-		meta_assign<M-1,N-1>::assign_d(*this,d);
+		meta_assign<M,N>::assign_d(*this,d);
 #endif
 		return *this;
 	}
@@ -223,7 +223,7 @@ public:
 			for (unsigned j = 0; j < N; j++)
 				data[i][j] = m(i,j);
 #else
-		meta_assign<M-1,N-1>::assign(*this,m);
+		meta_assign<M,N>::assign(*this,m);
 #endif
 		return *this;
 	}
@@ -233,7 +233,7 @@ public:
 			for (unsigned j = 0; j < N; j++)
 				data[i][j] += m(i,j);
 #else
-		meta_assign<M-1,N-1>::assign_add(*this,m);
+		meta_assign<M,N>::assign_add(*this,m);
 #endif
 		return *this;
 	}
@@ -244,7 +244,7 @@ public:
 			for (unsigned j = 0; j < N; j++)
 				data[i][j] += m(i,j);
 #else
-		meta_assign<M-1,N-1>::assign_add(*this,m);
+		meta_assign<M,N>::assign_add(*this,m);
 #endif
 		return *this;
 	}
@@ -254,7 +254,7 @@ public:
 			for (unsigned j = 0; j < N; j++)
 				data[i][j] += d;
 #else
-		meta_assign<M-1,N-1>::assign_add_d(*this,d);
+		meta_assign<M,N>::assign_add_d(*this,d);
 #endif
 		return *this;
 	}
@@ -264,7 +264,7 @@ public:
 			for (unsigned j = 0; j < N; j++)
 				data[i][j] -= m(i,j);
 #else
-		meta_assign<M-1,N-1>::assign_sub(*this,m);
+		meta_assign<M,N>::assign_sub(*this,m);
 #endif
 		return *this;
 	}
@@ -275,7 +275,7 @@ public:
 			for (unsigned j = 0; j < N; j++)
 				data[i][j] -= m(i,j);
 #else
-		meta_assign<M-1,N-1>::assign_sub(*this,m);
+		meta_assign<M,N>::assign_sub(*this,m);
 #endif
 		return *this;
 	}
@@ -285,7 +285,7 @@ public:
 			for (unsigned j = 0; j < N; j++)
 				data[i][j] -= d;
 #else
-		meta_assign<M-1,N-1>::assign_add_d(*this,-d);
+		meta_assign<M,N>::assign_add_d(*this,-d);
 #endif
 		return *this;
 	}
@@ -295,7 +295,7 @@ public:
 			for (unsigned j = 0; j < N; j++)
 				data[i][j] *= d;
 #else
-		meta_assign<M-1,N-1>::assign_mul_d(*this,d);
+		meta_assign<M,N>::assign_mul_d(*this,d);
 #endif
 		return *this;
 	}
@@ -306,29 +306,29 @@ public:
 			for (unsigned j = 0; j < N; j++)
 				data[i][j] *= t;
 #else
-		meta_assign<M-1,N-1>::assign_mul_d(*this,1.0/d);
+		meta_assign<M,N>::assign_mul_d(*this,1.0/d);
 #endif
 		return *this;
 	}
-	inline int rows() const {
+	inline unsigned rows() const {
 		return M;
 	}
-	inline int cols() const {
+	inline unsigned cols() const {
 		return N;
 	}
-	inline T operator() (const int r, const int c) const {
+	inline T operator() (const unsigned r, const unsigned c) const {
 		return data[r][c];
 	}
-	inline T operator() (const int i) const {
+	inline T operator() (const unsigned i) const {
 		return data[i/N][i%N];
 	}
-	inline T & operator() (const int r, const int c) {
+	inline T & operator() (const unsigned r, const unsigned c) {
 		return data[r][c];
 	}
-	inline T & operator() (const int i) {
+	inline T & operator() (const unsigned i) {
 		return data[i/N][i%N];
 	}
-	inline T * operator[] (const int r) {
+	inline T * operator[] (const unsigned r) {
 		return data[r];
 	}
 
