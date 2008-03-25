@@ -37,10 +37,10 @@
  * Orthonormalize the nxn matrix Q, using the Gramm-Schmidt algorithm.
  */
 void
-orth_gs(const int n, double * Q)
+orth_gs(const unsigned n, double * Q)
 {
 	double r;
-	int i, j, k;
+	unsigned i, j, k;
 
 	for (k = 0; k < n; k++) {
 		for (i = 0, r = 0.0; i < n; i++)
@@ -64,12 +64,14 @@ orth_gs(const int n, double * Q)
  * This function employs Gaussian elimination with full pivoting.
  */
 bool
-equ_gauss(const int n, const double * A, const double * b,
+equ_gauss(const unsigned n, const double * A, const double * b,
           double * x)
 {
 	bool rv = true;
-	int i, j, k;
+	unsigned i, j, k;
 
+	if (n == 0)
+		return true;
 	double * a = new double[n*n];
 	if (a == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in equ_gauss()!");
@@ -80,32 +82,32 @@ equ_gauss(const int n, const double * A, const double * b,
 	memcpy(a,A,sizeof(double)*n*n);
 	memcpy(x,b,sizeof(double)*n);
 	for (i = 0; i < n; i++) {
-		double pvt = a[i*n+i];
-		if (fabs(pvt) < DBL_EPSILON) {
-			for (j = i+1; j < n; j++) {
-				if (fabs(pvt = a[j*n+i]) >= DBL_EPSILON)
-					break;
-			}
-			if (j == n) {
-				event_msg(EVENT_ERROR,"Singular matrix in equ_gauss()!");
-				rv = false;
-				goto abort;
-			}
+		double pvt = 0.0;
+		for (j = i; i < n && j < n; j++) {
+			if (fabs(pvt = a[j*n+i]) >= DBL_EPSILON)
+				break;
+		}
+		if (j == n) {
+			event_msg(EVENT_ERROR,"Singular matrix in equ_gauss()!");
+			rv = false;
+			goto abort;
+		}
+		if (j != i) {
 			for (k = 0; k < n; k++)
 				swap(a[j*n+k],a[i*n+k]);
 			swap(x[j],x[i]);
 		}
-		for (k = n-1; k > i; k--) {
+		for (k = i+1; i < n && k < n; k++) {
 			double tmp = a[k*n+i]/pvt;
-			for (j = n-1; j > i; j--)
+			for (j = i+1; i < n && j < n; j++)
 				a[k*n+j] -= tmp*a[i*n+j];
 			x[k] -= tmp*x[i];
 		}
 	}
-	for (i = n-1; i >= 0; i--) {
-		for (j = n-1; j > i; j--)
-			x[i] -= a[i*n+j]*x[j];
-		x[i] /= a[i*n+i];
+	for (i = n; i > 0; i--) {
+		for (j = i; i < n && j < n; j++)
+			x[i-1] -= a[(i-1)*n+j]*x[j];
+		x[i-1] /= a[(i-1)*n+(i-1)];
 	}
   abort:
 	delete [] a;
@@ -119,44 +121,44 @@ equ_gauss(const int n, const double * A, const double * b,
  * This function employs Gaussian elimination with full pivoting.
  */
 double
-inv_mul_gauss(const int n, const int m, double * A,
+inv_mul_gauss(const unsigned n, const unsigned m, double * A,
               double * B)
 {
 	double det = 1.0;
-	int i, j, k;
+	unsigned i, j, k;
 
 	for (i = 0; i < n; i++) {
-		double pvt = A[i*n+i];
-		if (fabs(pvt) < DBL_EPSILON) {
-			for (j = i+1; j < n; j++) {
-				if (fabs(pvt = A[j*n+i]) >= DBL_EPSILON)
-					break;
-			}
-			if (j == n) {
-				event_msg(EVENT_ERROR,"Singular matrix in inv_mul_gauss()!");
-				det = 0.0;
-				goto abort;
-			}
+		double pvt = 0.0;
+		for (j = i; j < n; j++) {
+			if (fabs(pvt = A[j*n+i]) >= DBL_EPSILON)
+				break;
+		}
+		if (j == n) {
+			event_msg(EVENT_ERROR,"Singular matrix in inv_mul_gauss()!");
+			det = 0.0;
+			goto abort;
+		}
+		if (j != i) {
 			for (k = 0; k < n; k++)
 				swap(A[j*n+k],A[i*n+k]);
 			for (k = 0; k < m; k++)
 				swap(B[j*m+k],B[i*m+k]);
 		}
 		det *= pvt;
-		for (k = n-1; k > i; k--) {
+		for (k = i+1; i < n && k < n; k++) {
 			double tmp = A[k*n+i]/pvt;
-			for (j = n-1; j > i; j--)
+			for (j = i+1; i < n && j < n; j++)
 				A[k*n+j] -= tmp*A[i*n+j];
 			for (j = 0; j < m; j++)
 				B[k*m+j] -= tmp*B[i*m+j];
 		}
 	}
-	for (i = n-1; i >= 0; i--) {
-		for (j = n-1; j > i; j--)
+	for (i = n; i > 0; i--) {
+		for (j = i; j < n; j++)
 			for (k = 0; k < m; k++)
-				B[i*m+k] -= A[i*n+j]*B[j*m+k];
+				B[(i-1)*m+k] -= A[(i-1)*n+j]*B[j*m+k];
 		for (k = 0; k < m; k++)
-			B[i*m+k] /= A[i*n+i];
+			B[(i-1)*m+k] /= A[(i-1)*n+(i-1)];
 	}
 abort:
 	return det;
@@ -172,12 +174,14 @@ abort:
  * of interchanges have been performed (this is for the determinant calc).
  */
 bool
-decmp_lu(const int n, double * A, int * idx,
+decmp_lu(const unsigned n, double * A, unsigned * idx,
          int & d)
 {
 	bool rv = true;
-	int i, j, k;
+	unsigned i, j, k;
 
+	if (n == 0)
+		return true;
 	double * work = new double[n];
 	if (work == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in decmp_lu()!");
@@ -242,27 +246,26 @@ abort:
  * m is the number of columns in b, and c is the column index.
  */
 void
-bksub_lu(const int n, const double * A, const int * idx,
-         double * b, const int m, const int c)
+bksub_lu(const unsigned n, const double * A, const unsigned * idx,
+         double * b, const unsigned m, const unsigned c)
 {
-	int i, j, k;
+	unsigned i, j, k;
 
 	for (i = 0, k = 0; i < n; i++) {
 		j = idx[i];
 		double sum = b[j*m+c];
 		b[j*m+c] = b[i*m+c];
-		if (k != 0)
-			for (j = k-1; j < i; j++)
+		if (k > 0)
+			for (j = k-1; k <= i && j < i; j++)
 				sum -= A[i*n+j]*b[j*m+c];
 		else if (sum != 0.0)
 			k = i+1;
 		b[i*m+c] = sum;
 	}
-	for (i = n-1; i >= 0; i--) {
-		double sum = b[i*m+c];
-		for (j = i+1; j < n; j++)
-			sum -= A[i*n+j]*b[j*m+c];
-		b[i*m+c] = sum/A[i*n+i];
+	for (i = n; i > 0; i--) {
+		for (j = i; i < n && j < n; j++)
+			b[(i-1)*m+c] -= A[(i-1)*n+j]*b[j*m+c];
+		b[(i-1)*m+c] /= A[(i-1)*n+(i-1)];
 	}
 }
 
@@ -273,13 +276,16 @@ bksub_lu(const int n, const double * A, const int * idx,
  * substitution, with a single step refinement.
  */
 bool
-equ_lu(const int n, const double * A, const double * b,
+equ_lu(const unsigned n, const double * A, const double * b,
        double * x, const double tol)
 {
 	bool rv = true;
-	int i, j, d;
+	unsigned i, j;
+	int d;
 
-	int * idx = new int[n];
+	if (n == 0)
+		return true;
+	unsigned * idx = new unsigned[n];
 	double * a = new double[n*n];
 	double * r = new double[n];
 	if (idx == 0 || a == 0 || r == 0) {
@@ -316,13 +322,16 @@ equ_lu(const int n, const double * A, const double * b,
  * The result is returned in B, and the determinant in the return value.
  */
 double
-inv_mul_lu(const int n, const int m, double * A,
+inv_mul_lu(const unsigned n, const unsigned m, double * A,
            double * B)
 {
 	double det = 0.0;
-	int i, d;
+	unsigned i;
+	int d;
 
-	int * idx = new int[n];
+	if (n == 0)
+		return 0.0;
+	unsigned * idx = new unsigned[n];
 	if (idx == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in inv_mul_lu()!");
 		goto abort;
@@ -344,12 +353,15 @@ abort:
  * Matrix inverse of the real nxn matrix A using LU decomposition.  
  */
 bool
-inv_lu(const int n, double * A)
+inv_lu(const unsigned n, double * A)
 {
 	bool rv = true;
-	int i, d;
+	unsigned i;
+	int d;
 
-	int * idx = new int[n];
+	if (n == 0)
+		return true;
+	unsigned * idx = new unsigned[n];
 	double * a = new double[n*n];
 	if (idx == 0 || a == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in inv_lu()!");
@@ -378,24 +390,24 @@ abort:
  * Returns L in the lower triangle of A.
  */
 bool
-decmp_chol(const int n, double * A)
+decmp_chol(const unsigned n, double * A)
 {
-	int i, j, k;
+	unsigned i, j, k;
 	double sum;
 
 	for (i = 0; i < n; i++) {
 		for (j = i; j < n; j++) {
 			sum = A[i*n+j];
-			for (k = i-1; k >= 0; k--)
+			for (k = 0; k < i; k++)
 				sum -= A[i*n+k]*A[j*n+k];
 			if (i == j) {
 				if (sum <= 0.0) {
 					event_msg(EVENT_WARN,"Non-positive definite matrix in decmp_chol(%f)!",sum);
 					return false;
 				}
-				A[i*n+i] = sqrt(sum);
+				A[i*n+i] = 1.0/sqrt(sum);
 			} else
-				A[j*n+i] = sum/A[i*n+i];
+				A[j*n+i] = sum*A[i*n+i];
 		}
 	}
 	return true;
@@ -408,15 +420,15 @@ decmp_chol(const int n, double * A)
  * Returns U in the upper triangle of A.
  */
 bool
-decmp_chol(const int n, const int w, double * A)
+decmp_chol(const unsigned n, const unsigned w, double * A)
 {
-	int i, j, k;
+	unsigned i, j, k;
 	double sum, c, y, t;
 	
 	for (i = 0; i < n; i++) {
 		for (j = i; j <= i+w && j < n; j++) {
 			sum = A[B_IDX(n,w,i,j)];
-			for (k = i-1, c = 0.0; k >= j-w && k >= 0; k--) {
+			for (k = (w>j?0:j-w), c = 0.0; k < i; k++) {
 				y = -fma(A[B_IDX(n,w,k,i)],A[B_IDX(n,w,k,j)],c);
 				t = sum + y; c = (t - sum) - y; sum = t;
 			}
@@ -440,20 +452,20 @@ decmp_chol(const int n, const int w, double * A)
  * m is the number of columns in b, and c is the column index.
  */
 void
-bksub_chol(const int n, const double * A,
-           double * b, const int m, const int c)
+bksub_chol(const unsigned n, const double * A,
+           double * b, const unsigned m, const unsigned c)
 {
-	int i, k;
+	unsigned i, k;
 
 	for (i = 0; i < n; i++) {
-		for (k = i-1; k >= 0; k--)
+		for (k = 0; k < i; k++)
 			b[i*m+c] -= A[i*n+k]*b[k*m+c];
-		b[i*m+c] /= A[i*n+i];
+		b[i*m+c] *= A[i*n+i];
 	}
-	for (i = n-1; i >= 0; i--) {
-		for (k = i+1; k < n; k++)
-			b[i*m+c] -= A[k*n+i]*b[k*m+c];
-		b[i*m+c] /= A[i*n+i];
+	for (i = n; i > 0; i--) {
+		for (k = i; k < n; k++)
+			b[(i-1)*m+c] -= A[k*n+(i-1)]*b[k*m+c];
+		b[(i-1)*m+c] *= A[(i-1)*n+(i-1)];
 	}
 }
 
@@ -462,25 +474,25 @@ bksub_chol(const int n, const double * A,
  * matrix, to solve a particular system.
  */
 void
-bksub_chol(const int n, const int w, const double * A,
-           double * b, const int m, const int c)
+bksub_chol(const unsigned n, const unsigned w, const double * A,
+           double * b, const unsigned m, const unsigned c)
 {
-	int i, k;
+	unsigned i, k;
 	double s, y, t;
 	
 	for (i = 0; i < n; i++) {
-		for (k = i-1, s = 0.0; k >= i-w && k >= 0; k--) {
+		for (k = (w>i?0:i-w), s = 0.0; k < i; k++) {
 			y = -fma(A[B_IDX(n,w,k,i)],b[k*m+c],s); t = b[i*m+c] + y;
 			s = t - b[i*m+c] - y; b[i*m+c] = t;
 		}
 		b[i*m+c] /= A[B_IDX(n,w,i,i)];
 	}
-	for (i = n-1; i >= 0; i--) {
-		for (k = i+1, s = 0.0; k <= i+w && k < n; k++) {
-			y = -fma(A[B_IDX(n,w,i,k)],b[k*m+c],s); t = b[i*m+c] + y;
-			s = t - b[i*m+c] - y; b[i*m+c] = t;
+	for (i = n; i > 0; i--) {
+		for (k = i, s = 0.0; k < i+w && k < n; k++) {
+			y = -fma(A[B_IDX(n,w,i-1,k)],b[k*m+c],s); t = b[(i-1)*m+c] + y;
+			s = t - b[(i-1)*m+c] - y; b[(i-1)*m+c] = t;
 		}
-		b[i*m+c] /= A[B_IDX(n,w,i,i)];
+		b[(i-1)*m+c] /= A[B_IDX(n,w,i-1,i-1)];
 	}
 }
 
@@ -489,12 +501,14 @@ bksub_chol(const int n, const int w, const double * A,
  * substitution.
  */
 bool
-equ_chol(const int n, const double * A,
+equ_chol(const unsigned n, const double * A,
          const double * b, double * x, const double tol)
 {
 	bool rv = true;
-	//int i, j;
+	//unsigned i, j;
 
+	if (n == 0)
+		return true;
 	double * a = new double[n*n];
 	//double * r = new double[n];
 	if (a == 0) { // || r == 0
@@ -535,13 +549,15 @@ abort:
  * substitution, with a single step refinement.
  */
 bool
-equ_chol(const int n, const int w, const double * A,
+equ_chol(const unsigned n, const unsigned w, const double * A,
          const double * b, double * x, const double tol)
 {
 	bool rv = true;
-	int i, j, iter = 0;
+	unsigned i, j, iter = 0;
 	double dot, c1, y1, t1, c, y, t;
 
+	if (n == 0)
+		return true;
 	double * a = new double[B_SIZE(n,w)];
 	double * r = new double[n];
 	if (a == 0 || r == 0) {
@@ -562,7 +578,7 @@ equ_chol(const int n, const int w, const double * A,
 		dot = 0.0; c1 = 0.0;
 		for (i = 0; i < n; i++) {
 			r[i] = -b[i];
-			for (j = MAX(i-w,0), c = 0.0; j < i; j++) {
+			for (j = (w>i?0:i-w), c = 0.0; j < i; j++) {
 				y = fma(A[B_IDX(n,w,j,i)],x[j],-c); t = r[i] + y;
 				c = t - r[i] - y; r[i] = t;
 			}
@@ -590,16 +606,16 @@ abort:
  * Cholesky decomposition.  
  */
 bool
-inv_chol(int n, double * A)
+inv_chol(unsigned n, double * A)
 {
-	int i, j, k;
+	unsigned i, j, k;
 	double sum;
 
 	if (!decmp_chol(n,A))
 		return false;
 	for (i = 0; i < n; i++) {
 		for (j = i+1; j < n; j++) {
-			for (k = i, sum = 0.0; k < j; k++)
+			for (k = i, sum = 0.0; i < j && k < j; k++)
 				sum -= A[j*n+k]*A[k*n+i];
 			A[j*n+i] = sum*A[j*n+j];
 		}
@@ -626,22 +642,21 @@ inv_chol(int n, double * A)
  * with D in the diagonal.
  */
 bool
-decmp_ldl(const int n, double * A)
+decmp_ldl(const unsigned n, double * A)
 {
-	int i, j, k;
+	unsigned i, j, k;
 	double sum;
 
 	for (i = 0; i < n; i++) {
-		for (k = i-1, sum = 0.0; k >= 0; k--) {
+		for (k = 0, sum = 0.0; k < i; k++)
 			sum += A[k*n+k]*(A[i*n+k]*A[i*n+k]);
-		}
 		A[i*n+i] -= sum;
 		if (fabs(A[i*n+i]) < DBL_EPSILON) {
 			event_msg(EVENT_WARN,"Indefinite matrix in decmp_ldl(%f)!",A[i*n+i]);
 			return false;
 		}
 		for (j = i+1; j < n; j++) {
-			for (k = i-1, sum = 0.0; k >= 0; k--) {
+			for (k = 0, sum = 0.0; k < i; k++) {
 				sum += A[k*n+k]*(A[i*n+k]*A[j*n+k]);
 			}
 			A[j*n+i] = (A[j*n+i]-sum)/A[i*n+i];
@@ -657,22 +672,22 @@ decmp_ldl(const int n, double * A)
  * m is the number of columns in b, and c is the column index.
  */
 void
-bksub_ldl(const int n, const double * A,
-          double * b, const int m, const int c)
+bksub_ldl(const unsigned n, const double * A,
+          double * b, const unsigned m, const unsigned c)
 {
-	int i, k;
+	unsigned i, k;
 	double sum;
 
 	for (i = 0; i < n; i++) {
-		for (k = i-1, sum = 0.0; k >= 0; k--)
+		for (k = 0, sum = 0.0; k < i; k++)
 			sum += A[i*n+k]*b[k*m+c];
 		b[i*m+c] -= sum;
 	}
-	for (i = n-1; i >= 0; i--) {
-		b[i*m+c] /= A[i*n+i];
-		for (k = i+1, sum = 0.0; k < n; k++)
-			sum += A[k*n+i]*b[k*m+c];
-		b[i*m+c] -= sum;
+	for (i = n; i > 0; i--) {
+		b[(i-1)*m+c] /= A[(i-1)*n+(i-1)];
+		for (k = i, sum = 0.0; k < n; k++)
+			sum += A[k*n+(i-1)]*b[k*m+c];
+		b[(i-1)*m+c] -= sum;
 	}
 }
 
@@ -683,16 +698,18 @@ bksub_ldl(const int n, const double * A,
  * substitution, (with a single step refinement).
  */
 bool
-equ_ldl(const int n, const double * A,
+equ_ldl(const unsigned n, const double * A,
         const double * b, double * x, const double tol)
 {
 	bool rv = true;
-	int i, j;
+	unsigned i, j;
 
+	if (n == 0)
+		return true;
 	double * a = new double[n*n];
 	double * r = new double[n];
 	if (a == 0 || r == 0) { 
-		event_msg(EVENT_ERROR,"Out of memory in equ_chol()!");
+		event_msg(EVENT_ERROR,"Out of memory in equ_ldl()!");
 		rv = false;
 		goto abort;
 	}
@@ -724,136 +741,133 @@ equ_ldl(const int n, const double * A,
  * The diagonal matrix of singular values, W, is output as a vector W.
  * The matrix V (not the transpose of V) is output as V.
  */
-void
-decmp_svd(const int m, const int n, double * A,
+bool
+decmp_svd(const unsigned m, const unsigned n, double * A,
           double * W, double * V)
 {
 	double F, G = 0.0, H;
 	double C, S, X, Y;
 	double scale = 0.0;
 	double anorm = 0.0;
-	int iter, i, j, k, q;
-	bool flag;
+	unsigned iter, i, j, k, q;
 	
+	if (m == 0 || n == 0)
+		return true;
 	double * rv1 = new double[n];
 	if (rv1 == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in decmp_svd()!");
-		goto abort;
+		return false;
 	}
 	// Householder reduction to bidiagonal form.
 	for (i = 0; i < n; i++) {
 		rv1[i] = scale*G;
-		if (i < m) {
-			for (k = i, scale = 0.0; k < m; k++)
-				scale += fabs(A[k*n+i]);
-			if (scale != 0.0) {
-				for (k = i, S = 0.0; k < m; k++) {
-					A[k*n+i] /= scale;
-					S += A[k*n+i]*A[k*n+i];
-				}
-				G = (A[i*n+i] > 0.0 ? -1 : 1)*sqrt(S);
-				H = A[i*n+i]*G - S;
-				A[i*n+i] -= G;
-				for (j = i+1; j < n; j++) {
-					for (k = i, S = 0.0; k < m; k++)
-						S += A[k*n+i]*A[k*n+j];
-					for (k = i; k < m; k++)
-						A[k*n+j] += S*A[k*n+i]/H;
-				}
-				for (k = i; k < m; k++)
-					A[k*n+i] *= scale;
-				W[i] = scale*G;
+		for (k = i, scale = 0.0; i < m && k < m; k++)
+			scale += fabs(A[k*n+i]);
+		if (scale != 0.0) {
+			for (k = i, S = 0.0; i < m && k < m; k++) {
+				A[k*n+i] /= scale;
+				S += A[k*n+i]*A[k*n+i];
 			}
-			for (k = i+1, scale = 0.0; k < n; k++)
-				scale += fabs(A[i*n+k]);
-			if (scale != 0.0) {
-				for (k = i+1, S = 0.0; k < n; k++) {
-					A[i*n+k] /= scale;
-					S += A[i*n+k]*A[i*n+k];
-				}
-				G = (A[i*n+i+1] > 0.0 ? -1 : 1)*sqrt(S);
-				H = A[i*n+i+1]*G - S;
-				A[i*n+i+1] -= G;
-				for (k = i+1; k < n; k++)
-					rv1[k] = A[i*n+k] / H;
-				for (j = i+1; j < m; j++ ) {
-					for (k = i+1, S = 0.0; k < n; k++)
-						S += A[j*n+k]*A[i*n+k];
-					for (k = i+1; k < n; k++ )
-						A[j*n+k] += S*rv1[k];
-				}
-				for (k = i+1; k < n; k++)
-					A[i*n+k] *= scale;
+			G = (A[i*n+i] > 0.0 ? -1 : 1)*sqrt(S);
+			H = A[i*n+i]*G - S;
+			A[i*n+i] -= G;
+			for (j = i+1; i < n && j < n; j++) {
+				for (k = i, S = 0.0; i < n && k < m; k++)
+					S += A[k*n+i]*A[k*n+j];
+				for (k = i; i < m && k < m; k++)
+					A[k*n+j] += S*A[k*n+i]/H;
 			}
+			for (k = i; i < m && k < m; k++)
+				A[k*n+i] *= scale;
+			W[i] = scale*G;
+		}
+		for (k = i+1, scale = 0.0; i < n && i < m && k < n; k++)
+			scale += fabs(A[i*n+k]);
+		if (scale != 0.0) {
+			for (k = i+1, S = 0.0; i < n && k < n; k++) {
+				A[i*n+k] /= scale;
+				S += A[i*n+k]*A[i*n+k];
+			}
+			G = (A[i*n+i+1] > 0.0 ? -1 : 1)*sqrt(S);
+			H = A[i*n+i+1]*G - S;
+			A[i*n+i+1] -= G;
+			for (k = i+1; i < n && k < n; k++)
+				rv1[k] = A[i*n+k] / H;
+			for (j = i+1; i < m && j < m; j++ ) {
+				for (k = i+1, S = 0.0; i < n && k < n; k++)
+					S += A[j*n+k]*A[i*n+k];
+				for (k = i+1; i < n && k < n; k++ )
+					A[j*n+k] += S*rv1[k];
+			}
+			for (k = i+1; i < n && k < n; k++)
+				A[i*n+k] *= scale;
 		}
 		double tmp = fabs(W[i]) + fabs(rv1[i]);
 		if (tmp > anorm)
 			anorm = tmp;
 	}
 	// Accumulation of right-hand transformations.
-	V[n*n-1] = 1.0;
-	for (i = n-2; i >= 0; i--) {
-		if (rv1[i+1] != 0.0 ) {
-			for (j = i+1; j < n; j++)
-				V[j*n+i] = (A[i*n+j]/A[i*n+i+1])/rv1[i+1];
-			for (j = i+1; j < n; j++) {
-				for (k = i+1, S = 0.0; k < n; k++)
-					S += A[i*n+k]*V[k*n+j];
-				for (k = i+1; k < n; k++)
-					V[k*n+j] += S*V[k*n+i];
+	for (i = n; i > 0; i--) {
+		if (rv1[i] != 0.0 ) {
+			for (j = i; i < n && j < n; j++)
+				V[j*n+(i-1)] = (A[(i-1)*n+j]/A[(i-1)*n+i])/rv1[i];
+			for (j = i; i < n && j < n; j++) {
+				for (k = i, S = 0.0; i < n && k < n; k++)
+					S += A[(i-1)*n+k]*V[k*n+j];
+				for (k = i; i < n && k < n; k++)
+					V[k*n+j] += S*V[k*n+(i-1)];
 			}
 		}
-		for (j = i+1; j < n; j++)
-			V[i*n+j] = V[j*n+i] = 0.0;
-		V[i*n+i] = 1.0;
+		for (j = i; i < n && j < n; j++)
+			V[(i-1)*n+j] = V[j*n+(i-1)] = 0.0;
+		V[(i-1)*n+(i-1)] = 1.0;
 	}
 	// Accumulation of left-hand transformations.
-	for (i = MIN(m-1,n-1); i >= 0; i--) {
-		for (j = i+1; j < n; j++)
-			A[i*n+j] = 0.0;
-		if (W[i] != 0.0) {
-			for (j = i+1; j < n; j++) {
-				for (k = i+1, S = 0.0; k < m; k++)
-					S += A[k*n+i]*A[k*n+j];
-				double f = (S/A[i*n+i])/W[i];
-				for (k = i; k < m; k++)
-					A[k*n+j] += f*A[k*n+i];
+	for (i = MIN(m,n); i > 0; i--) {
+		for (j = i; i < n && j < n; j++)
+			A[(i-1)*n+j] = 0.0;
+		if (W[i-1] != 0.0) {
+			for (j = i; i < n && j < n; j++) {
+				for (k = i, S = 0.0; i < m && k < m; k++)
+					S += A[k*n+(i-1)]*A[k*n+j];
+				double f = (S/A[(i-1)*n+(i-1)])/W[i-1];
+				for (k = i-1; k < m; k++)
+					A[k*n+j] += f*A[k*n+(i-1)];
 			}
-			for (j = i; j < m; j++)
-				A[j*n+i] /= W[i];
+			for (j = i-1; j < m; j++)
+				A[j*n+(i-1)] /= W[i-1];
 		} else {
-			for (j = i; j < m; j++)
-				A[j*n+i] = 0.0;
+			for (j = i-1; j < m; j++)
+				A[j*n+(i-1)] = 0.0;
 		}
-		A[i*n+i] += 1.0;
+		A[(i-1)*n+(i-1)] += 1.0;
 	}
 	// Diagonalization of the bidiagonal form, looping over
 	// singular values.
-	for (i = n-1; i >= 0; i--) {
-		for (iter = 0; iter < 30; iter++) {
+	for (i = n; i > 0; ) {
+		i--; iter = 0;
+		while (iter++ < 30) {
 			// Test for splitting. Note that rv1[0] is always zero.
-			flag = true;
-			for (q = i; q >= 0; q--) {
-				if ((fabs(rv1[q]) + anorm) == anorm) {
+			bool flag = true;
+			for (q = i+1; q > 0; ) {
+				if ((fabs(rv1[--q]) + anorm) == anorm) {
 					flag = false;
 					break;
 				} else if ((fabs(W[q-1]) + anorm) == anorm)
 					break;
 			}
 			// Cancellation of rv1[q], if q > 0.
-			if (flag) {
-				C = 0.0; S = 1.0;
-				for (k = q; k <= i; k++) {
-					F = S*rv1[k];
-					if ((fabs(F) + anorm) != anorm) {
-						G = W[k];
-						W[k] = hypot(F,G);
-						C = G/W[k]; S = -F/W[k];
-						for (j = 0; j < m; j++) {
-							G = A[j*n+q-1];
-							A[j*n+q-1] = A[j*n+k]*S + G*C;
-							A[j*n+k]   = A[j*n+k]*C - G*S;
-						}
+			C = 0.0; S = 1.0;
+			for (k = q; flag && q <= i && k <= i; k++) {
+				F = S*rv1[k];
+				if ((fabs(F) + anorm) != anorm) {
+					G = W[k];
+					W[k] = hypot(F,G);
+					C = G/W[k]; S = -F/W[k];
+					for (j = 0; j < m; j++) {
+						G = A[j*n+q-1];
+						A[j*n+q-1] = A[j*n+k]*S + G*C;
+						A[j*n+k]   = A[j*n+k]*C - G*S;
 					}
 				}
 			}
@@ -874,7 +888,7 @@ decmp_svd(const int m, const int n, double * A,
 					+ rv1[i]*((W[i-1]/(F+G))-rv1[i])) / W[q];
 			// Next QR transformation.
 			X = W[q]; C = 1.0; S = 1.0;
-			for (j = q; q <= i-1 && j <= i-1; j++) {
+			for (j = q; q < i && j < i; j++) {
 				H = S*rv1[j+1], G = C*rv1[j+1];
 				rv1[j] = hypot(F,H);
 				C = F/rv1[j], S = H/rv1[j];
@@ -899,21 +913,23 @@ decmp_svd(const int m, const int n, double * A,
 			rv1[i] = F; W[i] = X;
 		}
 	}
-abort:
 	delete [] rv1;
+	return true;
 }
 
-void
-bksub_svd(const int m, const int n, const double * U,
+bool
+bksub_svd(const unsigned m, const unsigned n, const double * U,
           const double * W, const double * V,
-          double * b, const int p, const int c)
+          double * b, const unsigned p, const unsigned c)
 {
-	int i, j;
+	unsigned i, j;
 
+	if (m == 0 || n == 0)
+		return true;
 	double * tmp = new double[n];
 	if (tmp == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in bksub_svd()!");
-		goto abort;
+		return false;
 	}
 	for (j = 0; j < n; j++) {
 		tmp[j] = 0.0;
@@ -928,9 +944,8 @@ bksub_svd(const int m, const int n, const double * U,
 		for (i = 0; i < n; i++)
 			b[j*p+c] += V[j*n+i]*tmp[i];
 	}
-
-abort:
 	delete [] tmp;
+	return true;
 }
 
 /*
@@ -939,37 +954,50 @@ abort:
  * The function employs SVD decomposition followed by forward/back
  * substitution, with refinement.
  */
-void
-equ_svd(const int n, const double * A, const double * b,
+bool
+equ_svd(const unsigned n, const double * A, const double * b,
         double * x, const double tol)
 {
+	bool rv = true;
 	double max;
-	int i, j;
+	unsigned i, j;
 
+	if (n == 0)
+		return true;
 	double * U = new double[n*n];
 	double * W = new double[n];
 	double * V = new double[n*n];
 	double * r = new double[n];
 	if (U == 0 || W == 0 || V == 0 || r == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in equ_svd()!");
+		rv = false;
 		goto abort;
 	}
 	// avoid destroying A, B by copying them to U, x resp.
 	memcpy(U,A,sizeof(double)*n*n);
 	memcpy(x,b,sizeof(double)*n);
-	decmp_svd(n,n,U,W,V);
+	if (!decmp_svd(n,n,U,W,V)) {
+		rv = false;
+		goto abort;
+	}
 	for (i = 0, max = 0.0; i < n; i++)
 		if (W[i] > max)
 			max = W[i];
 	for (i = 0, max *= EIG_TOL; i < n; i++)
 		if (W[i] < max)
 			W[i] = 0.0;
-	bksub_svd(n,n,U,W,V,x);
+	if (!bksub_svd(n,n,U,W,V,x)) {
+		rv = false;
+		goto abort;
+	}
 	for (i = 0; i < n; i++) {
 		for (j = 0, r[i] = -b[i]; j < n; j++)
 			r[i] += A[i*n+j]*x[j];
 	}
-	bksub_svd(n,n,U,W,V,r);
+	if (!bksub_svd(n,n,U,W,V,r)) {
+		rv = false;
+		goto abort;
+	}
 	for (i = 0; i < n; i++)
 		x[i] -= r[i];
 abort:
@@ -977,26 +1005,34 @@ abort:
 	delete [] U;
 	delete [] W;
 	delete [] V;
+	return rv;
 }
 
 /*
  * Matrix inverse of the real nxn matrix A using SVD decomposition.
  */
-void
-inv_svd(const int n, double * A)
+bool
+inv_svd(const unsigned n, double * A)
 {
+	bool rv = true;
 	double max;
-	int i, j, k;
+	unsigned i, j, k;
 
+	if (n == 0)
+		return true;
 	double * U = new double[n*n];
 	double * W = new double[n];
 	double * V = new double[n*n];
 	if (U == 0 || W == 0 || V == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in inv_svd()!");
+		rv = false;
 		goto abort;
 	}
 	memcpy(U,A,sizeof(double)*n*n);
-	decmp_svd(n,n,U,W,V);
+	if (!decmp_svd(n,n,U,W,V)) {
+		rv = false;
+		goto abort;
+	}
 	for (i = 0, max = 0.0; i < n; i++)
 		if (W[i] > max)
 			max = W[i];
@@ -1015,24 +1051,32 @@ abort:
 	delete [] U;
 	delete [] W;
 	delete [] V;
+	return rv;
 }
 
 /*
  * Orthonormalize the nxn matrix Q, using the SVD decomposition.
  */
-void
-orth_svd(const int n, double * Q)
+bool
+orth_svd(const unsigned n, double * Q)
 {
+	bool rv = true;
+	
+	if (n == 0)
+		return true;
 	double * W = new double[n];
 	double * V = new double[n*n];
 	if (W == 0 || V == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in orth_svd()!");
+		rv = false;
 		goto abort;
 	}
-	decmp_svd(n,n,Q,W,V);
+	if (!decmp_svd(n,n,Q,W,V))
+		rv = false;
 abort:
 	delete [] W;
 	delete [] V;
+	return rv;
 }
 
 /*
@@ -1041,13 +1085,15 @@ abort:
  * XXX: this routine is using a stupid access scheme.
  */
 bool
-decmp_qr(const int n, double * A, double * s,
+decmp_qr(const unsigned n, double * A, double * s,
          double * d)
 {
 	bool rv = true;
-	int i, j, k;
+	unsigned i, j, k;
 	
-	for (k = 0; k < n-1; k++) {
+	if (n == 0)
+		return true;
+	for (k = 0; n > 1 && k < n-1; k++) {
 		double sum, tmp, scale = 0.0;
 		for (i = k; i < n; i++) {
 			if ((tmp = fabs(A[i*n+k])) > scale)
@@ -1085,23 +1131,24 @@ decmp_qr(const int n, double * A, double * s,
  * Ax = b. 
  */
 void
-bksbp_qr(const int n, const double * A,
+bksub_qr(const unsigned n, const double * A,
          const double * s, const double * d, 
-         double * b, const int m, const int c)
+         double * b, const unsigned m, const unsigned c)
 {
-	int i, j;
+	unsigned i, j;
 	double sum;
-	for (j = 0; j < n-1; j++) {
-		for (i = j, sum = 0.0; i < n; i++)
+
+	for (j = 0; j < n; j++) {
+		for (i = j, sum = 0.0; j < n && i < n; i++)
 			sum += A[i*n+j]*b[i*m+c];
 		sum /= s[j];
-		for (i = j; i < n; i++)
+		for (i = j; j < n && i < n; i++)
 			b[i*m+c] -= sum*A[i*n+j];
 	}
-	for (i = n-1; i >= 0; i--) {
-		for (j = i+1, sum = 0.0; j < n; j++)
-			sum += A[i*n+j]*b[j*m+c];
-		b[i*m+c] = (b[i*m+c]-sum)/d[i];
+	for (i = n; i > 0; i--) {
+		for (j = i, sum = 0.0; i < n && j < n; j++)
+			sum += A[(i-1)*n+j]*b[j*m+c];
+		b[(i-1)*m+c] = (b[(i-1)*m+c]-sum)/d[i-1];
 	}
 }
 
@@ -1109,13 +1156,15 @@ bksbp_qr(const int n, const double * A,
  * Householder reduction of a nxn matrix A to tridiagonal form.
  */
 void
-tridiag_hh(const int n, double * A, double * d,
+tridiag_hh(const unsigned n, double * A, double * d,
            double * e)
 {
-	int i, j, k;
+	unsigned i, j, k;
 	double scale, f;
 	
-	for (i = n-1; i >= 1; i--)  {
+	if (n == 0)
+		return;
+	for (i = n-1; i > 0; i--)  {
 		for (j = 0, d[i] = 0.0, scale = 0.0; j < i-1; j++)
 			scale += fabs(A[i*n+j]);
 		if (scale == 0.0) {
@@ -1135,7 +1184,7 @@ tridiag_hh(const int n, double * A, double * d,
 			A[j*n+i] = A[i*n+j]/d[i];
 			for (k = 0, e[j] = 0.0; k <= j; k++)
 				e[j] += A[j*n+k]*A[i*n+k];
-			for (k = j+1; k < i; k++)
+			for (k = j+1; j < i && k < i; k++)
 				e[j] += A[k*n+j]*A[i*n+k];
 			e[j] /= d[i];
 			f += e[j]*A[i*n+j];
@@ -1168,12 +1217,14 @@ tridiag_hh(const int n, double * A, double * d,
  * eigenvectors of a real symmetric tridiagonal matrix.
  */
 void
-eig_tri_ql(const int n, double * d, double * e,
+eig_tri_ql(const unsigned n, double * d, double * e,
            double * A)
 {
-	int i, j, k, m;
+	unsigned i, j, k, m;
 	double b,c,f,g,p,r,s;
 
+	if (n == 0)
+		return;
 	for (i = 0; i < n; i++) {
 		while (1) {
 			for (m = i; m < n-1; m++) {
@@ -1187,25 +1238,25 @@ eig_tri_ql(const int n, double * d, double * e,
 			r = (g > 0.0 ? 1 : -1)*sqrt(g*g+1.0);
 			g = d[m] - d[i] + e[i+1]/(g+r);
 			s = c = 1.0; p = 0.0;
-			for (j = m-1; m-1 >= i && j >= i; j--) {
-				f = s*e[j+1], b = c*e[j+1];
-				if ((e[j+2<n?j+2:0] = r = hypot(f,g)) == 0.0) {
-					d[j+1] -= p;
+			for (j = m; j > i; j--) {
+				f = s*e[j], b = c*e[j];
+				if ((e[j+1<n?j+1:0] = r = hypot(f,g)) == 0.0) {
+					d[j] -= p;
 					break;
 				}
 				c = g/r, s = f/r;
-				d[j+1] -= p;
-				r = (d[j]-d[j+1])*s+2.0*c*b;
-				d[j+1] += p = s*r;
+				d[j] -= p;
+				r = (d[j-1]-d[j])*s+2.0*c*b;
+				d[j] += p = s*r;
 				g = c*r-b;
 				for (k = 0; k < n; k++) {
-					r = A[k*n+j+1];
-					A[k*n+j+1] = s*A[k*n+j] + c*r;
-					A[k*n+j]   = c*A[k*n+j] - s*r;
+					r = A[k*n+j];
+					A[k*n+j  ] = s*A[k*n+j-1] + c*r;
+					A[k*n+j-1] = c*A[k*n+j-1] - s*r;
 				}
 			}
 			e[m+1<n?m+1:0] = 0.0;
-			if (j < i)
+			if (j <= i)
 				d[i] -= p, e[i+1] = g;
 		}
 	}
@@ -1215,16 +1266,18 @@ eig_tri_ql(const int n, double * d, double * e,
  * Obtain the eigenvalues and eigenvectors of a real symmetric matrix by
  * QL transform.
  */
-void
-eig_ql(const int n, double * A, double * d, bool sorted)
+bool
+eig_ql(const unsigned n, double * A, double * d, bool sorted)
 {
 	double t;
-	int i, j, k;
+	unsigned i, j, k;
 
+	if (n == 0)
+		return true;
 	double * e = new double[n];
 	if (e == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in inv_eig()!");
-		goto abort;
+		event_msg(EVENT_ERROR,"Out of memory in eig_ql()!");
+		return false;
 	}
 	tridiag_hh(n,A,d,e);
 	eig_tri_ql(n,d,e,A);
@@ -1244,20 +1297,22 @@ eig_ql(const int n, double * A, double * d, bool sorted)
 			}
 		}
 	}
-abort:
 	delete [] e;
+	return true;
 }
 
-void
-bksub_eig(const int n, const double * Q, const double * d,
-          double * b, const int p, const int c)
+bool
+bksub_eig(const unsigned n, const double * Q, const double * d,
+          double * b, const unsigned p, const unsigned c)
 {
-	int i, j;
+	unsigned i, j;
 
+	if (n == 0)
+		return true;
 	double * tmp = new double[n];
 	if (tmp == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in bksub_eig()!");
-		goto abort;
+		return false;
 	}
 	memset(tmp,0,sizeof(double)*n);
 	for (j = 0; j < n; j++) {
@@ -1271,8 +1326,8 @@ bksub_eig(const int n, const double * Q, const double * d,
 		for (i = 0, b[j] = 0.0; i < n; i++)
 			b[j] += Q[j*n+i]*tmp[i];
 	}
-abort:
 	delete [] tmp;
+	return true;
 }
 
 /*
@@ -1281,19 +1336,23 @@ abort:
  * The function employs an Eigenvalue decomposition followed by forward/back
  * substitution, with refinement.
  */
-void
-equ_eig(const int n, const double * A, const double * b,
+bool
+equ_eig(const unsigned n, const double * A, const double * b,
         double * x, const double tol)
 {
+	bool rv = true;
 	double max;
-	int i, j;
+	unsigned i, j;
 
+	if (n == 0)
+		return true;
 	double * Q = new double[n*n];
 	double * d = new double[n];
 	double * e = new double[n];
 	double * r = new double[n];
 	if (Q == 0 || d == 0 || e == 0 || r == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in inv_eig()!");
+		event_msg(EVENT_ERROR,"Out of memory in equ_eig()!");
+		rv = false;
 		goto abort;
 	}
 	memcpy(Q,A,sizeof(double)*n*n);
@@ -1321,22 +1380,27 @@ abort:
 	delete [] e;
 	delete [] d;
 	delete [] Q;
+	return rv;
 }
 
 /*
  * Matrix inverse of the real symmetric nxn matrix A using eigenvalue decomposition.
  */
-void
-inv_eig(const int n, double * A)
+bool
+inv_eig(const unsigned n, double * A)
 {
+	bool rv = true;
 	double max;
-	int i, j, k;
+	unsigned i, j, k;
 
+	if (n == 0)
+		return true;
 	double * Q = new double[n*n];
 	double * d = new double[n];
 	double * e = new double[n];
 	if (Q == 0 || d == 0 || e == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in inv_eig()!");
+		rv = false;
 		goto abort;
 	}
 	memcpy(Q,A,sizeof(double)*n*n);
@@ -1362,5 +1426,5 @@ abort:
 	delete [] e;
 	delete [] d;
 	delete [] Q;
+	return rv;
 }
-

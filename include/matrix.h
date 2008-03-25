@@ -724,56 +724,57 @@ operator- (const matrix & b) {
 /*
  * Returns the size of the special banded matrix storage array
  */
-#define B_SIZE(n,w)		((w+1)*n-w*(w+1)/2)
+#define B_SIZE(n,w)    (((w)+1)*(n)-(w)*((w)+1)/2)
 /*
  * Returns the index into the special banded matrix storage array
  * This is in column major format, so loops over i are efficent.
  */
-#define B_IDX(n,w,i,j)		(j <= w ? j*(j+1)/2+i : (j+1)*w+i-w*(w+1)/2)
+#define B_IDX(n,w,i,j) ((j) <= (w) ? (j)*((j)+1)/2+(i) : \
+                                   ((j)+1)*(w)+(i)-(w)*((w)+1)/2)
 
-void orth_gs(const int n, double * Q);
-bool equ_gauss(const int n, const double * A, const double * b, double * x);
-double inv_mul_gauss(const int n, const int m, double * A, double * B);
-bool decmp_lu(const int n, double * A, int * idx, int & d);
-void bksub_lu(const int n, const double * A, const int * idx, double * b,
-	const int m = 1, const int c = 0);
-bool equ_lu(const int n, const double * A, const double * b, double * x,
+void orth_gs(const unsigned n, double * Q);
+bool equ_gauss(const unsigned n, const double * A, const double * b, double * x);
+double inv_mul_gauss(const unsigned n, const unsigned m, double * A, double * B);
+bool decmp_lu(const unsigned n, double * A, unsigned * idx, int & d);
+void bksub_lu(const unsigned n, const double * A, const unsigned * idx, double * b,
+	const unsigned m = 1, const unsigned c = 0);
+bool equ_lu(const unsigned n, const double * A, const double * b, double * x,
 	const double tol = ERR_TOL);
-double inv_mul_lu(const int n, const int m, double * A, double * B);
-bool inv_lu(const int n, double * A);
-bool decmp_chol(const int n, double * A);
-bool decmp_chol(const int n, const int w, double * A);
-void bksub_chol(const int n, const double * A, double * b,
-	const int m = 1, const int c = 0);
-void bksub_chol(const int n, const int w, const double * A, double * b,
-	const int m = 1, const int c = 0);
-bool equ_chol(const int n, const double * A, const double * b, double * x,
+double inv_mul_lu(const unsigned n, const unsigned m, double * A, double * B);
+bool inv_lu(const unsigned n, double * A);
+bool decmp_chol(const unsigned n, double * A);
+bool decmp_chol(const unsigned n, const unsigned w, double * A);
+void bksub_chol(const unsigned n, const double * A, double * b,
+	const unsigned m = 1, const unsigned c = 0);
+void bksub_chol(const unsigned n, const unsigned w, const double * A, double * b,
+	const unsigned m = 1, const unsigned c = 0);
+bool equ_chol(const unsigned n, const double * A, const double * b, double * x,
 	const double tol = ERR_TOL);
-bool equ_chol(const int n, const int w, const double * A, const double * b,
+bool equ_chol(const unsigned n, const unsigned w, const double * A, const double * b,
 	double * x, const double tol = ERR_TOL);
-bool inv_chol(const int n, double * A);
-bool decmp_ldl(const int n, double * A);
-void bksub_ldl(const int n, const double * A, double * b,
-	const int m = 1, const int c = 0);
-bool equ_ldl(const int n, const double * A, const double * b, double * x,
+bool inv_chol(const unsigned n, double * A);
+bool decmp_ldl(const unsigned n, double * A);
+void bksub_ldl(const unsigned n, const double * A, double * b,
+	const unsigned m = 1, const unsigned c = 0);
+bool equ_ldl(const unsigned n, const double * A, const double * b, double * x,
 	const double tol = ERR_TOL);
-void decmp_svd(const int m, const int n, double * A, double * W, double * V);
-void bksub_svd(const int m, const int n, const double * U, const double * W,
-	const double * V, double * b, const int p = 1, const int c = 0);
-void equ_svd(const int n, const double * A,	const double * b, double * x,
+bool decmp_svd(const unsigned m, const unsigned n, double * A, double * W, double * V);
+bool bksub_svd(const unsigned m, const unsigned n, const double * U, const double * W,
+	const double * V, double * b, const unsigned p = 1, const unsigned c = 0);
+bool equ_svd(const unsigned n, const double * A,	const double * b, double * x,
 	const double tol = ERR_TOL);
-void inv_svd(const int n, double * A);
-void orth_svd(const int n, double * Q);
-bool decmp_qr(const int n, double * A, double * s, double * d);
-void bksbp_qr(const int n, const double * A, const double * s,
-	const double * d, double * b, const int m = 1, const int c = 0);
-void tridiag_hh(const int n, double * A, double * d, double * e);
-void eig_tri_ql(const int n, double * d, double * e, double * A);
-void eig_ql(const int n, double * A, double * d, bool sorted = true);
-void bksub_eig(const int n, const double * Q, const double * d, double * b,
-	const int p = 1, const int c = 0);
-void equ_eig(const int n, const double * A, const double * b, double * x,
+bool inv_svd(const unsigned n, double * A);
+bool orth_svd(const unsigned n, double * Q);
+bool decmp_qr(const unsigned n, double * A, double * s, double * d);
+void bksub_qr(const unsigned n, const double * A, const double * s,
+	const double * d, double * b, const unsigned m = 1, const unsigned c = 0);
+void tridiag_hh(const unsigned n, double * A, double * d, double * e);
+void eig_tri_ql(const unsigned n, double * d, double * e, double * A);
+bool eig_ql(const unsigned n, double * A, double * d, bool sorted = true);
+bool bksub_eig(const unsigned n, const double * Q, const double * d, double * b,
+	const unsigned p = 1, const unsigned c = 0);
+bool equ_eig(const unsigned n, const double * A, const double * b, double * x,
 	const double tol = ERR_TOL);
-void inv_eig(const int n, double * A);
+bool inv_eig(const unsigned n, double * A);
 
 #endif // MATRIX_H
