@@ -59,6 +59,7 @@
 #include "event.h"
 #include "mathplus.h"
 #include <string.h>
+#include <limits.h>
 #include <assert.h>
 
 #define DFLT_BLK	64
@@ -71,29 +72,21 @@
  */
 class set {
 public:
-	// The first element. Nice for loops...
-	inline const int start() const {
-		return 0;
-	}
-	// The last element. Also nice for loops...
-	inline const int end() const {
-		return size-1;
-	}
 	// The length. Nice for lots of things...
-	inline const int length() const {
+	inline const unsigned length() const {
 		return size;
 	}
 	// Check if an index is within the set...
-	inline bool inbounds(const int p) const {
-		return (p >= 0 && p < size ? true : false);
+	inline bool inbounds(const unsigned p) const {
+		return (p < size ? true : false);
 	}
 
 protected:
-	int size;                  // The size of the set...
-	int buffer;                // The allocated buffer size...
+	unsigned size;             // The size of the set...
+	unsigned buffer;           // The allocated buffer size...
 
 	// Simple constructor...
-	inline explicit set(const int b = DFLT_BLK)
+	inline explicit set(const unsigned b = DFLT_BLK)
 	  : size(0), buffer(0), block(b > 1 ? b : 1) {
 	}
 	inline explicit set(const set & s)
@@ -102,8 +95,7 @@ protected:
 	inline ~set() {
 	}
 	// Calculate the buffer size.
-	inline int bufsize(int s) {
-		assert(s >= 0);
+	inline unsigned bufsize(unsigned s) {
 		while (s > 8*block)
 			block *= 8;
 		//while (64*s < block)
@@ -112,7 +104,7 @@ protected:
 	}
 
 private:
-	int block;                 // The minimum block size.
+	unsigned block;            // The minimum block size.
 };
 
 /*
@@ -125,7 +117,7 @@ template <class V>
 class fset : public set {
 public:
 	// Nice simple constructor...
-	inline explicit fset(const int s, const int b = DFLT_BLK,
+	inline explicit fset(const unsigned s, const unsigned b = DFLT_BLK,
 			const V * v = 0)
 	  : set(b), value(0) {
 		if (!allocate(s))
@@ -153,7 +145,7 @@ public:
 		return *this;
 	}
 	// Allow the size to be changed, even for 'fixed' sets.
-	bool resize(const int s) {
+	bool resize(const unsigned s) {
 		deallocate();
 		if (!allocate(s))
 			return false;
@@ -161,14 +153,14 @@ public:
 		return true;
 	}
 	// Behave like an array. Zero indexed.
-	V & operator[] (const int p) const {
+	V & operator[] (const unsigned p) const {
 		assert(inbounds(p));
 		return value[p];
 	}
 
 protected:
-	V * value;					// The buffer.
-	struct _V {                 // Placement new wrapper
+	V * value;                 // The buffer.
+	struct _V {                // Placement new wrapper
 		V _v;
 		explicit _V() : _v() {}
 		explicit _V(const V & v) : _v(v) {}
@@ -178,8 +170,8 @@ protected:
 	};
 
 	// Since this is a fixed size set, hide the allocator...
-	bool allocate(const int s) {
-		int b = bufsize(s);
+	bool allocate(const unsigned s) {
+		unsigned b = bufsize(s);
 		if (b == buffer)
 			return true;
 		if (b == 0) {
@@ -199,7 +191,7 @@ protected:
 	}
 	void deallocate() {
 		if (value) {
-			for (int i = 0; i < size; i++)
+			for (unsigned i = 0; i < size; i++)
 				value[i].~V();
 			free(value);
 			value = 0;
@@ -207,14 +199,14 @@ protected:
 		size = 0;
 		buffer = 0;
 	}
-	void init(const int i, const V * v) {
+	void init(const unsigned i, const V * v) {
 		if (v != 0)
 			new(&value[i]) _V(*v);
 		else
 			new(&value[i]) _V();
 	}
-	void copy(const int s, const V * v) {
-		for (int i = 0; i < s; i++)
+	void copy(const unsigned s, const V * v) {
+		for (unsigned i = 0; i < s; i++)
 			init(size++,(v ? &v[i] : 0));
 	}
 	// Also hide the null constructor.
@@ -228,12 +220,22 @@ protected:
  * Special case these to avoid constructors
  */
 template<>
-inline void fset<int>::init(const int i, const int * v) {
+inline void fset<int>::init(const unsigned i, const int * v) {
 	if (v)
 		value[i] = *v;
 }
 template<>
-inline void fset<double>::init(const int i, const double * v) {
+inline void fset<unsigned>::init(const unsigned i, const unsigned * v) {
+	if (v)
+		value[i] = *v;
+}
+template<>
+inline void fset<float>::init(const unsigned i, const float * v) {
+	if (v)
+		value[i] = *v;
+}
+template<>
+inline void fset<double>::init(const unsigned i, const double * v) {
 	if (v)
 		value[i] = *v;
 }
@@ -252,7 +254,7 @@ public:
 	  : fset<V>() {
 	}
 	// Simple constructor.
-	inline explicit sset(const int s, const int b = DFLT_BLK,
+	inline explicit sset(const unsigned s, const unsigned b = DFLT_BLK,
 			const V * v = 0)
 	  : fset<V>(s,b,v) {
 	}
@@ -273,26 +275,26 @@ public:
 		return add(this->size,v.value,v.size);
 	}
 	// Add an array, at the end.
-	inline bool add(const V * v, const int s = 1) {
+	inline bool add(const V * v, const unsigned s = 1) {
 		return add(this->size,v,s);
 	}
 	// Insert one element at position p.
-	inline bool add(const int p, const V & v) {
+	inline bool add(const unsigned p, const V & v) {
 		return add(p,&v,1);
 	}
 	// Insert a set at position p.
-	inline bool add(const int p, const fset<V> & v) {
+	inline bool add(const unsigned p, const fset<V> & v) {
 		return add(p,v.value,v.size);
 	}
 	// Add an array at position p. (Actually do the work too).
-	bool add(int p, const V * v, const int s = 1) {
-		int i;
-		if (p < 0 || s <= 0 || v == 0)
+	bool add(unsigned p, const V * v, const unsigned s = 1) {
+		unsigned i;
+		if (s == 0 || v == 0)
 			return false;
 		if (p >= this->size) {
 			if (!this->allocate(p+s))
 				return false;
-			for (i = this->size; i < p-1; i++)
+			for (i = this->size; p > 0 && i < p-1; i++)
 				this->init(i,0);
 			this->size = p+s;
 		} else {
@@ -311,11 +313,11 @@ public:
 		return remove(this->size-1,1);
 	}
 	// Remove s elements, starting at position p.
-	bool remove(int p, int s = 1) {
+	bool remove(unsigned p, unsigned s = 1) {
 		if (!this->inbounds(p) || s == 0)
 			return false;
 		s = (p+s > this->size ? this->size-p : s);
-		for (int i = 0; i < s; i++)
+		for (unsigned i = 0; i < s; i++)
 			this->value[p+i].~V();
 		if (this->size-p > s)
 			memmove(&this->value[p],&this->value[p+s],
@@ -347,7 +349,7 @@ public:
 	  : sset<V>() {
 	}
 	// Simple constructor.
-	inline explicit oset(const int s, const int b = DFLT_BLK,
+	inline explicit oset(const unsigned s, const unsigned b = DFLT_BLK,
 			const V * v = 0)
 	  : sset<V>(s,b,v) {
 		if (v)
@@ -364,14 +366,14 @@ public:
 
 	// Guess what?
 	inline void sort() {
-		qsort(0,this->size-1);
+		qsort(0,this->size);
 	}
 	// Do a lookup, and return -1 if the value is not found.
 	// You must sort the set first!
-	inline int findvalue(const V & v) const {
-		int l = 0, r = this->size;
+	inline unsigned findvalue(const V & v) const {
+		unsigned l = 0, r = this->size;
 		while (l < r) {
-			int i = l + (r-l)/2;
+			unsigned i = l + (r-l)/2;
 			if (this->value[i] < v)
 				l = i+1;
 			else
@@ -380,43 +382,45 @@ public:
 		if (l < this->size && this->value[l] == v)
 			return l;
 		else
-			return -1;
+			return UINT_MAX;
 	}
 
 protected:
 	// A highly optimised quick sort. Don't touch...
-	void qsort(const int l, const int r) {
-		if (r > l) {
-			int i, j, k, p = l+(r-l)/2;
-			if (this->value[l] > this->value[p])
-				swap(this->value[l],this->value[p]);
-			if (this->value[l] > this->value[r])
-				swap(this->value[l],this->value[r]);
-			if (this->value[p] > this->value[r])
-				swap(this->value[p],this->value[r]);
-			for (i = l, j = r, k = 0; ;
-								p = (p==i?j++:(p==j?i--:p)), k++) {
-				while (++i < p && !(this->value[i] > this->value[p]));
-				while (p < --j && !(this->value[p] > this->value[j]));
-				if (i >= j)
-					break;
-				swap(this->value[i],this->value[j]);
-			}
-			if (k == 0) {
-				isort(l,p-1);
-				isort(p+1,r);
-			} else {
-				qsort(l,p-1);
-				qsort(p+1,r);
-			}	
+	void qsort(const unsigned l, const unsigned r) {
+		if (r <= l)
+			return;
+		unsigned i, j, k, p = l+(r-1-l)/2;
+		if (this->value[l] > this->value[p])
+			swap(this->value[l],this->value[p]);
+		if (this->value[l] > this->value[r-1])
+			swap(this->value[l],this->value[r-1]);
+		if (this->value[p] > this->value[r-1])
+			swap(this->value[p],this->value[r-1]);
+		if (r-1-l <= 2)
+			return;
+		for (i = l, j = r-1, k = 0; ;
+				p = (p==i?j++:(p==j?i--:p)), k++) {
+			while (++i < p && !(this->value[i] > this->value[p]));
+			while (p < --j && !(this->value[p] > this->value[j]));
+			if (i >= j)
+				break;
+			swap(this->value[i],this->value[j]);
 		}
+		if (k == 0) {
+			isort(l,p);
+			isort(p+1,r);
+		} else {
+			qsort(l,p);
+			qsort(p+1,r);
+		}	
 	}
 	// Insertion sort for if the set looks sorted already.
-	void isort(const int l, const int r) {
-		for (int i = l; l < r && i < r; i++) {
-			for (int j = i; i >= l && j >= l
-					&& this->value[j] > this->value[j+1]; j--)
-				swap(this->value[j],this->value[j+1]);
+	void isort(const unsigned l, const unsigned r) {
+		for (unsigned i = l; l < r && i < r-1; i++) {
+			for (unsigned j = i+1; j > l
+					&& this->value[j-1] > this->value[j]; j--)
+				swap(this->value[j-1],this->value[j]);
 		}
 	}
 };
@@ -436,7 +440,7 @@ public:
 	inline explicit cset()
 	  : oset<V>() {
 	}
-	inline explicit cset(const int s, const int b = DFLT_BLK,
+	inline explicit cset(const unsigned s, const unsigned b = DFLT_BLK,
 			const V * v = 0)
 	  : oset<V>(s,b,v) {
 		if (v)
@@ -451,13 +455,13 @@ public:
 
 	// Sort then compact the set.
 	inline void sort() {
-		this->qsort(0,this->size-1);
+		this->qsort(0,this->size);
 		compact();
 	}
 
 protected:
 	void compact() {
-		int i, j, s;
+		unsigned i, j, s;
 		for (i = 1, j = 0; this->size > 1 && i < this->size; i++) {
 			if (this->value[j] != this->value[i])
 				j++;
@@ -498,7 +502,7 @@ public:
 		allocate(size);
 	}
 	// Basic constructor
-	inline explicit iset(const int s, const int b = DFLT_BLK,
+	inline explicit iset(const unsigned s, const unsigned b = DFLT_BLK,
 			const V * v = 0)
 	  : set(b), idx(0), value(0) {
 		if (!allocate(s))
@@ -527,12 +531,12 @@ public:
 	}
 
 	// Do a lookup, and return -1 if the value is not found.
-	inline int hasvalue(const V & v) const {
-		int p = findvalue(v);
+	inline unsigned hasvalue(const V & v) const {
+		unsigned p = findvalue(v);
 		if (p < size && value[idx[p]] == v)
 			return idx[p];
 		else
-			return -1;
+			return UINT_MAX;
 	}
 	// Assignment operator.
 	inline iset<V> & operator= (const iset<V> & v) {
@@ -551,17 +555,17 @@ public:
 		return *this;
 	}
 	// Only integer keys make sense.
-	inline const V & operator[] (const int p) const {
+	inline const V & operator[] (const unsigned p) const {
 		assert(inbounds(p));
 		return value[p];
 	}
 	// Allow sorted acess.
-	inline const V & getindex(const int i) const {
+	inline const V & getindex(const unsigned i) const {
 		assert(inbounds(i));
 		return value[idx[i]];
 	}
 	// Get the position of an element in the sort.
-	inline int getorder(const int i) const {
+	inline unsigned getorder(const unsigned i) const {
 		assert(inbounds(i));
 		return findvalue(value[i]);
 	}
@@ -579,8 +583,8 @@ public:
 	}
 	// Add an array of values... There is no point in
 	// a position based addition. 
-	bool add(const V * v, const int s = 1) {
-		if (s <= 0 || v == 0)
+	bool add(const V * v, const unsigned s = 1) {
+		if (s == 0 || v == 0)
 			return false;
 		if (!allocate(size+s))
 			return false;
@@ -589,26 +593,26 @@ public:
 	}
 	// Now start removing them...
 	bool remove(const V & v) {
-		int p = hasvalue(v), q = -1;
-		if (p == -1)
+		unsigned p = hasvalue(v), q = UINT_MAX;
+		if (p == UINT_MAX)
 			return false;
 		value[p].~V();
 		if (p < --size)
 			memmove(&value[p],&value[p+1],(size-p)*sizeof(V));
-		for (int i = 0; i <= size; i++) {
+		for (unsigned i = 0; i <= size; i++) {
 			if (idx[i] == p)
 				q = i;
 			else if (idx[i] > p)
 				idx[i]--;
 		}
 		if (q < size)
-			memmove(&idx[q],&idx[q+1],(size-q)*sizeof(int));
+			memmove(&idx[q],&idx[q+1],(size-q)*sizeof(unsigned));
 		return allocate(size);
 	}
 	// Replace key/value with another.
 	inline bool replace(const V & v) {
-		int p = hasvalue(v);
-		if (p == -1)
+		unsigned p = hasvalue(v);
+		if (p == UINT_MAX)
 			return false;
 		value[p] = v;
 		return true;
@@ -619,7 +623,7 @@ public:
 	}
 
 protected:
-	int * idx;                 // The index.
+	unsigned * idx;            // The index.
 	V * value;                 // Take a guess...
 	struct _V {                // Placement new wrapper
 		V _v;
@@ -631,8 +635,8 @@ protected:
 	};
 
 	// Make some space...
-	bool allocate(const int s) {
-		int b = bufsize(s);
+	bool allocate(const unsigned s) {
+		unsigned b = bufsize(s);
 		if (b == buffer)
 			return true;
 		if (b == 0) {
@@ -643,7 +647,8 @@ protected:
 			buffer = 0;
 			return true;
 		}
-		int * itemp = static_cast<int *>(realloc(idx,b*sizeof(int)));
+		unsigned * itemp = static_cast<unsigned *>(
+				realloc(idx,b*sizeof(unsigned)));
 		V * vtemp = static_cast<V *>(realloc(value,b*sizeof(V)));
 		if (itemp == 0 || vtemp == 0) {
 			event_msg(EVENT_ERROR,"Out of memory in iset::allocate()!");
@@ -660,7 +665,7 @@ protected:
 			idx = 0;
 		}
 		if (value) {
-			for (int i = 0; i < size; i++)
+			for (unsigned i = 0; i < size; i++)
 				value[i].~V();
 			free(value);
 			value = 0;
@@ -669,10 +674,10 @@ protected:
 		buffer = 0;
 	}
 	// Find the position which is either equal or greater...
-	inline int findvalue(const V & v) const {
-		int l = 0, r = size;
+	inline unsigned findvalue(const V & v) const {
+		unsigned l = 0, r = size;
 		while (l < r) {
-			int i = l + (r-l)/2;
+			unsigned i = l + (r-l)/2;
 			if (value[idx[i]] < v)
 				l = i+1;
 			else
@@ -683,14 +688,14 @@ protected:
 	void init(const V * v) {
 		assert(v != 0);
 		new(&value[size]) _V(*v);
-		int p = findvalue(*v);
+		unsigned p = findvalue(*v);
 		if (p < size)
-			memmove(&idx[p+1],&idx[p],(size-p)*sizeof(int));
+			memmove(&idx[p+1],&idx[p],(size-p)*sizeof(unsigned));
 		idx[p] = size++;
 	}
-	void copy(const int s, const V * v, bool checkdups) {
-		for (int i = 0, p; v && i < s; i++) {
-			if (checkdups && (p = hasvalue(v[i])) != -1)
+	void copy(const unsigned s, const V * v, bool checkdups) {
+		for (unsigned i = 0, p; v && i < s; i++) {
+			if (checkdups && (p = hasvalue(v[i])) != UINT_MAX)
 				value[p] = v[i];
 			else
 				init(&v[i]);
@@ -711,7 +716,7 @@ template <class K, class V>
 class kfset : public set {
 public:
 	// Simple constructor.
-	inline explicit kfset(const int s, const int b = DFLT_BLK,
+	inline explicit kfset(const unsigned s, const unsigned b = DFLT_BLK,
 			const V * v = 0)
 	  : set(b), value(0) {
 		if (!allocate(s))
@@ -732,12 +737,12 @@ public:
 	}
 
 	// Do a key lookup, and return -1 if the key is not found.
-	inline int haskey(const K & k) const {
-		for (int i = 0; i < size; i++) {
+	inline unsigned haskey(const K & k) const {
+		for (unsigned i = 0; i < size; i++) {
 			if (static_cast<K &>(value[i]) == k)
 				return i;
 		}
-		return -1;
+		return UINT_MAX;
 	}
 	// Assignment operator.
 	inline kfset<K,V> & operator= (const kfset<K,V> & v) {
@@ -749,12 +754,12 @@ public:
 	}
 	// Return data based on a key lookup.
 	inline V & operator[] (const K & k) const {
-		int p = haskey(k);
+		unsigned p = haskey(k);
 		assert(inbounds(p));
 		return value[p];
 	}
 	// Allow integer keys.
-	inline V & operator[] (const int p) const {
+	inline V & operator[] (const unsigned p) const {
 		assert(inbounds(p));
 		return value[p];
 	}
@@ -771,8 +776,8 @@ protected:
 	};
 
 	// Hide the allocation function.
-	bool allocate(const int s) {
-		int b = bufsize(s);
+	bool allocate(const unsigned s) {
+		unsigned b = bufsize(s);
 		if (b == buffer)
 			return true;
 		if (b == 0) {
@@ -792,7 +797,7 @@ protected:
 	}
 	void deallocate() {
 		if (value) {
-			for (int i = 0; i < size; i++)
+			for (unsigned i = 0; i < size; i++)
 				value[i].~V();
 			free(value);
 			value = 0;
@@ -804,9 +809,9 @@ protected:
 		assert(v != 0);
 		new(&value[size++]) _V(*v);
 	}
-	void copy(const int s, const V * v, bool checkdups) {
-		for (int i = 0, p; v && i < s; i++) {
-			if (checkdups && (p = haskey(v[i])) != -1)
+	void copy(const unsigned s, const V * v, bool checkdups) {
+		for (unsigned i = 0, p; v && i < s; i++) {
+			if (checkdups && (p = haskey(v[i])) != UINT_MAX)
 				value[p] = v[i];
 			else
 				init(&v[i]);
@@ -831,7 +836,7 @@ public:
 	inline explicit ksset()
 	  : kfset<K,V>() {
 	}
-	inline explicit ksset(const int s, const int b = DFLT_BLK,
+	inline explicit ksset(const unsigned s, const unsigned b = DFLT_BLK,
 			const V * v = 0)
 	  : kfset<K,V>(s,b,v) {
 	}
@@ -851,8 +856,8 @@ public:
 	}
 	// Add an array of values... There is no point in
 	// a position based addition. 
-	bool add(const V * v, const int s = 1) {
-		if (s <= 0 || v == 0)
+	bool add(const V * v, const unsigned s = 1) {
+		if (s == 0 || v == 0)
 			return false;
 		if (!allocate(this->size+s))
 			return false;
@@ -861,8 +866,8 @@ public:
 	}
 	// Remove based on key.
 	bool remove(const K & k) {
-		int p = haskey(k);
-		if (p == -1)
+		unsigned p = haskey(k);
+		if (p == UINT_MAX)
 			return false;
 		this->value[p].~V();
 		if (p < --this->size)
@@ -872,8 +877,8 @@ public:
 	}
 	// Replace key/value with another.
 	inline bool replace(const V & v) {
-		int p = haskey(v);
-		if (p == -1)
+		unsigned p = haskey(v);
+		if (p == UINT_MAX)
 			return false;
 		this->value[p] = v;
 		return true;
@@ -895,7 +900,7 @@ public:
 	inline explicit koset()
 	  : ksset<K,V>() {
 	}
-	inline explicit koset(const int s, const int b = DFLT_BLK,
+	inline explicit koset(const unsigned s, const unsigned b = DFLT_BLK,
 			const V * v = 0)
 	  : ksset<K,V>(s,b,v) {
 		if (v)
@@ -909,40 +914,42 @@ public:
 	}
 
 	inline void sort() {
-		qsort(0,this->size-1);
+		qsort(0,this->size);
 	}
 protected:
-	void qsort(const int l, const int r) {
-		if (r > l) {
-			int i, j, k, p = l+(r-l)/2;
-			if (this->value[l] > this->value[p])
-				swap(this->value[l],this->value[p]);
-			if (this->value[l] > this->value[r])
-				swap(this->value[l],this->value[r]);
-			if (this->value[p] > this->value[r])
-				swap(this->value[p],this->value[r]);
-			for (i = l, j = r, k = 0; ;
-							p = (p==i?j++:(p==j?i--:p)), k++) {
-				while (++i < p && !(this->value[i] > this->value[p]));
-				while (p < --j && !(this->value[p] > this->value[j]));
-				if (i >= j)
-					break;
-				swap(this->value[i],this->value[j]);
-			}
-			if (k == 0) {
-				isort(l,p-1);
-				isort(p+1,r);
-			} else {
-				qsort(l,p-1);
-				qsort(p+1,r);
-			}
+	void qsort(const unsigned l, const unsigned r) {
+		if (r <= l)
+			return;
+		unsigned i, j, k, p = l+(r-1-l)/2;
+		if (this->value[l] > this->value[p])
+			swap(this->value[l],this->value[p]);
+		if (this->value[l] > this->value[r-1])
+			swap(this->value[l],this->value[r-1]);
+		if (this->value[p] > this->value[r-1])
+			swap(this->value[p],this->value[r-1]);
+		if (r-1-l <= 2)
+			return;
+		for (i = l, j = r-1, k = 0; ;
+						p = (p==i?j++:(p==j?i--:p)), k++) {
+			while (++i < p && !(this->value[i] > this->value[p]));
+			while (p < --j && !(this->value[p] > this->value[j]));
+			if (i >= j)
+				break;
+			swap(this->value[i],this->value[j]);
+		}
+		if (k == 0) {
+			isort(l,p);
+			isort(p+1,r);
+		} else {
+			qsort(l,p);
+			qsort(p+1,r);
 		}
 	}
-	void isort(const int l, const int r) {
-		for (int i = l; l < r && i < r; i++) {
-			for (int j = i; i >= l && j >= l
-					 && this->value[j] > this->value[j+1]; j--) {
-				swap(this->value[j],this->value[j+1]);
+	void isort(const unsigned l, const unsigned r) {
+		for (unsigned i = l; l < r && i < r-1; i++) {
+			for (unsigned j = i+1; j > l
+					 && this->value[j-1] > this->value[j]; j--) {
+				swap(this->value[j-1],this->value[j]);
 			}
 		}
 	}
@@ -964,7 +971,7 @@ public:
 		allocate(size);
 	}
 	// Basic constructor
-	inline explicit kiset(const int s, const int b = DFLT_BLK,
+	inline explicit kiset(const unsigned s, const unsigned b = DFLT_BLK,
 			const V * v = 0)
 	  : set(b), idx(0), value(0) {
 		if (!allocate(s))
@@ -993,12 +1000,12 @@ public:
 	}
 
 	// Do a key lookup, and return -1 if the key is not found.
-	inline int haskey(const K & k) const {
-		int p = findkey(k);
+	inline unsigned haskey(const K & k) const {
+		unsigned p = findkey(k);
 		if (p < size && static_cast<K &>(value[idx[p]]) == k)
 			return idx[p];
 		else
-			return -1;
+			return UINT_MAX;
 	}
 	// Assignment operator.
 	inline kiset<K,V> & operator= (const kiset<K,V> & v) {
@@ -1018,22 +1025,22 @@ public:
 	}
 	// Return data based on a key lookup.
 	inline const V & operator[] (const K & k) const {
-		int p = haskey(k);
+		unsigned p = haskey(k);
 		assert(inbounds(p));
 		return value[p];
 	}
 	// Allow integer keys.
-	inline const V & operator[] (const int p) const {
+	inline const V & operator[] (const unsigned p) const {
 		assert(inbounds(p));
 		return value[p];
 	}
 	// Allow sorted acess.
-	inline const V & getindex(const int i) const {
+	inline const V & getindex(const unsigned i) const {
 		assert(inbounds(i));
 		return value[idx[i]];
 	}
 	// Get the position of an element in the sort.
-	inline int getorder(const int i) const {
+	inline unsigned getorder(const unsigned i) const {
 		assert(inbounds(i));
 		return findkey(value[i]);
 	}
@@ -1048,8 +1055,8 @@ public:
 	}
 	// Add an array of values... There is no point in
 	// a position based addition. 
-	bool add(const V * v, const int s = 1) {
-		if (s <= 0 || v == 0)
+	bool add(const V * v, const unsigned s = 1) {
+		if (s == 0 || v == 0)
 			return false;
 		if (!allocate(size+s))
 			return false;
@@ -1058,26 +1065,26 @@ public:
 	}
 	// Now start removing them...
 	bool remove(const K & k) {
-		int p = haskey(k), q = -1;
-		if (p == -1)
+		unsigned p = haskey(k), q = UINT_MAX;
+		if (p == UINT_MAX)
 			return false;
 		value[p].~V();
 		if (p < --size)
 			memmove(&value[p],&value[p+1],(size-p)*sizeof(V));
-		for (int i = 0; i <= size; i++) {
+		for (unsigned i = 0; i <= size; i++) {
 			if (idx[i] == p)
 				q = i;
 			else if (idx[i] > p)
 				idx[i]--;
 		}
 		if (q < size)
-			memmove(&idx[q],&idx[q+1],(size-q)*sizeof(int));
+			memmove(&idx[q],&idx[q+1],(size-q)*sizeof(unsigned));
 		return allocate(size);
 	}
 	// Replace key/value with another.
 	inline bool replace(const V & v) {
-		int p = haskey(v);
-		if (p == -1)
+		unsigned p = haskey(v);
+		if (p == UINT_MAX)
 			return false;
 		value[p] = v;
 		return true;
@@ -1088,7 +1095,7 @@ public:
 	}
 
 protected:
-	int * idx;                 // The index.
+	unsigned * idx;            // The index.
 	V * value;                 // Take a guess...
 	struct _V {                // Placement new wrapper
 		V _v;
@@ -1100,8 +1107,8 @@ protected:
 	};
 
 	// Make some space...
-	bool allocate(const int s) {
-		int b = bufsize(s);
+	bool allocate(const unsigned s) {
+		unsigned b = bufsize(s);
 		if (b == buffer)
 			return true;
 		if (b == 0) {
@@ -1112,7 +1119,8 @@ protected:
 			buffer = 0;
 			return true;
 		}
-		int * itemp = static_cast<int *>(realloc(idx,b*sizeof(int)));
+		unsigned * itemp = static_cast<unsigned *>(
+				realloc(idx,b*sizeof(unsigned)));
 		V * vtemp = static_cast<V *>(realloc(value,b*sizeof(V)));
 		if (itemp == 0 || vtemp == 0) {
 			event_msg(EVENT_ERROR,"Out of memory in kiset::allocate()!");
@@ -1129,7 +1137,7 @@ protected:
 			idx = 0;
 		}
 		if (value) {
-			for (int i = 0; i <= size; i++)
+			for (unsigned i = 0; i < size; i++)
 				value[i].~V();
 			free(value);
 			value = 0;
@@ -1138,10 +1146,10 @@ protected:
 		buffer = 0;
 	}
 	// Find the position which is either equal or greater...
-	inline int findkey(const K & k) const {
-		int l = 0, r = size;
+	inline unsigned findkey(const K & k) const {
+		unsigned l = 0, r = size;
 		while (l < r) {
-			int i = l + (r-l)/2;
+			unsigned i = l + (r-l)/2;
 			if (static_cast<K &>(value[idx[i]]) < k)
 				l = i+1;
 			else
@@ -1152,14 +1160,14 @@ protected:
 	void init(const V * v) {
 		assert(v != 0);
 		new(&value[size]) _V(*v);
-		int p = findkey(static_cast<const K &>(*v));
+		unsigned p = findkey(static_cast<const K &>(*v));
 		if (p < size)
-			memmove(&idx[p+1],&idx[p],(size-p)*sizeof(int));
+			memmove(&idx[p+1],&idx[p],(size-p)*sizeof(unsigned));
 		idx[p] = size++;
 	}
-	void copy(const int s, const V * v, bool checkdups) {
-		for (int i = 0, p; v && i < s; i++) {
-			if (checkdups && (p = haskey(v[i])) != -1)
+	void copy(const unsigned s, const V * v, bool checkdups) {
+		for (unsigned i = 0, p; v && i < s; i++) {
+			if (checkdups && (p = haskey(v[i])) != UINT_MAX)
 				value[p] = v[i];
 			else
 				init(&v[i]);
@@ -1178,7 +1186,7 @@ template <class K, class V>
 class afset : public set {
 public:
 	// Make one...
-	inline explicit afset(const int s, const int b = DFLT_BLK,
+	inline explicit afset(const unsigned s, const unsigned b = DFLT_BLK,
 			const K * k = 0, const V * v = 0)
 	  : set(b), key(0), value(0) {
 		if (!allocate(s))
@@ -1199,12 +1207,12 @@ public:
 	}
 
 	// Return an index for a key.
-	inline int haskey(const K & k) const {
-		for (int i = 0; i < size; i++) {
+	inline unsigned haskey(const K & k) const {
+		for (unsigned i = 0; i < size; i++) {
 			if (key[i] == k)
 				return i;
 		}
-		return -1;
+		return UINT_MAX;
 	}
 	// Assignement operator.
 	inline afset<K,V> & operator= (const afset<K,V> & v) {
@@ -1216,17 +1224,17 @@ public:
 	}
 	// Behave like an indexed array...
 	inline V & operator[] (const K & k) const {
-		int p = haskey(k);
+		unsigned p = haskey(k);
 		assert(inbounds(p));
 		return value[p];
 	}
 	// Linear access.
-	inline K & getkey(const int p) const {
+	inline K & getkey(const unsigned p) const {
 		assert(inbounds(p));
 		return key[p];
 	}
 	// More linear access.
-	inline V & getvalue(const int p) const {
+	inline V & getvalue(const unsigned p) const {
 		assert(inbounds(p));
 		return value[p];
 	}
@@ -1251,8 +1259,8 @@ protected:
 	};
 
 	// Make some space...
-	bool allocate(const int s) {
-		int b = bufsize(s);
+	bool allocate(const unsigned s) {
+		unsigned b = bufsize(s);
 		if (b == buffer)
 			return true;
 		if (b == 0) {
@@ -1277,13 +1285,13 @@ protected:
 	}
 	void deallocate() {
 		if (key) {
-			for (int i = 0; i < size; i++)
+			for (unsigned i = 0; i < size; i++)
 				key[i].~K();
 			free(key);
 			key = 0;
 		}
 		if (value) {
-			for (int i = 0; i < size; i++)
+			for (unsigned i = 0; i < size; i++)
 				value[i].~V();
 			free(value);
 			value = 0;
@@ -1299,9 +1307,9 @@ protected:
 			new(&value[size]) _V();
 		new(&key[size++]) _K(*k);
 	}
-	void copy(const int s, const K * k, const V * v, bool checkdups) {
-		for (int i = 0, p; k && i < s; i++) {
-			if (checkdups && (p = haskey(k[i])) != -1)
+	void copy(const unsigned s, const K * k, const V * v, bool checkdups) {
+		for (unsigned i = 0, p; k && i < s; i++) {
+			if (checkdups && (p = haskey(k[i])) != UINT_MAX)
 				value[p] = (v ? v[i] : V());
 			else
 				init(&k[i],(v ? &v[i] : 0));
@@ -1325,7 +1333,7 @@ public:
 	  : afset<K,V>() {
 	}
 	// Simple constructor.
-	inline explicit asset(const int s, const int b = DFLT_BLK,
+	inline explicit asset(const unsigned s, const unsigned b = DFLT_BLK,
 			const K * k = 0, const V * v = 0)
 	  : afset<K,V>(s,b,k,v) {
 	}
@@ -1347,8 +1355,8 @@ public:
 	}
 	// Add a whole bunch...
 	bool add(const K * k, const V * v = 0,
-			const int s = 1) {
-		if (s <= 0 || k == 0)
+			const unsigned s = 1) {
+		if (s == 0 || k == 0)
 			return false;
 		if (!allocate(this->size+s))
 			return false;
@@ -1357,7 +1365,7 @@ public:
 	}
 	// Now start removing them...
 	bool remove(const K & k) {
-		int p = haskey(k) + 1;
+		unsigned p = haskey(k) + 1;
 		if (p == 0)
 			return false;
 		this->key[p].~K();
@@ -1372,8 +1380,8 @@ public:
 	}
 	// Or replacing them...
 	inline bool replace(const K & k, const V & v) {
-		int p = haskey(k);
-		if (p == -1)
+		unsigned p = haskey(k);
+		if (p == UINT_MAX)
 			return false;
 		this->value[p] = v;
 		return true;
@@ -1395,7 +1403,7 @@ public:
 	inline explicit aoset()
 	  : asset<K,V>() {
 	}
-	inline explicit aoset(const int s, const int b = DFLT_BLK,
+	inline explicit aoset(const unsigned s, const unsigned b = DFLT_BLK,
 			const K * k = 0, const V * v = 0)
 	  : asset<K,V>(s,b,k,v) {
 		if (k)
@@ -1409,48 +1417,50 @@ public:
 	}
 
 	inline void sort() {
-		qsort(0,this->size-1);
+		qsort(0,this->size);
 	}
 protected:
-	void qsort(const int l, const int r) {
-		if (r > l) {
-			int i, j, k, p = l+(r-l)/2;
-			if (this->key[l] > this->key[p]) {
-				swap(this->key[l],this->key[p]);
-				swap(this->value[l],this->value[p]);
-			}
-			if (this->key[l] > this->key[r]) {
-				swap(this->key[l],this->key[r]);
-				swap(this->value[l],this->value[r]);
-			}
-			if (this->key[p] > this->key[r]) {
-				swap(this->key[p],this->key[r]);
-				swap(this->value[p],this->value[r]);
-			}
-			for (i = l, j = r, k = 0; ;
-								p = (p==i?j++:(p==j?i--:p)), k++) {
-				while (++i < p && !(this->key[i] > this->key[p]));
-				while (p < --j && !(this->key[p] > this->key[j]));
-				if (i >= j)
-					break;
-				swap(this->key[i],this->key[j]);
-				swap(this->value[i],this->value[j]);
-			}
-			if (k == 0) {
-				isort(l,p-1);
-				isort(p+1,r);
-			} else {
-				qsort(l,p-1);
-				qsort(p+1,r);
-			}
+	void qsort(const unsigned l, const unsigned r) {
+		if (r <= l)
+			return;
+		unsigned i, j, k, p = l+(r-1-l)/2;
+		if (this->key[l] > this->key[p]) {
+			swap(this->key[l],this->key[p]);
+			swap(this->value[l],this->value[p]);
+		}
+		if (this->key[l] > this->key[r-1]) {
+			swap(this->key[l],this->key[r-1]);
+			swap(this->value[l],this->value[r-1]);
+		}
+		if (this->key[p] > this->key[r-1]) {
+			swap(this->key[p],this->key[r-1]);
+			swap(this->value[p],this->value[r-1]);
+		}
+		if (r-1-l <= 2)
+			return;
+		for (i = l, j = r-1, k = 0; ;
+				p = (p==i?j++:(p==j?i--:p)), k++) {
+			while (++i < p && !(this->key[i] > this->key[p]));
+			while (p < --j && !(this->key[p] > this->key[j]));
+			if (i >= j)
+				break;
+			swap(this->key[i],this->key[j]);
+			swap(this->value[i],this->value[j]);
+		}
+		if (k == 0) {
+			isort(l,p);
+			isort(p+1,r);
+		} else {
+			qsort(l,p);
+			qsort(p+1,r);
 		}
 	}
-	void isort(const int l, const int r) {
-		for (int i = l; l < r && i < r; i++) {
-			for (int j = i; i >= l && j >= l
-					&& this->key[j] > this->key[j+1]; j--) {
-				swap(this->key[j],this->key[j+1]);
-				swap(this->value[j],this->value[j+1]);
+	void isort(const unsigned l, const unsigned r) {
+		for (unsigned i = l; l < r && i < r-1; i++) {
+			for (unsigned j = i+1; j > l
+					&& this->key[j-1] > this->key[j]; j--) {
+				swap(this->key[j-1],this->key[j]);
+				swap(this->value[j-1],this->value[j]);
 			}
 		}
 	}
@@ -1465,7 +1475,7 @@ public:
 	inline explicit avoset()
 	  : asset<K,V>() {
 	}
-	inline explicit avoset(const int s, const int b = DFLT_BLK,
+	inline explicit avoset(const unsigned s, const unsigned b = DFLT_BLK,
 			const K * k = 0, const V * v = 0)
 	  : asset<K,V>(s,b,k,v) {
 		if (k)
@@ -1479,48 +1489,50 @@ public:
 	}
 
 	inline void sort() {
-		qsort(0,this->size-1);
+		qsort(0,this->size);
 	}
 protected:
-	void qsort(const int l, const int r) {
-		if (r > l) {
-			int i, j, k, p = l+(r-l)/2;
-			if (this->value[l] > this->value[p]) {
-				swap(this->key[l],this->key[p]);
-				swap(this->value[l],this->value[p]);
-			}
-			if (this->value[l] > this->value[r]) {
-				swap(this->key[l],this->key[r]);
-				swap(this->value[l],this->value[r]);
-			}
-			if (this->value[p] > this->value[r]) {
-				swap(this->key[p],this->key[r]);
-				swap(this->value[p],this->value[r]);
-			}
-			for (i = l, j = r, k = 0; ;
-								p = (p==i?j++:(p==j?i--:p)), k++) {
-				while (++i < p && !(this->value[i] > this->value[p]));
-				while (p < --j && !(this->value[p] > this->value[j]));
-				if (i >= j)
-					break;
-				swap(this->key[i],this->key[j]);
-				swap(this->value[i],this->value[j]);
-			}
-			if (k == 0) {
-				isort(l,p-1);
-				isort(p+1,r);
-			} else {
-				qsort(l,p-1);
-				qsort(p+1,r);
-			}
+	void qsort(const unsigned l, const unsigned r) {
+		if (r <= l)
+			return;
+		unsigned i, j, k, p = l+(r-1-l)/2;
+		if (this->value[l] > this->value[p]) {
+			swap(this->key[l],this->key[p]);
+			swap(this->value[l],this->value[p]);
+		}
+		if (this->value[l] > this->value[r-1]) {
+			swap(this->key[l],this->key[r-1]);
+			swap(this->value[l],this->value[r-1]);
+		}
+		if (this->value[p] > this->value[r-1]) {
+			swap(this->key[p],this->key[r-1]);
+			swap(this->value[p],this->value[r-1]);
+		}
+		if (r-1-l <= 2)
+			return;
+		for (i = l, j = r-1, k = 0; ;
+				p = (p==i?j++:(p==j?i--:p)), k++) {
+			while (++i < p && !(this->value[i] > this->value[p]));
+			while (p < --j && !(this->value[p] > this->value[j]));
+			if (i >= j)
+				break;
+			swap(this->key[i],this->key[j]);
+			swap(this->value[i],this->value[j]);
+		}
+		if (k == 0) {
+			isort(l,p);
+			isort(p+1,r);
+		} else {
+			qsort(l,p);
+			qsort(p+1,r);
 		}
 	}
-	void isort(const int l, const int r) {
-		for (int i = l; l < r && i < r; i++) {
-			for (int j = i; i >= l && j >= l
-					&& this->value[j] > this->value[j+1]; j--) {
-				swap(this->key[j],this->key[j+1]);
-				swap(this->value[j],this->value[j+1]);
+	void isort(const unsigned l, const unsigned r) {
+		for (unsigned i = l; l < r && i < r-1; i++) {
+			for (unsigned j = i+1; j > l
+					&& this->value[j-1] > this->value[j]; j--) {
+				swap(this->key[j-1],this->key[j]);
+				swap(this->value[j-1],this->value[j]);
 			}
 		}
 	}
