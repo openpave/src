@@ -73,10 +73,10 @@
 /*
  * Templated Kronecker delta
  */
-template<int I, int J>
-static inline int delta()
+template<unsigned I, unsigned J>
+static inline double delta()
 {
-	return (I == J ? 1 : 0);
+	return (I == J ? 1.0 : 0.0);
 }
 
 /*
@@ -88,25 +88,25 @@ struct meta_stiffness
 {
 	static inline void assignR(tmatrix<double,NDOF,NDOF> & E,
 			const double & l, const double & m) {
-		E(J,L) = l*delta<I,J>()*delta<K,L>()
-				+ m*(delta<I,K>()*delta<J,L>()
-				   + delta<I,L>()*delta<J,K>());
 		meta_stiffness<I,J,K,L-1>::assignR(E,l,m);
+		E(J-1,L-1) = l*delta<I,J-1>()*delta<K,L-1>()
+				+ m*(delta<I,K>()*delta<J-1,L-1>()
+				   + delta<I,L-1>()*delta<J-1,K>());
 	}
 	static inline void assign(tmatrix<double,NDOF,NDOF> & E,
 			const double & l, const double & m) {
-		meta_stiffness<I,J,K,L>::assignR(E,l,m);
 		meta_stiffness<I,J-1,K,L>::assign(E,l,m);
+		meta_stiffness<I,J,K,L>::assignR(E,l,m);
 	}
 };
 template<unsigned I, unsigned J, unsigned K>
-struct meta_stiffness<I,J,K,-1>
+struct meta_stiffness<I,J,K,0>
 {
 	static inline void assignR(tmatrix<double,NDOF,NDOF> &,
 			const double &, const double &) {}
 };
 template<unsigned I, unsigned K, unsigned L>
-struct meta_stiffness<I,-1,K,L>
+struct meta_stiffness<I,0,K,L>
 {
 	static inline void assign(tmatrix<double,NDOF,NDOF> &,
 			const double &, const double &) {}
@@ -169,7 +169,7 @@ public:
 		props.add(material_property_value(p,v));
 	}
 	inline bool hasprop(const material_property::property_t p) const {
-		return props.haskey(material_property(p)) != -1;
+		return props.haskey(material_property(p)) != UINT_MAX;
 	}
 	inline double getprop(const material_property::property_t p) const {
 		if (!hasprop(p))
@@ -186,15 +186,15 @@ public:
 		double lambda = v*e/(1+v)/(1-2*v);
 		double mu = e/2/(1+v);
 
-		meta_stiffness<0,2,0,2>::assign(E[0][0],lambda,mu);
-		meta_stiffness<0,2,1,2>::assign(E[0][1],lambda,mu);
-		meta_stiffness<0,2,2,2>::assign(E[0][2],lambda,mu);
-		meta_stiffness<1,2,0,2>::assign(E[1][0],lambda,mu);
-		meta_stiffness<1,2,1,2>::assign(E[1][1],lambda,mu);
-		meta_stiffness<1,2,2,2>::assign(E[1][2],lambda,mu);
-		meta_stiffness<2,2,0,2>::assign(E[2][0],lambda,mu);
-		meta_stiffness<2,2,1,2>::assign(E[2][1],lambda,mu);
-		meta_stiffness<2,2,2,2>::assign(E[2][2],lambda,mu);
+		meta_stiffness<0,3,0,3>::assign(E[0][0],lambda,mu);
+		meta_stiffness<0,3,1,3>::assign(E[0][1],lambda,mu);
+		meta_stiffness<0,3,2,3>::assign(E[0][2],lambda,mu);
+		meta_stiffness<1,3,0,3>::assign(E[1][0],lambda,mu);
+		meta_stiffness<1,3,1,3>::assign(E[1][1],lambda,mu);
+		meta_stiffness<1,3,2,3>::assign(E[1][2],lambda,mu);
+		meta_stiffness<2,3,0,3>::assign(E[2][0],lambda,mu);
+		meta_stiffness<2,3,1,3>::assign(E[2][1],lambda,mu);
+		meta_stiffness<2,3,2,3>::assign(E[2][2],lambda,mu);
 	}
 
 private:
@@ -300,7 +300,7 @@ struct node3d : public coord3d {
 		// Neighbour in (x,y,z) plus/minus directions.
 		// -1 if not there...
 		struct {
-			int xm, xp, ym, yp, zm, zp;
+			unsigned xm, xp, ym, yp, zm, zp;
 		};
 		// Final results.
 		struct {
@@ -309,34 +309,36 @@ struct node3d : public coord3d {
 	};
 
 	node3d(const coord3d & c)
-	  : coord3d(c), xm(-1), xp(-1), ym(-1), yp(-1), zm(-1), zp(-1) {
+	  : coord3d(c), xm(UINT_MAX), xp(UINT_MAX), ym(UINT_MAX), yp(UINT_MAX),
+			zm(UINT_MAX), zp(UINT_MAX) {
 	}
 	// Set new neighbours.  If this conflicts with what we know, we
 	// complain (if we're debugging).
-	void setneighbours(const int x_m, const int x_p, const int y_m,
-			const int y_p, const int z_m, const int z_p) {
-		if (x_m != -1) {
-			assert(xm == -1 || xm == x_m);
+	void setneighbours(const unsigned x_m, const unsigned x_p,
+			const unsigned y_m, const unsigned y_p,
+			const unsigned z_m, const unsigned z_p) {
+		if (x_m != UINT_MAX) {
+			assert(xm == UINT_MAX || xm == x_m);
 			xm = x_m;
 		}
-		if (x_p != -1) {
-			assert(xp == -1 || xp == x_p);
+		if (x_p != UINT_MAX) {
+			assert(xp == UINT_MAX || xp == x_p);
 			xp = x_p;
 		}
-		if (y_m != -1) {
-			assert(ym == -1 || ym == y_m);
+		if (y_m != UINT_MAX) {
+			assert(ym == UINT_MAX || ym == y_m);
 			ym = y_m;
 		}
-		if (y_p != -1) {
-			assert(yp == -1 || yp == y_p);
+		if (y_p != UINT_MAX) {
+			assert(yp == UINT_MAX || yp == y_p);
 			yp = y_p;
 		}
-		if (z_m != -1) {
-			assert(zm == -1 || zm == z_m);
+		if (z_m != UINT_MAX) {
+			assert(zm == UINT_MAX || zm == z_m);
 			zm = z_m;
 		}
-		if (z_p != -1) {
-			assert(zp == -1 || zp == z_p);
+		if (z_p != UINT_MAX) {
+			assert(zp == UINT_MAX || zp == z_p);
 			zp = z_p;
 		}
 	}
@@ -359,7 +361,7 @@ class mesh;                            // Forward declare.
  */
 class smatrix_elem {
 public:
-	explicit smatrix_elem(const int n)
+	explicit smatrix_elem(const unsigned n)
 	  : nnd(n), K(0) {
 		// calloc() to zero the memory...
 		K = static_cast<tmatrix<double,NDOF,NDOF> *>
@@ -371,7 +373,7 @@ public:
 		if (K != 0)
 			free(K);
 	}
-	inline tmatrix<double,NDOF,NDOF> & operator() (int i, int j) const {
+	inline tmatrix<double,NDOF,NDOF> & operator() (unsigned i, unsigned j) const {
 		assert(j >= i);
 		return K[index(i,j)];
 	}
@@ -379,15 +381,15 @@ public:
 private:
 	friend class mesh;
 
-	const int nnd;
+	const unsigned nnd;
 	tmatrix<double,NDOF,NDOF> * K;
 
 	// Size of the triangular matrix storage
-	inline int size() const {
+	inline unsigned size() const {
 		return nnd*(nnd+1)/2;
 	}
 	// Index into the triangular matrix storage
-	inline int index(const int i, const int j) const {
+	inline unsigned index(const unsigned i, const unsigned j) const {
 		return j*(j+1)/2 + i;
 	}
 };
@@ -446,20 +448,20 @@ protected:
 
 	shape_t sx, sy, sz;
 	const material & mat;
-	sset<int> inel;
+	sset<unsigned> inel;
 
 	// These are declared later, once we can access our mesh's node list,
 	// without the problem of having the classes depend on one another.
-	inline int addnode(const coord3d & c) const;
+	inline unsigned addnode(const coord3d & c) const;
 	inline void updatenode(const node3d & n) const;
-	inline const node3d & getnode(const int i) const;
+	inline const node3d & getnode(const unsigned i) const;
 	
 	// This is the core routine for creating elements.  It is passed a set
 	// of eight corners, and adds the required nodes.  It also sets up the
 	// mask of optional nodes when we are dropping nodes.
-	inline void setup(const fset<coord3d> & c, int * mask = 0) {
+	inline void setup(const fset<coord3d> & c, unsigned * mask = 0) {
 		assert(8 == c.length());
-		const int nz = getnz();
+		const unsigned nz = getnz();
 		fset<coord3d> cc(c);
 		coord3d p, m;
 		
@@ -493,8 +495,8 @@ protected:
 		} while(true);
 		
 		// Add the corner nodes.
-		for (int i = 0; i < nz; i++) {
-			for (int j = 0; j < 4; j++) {
+		for (unsigned i = 0; i < nz; i++) {
+			for (unsigned j = 0; j < 4; j++) {
 				double x = double(cc[j].x)+i*double(cc[j+4].x-cc[j].x)/(nz-1);
 				double y = double(cc[j].y)+i*double(cc[j+4].y-cc[j].y)/(nz-1);
 				double z = double(cc[j].z)+i*double(cc[j+4].z-cc[j].z)/(nz-1);
@@ -502,14 +504,14 @@ protected:
 			}
 		}
 		// If we have a mask, initialise it.
-		if (mask != 0)
-			memset(mask,0xff,(4*nz+2)*sizeof(int));
+		for (unsigned i = 0; mask != 0 && i < (4*nz+2); i++)
+			mask[i] = UINT_MAX;
 		// Loop over the nodes, setting the neighbours.
-		for (int i = 0; i < 4*nz; i++) {
+		for (unsigned i = 0; i < 4*nz; i++) {
 			node3d n = getnode(inel[i]);
-			int x_m = -1, x_p = -1;
-			int y_m = -1, y_p = -1;
-			int z_m = -1, z_p = -1;
+			unsigned x_m = UINT_MAX, x_p = UINT_MAX;
+			unsigned y_m = UINT_MAX, y_p = UINT_MAX;
+			unsigned z_m = UINT_MAX, z_p = UINT_MAX;
 			(i%4 < 2 ? x_p : x_m) = inel[4*(i/4)+(i%4+2)%4];
 			(i%2 < 1 ? y_p : y_m) = inel[2*(i/2)+(i%2+1)%2];
 			if (i < 4*(nz-1))
@@ -520,36 +522,36 @@ protected:
 				// Check for nodes in the middle, and set the mask.
 				switch (i%4) {
 				case 0:
-					if (n.xp != -1 && n.xp != x_p) {
+					if (n.xp != UINT_MAX && n.xp != x_p) {
 						mask[i+2] = x_p = n.xp;
 					}
-					if (n.yp != -1 && n.yp != y_p) {
+					if (n.yp != UINT_MAX && n.yp != y_p) {
 						mask[i] = y_p = n.yp;
 						// Check the center for the top and bottom.
 						if ((i == 0 || i == 4*(nz-1))) {
 							const node3d & mid = getnode(n.yp);
-							if (mid.xp != -1)
+							if (mid.xp != UINT_MAX)
 								mask[i == 0 ? 4*nz : 4*nz+1] = mid.xp;
 						}
 					}
 					break;
 				case 1:
-					if (n.xp != -1 && n.xp != x_p)
+					if (n.xp != UINT_MAX && n.xp != x_p)
 						x_p = n.xp;
-					if (n.ym != -1 && n.ym != y_m)
+					if (n.ym != UINT_MAX && n.ym != y_m)
 						y_m = n.ym;
 					break;
 				case 2:
-					if (n.xm != -1 && n.xm != x_m)
+					if (n.xm != UINT_MAX && n.xm != x_m)
 						x_m = n.xm;
-					if (n.yp != -1 && n.yp != y_p)
+					if (n.yp != UINT_MAX && n.yp != y_p)
 						y_p = n.yp;
 					break;
 				case 3:
-					if (n.xm != -1 && n.xm != x_m) {
+					if (n.xm != UINT_MAX && n.xm != x_m) {
 						mask[i-2] = x_m = n.xm;
 					}
-					if (n.ym != -1 && n.ym != y_m) {
+					if (n.ym != UINT_MAX && n.ym != y_m) {
 						mask[i] = y_m = n.ym;
 					}
 					break;
@@ -560,8 +562,8 @@ protected:
 		}
 		// Add the extra nodes to our list and set the mask from the global
 		// node number to the item number in the list.
-		for (int i = 0; mask && i < 4*nz+2; i++) {
-			if (mask[i] != -1) {
+		for (unsigned i = 0; mask && i < 4*nz+2; i++) {
+			if (mask[i] != UINT_MAX) {
 				inel.add(mask[i]);
 				mask[i] = inel.length()-1;
 			} else
@@ -573,14 +575,14 @@ protected:
 	//
 	// XXX: need to use mask to make dropping nodes on infinite elements
 	// possible.
-	void setup_infinite(const fset<coord3d> & c, int * mask = 0) {
+	void setup_infinite(const fset<coord3d> & c, unsigned * mask = 0) {
 		fset<coord3d> cc(8);
 		if (c.length() == 2) {
 			// Corner infinite elements are defined by 2 points in
 			// a line, which must be vertical.
 			assert(c[0].x == c[1].x);
 			assert(c[0].y == c[1].y);
-			for (int i = 0; i < 4; i++) {
+			for (unsigned i = 0; i < 4; i++) {
 				double x = c[0].x, y = c[0].y;
 				x *= ((x > 0) == (i%4 < 2) ? 1 : 2);
 				y *= ((y > 0) == (i%2 < 1) ? 1 : 2);
@@ -596,7 +598,7 @@ protected:
 				assert(c[0].x == c[1].x);
 				assert(c[1].x == c[2].x);
 				assert(c[2].x == c[3].x);
-				for (int i = 0; i < 4; i++) {
+				for (unsigned i = 0; i < 4; i++) {
 					double x = c[0].x;
 					x *= ((x > 0) == (i%4 < 2) ? 1 : 2);
 					cc[i  ] = c[i%2  ]; cc[i  ].x = x;
@@ -607,7 +609,7 @@ protected:
 				assert(c[0].y == c[1].y);
 				assert(c[1].y == c[2].y);
 				assert(c[2].y == c[3].y);
-				for (int i = 0; i < 4; i++) {
+				for (unsigned i = 0; i < 4; i++) {
 					double y = c[0].y;
 					y *= ((y > 0) == (i%2 < 1) ? 1 : 2);
 					cc[i  ] = c[(i<2?0:1)]; cc[i  ].y = y;
@@ -621,7 +623,7 @@ protected:
 	// Build a matrix of the nodal coordinates.
 	void buildxe(matrix_dense & xe) const {
 		assert(xe.rows() == inel.length());
-		for (int i = 0; i < inel.length(); i++) {
+		for (unsigned i = 0; i < inel.length(); i++) {
 			const coord3d & p = getnode(inel[i]);
 			xe(i,0) = p.x; xe(i,1) = p.y; xe(i,2) = p.z;
 		}
@@ -629,15 +631,15 @@ protected:
 	// Build a list of gauss points.  This will need to be stored
 	// in the element when we do plastic models with history.
 	void buildgp(ksset<point3d,gauss3d> & gp) const {
-		int nx = 0, ny = 0, nz = 0;
+		unsigned nx = 0, ny = 0, nz = 0;
 		const double (* gx)[2] = 0, (* gy)[2] = 0, (* gz)[2] = 0;
 		
 		getgauss(sx,nx,gx);
 		getgauss(sy,ny,gy);
 		getgauss(sz,nz,gz);
-		for (int i = 0; i < nx; i++) {
-			for (int j = 0; j < ny; j++) {
-				for (int k = 0; k < nz; k++) {
+		for (unsigned i = 0; i < nx; i++) {
+			for (unsigned j = 0; j < ny; j++) {
+				for (unsigned k = 0; k < nz; k++) {
 					gp.add(gauss3d(gx[i][0],gy[j][0],gz[k][0],
 							gx[i][1]*gy[j][1]*gz[k][1]));
 				}
@@ -646,8 +648,8 @@ protected:
 	}
 	// build the shape function derivative matrix.
 	void builddNdr(const bool mapping, const point3d & gp,
-			matrix_dense & dNdr, const int * mask = 0) const {
-		const int nz = getnz();
+			matrix_dense & dNdr, const unsigned * mask = 0) const {
+		const unsigned nz = getnz();
 		double rx = gp.x, ry = gp.y, rz = gp.z;
 		double Nx = 0, Ny = 0, Nz = 0, dNdx = 0, dNdy = 0, dNdz = 0;
 
@@ -655,10 +657,10 @@ protected:
 		assert(mask != 0 || dNdr.cols() == 4*nz);
 
 		// Loop over each level in the element.
-		for (int i = 0, j; i < nz; i++) {
+		for (unsigned i = 0, j; i < nz; i++) {
 			Nz = N(mapping,sz,i,rz); dNdz = dN(mapping,sz,i,rz);
 			// Start with the corners.
-			for (int l = 0; l < 4; l++) {
+			for (unsigned l = 0; l < 4; l++) {
 				Nx = N(mapping,sx,l/2,rx); dNdx = dN(mapping,sx,l/2,rx);
 				Ny = N(mapping,sy,l%2,ry); dNdy = dN(mapping,sy,l%2,ry);
 				dNdr(0,i*4+l) = dNdx*Ny*Nz;
@@ -669,7 +671,7 @@ protected:
 			if (!mask)
 				continue;
 			// Build the extra nodes at the half points.
-			for (int l = 0; l < 4; l++) {
+			for (unsigned l = 0; l < 4; l++) {
 				if ((j = mask[i*4+l]) == 0)
 					continue;
 				switch (l) {
@@ -702,8 +704,8 @@ protected:
 			return;
 		// Correct the shape functions for the corners and sides,
 		// depending on the existance of the extra nodes.
-		for (int i = 0; i < 3; i++) {
-			for (int l = 0; l < 4*nz; l++) {
+		for (unsigned i = 0; i < 3; i++) {
+			for (unsigned l = 0; l < 4*nz; l++) {
 				if (mask[l] != 0)
 					dNdr(i,l) -= dNdr(i,mask[l])/2;
 				const int Jxy[4] = {+2,-1,+1,-2};
@@ -714,15 +716,16 @@ protected:
 				if (l >= 4*(nz-1) && mask[4*nz+1] != 0)
 					dNdr(i,l) += dNdr(i,mask[4*nz+1])/4;
 			}
-			for (int l = 0; mask[4*nz] != 0 && l < 4; l++)
+			for (unsigned l = 0; mask[4*nz] != 0 && l < 4; l++)
 				dNdr(i,mask[l]) -= dNdr(i,mask[4*nz])/2;
-			for (int l = 4*(nz-1); mask[4*nz+1] != 0 && l < 4*nz; l++)
+			for (unsigned l = 4*(nz-1); mask[4*nz+1] != 0 && l < 4*nz; l++)
 				dNdr(i,mask[l]) -= dNdr(i,mask[4*nz+1])/2;
 		}
 	}
 	// Build the element stiffness matrix.
-	smatrix_elem * buildKe(const int * mask = 0) const {
-		int i, j, k, l, g, nnd = inel.length();
+	smatrix_elem * buildKe(const unsigned * mask = 0) const {
+		unsigned i, j, k, l;
+		unsigned g, nnd = inel.length();
 
 		// Build the point stiffness tensor E_abcd
 		tmatrix<double,NDOF,NDOF> E[NDIM][NDIM];
@@ -766,7 +769,7 @@ protected:
 
 private:
 	// nz is the number of levels of nodes in the element.
-	const int getnz() const {
+	const unsigned getnz() const {
 		switch (sz) {
 		case linear:    return 2;
 		case quadratic: return 3;
@@ -778,7 +781,7 @@ private:
 		assert(false);  return 0;
 	}
 	// This gets the right gauss function based on the shape function.
-	static void getgauss(const shape_t t, int & n,
+	static void getgauss(const shape_t t, unsigned & n,
 			const double (*& g)[2]) {
 		switch (t) {
 			case linear:    n = 2; g = gp_2; return;
@@ -790,27 +793,27 @@ private:
 		}
 	}
 	// Linear shape function.
-	static double N_2(const int n, const double r) {
+	static double N_2(const unsigned n, const double r) {
 		switch (n) {
 		case 0: return 0.5*(1.0-r);
 		case 1: return 0.5*(1.0+r);
 		} assert(false); return 0.0;
 	}
-	static double dN_2(const int n, const double r) {
+	static double dN_2(const unsigned n, const double r) {
 		switch (n) {
 		case 0: return -0.5;
 		case 1: return  0.5;
 		} assert(false); return 0.0;
 	}
 	// Quadratic shape function.
-	static double N_3(const int n, const double r) {
+	static double N_3(const unsigned n, const double r) {
 		switch (n) {
 		case 0: return 0.5*r*(r-1);
 		case 1: return 1-r*r;
 		case 2: return 0.5*r*(r+1);
 		} assert(false); return 0.0;
 	}
-	static double dN_3(const int n, const double r) {
+	static double dN_3(const unsigned n, const double r) {
 		switch (n) {
 		case 0: return r-0.5;
 		case 1: return -2*r;
@@ -818,7 +821,7 @@ private:
 		} assert(false); return 0.0;
 	}
 	// Cubic shape function.
-	static double N_4(const int n, const double r) {
+	static double N_4(const unsigned n, const double r) {
 		switch (n) {
 		case 0: return 0.0625*(-1+9*r*r)*(1-1*r);
 		case 1: return 0.0625*(+9-9*r*r)*(1-3*r);
@@ -826,7 +829,7 @@ private:
 		case 3: return 0.0625*(-1+9*r*r)*(1+1*r);
 		} assert(false); return 0.0;
 	}
-	static double dN_4(const int n, const double r) {
+	static double dN_4(const unsigned n, const double r) {
 		switch (n) {
 		case 0: return 0.0625*((+18*r)*(1-1*r) - 1*(-1+9*r*r));
 		case 1: return 0.0625*((-18*r)*(1-3*r) - 3*(+9-9*r*r));
@@ -835,47 +838,47 @@ private:
 		} assert(false); return 0.0;
 	}
 	// mapping functions for infinite elements.
-	static double Mpi(const int n, const double r) {
+	static double Mpi(const unsigned n, const double r) {
 		switch (n) {
 		case 0: return  -2*r/(1-r);
 		case 1: return (1+r)/(1-r);
 		} assert(false); return 0.0;
 	}
-	static double dMpi(const int n, const double r) {
+	static double dMpi(const unsigned n, const double r) {
 		switch (n) {
 		case 0: return -2/((1-r)*(1-r));
 		case 1: return  2/((1-r)*(1-r));
 		} assert(false); return 0.0;
 	}
-	static double Mni(const int n, const double r) {
+	static double Mni(const unsigned n, const double r) {
 		switch (n) {
 		case 0: return (1-r)/(1+r);
 		case 1: return   2*r/(1+r);
 		} assert(false); return 0.0;
 	}
-	static double dMni(const int n, const double r) {
+	static double dMni(const unsigned n, const double r) {
 		switch (n) {
 		case 0: return -2/((1+r)*(1+r));
 		case 1: return  2/((1+r)*(1+r));
 		} assert(false); return 0.0;
 	}
 	// Shape functions for infinite elements are quadratic.
-	static double Npi(const int n, const double r) {
+	static double Npi(const unsigned n, const double r) {
 		return N_3(n,r);
 	}
-	static double dNpi(const int n, const double r) {
+	static double dNpi(const unsigned n, const double r) {
 		return dN_3(n,r);
 	}
 	// Shift the negative nodes to (0,+1).
-	static double Nni(const int n, const double r) {
+	static double Nni(const unsigned n, const double r) {
 		return N_3(n+1,r);
 	}
-	static double dNni(const int n, const double r) {
+	static double dNni(const unsigned n, const double r) {
 		return dN_3(n+1,r);
 	}
 	// Build the shape/mapping function based on the type of function.
 	static double N(const bool mapping, const shape_t s,
-			const int n, const double r) {
+			const unsigned n, const double r) {
 		switch (s) {
 		case linear:
 		case absolute:  return N_2(n,r);
@@ -887,7 +890,7 @@ private:
 		assert(false); return 0.0;
 	}
 	static double dN(const bool mapping, const shape_t s,
-			const int n, const double r) {
+			const unsigned n, const double r) {
 		switch (s) {
 		case linear:
 		case absolute:  return dN_2(n,r);
@@ -963,7 +966,7 @@ public:
 	}
 
 protected:
-	int mask[10];
+	unsigned mask[10];
 };
 
 /*
@@ -981,7 +984,7 @@ public:
 	}
 
 protected:
-	int mask[14];
+	unsigned mask[14];
 };
 
 /*
@@ -999,7 +1002,7 @@ public:
 	}
 
 protected:
-	int mask[18];
+	unsigned mask[18];
 };
 
 /*
@@ -1058,7 +1061,7 @@ class smatrix_node {
 	friend class mesh;
 
 	tmatrix<double,NDOF,NDOF> K;
-	int i;
+	unsigned i;
 	smatrix_node * col_next;
 };
 
@@ -1082,7 +1085,7 @@ class smatrix_diag {
 class smatrix {
 public:
 	// Create the matrix empty.
-	inline explicit smatrix(const int n)
+	inline explicit smatrix(const unsigned n)
 	  : nnd(n), diag(0) {
 		diag = static_cast<smatrix_diag *>
 				(calloc(nnd,sizeof(smatrix_diag)));
@@ -1098,7 +1101,7 @@ public:
 			event_msg(EVENT_ERROR,"Out of memory in smatrix::smatrix()!");
 			return;
 		}
-		for (int i = 0; i < nnd; i++) {
+		for (unsigned i = 0; i < nnd; i++) {
 			smatrix_diag * d = &(A.diag[i]);
 			// Pre-allocate the space.
 			diag[i].nodes = static_cast<smatrix_node *>
@@ -1118,7 +1121,7 @@ public:
 	}
 	inline ~smatrix() {
 		if (diag) {
-			for (int i = 0; i < nnd; i++) {
+			for (unsigned i = 0; i < nnd; i++) {
 				// smatrix_nodes don't have a destructor...
 				if (diag[i].nodes)
 					free(diag[i].nodes);
@@ -1126,7 +1129,7 @@ public:
 			free(diag);
 		}
 	}
-	bool append(int i, int j, const tmatrix<double,NDOF,NDOF> & t) {
+	bool append(unsigned i, unsigned j, const tmatrix<double,NDOF,NDOF> & t) {
 		// If we're appending to the diagonal, just do it.
 		if (i == j) {
 			diag[i].K += t;
@@ -1166,7 +1169,7 @@ public:
 			if (d->nodes != temp) {
 				if (d->col_head != 0)
 					d->col_head = temp + (d->col_head - d->nodes);
-				for (int k = 0; k < d->nnz; k++) {
+				for (unsigned k = 0; k < d->nnz; k++) {
 					n = &(temp[k]);
 					if (n->col_next != 0)
 						n->col_next = temp + (n->col_next - d->nodes);
@@ -1199,11 +1202,11 @@ public:
 		// We need somewhere to store the switched data.
 		smatrix_node temp;
 		
-		for (int i = 0; i < nnd; i++) {
+		for (unsigned i = 0; i < nnd; i++) {
 			smatrix_node * nodes = diag[i].nodes;
 			// Insertion sort the column of nodes.
-			for (int j = 1; j < diag[i].nnz; j++) {
-				for (int k = j; k > 0
+			for (unsigned j = 1; j < diag[i].nnz; j++) {
+				for (unsigned k = j; k > 0
 						&& nodes[k-1].i > nodes[k].i; k--) {
 					memcpy(&temp      ,&nodes[k-1],sizeof(smatrix_node));
 					memcpy(&nodes[k-1],&nodes[k]  ,sizeof(smatrix_node));
@@ -1213,8 +1216,8 @@ public:
 			// Now fix up the pointers.
 			if (diag[i].col_head != 0)
 				diag[i].col_head = nodes;
-			for (int j = 0; j < diag[i].nnz; j++)
-				nodes[j].col_next = (j < diag[i].nnz-1 ? &nodes[j+1] : 0);
+			for (unsigned short j = 0; j < diag[i].nnz; j++)
+				nodes[j].col_next = (j == diag[i].nnz-1 ? 0 : &nodes[j+1]);
 		}
 	}
 	// Incomplete Cholesky decompostion, by block.  Look at the small
@@ -1223,7 +1226,7 @@ public:
 		smatrix_diag * d;
 		smatrix_node * p;
 
-		for (int n = 0; n < nnd; n++) {
+		for (unsigned n = 0; n < nnd; n++) {
 			d = &(diag[n]);
 			p = d->col_head;
 			while (p != 0) {
@@ -1244,9 +1247,9 @@ public:
 				}
 				// Do the block Cholesky decomposition for an off diagonal
 				// element.
-				for (int i = 0; i < NDOF; i++) {
-					for (int j = 0; j < NDOF; j++) {
-						for (int k = 0; k < i; k++)
+				for (unsigned i = 0; i < NDOF; i++) {
+					for (unsigned j = 0; j < NDOF; j++) {
+						for (unsigned k = 0; k < i; k++)
 							p->K(i,j) -= diag[p->i].K(k,i)*p->K(k,j);
 						p->K(i,j) *= diag[p->i].K(i,i);
 					}
@@ -1255,15 +1258,15 @@ public:
 				p = p->col_next;
 			}
 			// Cholesky decompostion of the diagonal.
-			for (int i = 0; i < NDOF; i++) {
-				for (int k = 0; k < i; k++)
+			for (unsigned i = 0; i < NDOF; i++) {
+				for (unsigned k = 0; k < i; k++)
 					d->K(i,i) -= d->K(k,i)*d->K(k,i);
 				assert(d->K(i,i) > 0.0);
 				// NOTE: We store the inverse of the diagonal to avoid
 				// divisions.
 				d->K(i,i) = 1.0/sqrt(d->K(i,i));
-				for (int j = i+1; j < NDOF; j++) {
-					for (int k = 0; k < i; k++)
+				for (unsigned j = i+1; j < NDOF; j++) {
+					for (unsigned k = 0; k < i; k++)
 						d->K(i,j) -= d->K(k,i)*d->K(k,j);
 					d->K(i,j) *= d->K(i,i);
 					d->K(j,i) = 0.0;
@@ -1274,7 +1277,7 @@ public:
 
 private:
 	friend class mesh;
-	int nnd;
+	unsigned nnd;
 	smatrix_diag * diag;
 };
 
@@ -1283,7 +1286,7 @@ private:
  */
 class svector {
 public:
-	inline explicit svector(const int n)
+	inline explicit svector(const unsigned n)
 	  : nnd(n), V(0) {
 		V = static_cast<tmatrix<double,NDOF,1> *>
 				(calloc(nnd,sizeof(tmatrix<double,NDOF,1>)));
@@ -1294,15 +1297,15 @@ public:
 		if (V)
 			free(V);
 	}
-	inline const tmatrix<double,NDOF,1> & operator() (const int i) const {
+	inline const tmatrix<double,NDOF,1> & operator() (const unsigned i) const {
 		return V[i];
 	}
-	inline tmatrix<double,NDOF,1> & operator() (const int i) {
+	inline tmatrix<double,NDOF,1> & operator() (const unsigned i) {
 		return V[i];
 	}
 
 private:
-	int nnd;
+	unsigned nnd;
 	tmatrix<double,NDOF,1> * V;
 };
 
@@ -1310,11 +1313,11 @@ private:
  * struct mesh_bc - a holder for mesh boundary conditions and forces.
  */
 struct mesh_bc_key {
-	int n, i;
+	unsigned n, i;
 	mesh_bc_key()
 	  : n(0), i(0) {
 	}
-	mesh_bc_key(int N, int I)
+	mesh_bc_key(unsigned N, unsigned I)
 	  : n(N), i(I) {
 	}
 	// Provide these for sorting.
@@ -1330,7 +1333,7 @@ struct mesh_bc : public mesh_bc_key {
 	mesh_bc()
 	  : mesh_bc_key(), d(0.0) {
 	}
-	mesh_bc(int N, int I, double D)
+	mesh_bc(unsigned N, unsigned I, double D)
 	  : mesh_bc_key(N,I), d(D) {
 	}
 };
@@ -1394,9 +1397,9 @@ public:
 			event_msg(EVENT_ERROR,"Out of memory in mesh::add()!");
 		return e;
 	}
-	inline int addnode(const coord3d & p) {
-		int k = node.haskey(p);
-		if (k == -1) {
+	inline unsigned addnode(const coord3d & p) {
+		unsigned k = node.haskey(p);
+		if (k == UINT_MAX) {
 			k = node.length();
 			node.add(p);
 		}
@@ -1405,16 +1408,16 @@ public:
 	inline void updatenode(const node3d & n) {
 		node.replace(n);
 	}
-	inline int getnodes() const {
+	inline unsigned getnodes() const {
 		return node.length();
 	}
-	inline const node3d & getnode(const int i) const {
+	inline const node3d & getnode(const unsigned i) const {
 		return node[i];
 	}
-	inline const node3d & getorderednode(const int i) const {
+	inline const node3d & getorderednode(const unsigned i) const {
 		return node.getindex(i);
 	}
-	inline const int hasnode(const coord3d & p) const {
+	inline const unsigned hasnode(const coord3d & p) const {
 		return node.haskey(p);
 	}
 
@@ -1432,9 +1435,8 @@ public:
 	};
 	// Add a constraint at a single point.
 	bool add_bc(const coord3d & p, const dof f, const double d) {
-		int k = node.haskey(p);
-		assert(k >= 0);
-		if (k == -1)
+		unsigned k = node.haskey(p);
+		if (k == UINT_MAX)
 			return false;
 		if (f & mesh::X)
 			disp_bc.add(mesh_bc(k,0,d));
@@ -1451,7 +1453,7 @@ public:
 		assert(!((o & mesh::X) && (o & mesh::Z)));
 		assert(!((o & mesh::Y) && (o & mesh::Z)));
 		coord3d cc(c,c,c);
-		for (int i = 0; i < node.length(); i++) {
+		for (unsigned i = 0; i < node.length(); i++) {
 			const node3d & n = node[i];
 			switch (o) {
 			case mesh::X:
@@ -1486,9 +1488,8 @@ public:
 	}
 	// Add an external force at a node.
 	bool add_fext(const coord3d & p, const dof f, const double d) {
-		int k = node.haskey(p);
-		assert(k >= 0);
-		if (k == -1)
+		unsigned k = node.haskey(p);
+		if (k == UINT_MAX)
 			return false;
 		if (f & mesh::X)
 			f_ext.add(mesh_bc(k,0,d));
@@ -1500,7 +1501,7 @@ public:
 	}
 	// Finally, solve the system.
 	bool solve(const double tol) {
-		int i, j, n, nnd = node.length();
+		unsigned i, j, n, nnd = node.length();
 		printf("Solving with %i nodes!\n",nnd);
 		smatrix K(nnd);
 		svector F(nnd), U(nnd), P(nnd), W(nnd), V(nnd);
@@ -1537,15 +1538,15 @@ public:
 			if (ke == 0)
 				return false;
 			for (i = 0; i < ke->nnd; i++) {
-				//int gi = e->inel[i];
-				int gi = node.getorder(e->inel[i]);
+				//unsigned gi = e->inel[i];
+				unsigned gi = node.getorder(e->inel[i]);
 				d = &(K.diag[gi]);
 				// At least one of P(gi) is non-zero, so apply the
 				// fixup to F for this element.
 				if (d->fixed & (1 << NDOF)) {
 					for (j = 0; j < ke->nnd; j++) {
-						//int gj = e->inel[j];
-						int gj = node.getorder(e->inel[j]);
+						//unsigned gj = e->inel[j];
+						unsigned gj = node.getorder(e->inel[j]);
 						if (j < i) {
 							if (gj < gi)
 								F(gj) -=  (*ke)(j,i)*P(gi);
@@ -1565,32 +1566,32 @@ public:
 					continue;
 				// Zero out the columns which are fixed.
 				for (j = 0; j <= i; j++) {
-					for (int k = 0; k < NDOF; k++) {
+					for (unsigned k = 0; k < NDOF; k++) {
 						if ((d->fixed & (1<<k)) == 0)
 							continue;
-						for (int l = 0; l < NDOF; l++)
+						for (unsigned l = 0; l < NDOF; l++)
 							(*ke)(j,i)(l,k) = 0.0;
 					}
 				}
 				for (j = i; j < ke->nnd; j++) {
-					for (int k = 0; k < NDOF; k++) {
+					for (unsigned k = 0; k < NDOF; k++) {
 						if ((d->fixed & (1<<k)) == 0)
 							continue;
-						for (int l = 0; l < NDOF; l++)
+						for (unsigned l = 0; l < NDOF; l++)
 							(*ke)(i,j)(k,l) = 0.0;
 					}
 				}
 			}
 			for (i = 0; i < ke->nnd; i++) {
-				//int gi = e->inel[i];
-				int gi = node.getorder(e->inel[i]);
+				//unsigned gi = e->inel[i];
+				unsigned gi = node.getorder(e->inel[i]);
 				d = &(K.diag[gi]);
 				// If this node is completly fixed, don't add anything.
 				if (d->fixed & ((1<<NDOF)-1) == ((1<<NDOF)-1))
 					continue;
 				for (j = i; j < ke->nnd; j++) {
-					//int gj = ke->inel[j];
-					int gj = node.getorder(e->inel[j]);
+					//unsigned gj = ke->inel[j];
+					unsigned gj = node.getorder(e->inel[j]);
 					d = &(K.diag[gj]);
 					if (d->fixed & ((1<<NDOF)-1) == ((1<<NDOF)-1))
 						continue;
@@ -1614,7 +1615,7 @@ public:
 		M.chol();
 
 		// CG solution
-		int it = 0;
+		unsigned it = 0;
 		double r = 0.0, ro = 0.0;
 		for (i = 0; i < nnd; i++)
 			r += tmatrix_scalar<double>(~F(i)*F(i));
@@ -1635,15 +1636,15 @@ public:
 				}
 				V(n) = t;
 			}
-			for (n = nnd-1; n >= 0; n--) {
-				d = &(M.diag[n]);
-				tmatrix<double,NDOF,1> t(V(n));
-				for (i = NDOF-1; i >= 0; i--) {
-					for (j = i+1; j < NDOF; j++)
-						t(i) -= t(j)*d->K(i,j);
-					t(i) *= d->K(i,i);
+			for (n = nnd; n > 0; n--) {
+				d = &(M.diag[n-1]);
+				tmatrix<double,NDOF,1> t(V(n-1));
+				for (i = NDOF; i > 0; i--) {
+					for (j = i; j < NDOF; j++)
+						t(i-1) -= t(j)*d->K(i-1,j);
+					t(i-1) *= d->K(i-1,i-1);
 				}
-				V(n) = t;
+				V(n-1) = t;
 				p = d->col_head;
 				while (p) {
 					V(p->i) -= (p->K)*t;
@@ -1702,29 +1703,29 @@ private:
 inline mesh::dof
 operator| (const mesh::dof l, const mesh::dof r)
 {
-	return static_cast<mesh::dof>(int(l) | int(r));
+	return static_cast<mesh::dof>(unsigned(l) | unsigned(r));
 }
 inline mesh::dof
 operator& (const mesh::dof l, const mesh::dof r)
 {
-	return static_cast<mesh::dof>(int(l) & int(r));
+	return static_cast<mesh::dof>(unsigned(l) & unsigned(r));
 }
 
 inline mesh::bcplane
 operator| (const mesh::bcplane l, const mesh::bcplane r)
 {
-	return static_cast<mesh::bcplane>(int(l) | int(r));
+	return static_cast<mesh::bcplane>(unsigned(l) | unsigned(r));
 }
 inline mesh::bcplane
 operator& (const mesh::bcplane l, const mesh::bcplane r)
 {
-	return static_cast<mesh::bcplane>(int(l) & int(r));
+	return static_cast<mesh::bcplane>(unsigned(l) & unsigned(r));
 }
 
 /*
  * Add a node to the mesh's node list, returning the index.
  */
-int
+unsigned
 element::addnode(const coord3d & c) const
 {
 	return owner->addnode(c);
@@ -1743,7 +1744,7 @@ element::updatenode(const node3d & n) const
  * Get a node from the node list, based on the index.
  */
 inline const node3d &
-element::getnode(const int i) const
+element::getnode(const unsigned i) const
 {
 	return owner->getnode(i);
 }
@@ -1804,8 +1805,8 @@ main_real()
 	m.setprop(material_property::emod,100e3); // kPa
 	m.setprop(material_property::poissons,0.35);
 
-	int x, y, z;
-	int dx, dy, dz, delta = 4, step = 1;
+	double x, y, z;
+	double dx, dy, dz, delta = 4, step = 1;
 	mesh FEM;
 	fset<coord3d> coord(8);
 
@@ -1814,7 +1815,8 @@ main_real()
 		step *= 2;
 	// Start with the tyre grid.
 	dx = delta; dy = delta;
-	for (x = -(step-2)*dx; x < (step-2)*dx; x += 2*dx) {
+	for (x = -(step-2)*dx; step > 0 && dx > 0
+			&& x < (step-2)*dx; x += 2*dx) {
 		for (y = -(step-2)*dy; y < (step-2)*dy; y += 2*dy) {
 			if (blockarea(x,x+2*dx,y,y+2*dx,100) == 0.0)
 				continue;
@@ -1833,15 +1835,15 @@ main_real()
 	double F = -690;
 	for (x = -(step-2)*dx; x <= (step-2)*dx; x += dx) {
 		for (y = -(step-2)*dy; y <= (step-2)*dy; y += dy) {
-			int p = FEM.hasnode(coord3d(x,y,0.0));
-			if (p == -1)
+			unsigned p = FEM.hasnode(coord3d(x,y,0.0));
+			if (p == UINT_MAX)
 				continue;
 			node3d n = FEM.getnode(p);
-			int x_m = FEM.hasnode(coord3d(x-dx,y,0.0));
-			int x_p = FEM.hasnode(coord3d(x+dx,y,0.0));
-			int y_m = FEM.hasnode(coord3d(x,y-dy,0.0));
-			int y_p = FEM.hasnode(coord3d(x,y+dy,0.0));
-			n.setneighbours(x_m,x_p,y_m,y_p,-1,-1);
+			unsigned x_m = FEM.hasnode(coord3d(x-dx,y,0.0));
+			unsigned x_p = FEM.hasnode(coord3d(x+dx,y,0.0));
+			unsigned y_m = FEM.hasnode(coord3d(x,y-dy,0.0));
+			unsigned y_p = FEM.hasnode(coord3d(x,y+dy,0.0));
+			n.setneighbours(x_m,x_p,y_m,y_p,UINT_MAX,UINT_MAX);
 			FEM.updatenode(n);
 			double f = F*blockarea(x-dx/2,x+dx/2,y-dy/2,y+dy/2,100.0);
 			if (fabs(f) > 0.0)
@@ -1853,7 +1855,7 @@ main_real()
 #define DOMAIN (4096)
 
 	// Now add the elements from below the tyre, working outwards.
-	int xm = 0, xp = 0, ym = 0, yp = 0, zp = 0, zm = 0;
+	double xm = 0, xp = 0, ym = 0, yp = 0, zp = 0, zm = 0;
 	while (zp > -4000 || xp < DOMAIN) {
 		zp += MIN(-40,zp);
 		dx = delta*2; dy = delta*2;
@@ -1861,7 +1863,7 @@ main_real()
 		while (z > MAX(zp,-4000)) {
 			dz = (z < -1000 ? -100 : -40);
 			z += dz;
-			printf("%i\t%i\t%i\t%i\t%i\n",MIN(16*dx,DOMAIN),xp,zm,z,zp);
+			printf("%f\t%f\t%f\t%f\t%f\n",MIN(16*dx,DOMAIN),xp,zm,z,zp);
 			for (x = 0; x < MIN(16*dx,DOMAIN); x += dx) {
 				for (y = 0; y < MIN(16*dy,DOMAIN); y += dy) {
 					if (xm < xp && (x >= xm && x < xp)
@@ -1878,13 +1880,13 @@ main_real()
 					coord[6] = coord3d(x+dx,y   ,z-dz);
 					coord[7] = coord3d(x+dx,y+dy,z-dz);
 					FEM.add(element::block34,m,coord);
-					for (int i = 0; i < 8; i++)
+					for (unsigned i = 0; i < 8; i++)
 						coord[i].x = -coord[i].x;
 					FEM.add(element::block34,m,coord);
-					for (int i = 0; i < 8; i++)
+					for (unsigned i = 0; i < 8; i++)
 						coord[i].y = -coord[i].y;
 					FEM.add(element::block34,m,coord);
-					for (int i = 0; i < 8; i++)
+					for (unsigned i = 0; i < 8; i++)
 						coord[i].x = -coord[i].x;
 					FEM.add(element::block34,m,coord);
 					if (x+dx == DOMAIN) {
@@ -1893,13 +1895,13 @@ main_real()
 							coord[0] = coord3d(x+dx,y+dy,z);
 							coord[1] = coord3d(x+dx,y+dy,z-dz);
 							FEM.add(element::infinite16,m,coord);
-							for (int i = 0; i < 2; i++)
+							for (unsigned i = 0; i < 2; i++)
 								coord[i].x = -coord[i].x;
 							FEM.add(element::infinite16,m,coord);
-							for (int i = 0; i < 2; i++)
+							for (unsigned i = 0; i < 2; i++)
 								coord[i].y = -coord[i].y;
 							FEM.add(element::infinite16,m,coord);
-							for (int i = 0; i < 2; i++)
+							for (unsigned i = 0; i < 2; i++)
 								coord[i].x = -coord[i].x;
 							FEM.add(element::infinite16,m,coord);
 						}
@@ -1909,13 +1911,13 @@ main_real()
 						coord[2] = coord3d(x+dx,y   ,z-dz);
 						coord[3] = coord3d(x+dx,y+dy,z-dz);
 						FEM.add(element::infinite16,m,coord);
-						for (int i = 0; i < 4; i++)
+						for (unsigned i = 0; i < 4; i++)
 							coord[i].x = -coord[i].x;
 						FEM.add(element::infinite16,m,coord);
-						for (int i = 0; i < 4; i++)
+						for (unsigned i = 0; i < 4; i++)
 							coord[i].y = -coord[i].y;
 						FEM.add(element::infinite16,m,coord);
-						for (int i = 0; i < 4; i++)
+						for (unsigned i = 0; i < 4; i++)
 							coord[i].x = -coord[i].x;
 						FEM.add(element::infinite16,m,coord);
 					}
@@ -1926,13 +1928,13 @@ main_real()
 						coord[2] = coord3d(x   ,y+dy,z-dz);
 						coord[3] = coord3d(x+dx,y+dy,z-dz);
 						FEM.add(element::infinite16,m,coord);
-						for (int i = 0; i < 4; i++)
+						for (unsigned i = 0; i < 4; i++)
 							coord[i].x = -coord[i].x;
 						FEM.add(element::infinite16,m,coord);
-						for (int i = 0; i < 4; i++)
+						for (unsigned i = 0; i < 4; i++)
 							coord[i].y = -coord[i].y;
 						FEM.add(element::infinite16,m,coord);
-						for (int i = 0; i < 4; i++)
+						for (unsigned i = 0; i < 4; i++)
 							coord[i].x = -coord[i].x;
 						FEM.add(element::infinite16,m,coord);
 					}
@@ -1958,7 +1960,7 @@ main_real()
 			mesh::X|mesh::Y|mesh::Z,0.0);
 	FEM.solve(1e-20);
 
-	int i, nnd = FEM.getnodes();
+	unsigned i, nnd = FEM.getnodes();
 	LEsystem test;
 	test.addlayer(-zm,100e3,0.35);
 	test.addload(point2d(0.0,0.0),0.0,690.0,100.0);
@@ -1986,7 +1988,7 @@ main_real()
 		double vx =  d.result(pavedata::deflct,pavedata::xx);
 		double vy =  d.result(pavedata::deflct,pavedata::yy);
 		double vz = -d.result(pavedata::deflct,pavedata::zz);
-		int j = FEM.hasnode(n);
+		unsigned j = FEM.hasnode(n);
 		double h = hypot(hypot(vx-ux,vy-uy),vz-uz);
 		double v = hypot(hypot(vx,vy),vz);
 		printf("Node %6i: (%+6i,%+6i,%+6i) =\t(%8.2g,%8.2g,%8.2g)\t(%8.2g,%8.2g,%8.2g)\t%8.2g\t(%8.2g)\n",j,int(x),int(y),int(z),vx,vy,vz,ux,uy,uz,h,(v == 0.0 ? 0.0 : h/v));
@@ -2016,8 +2018,8 @@ main()
 	m.setprop(material_property::poissons,0.2);
 
 	const double cube[3][2] = {{-10, 10}, {-10, 10}, {-10, 0}};
-	const int ndiv[3] = {80, 80, 50};
-	int i, j, k;
+	const unsigned ndiv[3] = {80, 80, 50};
+	unsigned i, j, k;
 	mesh FEM;
 
 	double dx = (cube[0][1]-cube[0][0])/ndiv[0];
@@ -2057,8 +2059,8 @@ main()
 	FEM.add_bc(coord3d(cube[0][0],cube[1][0],cube[2][0]),mesh::Y,0.0);
 	FEM.add_bc(coord3d(cube[0][1],cube[1][0],cube[2][0]),mesh::Y,0.0);
 	double F = -0.15*dx*dy;
-	for (i = 0; i <= ndiv[0]; i++) {
-		for (j = 0; j <= ndiv[1]; j++) {
+	for (i = 0; i < (ndiv[0]+1); i++) {
+		for (j = 0; j < (ndiv[1]+1); j++) {
 			double x = cube[0][0] + i*dx;
 			double y = cube[1][0] + j*dy;
 			double f = F;
