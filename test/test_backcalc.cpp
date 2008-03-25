@@ -33,11 +33,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#ifdef BUILD
+#ifdef NOBUILD
 int
 main()
 {
-	int i, l;
+	unsigned i, l;
 	LEbackcalc Bowl;
 	cset<point3d> p;
 	p.add(point3d(   0.0,0.0,  0.0));
@@ -52,7 +52,7 @@ main()
 	double T[5], h[5], v[5], mz[7], t, err;
 
 redo:
-	l = int(floor(RAND(2,6)));
+	l = unsigned(floor(RAND(2,6)));
 	//Bowl.setup(0.0,0.0,1e-6,5);
 	Bowl.setup(0.0001,0.0005,1e-4,5);
 
@@ -137,7 +137,7 @@ redo:
 int
 main()
 {
-	int i;
+	unsigned i;
 
 double Ebad[17][5] = {
 	{   16.322063,   39.174653,   29.353888,  230.667895,  649.966568}, 
@@ -192,7 +192,7 @@ double Ebad[17][5] = {
 	Bowl.addload(point2d(0.0,350.0),20*1e6,520);
 
 	double T[5], mz, err;
-	int bad = 0;
+	unsigned bad = 0;
 
 redo:
 	for (i = 0; i < Bowl.layers(); i++) {
@@ -264,8 +264,8 @@ redo:
 int
 main()
 {
-	int line = 0;
-	int i;
+	unsigned line = 0;
+	unsigned i;
 	double err;
 
 // PengCheng's Redbluff data
@@ -487,7 +487,7 @@ redo:
 int
 main()
 {
-	int i;
+	unsigned i;
 	LEbackcalc Bowl;
 
 	Bowl.setup(0.0001,0.0,1e-4,5);
@@ -538,7 +538,7 @@ main()
 int
 main()
 {
-	int i;
+	unsigned i;
 	double mz;
 	LEbackcalc Bowl;
 	static double T[2]= {800000.0, 50000.0};
@@ -611,7 +611,7 @@ main()
 	//	mz = Bowl.result(p).result(pavedata::deflct,pavedata::zz);
 	//	//Bowl.adddefl(p,mz);
 	//	printf("%0.16e\n",mz);
-	//	for (int j = 0; j < Bowl.layers(); j++) {
+	//	for (unsigned j = 0; j < Bowl.layers(); j++) {
 	//		mz = Bowl.result(p).deflgrad[j];
 	//		printf("%0.16e\t",mz);
 	//	}
@@ -632,7 +632,7 @@ main()
 int
 main()
 {
-	int i;
+	unsigned i;
 	double mz[7], t;
 	LEbackcalc Bowl;
 	static double T[2]= {800000.0, 50000.0};

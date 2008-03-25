@@ -246,8 +246,7 @@ test_set4()
 	}
 }
 
-#ifdef BUILD
-
+#ifdef NOBUILD
 int
 main()
 {
@@ -268,5 +267,4 @@ main()
 	printf("\n");
 	return 0;
 }
-
 #endif
