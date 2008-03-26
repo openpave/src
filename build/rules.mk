@@ -229,8 +229,10 @@ else
 	$(CC) $(OS_LDFLAGS) $(OBJS) $(_LIBS) $(OS_LIBS) -o $@
 endif
 ifndef BUILD_DBG
+ifndef BUILD_PRF
 ifdef BUILD_OPT
 	$(STRIP) $@
+endif
 endif
 endif
 endif
@@ -262,8 +264,10 @@ else
 	$(CC) $(DSO_LDFLAGS) $(_LIBS) $(OBJS) $(RES) -o $@
 endif
 ifndef BUILD_DBG
+ifndef BUILD_PRF
 ifdef BUILD_OPT
 	$(STRIP) $@
+endif
 endif
 endif
 endif
