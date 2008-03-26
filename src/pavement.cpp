@@ -1088,7 +1088,7 @@ LEsystem::calculate(resulttype res, double * Q)
 		bm.empty();
 		if (!bm.add(0.0))
 			goto abort;
-		for (ib = 0; nbz > 0 && ib <= nbz; ib++) {
+		for (ib = 0; ib < (nbz+1); ib++) {
 			if (!bm.add(j1r[ib]/a[ia]))
 				goto abort;
 		}
@@ -1977,7 +1977,7 @@ LEbackcalc::deflgrad(unsigned nl, double * P, double * Q,
 	}
 	for (j = 0; j < dl; j++)
 		DG[j] *= (dl*dl)/(gg*gg);
-	for (k = 0; nl > 0 && k <= nl; k++) {
+	for (k = 0; k < (nl+1); k++) {
 		if (dgg != 0.0) {
 			// Calculate our step, which we know exactly, because
 			// we're quadratic.

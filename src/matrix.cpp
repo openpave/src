@@ -1182,7 +1182,7 @@ tridiag_hh(const unsigned n, double * A, double * d,
 		A[i*n+i-1] -= f;
 		for (j = 0, f = 0.0; j < i; j++) {
 			A[j*n+i] = A[i*n+j]/d[i];
-			for (k = 0, e[j] = 0.0; k <= j; k++)
+			for (k = 0, e[j] = 0.0; k < j+1; k++)
 				e[j] += A[j*n+k]*A[i*n+k];
 			for (k = j+1; j < i && k < i; k++)
 				e[j] += A[k*n+j]*A[i*n+k];
@@ -1191,7 +1191,7 @@ tridiag_hh(const unsigned n, double * A, double * d,
 		}
 		for (j = 0; j < i; j++) {
 			e[j] -= f/(2*d[i])*A[i*n+j];
-			for (k = 0; k <= j; k++)
+			for (k = 0; k < j+1; k++)
 				A[j*n+k] -= (A[i*n+j]*e[k] + e[j]*A[i*n+k]);
 		}
 	}
