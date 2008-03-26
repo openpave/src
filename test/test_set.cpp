@@ -188,7 +188,7 @@ test_set2()
 		for (i = 1; i < N; i++) {
 			if (t[i-1] > t[i]) {
 				printf("Failed! (%i)\n",i);
-				for (j = (i<2?0:i-2); j <= MIN(i+2,N-1); j++)
+				for (j = (i<2?0:i-2); j < MIN(i+3,N); j++)
 					printf("%4.2f\n",t[j]);
 			}
 		}
@@ -211,7 +211,7 @@ test_set3()
 		for (i = 1; i < N; i++) {
 			if (t.getindex(i-1) > t.getindex(i)) {
 				printf("Failed! (%i)\n",i);
-				for (j = (i<2?0:i-2); j <= MIN(i+2,N-1); j++)
+				for (j = (i<2?0:i-2); j < MIN(i+3,N); j++)
 					printf("%4.2f\n",t[j]);
 			}
 		}
