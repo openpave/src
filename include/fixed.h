@@ -62,6 +62,13 @@ class fixed {
 	inline fixed(const int i) {
 		value = i << P;
 	}
+	inline fixed(const unsigned i) {
+		value = i << P;
+	}
+	inline fixed(const float f) {
+		value = (f >= 0 ? int(f*(1 << P) + 0.5)
+			 : -int(0.5 - f*(1 << P)) );
+	}
 	inline fixed(const double d) {
 		value = (d >= 0 ? int(d*(1 << P) + 0.5)
 			 : -int(0.5 - d*(1 << P)) );
