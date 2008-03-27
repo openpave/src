@@ -30,9 +30,10 @@
 
 #include "mathplus.h"
 #include "set.h"
+#include "tree.h"
 #include <stdio.h>
 
-#define N 30000
+#define N 3000000
 
 struct key {
 	int i;
@@ -107,6 +108,7 @@ void kfset_print(const kfset<K,V> & t) {
 	}
 	printf("}\n");
 }
+
 void
 test_set1b()
 {
@@ -264,6 +266,33 @@ main()
 	test_set3();
 	printf("\nTest 4:\n");
 	test_set4();
+	printf("\n");
+	return 0;
+}
+#endif
+
+#ifdef BUILD
+int main()
+{
+	BST<key,value> bst;
+	
+	unsigned i, l = 10;
+	oset<double> t(0,N);
+	while (l-- > 0) {
+		printf(".");
+		fflush(NULL);
+		for (i = 0; i < N; i++) {
+			int s = int(floor(RAND(0,N)));
+			double v = double(i);
+			//printf("Inserting %d: %f\n",s,v);
+			bst.insert(key(s),value(v));
+		}
+		//bst.print();
+		for (i = 0; i < N; i++) {
+			bst.remove(key(i));
+		}
+		//bst.print();
+	}
 	printf("\n");
 	return 0;
 }

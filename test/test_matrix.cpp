@@ -307,7 +307,7 @@ test_tmatrix()
 	printf(" I = "); I.print();
 }
 
-#ifdef BUILD
+#ifdef NOBUILD
 int
 main()
 {
