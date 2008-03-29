@@ -33,7 +33,7 @@
 #include "tree.h"
 #include <stdio.h>
 
-#define N 3000000
+#define N 10
 
 struct key {
 	int i;
@@ -276,7 +276,7 @@ int main()
 {
 	BST<key,value> bst;
 	
-	unsigned i, l = 10;
+	unsigned i, l = 1;
 	oset<double> t(0,N);
 	while (l-- > 0) {
 		printf(".");
@@ -284,13 +284,14 @@ int main()
 		for (i = 0; i < N; i++) {
 			int s = int(floor(RAND(0,N)));
 			double v = double(i);
-			//printf("Inserting %d: %f\n",s,v);
+			printf("Inserting %d: %f\n",s,v);
 			bst.insert(key(s),value(v));
+			bst.print();
 		}
 		//bst.print();
-		for (i = 0; i < N; i++) {
-			bst.remove(key(i));
-		}
+		//for (i = 0; i < N; i++) {
+		//	bst.remove(key(i));
+		//}
 		//bst.print();
 	}
 	printf("\n");

@@ -50,8 +50,7 @@ struct BST
 	  : root(0) {
 	}
 	~BST() {
-		while (root != 0)
-			remove(root->key);
+		delete root;
 	}
 	V * get(const K & k) {
 		node * x = root;
@@ -66,7 +65,8 @@ struct BST
 		return 0;
 	}
 	void insert(const K & k, const V & v) {
-		root = insert(root,k,v);
+		bool add = false;
+		root = insert(root,k,v,&add);
 		root->red = false;
 	}
 	void remove(const K & k) {
@@ -81,7 +81,7 @@ struct BST
 		if (root == 0)
 			printf("Empty!\n");
 		else
-			print(0,root);
+			print(0,0,root);
 		printf("\n");
 	}
 
@@ -89,19 +89,24 @@ private:
 	struct node {
 		K key;
 		V value;
+		unsigned order;
 		node * left, * right;
 		bool red;
 		node(const K & k, const V & v)
-		  : key(k), value(v), red(true) {
+		  : key(k), value(v), order(0), left(0), right(0), red(true) {
 		}
 		~node() {
+			delete left;
+			delete right;
 		}
 	} * root;
 
-	node * insert(node * h, const K & k, const V & v) {
+	node * insert(node * h, const K & k, const V & v, bool * o) {
 		// If we're zero that means we need to make a new node...
-		if (h == 0)
+		if (h == 0) {
+			*o = true;
 			return new node(k,v);
+		}
 		// Split double reds on the way down.
 		if (h->left != 0 && h->left->red) {
 			if (h->left->left != 0 && h->left->left->red) {
@@ -112,12 +117,15 @@ private:
 		if (k == h->key)
 			// Key already exists, so replace.
 			h->value = v;
-		else if (k < h->key)
+		else if (k < h->key) {
 			// Re-root insert into left tree.
-			h->left = insert(h->left,k,v);
-		else
+			h->left = insert(h->left,k,v,o);
+			if (*o)
+				h->order++;
+		} else {
 			// Or right tree.
-			h->right = insert(h->right,k,v);
+			h->right = insert(h->right,k,v,o);
+		}
 		if (h->right != 0 && h->right->red)
 			h = leanLeft(h);
 		return h;
@@ -126,18 +134,26 @@ private:
 		node * x = h->right;
 		h->right = x->left;
 		x->left = h;
+		x->order += h->order + 1;
 		return x;
 	}
 	node * rotR(node * h) {
 		node * x = h->left;
 		h->left = x->right;
 		x->right = h;
+		h->order -= x->order + 1;
 		return x;
 	}
 	node * leanLeft(node * h) {
 		h = rotL(h);
 		h->red = h->left->red;
 		h->left->red = true;
+		return h;
+	}
+	node * leanRight(node * h) {
+		h = rotR(h);
+		h->red = h->right->red;
+		h->right->red = true;
 		return h;
 	}
 	node * remove(node * h, const K & k) {
@@ -160,11 +176,8 @@ private:
 			h->left = remove(h->left,k);
 		} else {
 			// Lean red links right going down.
-			if (h->left != 0 && h->left->red) {
-				h = rotR(h);
-				h->red = h->right->red;
-				h->right->red = true;
-			}
+			if (h->left != 0 && h->left->red)
+				h = leanRight(h);
 			// We've found our node, and it's a leaf.
 			if (k == h->key && h->right == 0) {
 				delete h;
@@ -201,14 +214,15 @@ private:
 			h = leanLeft(h);
 		return h;
 	}	
-	void print(int level, node * h) {
+	void print(int level, unsigned order, node * h) {
 		if (h->right != 0)
-			print(level+1,h->right);
+			print(level+1,order+h->order+1,h->right);
+		printf("(%d %d %d) ",order,h->order,order+h->order);
 		for (int i = 0; i < level; i++)
 			printf(" ");
 		printf("%d: %f %s\n",h->key.i,h->value.d,(h->red?"RED  ":"BLACK"));
 		if (h->left != 0)
-			print(level+1,h->left);
+			print(level+1,order,h->left);
 	}
 	
 };
