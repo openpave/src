@@ -96,32 +96,55 @@ static inline double delta()
  * struct meta_stiffness - template meta class to assign the stiffness
  * tensor based on lambda and mu.  DO NOT PLAY WITH THIS.
  */
-template<unsigned I, unsigned J, unsigned K, unsigned L>
+template<unsigned I = NDIM, unsigned J = NDOF,
+	unsigned K = NDIM, unsigned L = NDOF>
 struct meta_stiffness
 {
-	static inline void assignR(smatrix_dof & E,
+	static inline void subassignR(smatrix_dof & E,
 			const double & l, const double & m) {
-		meta_stiffness<I,J,K,L-1>::assignR(E,l,m);
-		E(J-1,L-1) = l*delta<I,J-1>()*delta<K,L-1>()
-				+ m*(delta<I,K>()*delta<J-1,L-1>()
-				   + delta<I,L-1>()*delta<J-1,K>());
+		meta_stiffness<I,J,K,L-1>::subassignR(E,l,m);
+		E(J-1,L-1) = l*delta<I-1,J-1>()*delta<K-1,L-1>()
+				+ m*(delta<I-1,K-1>()*delta<J-1,L-1>()
+				   + delta<I-1,L-1>()*delta<J-1,K-1>());
 	}
-	static inline void assign(smatrix_dof & E,
+	static inline void subassign(smatrix_dof & E,
 			const double & l, const double & m) {
-		meta_stiffness<I,J-1,K,L>::assign(E,l,m);
+		meta_stiffness<I,J-1,K,L>::subassign(E,l,m);
+		meta_stiffness<I,J,K,L>::subassignR(E,l,m);
+	}
+	static inline void assignR(smatrix_dof (& E)[NDIM][NDIM],
+			const double & l, const double & m) {
+		meta_stiffness<I,J,K-1,L>::assignR(E,l,m);
+		subassign(E[I-1][K-1],l,m);
+	}
+	static inline void assign(smatrix_dof (& E)[NDIM][NDIM],
+			const double & l, const double & m) {
+		meta_stiffness<I-1,J,K,L>::assign(E,l,m);
 		meta_stiffness<I,J,K,L>::assignR(E,l,m);
 	}
 };
 template<unsigned I, unsigned J, unsigned K>
 struct meta_stiffness<I,J,K,0>
 {
-	static inline void assignR(smatrix_dof &,
+	static inline void subassignR(smatrix_dof &,
 			const double &, const double &) {}
 };
 template<unsigned I, unsigned K, unsigned L>
 struct meta_stiffness<I,0,K,L>
 {
-	static inline void assign(smatrix_dof &,
+	static inline void subassign(smatrix_dof &,
+			const double &, const double &) {}
+};
+template<unsigned I, unsigned J, unsigned L>
+struct meta_stiffness<I,J,0,L>
+{
+	static inline void assignR(smatrix_dof (&)[NDIM][NDIM],
+			const double &, const double &) {}
+};
+template<unsigned J, unsigned K, unsigned L>
+struct meta_stiffness<0,J,K,L>
+{
+	static inline void assign(smatrix_dof (&)[NDIM][NDIM],
 			const double &, const double &) {}
 };
 
@@ -190,7 +213,7 @@ public:
 		return double(props[material_property(p)]);
 	}
 
-	// Get the point stiffness matrix.  This should be made to cache
+	// Get the point stiffness tensor.  This should be made to cache
 	// the result.
 	inline void pointstiffness(
 			smatrix_dof (& E)[NDIM][NDIM]) const {
@@ -199,15 +222,7 @@ public:
 		double lambda = v*e/(1+v)/(1-2*v);
 		double mu = e/2/(1+v);
 
-		meta_stiffness<0,3,0,3>::assign(E[0][0],lambda,mu);
-		meta_stiffness<0,3,1,3>::assign(E[0][1],lambda,mu);
-		meta_stiffness<0,3,2,3>::assign(E[0][2],lambda,mu);
-		meta_stiffness<1,3,0,3>::assign(E[1][0],lambda,mu);
-		meta_stiffness<1,3,1,3>::assign(E[1][1],lambda,mu);
-		meta_stiffness<1,3,2,3>::assign(E[1][2],lambda,mu);
-		meta_stiffness<2,3,0,3>::assign(E[2][0],lambda,mu);
-		meta_stiffness<2,3,1,3>::assign(E[2][1],lambda,mu);
-		meta_stiffness<2,3,2,3>::assign(E[2][2],lambda,mu);
+		meta_stiffness<>::assign(E,lambda,mu);
 	}
 
 private:
