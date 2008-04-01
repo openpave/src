@@ -82,6 +82,7 @@ double run_time;
  */
 typedef tmatrix<double,NDOF,NDOF> smatrix_dof;
 typedef tmatrix<double,NDOF,1>    svector_dof;
+typedef tmatrix<double,NDIM,NDOF> ematrix;
 
 /*
  * Templated Kronecker delta
@@ -115,12 +116,35 @@ struct meta_stiffness
 	static inline void assignR(smatrix_dof (& E)[NDIM][NDIM],
 			const double & l, const double & m) {
 		meta_stiffness<I,J,K-1,L>::assignR(E,l,m);
-		subassign(E[I-1][K-1],l,m);
+		meta_stiffness<I,J,K,L>::subassign(E[I-1][K-1],l,m);
 	}
 	static inline void assign(smatrix_dof (& E)[NDIM][NDIM],
 			const double & l, const double & m) {
 		meta_stiffness<I-1,J,K,L>::assign(E,l,m);
 		meta_stiffness<I,J,K,L>::assignR(E,l,m);
+	}
+	static inline void submulR(ematrix & s, const ematrix & e,
+			const double & l, const double & m) {
+		meta_stiffness<I,J,K,L-1>::submulR(s,e,l,m);
+		s(I-1,J-1) += (l*delta<I-1,J-1>()*delta<K-1,L-1>()
+				+ m*(delta<I-1,K-1>()*delta<J-1,L-1>()
+				   + delta<I-1,L-1>()*delta<J-1,K-1>()))
+				*e(K-1,L-1);
+	}
+	static inline void submul(ematrix & s, const ematrix & e,
+			const double & l, const double & m) {
+		meta_stiffness<I,J-1,K,L>::submul(s,e,l,m);
+		meta_stiffness<I,J,K,L>::submulR(s,e,l,m);
+	}
+	static inline void mulR(ematrix & s, const ematrix & e,
+			const double & l, const double & m) {
+		meta_stiffness<I,J,K-1,L>::mulR(s,e,l,m);
+		meta_stiffness<I,J,K,L>::submul(s,e,l,m);
+	}
+	static inline void mul(ematrix & s, const ematrix & e,
+			const double & l, const double & m) {
+		meta_stiffness<I-1,J,K,L>::mul(s,e,l,m);
+		meta_stiffness<I,J,K,L>::mulR(s,e,l,m);
 	}
 };
 template<unsigned I, unsigned J, unsigned K>
@@ -128,11 +152,15 @@ struct meta_stiffness<I,J,K,0>
 {
 	static inline void subassignR(smatrix_dof &,
 			const double &, const double &) {}
+	static inline void submulR(ematrix &, const ematrix &,
+			const double &, const double &) {}
 };
 template<unsigned I, unsigned K, unsigned L>
 struct meta_stiffness<I,0,K,L>
 {
 	static inline void subassign(smatrix_dof &,
+			const double &, const double &) {}
+	static inline void submul(ematrix &, const ematrix &,
 			const double &, const double &) {}
 };
 template<unsigned I, unsigned J, unsigned L>
@@ -140,11 +168,15 @@ struct meta_stiffness<I,J,0,L>
 {
 	static inline void assignR(smatrix_dof (&)[NDIM][NDIM],
 			const double &, const double &) {}
+	static inline void mulR(ematrix &, const ematrix &,
+			const double &, const double &) {}
 };
 template<unsigned J, unsigned K, unsigned L>
 struct meta_stiffness<0,J,K,L>
 {
 	static inline void assign(smatrix_dof (&)[NDIM][NDIM],
+			const double &, const double &) {}
+	static inline void mul(ematrix &, const ematrix &,
 			const double &, const double &) {}
 };
 
@@ -215,14 +247,22 @@ public:
 
 	// Get the point stiffness tensor.  This should be made to cache
 	// the result.
-	inline void pointstiffness(
-			smatrix_dof (& E)[NDIM][NDIM]) const {
+	inline void pointstiffness(smatrix_dof (& E)[NDIM][NDIM]) const {
 		double e = getprop(material_property::emod);
 		double v = getprop(material_property::poissons);
 		double lambda = v*e/(1+v)/(1-2*v);
 		double mu = e/2/(1+v);
 
 		meta_stiffness<>::assign(E,lambda,mu);
+	}
+	// Get the point stress tensor, based on the strain.
+	inline void pointstress(ematrix & s, const ematrix & e) const {
+		double E = getprop(material_property::emod);
+		double v = getprop(material_property::poissons);
+		double lambda = v*E/(1+v)/(1-2*v);
+		double mu = E/2/(1+v);
+
+		meta_stiffness<>::mul(s,e,lambda,mu);
 	}
 
 private:
@@ -654,7 +694,9 @@ public:
 	}
 	virtual unsigned l2g(const unsigned i) const = 0;
 	virtual smatrix_elem * stiffness(const node_list &) const = 0;
-
+	virtual void results(const node_list &, const fset<point3d> &,
+		fset<pavedata> &) const = 0;
+	
 protected:
 	friend class mesh;
 
@@ -862,12 +904,82 @@ protected:
 	void buildxe(const node_list & node, double (* xe)[NDIM]) const {
 		assert(NDIM == 3);
 		for (unsigned i = 0; i < nnd; i++) {
-			const coord3d & p = node[inel[i]];
-			xe[i][0] = p.x; xe[i][1] = p.y; xe[i][2] = p.z;
+			const coord3d & c = node[inel[i]];
+			xe[i][0] = c.x; xe[i][1] = c.y; xe[i][2] = c.z;
 		}
 	}
+	// Build a matrix of the nodal deflections.
+	void buildue(const node_list & node, double (* ue)[NDOF]) const {
+		assert(NDOF == 3);
+		for (unsigned i = 0; i < nnd; i++) {
+			const node3d & n = node[inel[i]];
+			ue[i][0] = n.ux; ue[i][1] = n.uy; ue[i][2] = n.uz;
+		}
+	}
+	// build the shape function vector.
+	void buildN(const bool ismap, const double & gx,
+			const double & gy, const double & gz,
+			double * N, const unsigned * mask = 0) const {
+		const unsigned nz = unsigned(SZ);
+		double Nx = 0, Ny = 0, Nz = 0;
+
+		assert(NDIM == 3);
+		// Loop over each level in the element.
+		for (unsigned i = 0, j; i < nz; i++) {
+			Nz = getN(ismap,SZ,i,gz);
+			// Start with the corners.
+			for (unsigned l = 0; l < 4; l++) {
+				Nx = getN(ismap,sx,l/2,gx); Ny = getN(ismap,sy,l%2,gy);
+				N[i*4+l] = Nx*Ny*Nz;
+			}
+			// If we don't have extra nodes we're done.
+			if (!mask)
+				continue;
+			// Build the extra nodes at the half points.
+			for (unsigned l = 0; l < 4; l++) {
+				if ((j = mask[i*4+l]) == 0)
+					continue;
+				switch (l) {
+				case 0: case 3:
+					Nx = N_2(l/2,gx); Ny = 1-fabs(gy);
+					break;
+				case 1: case 2:
+					Nx = 1-fabs(gx);  Ny = N_2(l%2,gy);
+					break;
+				}
+				N[j] = Nx*Ny*Nz;
+			}
+			// If we're not the top or bottom we're done.  Else, build
+			// those.
+			if (i > 0 && i < nz-1)
+				continue;
+			if ((j = mask[(i == 0 ? 4*nz : 4*nz+1)]) == 0)
+				continue;
+			Nx = 1-fabs(gx); Ny = 1-fabs(gy);
+			N[j] = Nx*Ny*Nz;
+		}
+		if (!mask)
+			return;
+		// Correct the shape functions for the corners and sides,
+		// depending on the existance of the extra nodes.
+		for (unsigned l = 0; l < 4*nz; l++) {
+			if (mask[l] != 0)
+				N[l] -= N[mask[l]]/2;
+			const int Jxy[4] = {+2,-1,+1,-2};
+			if (mask[l+Jxy[l%4]] != 0)
+				N[l] -= N[mask[l+Jxy[l%4]]]/2;
+			if (l < 4 && mask[4*nz] != 0)
+				N[l] += N[mask[4*nz]]/4;
+			if (l >= 4*(nz-1) && mask[4*nz+1] != 0)
+				N[l] += N[mask[4*nz+1]]/4;
+		}
+		for (unsigned l = 0; mask[4*nz] != 0 && l < 4; l++)
+			N[mask[l]] -= N[mask[4*nz]]/2;
+		for (unsigned l = 4*(nz-1); mask[4*nz+1] != 0 && l < 4*nz; l++)
+			N[mask[l]] -= N[mask[4*nz+1]]/2;
+	}
 	// build the shape function derivative matrix.
-	void builddNdr(const bool mapping, const double & gx,
+	void builddNdr(const bool ismap, const double & gx,
 			const double & gy, const double & gz,
 			double (* dNdr)[NDIM], const unsigned * mask = 0) const {
 		const unsigned nz = unsigned(SZ);
@@ -876,11 +988,11 @@ protected:
 		assert(NDIM == 3);
 		// Loop over each level in the element.
 		for (unsigned i = 0, j; i < nz; i++) {
-			Nz = N(mapping,SZ,i,gz); dNdz = dN(mapping,SZ,i,gz);
+			Nz = getN(ismap,SZ,i,gz); dNdz = getdN(ismap,SZ,i,gz);
 			// Start with the corners.
 			for (unsigned l = 0; l < 4; l++) {
-				Nx = N(mapping,sx,l/2,gx); dNdx = dN(mapping,sx,l/2,gx);
-				Ny = N(mapping,sy,l%2,gy); dNdy = dN(mapping,sy,l%2,gy);
+				Nx = getN(ismap,sx,l/2,gx); dNdx = getdN(ismap,sx,l/2,gx);
+				Ny = getN(ismap,sy,l%2,gy); dNdy = getdN(ismap,sy,l%2,gy);
 				dNdr[i*4+l][0] = dNdx*Ny*Nz;
 				dNdr[i*4+l][1] = Nx*dNdy*Nz;
 				dNdr[i*4+l][2] = Nx*Ny*dNdz;
@@ -978,8 +1090,8 @@ protected:
 		for (unsigned gk = 0; gk < nz; gk++) {
 			double gw = gx[gi][1]*gy[gj][1]*gz[gk][1];
 			builddNdr(true,gx[gi][0],gy[gj][0],gz[gk][0],dNdr,mask);
-			for (i = 0; i < NDOF; i++) {
-				for (j = 0; j < NDOF; j++) {
+			for (i = 0; i < NDIM; i++) {
+				for (j = 0; j < NDIM; j++) {
 					J[i][j] = 0.0;
 					for (k = 0; k < nnd; k++)
 						J[i][j] += dNdr[k][i]*xe[k][j];
@@ -1000,6 +1112,85 @@ protected:
 			}
 		}}}
 		return K;
+	}
+	// Output a MATLAB patch of results.
+	void builddata(const node_list & node, const fset<point3d> & c,
+			fset<pavedata> & data, const unsigned * mask = 0) const {
+		unsigned n, i, j, k;
+		double l[NDIM], g[NDIM];
+
+		assert(NDIM == 3 && NDOF == 3);
+		assert(c.length() == data.length());
+		
+		// XXX: Temp
+		double emod = mat.getprop(material_property::emod);
+		double v = mat.getprop(material_property::poissons);
+
+		// Element nodal coords
+		double (* xe)[NDIM] = static_cast<double (*)[NDIM]>
+				(alloca(nnd*NDIM*sizeof(double)));
+		// Element nodal deflections
+		double (* ue)[NDOF] = static_cast<double (*)[NDOF]>
+				(alloca(nnd*NDOF*sizeof(double)));
+		buildxe(node,xe);
+		buildue(node,ue);
+
+		double * N = static_cast<double *>(alloca(nnd*sizeof(double)));
+		// This matrix is transposed.
+		double (* dNdr)[NDIM] = static_cast<double (*)[NDIM]>
+				(alloca(nnd*NDIM*sizeof(double)));
+		double J[NDIM][NDIM];
+		for (n = 0; n < c.length(); n++) {
+			pavedata & d = data[n];
+			// Stress and strain tensors.
+			ematrix s(0.0), e(0.0);
+			l[0] = c[n].x, l[1] = c[n].y, l[2] = c[n].z;
+			buildN(true,l[0],l[1],l[2],N,mask);
+			for (j = 0; j < NDIM; j++) {
+				g[j] = 0.0;
+				for (k = 0; k < nnd; k++)
+					g[j] += N[k]*xe[k][j];
+			}
+			d.x = g[0], d.y = g[1], d.z = g[2];
+			builddNdr(true,l[0],l[1],l[2],dNdr,mask);
+			for (i = 0; i < NDIM; i++) {
+				for (j = 0; j < NDIM; j++) {
+					J[i][j] = 0.0;
+					for (k = 0; k < nnd; k++)
+						J[i][j] += dNdr[k][i]*xe[k][j];
+				}
+			}
+			if (sx == inf_pos || sx == inf_neg
+			 || sy == inf_pos || sy == inf_neg) {
+				buildN(false,l[0],l[1],l[2],N,mask);
+				builddNdr(false,l[0],l[1],l[2],dNdr,mask);
+			}
+			inv_mul_gauss(nnd,J,dNdr);
+			for (j = 0; j < NDOF; j++) {
+				g[j] = 0.0;
+				for (k = 0; k < nnd; k++)
+					g[j] += N[k]*ue[k][j];
+			}
+			for (i = 0; i < NDIM; i++) {
+				for (j = 0; j < NDOF; j++) {
+					for (k = 0; k < nnd; k++)
+						e(i,j) += dNdr[k][i]*ue[k][j];
+				}
+			}
+			e = (e + ~e)*0.5;
+			mat.pointstress(s,e);
+			d.data[4][0] = g[0];
+			d.data[4][1] = g[1];
+			d.data[4][2] = g[2];
+			d.data[0][0] = s(0,0);
+			d.data[0][1] = s(1,1);
+			d.data[0][2] = s(2,2);
+			d.data[1][0] = s(0,1);
+			d.data[1][1] = s(0,2);
+			d.data[1][2] = s(1,2);
+			// XXX: we'll need to fix this...
+			d.principle(v,emod);
+		}
 	}
 
 private:
@@ -1100,27 +1291,27 @@ private:
 		return dN_3(n+1,r);
 	}
 	// Build the shape/mapping function based on the type of function.
-	static inline double N(const bool mapping, const shape_t s,
+	static inline double getN(const bool ismap, const shape_t s,
 			const unsigned n, const double r) {
 		switch (s) {
 		case linear:
 		case absolute:  return N_2(n,r);
 		case quadratic: return N_3(n,r);
 		case cubic:     return N_4(n,r);
-		case inf_pos:   return (mapping ? Mpi(n,r) : Npi(n,r));
-		case inf_neg:   return (mapping ? Mni(n,r) : Nni(n,r));
+		case inf_pos:   return (ismap ? Mpi(n,r) : Npi(n,r));
+		case inf_neg:   return (ismap ? Mni(n,r) : Nni(n,r));
 		}
 		assert(false); return 0.0;
 	}
-	static inline double dN(const bool mapping, const shape_t s,
+	static inline double getdN(const bool ismap, const shape_t s,
 			const unsigned n, const double r) {
 		switch (s) {
 		case linear:
 		case absolute:  return dN_2(n,r);
 		case quadratic: return dN_3(n,r);
 		case cubic:     return dN_4(n,r);
-		case inf_pos:   return (mapping ? dMpi(n,r) : dNpi(n,r));
-		case inf_neg:   return (mapping ? dMni(n,r) : dNni(n,r));
+		case inf_pos:   return (ismap ? dMpi(n,r) : dNpi(n,r));
+		case inf_neg:   return (ismap ? dMni(n,r) : dNni(n,r));
 		}
 		assert(false); return 0.0;
 	}
@@ -1141,6 +1332,11 @@ public:
 		assert(4*int(SZ) == this->nnd);
 		return element_base<SZ,4*int(SZ)>::buildKe(node);
 	}
+	virtual void results(const node_list & node, const fset<point3d> & c,
+			fset<pavedata> & d) const {
+		assert(4*int(SZ) == this->nnd);
+		element_base<SZ,4*int(SZ)>::builddata(node,c,d);
+	}
 };
 
 /*
@@ -1156,6 +1352,10 @@ public:
 	}
 	virtual smatrix_elem * stiffness(const node_list & node) const {
 		return element_base<SZ,8*int(SZ)+2>::buildKe(node,mask);
+	}
+	virtual void results(const node_list & node, const fset<point3d> & c,
+			fset<pavedata> & d) const {
+		element_base<SZ,8*int(SZ)+2>::builddata(node,c,d,mask);
 	}
 
 protected:
@@ -1176,6 +1376,11 @@ public:
 	virtual smatrix_elem * stiffness(const node_list & node) const {
 		assert(4*int(SZ) == this->nnd);
 		return element_base<SZ,4*int(SZ)>::buildKe(node);
+	}
+	virtual void results(const node_list & node, const fset<point3d> & c,
+			fset<pavedata> & d) const {
+		assert(4*int(SZ) == this->nnd);
+		element_base<SZ,4*int(SZ)>::builddata(node,c,d);
 	}
 };
 
@@ -1556,6 +1761,29 @@ public:
 	}
 	inline const unsigned hasnode(const coord3d & p) const {
 		return node.haskey(p);
+	}
+	// This outputs the results for all the elements in the list
+	// Obviously, the list must be ones returned by add().
+	void results(const fset<const element *> & e,
+			const fset<point3d> & c) {
+		fset<pavedata> data(c.length(),c.length());
+		
+		// XXX: fopen a file?
+		for (unsigned i = 0; i < e.length(); i++) {
+			e[i]->results(node,c,data);
+			printf("data{%d} = [ ...\n",i);
+			for (unsigned j = 0; j < data.length(); j++) {
+				pavedata & d = data[j];
+				printf("%4g, %4g, %4g",d.x,d.y,d.z);
+				printf(", %4g, %4g, %4g",d.data[4][0],d.data[4][1],d.data[4][2]);
+				printf(", %4g, %4g, %4g",d.data[0][0],d.data[0][1],d.data[0][2]);
+				printf(", %4g, %4g, %4g",d.data[1][0],d.data[1][1],d.data[1][2]);
+				printf(", %4g, %4g, %4g",d.data[2][0],d.data[2][1],d.data[2][2]);
+				printf(", %4g, %4g, %4g",d.data[3][0],d.data[3][1],d.data[3][2]);
+				printf("; ... \n");
+			}
+			printf("];\n");
+		}
 	}
 
 	// An enum to enable handling the degrees of freedom easily.
@@ -2214,6 +2442,7 @@ main()
 	const unsigned ndiv[3] = {80, 80, 50};
 	unsigned i, j, k;
 	mesh FEM;
+	cset<const element *> face;
 
 	double dx = (cube[0][1]-cube[0][0])/ndiv[0];
 	double dy = (cube[1][1]-cube[1][0])/ndiv[1];
@@ -2242,8 +2471,10 @@ main()
 				coord[6] = coord3d(x+p*dx,y     ,z   );
 				coord[7] = coord3d(x+p*dx,y+p*dy,z   );
 				//printf("%4.2f\t%4.2f\t%4.2f\n",x,y,z);
-				FEM.add(element::block8,m,coord);
+				const element * e = FEM.add(element::block8,m,coord);
 				//FEM.add(element::variable18,m,coord);
+				if (i == ndiv[0]/2)
+					face.add(e);
 			}
 		}
 	}
@@ -2282,7 +2513,7 @@ main()
 #endif
 	printf("Solving...\n");
 
-	FEM.solve(1e-12);
+	FEM.solve(1e-30);
 
 #if !defined(_MSC_VER) && !defined(DARWIN)
 	clock_gettime(CLOCK_PROF,&stop);
@@ -2309,6 +2540,13 @@ main()
 	}*/
 	const node3d & n = FEM.getnode(FEM.hasnode(coord3d(cube[0][1],cube[1][1],cube[2][1])));
 	printf("(%+f,%+f,%+f)\n",n.ux,n.uy,n.uz);
+
+	fset<point3d> poly(4,4);
+	poly[0] = point3d(-1,-1,-1);
+	poly[1] = point3d(-1,-1,+1);
+	poly[2] = point3d(-1,+1,+1);
+	poly[3] = point3d(-1,+1,-1);
+	FEM.results(face,poly);
 
 #if !defined(_MSC_VER) && !defined(DARWIN)
 	clock_gettime(CLOCK_PROF,&stop);
