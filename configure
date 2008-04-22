@@ -1968,8 +1968,8 @@ test -n "$RC" || RC=":"
         if test -n "$OP_OPTIMIZE"; then
             if test -n "$OP_PROFILE"; then
                 _OPTIMIZE_FLAGS="$_OPTIMIZE_FLAGS -Z7"
-                DSO_LDFLAGS="$DSO_LDFLAGS -DEBUG -OPT:REF"
-                LDFLAGS="$LDFLAGS -DEBUG -OPT:REF"
+                DSO_LDFLAGS="$DSO_LDFLAGS -DEBUG -OPT:REF -FIXED:NO"
+                LDFLAGS="$LDFLAGS -DEBUG -OPT:REF -FIXED:NO"
             fi
         fi
         DSO_LDFLAGS="$DSO_LDFLAGS -DLL -SUBSYSTEM:WINDOWS -INCREMENTAL:NO"
