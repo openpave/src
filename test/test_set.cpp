@@ -271,7 +271,7 @@ main()
 }
 #endif
 
-#ifdef BUILD
+#ifdef NOBUILD
 int main()
 {
 	BST<key,value> bst;

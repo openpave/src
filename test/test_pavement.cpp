@@ -581,3 +581,69 @@ redo:
 	return 0;
 }
 #endif
+
+/*
+ * MB Road under a single wheel.
+ */
+#ifdef BUILD
+int
+main()
+{
+	LEsystem Pavement;
+	cset<point3d> p;
+
+	Pavement.addlayer(  90.0,3000e3,0.35);
+	Pavement.addlayer( 410.0, 750e3,0.35);
+	Pavement.addlayer(4500.0, 100e3,0.35);
+
+	Pavement.addload(point2d(0.0,0.0),0.0,690.0,100.0);
+
+	//for (double x = 0.0; x <= 8192.0; x += 8.0) {
+	//	for (double z = 0; z < 5000.0; z += 5.0) {
+	//		p.add(point3d(x,0.0,z));
+	//	}
+	//}
+	for (double x = -1024.0; x <= 1024.0; x += 8.0) {
+		for (double y = -1024.0; y <= 1024.0; y += 8.0) {
+			p.add(point3d(x,y,90.0-1e-6));
+		}
+	}
+	//p.sort();
+	for (unsigned i = 0; i < p.length(); i++)
+		Pavement.addpoint(p[i]);
+
+	Pavement.calculate();
+
+	for (unsigned i = 0; i < p.length(); i++) {
+		const pavedata & d = Pavement.result(p[i]);
+		printf("%7.1f\t%7.1f\t%7.1f\t",d.x,d.y,d.z);
+		printf("%0.16f\t",d.result(pavedata::deflct,pavedata::xx));
+		printf("%0.16f\t",d.result(pavedata::deflct,pavedata::yy));
+		printf("%0.16f\t",d.result(pavedata::deflct,pavedata::zz));
+		printf("%0.16f\t",d.result(pavedata::strain,pavedata::xx));
+		printf("%0.16f\t",d.result(pavedata::strain,pavedata::yy));
+		printf("%0.16f\t",d.result(pavedata::strain,pavedata::zz));
+		printf("%0.16f\t",d.result(pavedata::strain,pavedata::xy));
+		printf("%0.16f\t",d.result(pavedata::strain,pavedata::xz));
+		printf("%0.16f\t",d.result(pavedata::strain,pavedata::yz));
+		printf("%0.16f\t",d.result(pavedata::strain,pavedata::p1));
+		printf("%0.16f\t",d.result(pavedata::strain,pavedata::p2));
+		printf("%0.16f\t",d.result(pavedata::strain,pavedata::p3));
+		printf("%0.16f\t",d.result(pavedata::strain,pavedata::s1));
+		printf("%0.16f\t",d.result(pavedata::strain,pavedata::s2));
+		printf("%0.16f\t",d.result(pavedata::strain,pavedata::s3));
+		printf("%0.16f\t",d.result(pavedata::stress,pavedata::xx));
+		printf("%0.16f\t",d.result(pavedata::stress,pavedata::yy));
+		printf("%0.16f\t",d.result(pavedata::stress,pavedata::zz));
+		printf("%0.16f\t",d.result(pavedata::stress,pavedata::xy));
+		printf("%0.16f\t",d.result(pavedata::stress,pavedata::xz));
+		printf("%0.16f\t",d.result(pavedata::stress,pavedata::yz));
+		printf("%0.16f\t",d.result(pavedata::stress,pavedata::p1));
+		printf("%0.16f\t",d.result(pavedata::stress,pavedata::p2));
+		printf("%0.16f\t",d.result(pavedata::stress,pavedata::p3));
+		printf("%0.16f\t",d.result(pavedata::stress,pavedata::s1));
+		printf("%0.16f\t",d.result(pavedata::stress,pavedata::s2));
+		printf("%0.16f\n",d.result(pavedata::stress,pavedata::s3));
+	}
+}
+#endif
