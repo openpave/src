@@ -73,8 +73,18 @@ double run_time;
 #include "tmatrix.h"
 #include "pavement.h"
 
+#if defined(__FreeBSD__)
+#include <stdlib.h>
+extern "C" {
+extern const char * _malloc_options = "ajzSSS";
+};
+#endif
+
 #define NDOF 3
 #define NDIM 3
+
+int run;
+bool isvar;
 
 /*
  * These are the block matrices used to store the DOF data.  These
@@ -295,8 +305,8 @@ struct coord3d {
 	int compare(const coord3d & p) const {
 		if (x == p.x && y == p.y && z == p.z)
 			return 0;
-		if (z < p.z) return -1;
-		if (z > p.z) return  1;
+		if (z > p.z) return -1;
+		if (z < p.z) return  1;
 		if (x < p.x) return -1;
 		if (x > p.x) return  1;
 		return (y < p.y ? -1 : 1);
@@ -1765,25 +1775,32 @@ public:
 	// This outputs the results for all the elements in the list
 	// Obviously, the list must be ones returned by add().
 	void results(const fset<const element *> & e,
-			const fset<point3d> & c) {
+			const fset<point3d> & c, const char * dname) {
 		fset<pavedata> data(c.length(),c.length());
 		
-		// XXX: fopen a file?
+		char fname[128];
+		sprintf(fname,"%s%d_%s.m",dname,run,(isvar?"3d":"1d"));
+		FILE * f = fopen(fname,"w");
 		for (unsigned i = 0; i < e.length(); i++) {
 			e[i]->results(node,c,data);
-			printf("data{%d} = [ ...\n",i);
+			fprintf(f,"%s%s%d{%d} = [ ...\n",dname,(isvar?"3d":"1d"),run,i+1);
 			for (unsigned j = 0; j < data.length(); j++) {
 				pavedata & d = data[j];
-				printf("%4g, %4g, %4g",d.x,d.y,d.z);
-				printf(", %4g, %4g, %4g",d.data[4][0],d.data[4][1],d.data[4][2]);
-				printf(", %4g, %4g, %4g",d.data[0][0],d.data[0][1],d.data[0][2]);
-				printf(", %4g, %4g, %4g",d.data[1][0],d.data[1][1],d.data[1][2]);
-				printf(", %4g, %4g, %4g",d.data[2][0],d.data[2][1],d.data[2][2]);
-				printf(", %4g, %4g, %4g",d.data[3][0],d.data[3][1],d.data[3][2]);
-				printf("; ... \n");
+				fprintf(f,"%4g, %4g, %4g",d.x,d.y,d.z);
+				fprintf(f,", %4g, %4g, %4g",d.data[4][0],d.data[4][1],-d.data[4][2]);
+				fprintf(f,", %4g, %4g, %4g",d.data[5][0],d.data[5][1],d.data[5][2]);
+				fprintf(f,", %4g, %4g, %4g",d.data[6][0],d.data[6][1],d.data[6][2]);
+				fprintf(f,", %4g, %4g, %4g",d.data[7][0],d.data[7][1],d.data[7][2]);
+				fprintf(f,", %4g, %4g, %4g",d.data[8][0],d.data[8][1],d.data[8][2]);
+				fprintf(f,", %4g, %4g, %4g",d.data[0][0],d.data[0][1],d.data[0][2]);
+				fprintf(f,", %4g, %4g, %4g",d.data[1][0],d.data[1][1],d.data[1][2]);
+				fprintf(f,", %4g, %4g, %4g",d.data[2][0],d.data[2][1],d.data[2][2]);
+				fprintf(f,", %4g, %4g, %4g",d.data[3][0],d.data[3][1],d.data[3][2]);
+				fprintf(f,"; ... \n");
 			}
-			printf("];\n");
+			fprintf(f,"];\n");
 		}
+		fclose(f);
 	}
 
 	// An enum to enable handling the degrees of freedom easily.
@@ -2211,6 +2228,52 @@ blockarea(double x1, double x2, double y1, double y2, double r)
 			- circlearea(x2,y1,r) + circlearea(x2,y2,r);
 }
 
+inline double
+mbac(double x, double y) {
+	double scale = M_2PI/256/0.064/1000;
+
+	if (!isvar) {
+		x = 0.0;
+		y = 0.0;
+	}
+
+	if (run == 2) {
+		x += 4096.0;
+		y -= 4096.0;
+	}
+	if (run == 3) {
+		x -= 4096.0;
+		y += 4096.0;
+	}
+
+	double z =
+		-0.0872045842247668*cos((2*x+2*y)*scale)-0.0452662392539107*sin((2*x+2*y)*scale)
+		- 0.184435825482528*cos((  x+2*y)*scale)-0.0726316322322595*sin((  x+2*y)*scale)
+		+ 0.160559398768653*cos((    2*y)*scale)-  1.12338374978589*sin((   +2*y)*scale)
+		+  0.49075391336994*cos(( -x+2*y)*scale)-  0.36683072201147*sin(( -x+2*y)*scale)
+		+0.0633085922234123*cos((2*x  +y)*scale)- 0.356724327448318*sin((2*x  +y)*scale)
+		+ 0.330157164431708*cos((  x  +y)*scale)+  1.79254958998406*sin((  x  +y)*scale)
+		-  1.35393401298557*cos((     +y)*scale)+  3.48169603451368*sin((     +y)*scale)
+		+ 0.395617172728359*cos(( -x  +y)*scale)+ 0.489428373430067*sin(( -x  +y)*scale)
+		+ 0.147319009672208*cos((2*x    )*scale)+ 0.599566696447458*sin((2*x    )*scale)
+		- 0.287702814615793*cos((  x    )*scale)-  2.27887613714944*sin((  x    )*scale)
+		- 0.287702814615793*cos((- x    )*scale)+  2.27887613714944*sin(( -x    )*scale)
+		- 0.307530369157015*cos((2*x  -y)*scale)- 0.550319469491258*sin((2*x  -y)*scale)
+		+ 0.395617172728359*cos((  x  -y)*scale)- 0.489428373430067*sin((  x  -y)*scale)
+		-  1.35393401298557*cos((     -y)*scale)-  3.48169603451368*sin((     -y)*scale)
+		+ 0.330157164431708*cos(( -x  -y)*scale)-  1.79254958998406*sin(( -x  -y)*scale)
+		+ 84.123378178028;
+	return -z;
+}
+
+struct femlayer {
+	double thickness;
+	fixed<8> top;
+	fixed<8> bottom;
+	material mat;
+	cset<fixed<8> > stops;
+};
+
 /*
  * This program is a custom 3D finite element code, intended for
  * work on my PhD.  It will hopefully form the basis for a later
@@ -2218,30 +2281,46 @@ blockarea(double x1, double x2, double y1, double y2, double r)
  * to get some work done...
  */
 int
-main_real()
+core()
 {
 #if !defined(_MSC_VER) && !defined(DARWIN)
 	clock_gettime(CLOCK_PROF,&start);
 #endif
 
-	material m;
-	m.setprop(material_property::emod,100e3); // kPa
-	m.setprop(material_property::poissons,0.35);
+	LEsystem test;
+	test.addlayer(  90.0,3000e3,0.35);
+	test.addlayer( 410.0, 750e3,0.35);
+	test.addlayer(4500.0, 100e3,0.35);
 
-	double x, y, z;
+	sset<femlayer> layer;
+	for (unsigned i = 0; i < test.layers(); i++) {
+		femlayer t;
+		t.thickness = test.layer(i).thickness();
+		t.top       = -test.layer(i).top();
+		t.bottom    = -test.layer(i).bottom();
+		t.mat.setprop(material_property::emod,test.layer(i).emod());
+		t.mat.setprop(material_property::poissons,test.layer(i).poissons());
+		layer.add(t);
+	}
+
+	double x, y, z = 0.0, zmax = 0.0;
 	double dx, dy, dz, delta = 4, step = 1;
 	mesh FEM;
 	fset<coord3d> coord(8);
+	cset<const element *> face;
+
+	test.addload(point2d(0.0,0.0),0.0,690.0,100.0);
 
 	// Find the step size, which depends on our tyre.
-	while ((step-2)*delta < 100)
+	while ((step-2)*delta < test.getload(0).radius())
 		step *= 2;
+
 	// Start with the tyre grid.
 	dx = delta; dy = delta;
 	for (x = -(step-2)*dx; step > 0 && dx > 0
 			&& x < (step-2)*dx; x += 2*dx) {
 		for (y = -(step-2)*dy; y < (step-2)*dy; y += 2*dy) {
-			if (blockarea(x,x+2*dx,y,y+2*dx,100) == 0.0)
+			if (blockarea(x,x+2*dx,y,y+2*dx,test.getload(0).radius()) == 0.0)
 				continue;
 			FEM.addnode(coord3d(x     ,y     ,0.0));
 			FEM.addnode(coord3d(x  +dx,y     ,0.0));
@@ -2255,7 +2334,7 @@ main_real()
 		}
 	}
 	// Add the tire loads
-	double F = -690;
+	double F = -test.getload(0).pressure();
 	for (x = -(step-2)*dx; x <= (step-2)*dx; x += dx) {
 		for (y = -(step-2)*dy; y <= (step-2)*dy; y += dy) {
 			unsigned p = FEM.hasnode(coord3d(x,y,0.0));
@@ -2268,129 +2347,194 @@ main_real()
 			unsigned y_p = FEM.hasnode(coord3d(x,y+dy,0.0));
 			n.setneighbours(x_m,x_p,y_m,y_p,UINT_MAX,UINT_MAX);
 			FEM.updatenode(n);
-			double f = F*blockarea(x-dx/2,x+dx/2,y-dy/2,y+dy/2,100.0);
+			double f = F*blockarea(x-dx/2,x+dx/2,y-dy/2,y+dy/2,
+					test.getload(0).radius());
 			if (fabs(f) > 0.0)
 				FEM.add_fext(coord3d(x,y,0.0),mesh::Z,f);
 		}
 	}
 	step /= 2;
 
-#define DOMAIN (4096+2048)
+	// add the depth stops.
+	for (unsigned i = 0; i < layer.length(); i++) {
+		double t = -layer[i].top, b = -layer[i].bottom;
+		layer[i].stops.add(t);
+		layer[i].stops.add(b);
+		double ta = t/test.getload(0).radius();
+		double ba = b/test.getload(0).radius();
+		double za = 1.0;
+		while (za < ba)
+			za += 1.0;
+		// za now holds the first integer multiple of the wheel
+		// radius which is larger than the bottom of this layer.
+		
+		// We now work our way back to the load, adding stops at
+		// the right spacing.
+		while (za > ta) {
+			double md = fabs(16*delta*za);
+			double mt = MAX(za-1.0,ta)*test.getload(0).radius();
+			double mb = MIN(za,ba)*test.getload(0).radius();
+			double d = fabs(mb-mt);
+			while (d > md)
+				d /= 2;
+			md = mt;
+			while (md <= mb) {
+				layer[i].stops.add(md);
+				md += d;
+			} 
+			za -= 1.0;
+		}
+		layer[i].stops.sort();
+		for (unsigned j = 0; j < layer[i].stops.length(); j++)
+			layer[i].stops[j] = -layer[i].stops[j];
+		zmax = layer[i].bottom;
+	}
 
-	// Now add the elements from below the tyre, working outwards.
+#define EDGE (8192)
+
 	double xm = 0, xp = 0, ym = 0, yp = 0, zp = 0, zm = 0;
-	while (zp > -4000 || xp < DOMAIN) {
-		zp += MIN(-40,zp);
+	// Now add the elements from below the tyre, working outwards.
+	while (zp > zmax || xp < EDGE) {
+		zp = -2*step*delta;
 		dx = delta*2; dy = delta*2;
-		z = 0;
-		while (z > MAX(zp,-4000)) {
-			dz = (z < -1000 ? -100 : -40);
-			z += dz;
-			printf("%f\t%f\t%f\t%f\t%f\n",MIN(16*dx,DOMAIN),xp,zm,z,zp);
-			for (x = 0; x < MIN(16*dx,DOMAIN); x += dx) {
-				for (y = 0; y < MIN(16*dy,DOMAIN); y += dy) {
-					if (xm < xp && (x >= xm && x < xp)
-					 && ym < yp && (y >= ym && y < yp)
-					 && z >= zm)
-						continue;
-					coord.resize(8);
-					coord[0] = coord3d(x   ,y   ,z);
-					coord[1] = coord3d(x   ,y+dy,z);
-					coord[2] = coord3d(x+dx,y   ,z);
-					coord[3] = coord3d(x+dx,y+dy,z);
-					coord[4] = coord3d(x   ,y   ,z-dz);
-					coord[5] = coord3d(x   ,y+dy,z-dz);
-					coord[6] = coord3d(x+dx,y   ,z-dz);
-					coord[7] = coord3d(x+dx,y+dy,z-dz);
-					FEM.add(element::variable34,m,coord);
-					for (unsigned i = 0; i < 8; i++)
-						coord[i].x = -coord[i].x;
-					FEM.add(element::variable34,m,coord);
-					for (unsigned i = 0; i < 8; i++)
-						coord[i].y = -coord[i].y;
-					FEM.add(element::variable34,m,coord);
-					for (unsigned i = 0; i < 8; i++)
-						coord[i].x = -coord[i].x;
-					FEM.add(element::variable34,m,coord);
-					if (x+dx == DOMAIN) {
-						if (y+dy == DOMAIN) {
-							coord.resize(2);
-							coord[0] = coord3d(x+dx,y+dy,z);
-							coord[1] = coord3d(x+dx,y+dy,z-dz);
-							FEM.add(element::infinite16,m,coord);
-							for (unsigned i = 0; i < 2; i++)
-								coord[i].x = -coord[i].x;
-							FEM.add(element::infinite16,m,coord);
-							for (unsigned i = 0; i < 2; i++)
-								coord[i].y = -coord[i].y;
-							FEM.add(element::infinite16,m,coord);
-							for (unsigned i = 0; i < 2; i++)
-								coord[i].x = -coord[i].x;
-							FEM.add(element::infinite16,m,coord);
+		for (unsigned i = 0; i < layer.length(); i++) {
+			for (unsigned j = 1; j < layer[i].stops.length(); j++) {
+				z  = layer[i].stops[j]   - layer[i].top;
+				dz = layer[i].stops[j-1] - layer[i].top;
+				dz = z-dz;
+				element::element_t var = (z > -1000.0 ?
+						element::variable34 : element::variable18);
+				element::element_t inf = (var == element::variable34 ?
+						element::infinite16 : element::infinite8);
+				printf("%f\t%f\t%f\t%f\t%f\n",MIN(step*dx,EDGE),xp,zm,z,zp);
+				for (x = -MIN(step*dx,EDGE); x < MIN(step*dx,EDGE); x += dx) {
+					for (y = -MIN(step*dy,EDGE); y < MIN(step*dy,EDGE); y += dy) {
+						if (xm < xp && (x >= xm && x < xp)
+						 && ym < yp && (y >= ym && y < yp)
+						 && z+double(layer[i].top) >= zm)
+							continue;
+						double o1 = 0.0, o2 = 0.0, o3 = 0.0, o4 = 0.0;
+						double s1 = 1.0, s2 = 1.0, s3 = 1.0, s4 = 1.0;
+						o1 = o2 = o3 = o4 = layer[i].top;
+						double h = layer[i].thickness;
+						double t = layer[i].top;
+						double b = layer[i].bottom;
+						if (i == 0) {
+							s1 = (t-mbac(x   ,y   ))/h;
+							s2 = (t-mbac(x   ,y+dy))/h;
+							s3 = (t-mbac(x+dx,y   ))/h;
+							s4 = (t-mbac(x+dx,y+dy))/h;
+						} else if (i == 1) {
+							o1 = mbac(x   ,y   );
+							o2 = mbac(x   ,y+dy);
+							o3 = mbac(x+dx,y   );
+							o4 = mbac(x+dx,y+dy);
+							s1 = (o1-b)/h;
+							s2 = (o2-b)/h;
+							s3 = (o3-b)/h;
+							s4 = (o4-b)/h;
 						}
-						coord.resize(4);
-						coord[0] = coord3d(x+dx,y   ,z);
-						coord[1] = coord3d(x+dx,y+dy,z);
-						coord[2] = coord3d(x+dx,y   ,z-dz);
-						coord[3] = coord3d(x+dx,y+dy,z-dz);
-						FEM.add(element::infinite16,m,coord);
-						for (unsigned i = 0; i < 4; i++)
-							coord[i].x = -coord[i].x;
-						FEM.add(element::infinite16,m,coord);
-						for (unsigned i = 0; i < 4; i++)
-							coord[i].y = -coord[i].y;
-						FEM.add(element::infinite16,m,coord);
-						for (unsigned i = 0; i < 4; i++)
-							coord[i].x = -coord[i].x;
-						FEM.add(element::infinite16,m,coord);
-					}
-					if (y+dy == DOMAIN) {
-						coord.resize(4);
-						coord[0] = coord3d(x   ,y+dy,z);
-						coord[1] = coord3d(x+dx,y+dy,z);
-						coord[2] = coord3d(x   ,y+dy,z-dz);
-						coord[3] = coord3d(x+dx,y+dy,z-dz);
-						FEM.add(element::infinite16,m,coord);
-						for (unsigned i = 0; i < 4; i++)
-							coord[i].x = -coord[i].x;
-						FEM.add(element::infinite16,m,coord);
-						for (unsigned i = 0; i < 4; i++)
-							coord[i].y = -coord[i].y;
-						FEM.add(element::infinite16,m,coord);
-						for (unsigned i = 0; i < 4; i++)
-							coord[i].x = -coord[i].x;
-						FEM.add(element::infinite16,m,coord);
+						coord.resize(8);
+						coord[0] = coord3d(x   ,y   ,o1+s1*(z));
+						coord[1] = coord3d(x   ,y+dy,o2+s2*(z));
+						coord[2] = coord3d(x+dx,y   ,o3+s3*(z));
+						coord[3] = coord3d(x+dx,y+dy,o4+s4*(z));
+						coord[4] = coord3d(x   ,y   ,o1+s1*(z-dz));
+						coord[5] = coord3d(x   ,y+dy,o2+s2*(z-dz));
+						coord[6] = coord3d(x+dx,y   ,o3+s3*(z-dz));
+						coord[7] = coord3d(x+dx,y+dy,o4+s4*(z-dz));
+						const element * e;
+						e = FEM.add(var,layer[i].mat,coord);
+						if (y == 0.0)
+						//if (fixed<8>(z)+layer[i].top == layer[0].bottom)
+							face.add(e);
+						if (x == -EDGE) {
+							if (y == -EDGE) {
+								coord.resize(2);
+								coord[0] = coord3d(x   ,y   ,o1+s1*(z));
+								coord[1] = coord3d(x   ,y   ,o1+s1*(z-dz));
+								FEM.add(inf,layer[i].mat,coord);
+							} if (y+dy == EDGE) {
+								coord.resize(2);
+								coord[0] = coord3d(x   ,y+dy,o2+s2*(z));
+								coord[1] = coord3d(x   ,y+dy,o2+s2*(z-dz));
+								FEM.add(inf,layer[i].mat,coord);
+							}
+							coord.resize(4);
+							coord[0] = coord3d(x   ,y   ,o1+s1*(z));
+							coord[1] = coord3d(x   ,y+dy,o2+s2*(z));
+							coord[2] = coord3d(x   ,y   ,o1+s1*(z-dz));
+							coord[3] = coord3d(x   ,y+dy,o2+s2*(z-dz));
+							FEM.add(inf,layer[i].mat,coord);
+						} else if (x+dx == EDGE) {
+							if (y == -EDGE) {
+								coord.resize(2);
+								coord[0] = coord3d(x+dx,y   ,o3+s3*(z));
+								coord[1] = coord3d(x+dx,y   ,o3+s3*(z-dz));
+								FEM.add(inf,layer[i].mat,coord);
+							} if (y+dy == EDGE) {
+								coord.resize(2);
+								coord[0] = coord3d(x+dx,y+dy,o4+s4*(z));
+								coord[1] = coord3d(x+dx,y+dy,o4+s4*(z-dz));
+								FEM.add(inf,layer[i].mat,coord);
+							}
+							coord.resize(4);
+							coord[0] = coord3d(x+dx,y   ,o3+s3*(z));
+							coord[1] = coord3d(x+dx,y+dy,o4+s4*(z));
+							coord[2] = coord3d(x+dx,y   ,o3+s3*(z-dz));
+							coord[3] = coord3d(x+dx,y+dy,o4+s4*(z-dz));
+							FEM.add(inf,layer[i].mat,coord);
+						}
+						if (y == -EDGE) {
+							coord.resize(4);
+							coord[0] = coord3d(x   ,y   ,o1+s1*(z));
+							coord[1] = coord3d(x+dx,y   ,o3+s3*(z));
+							coord[2] = coord3d(x   ,y   ,o1+s1*(z-dz));
+							coord[3] = coord3d(x+dx,y   ,o3+s3*(z-dz));
+							FEM.add(inf,layer[i].mat,coord);
+						} if (y+dy == EDGE) {
+							coord.resize(4);
+							coord[0] = coord3d(x   ,y+dy,o2+s2*(z));
+							coord[1] = coord3d(x+dx,y+dy,o4+s4*(z));
+							coord[2] = coord3d(x   ,y+dy,o2+s2*(z-dz));
+							coord[3] = coord3d(x+dx,y+dy,o4+s4*(z-dz));
+							FEM.add(inf,layer[i].mat,coord);
+						}
 					}
 				}
+				z = z+double(layer[i].top);
+				if (z <= MAX(zp,zmax))
+					break;
 			}
+			if (z <= MAX(zp,zmax))
+				break;
 		}
-		xm = -MIN(step*dx,DOMAIN); xp = MIN(step*dx,DOMAIN);
-		ym = -MIN(step*dy,DOMAIN); yp = MIN(step*dy,DOMAIN);
-		if (xm > -DOMAIN && xp < DOMAIN
-		 && ym > -DOMAIN && xp < DOMAIN)
+		xm = -MIN(step*dx,EDGE); xp = MIN(step*dx,EDGE);
+		ym = -MIN(step*dy,EDGE); yp = MIN(step*dy,EDGE);
+		if (xm > -EDGE && xp < EDGE
+		 && ym > -EDGE && xp < EDGE)
 			delta *= 2;
 		zm = z;
 	}
-	//FEM.add_bc_plane(mesh::X,mesh::at|mesh::below,-DOMAIN,
+	//FEM.add_bc_plane(mesh::X,mesh::at|mesh::below,-EDGE,
 	//		mesh::X,0.0);
-	//FEM.add_bc_plane(mesh::X,mesh::at|mesh::above, DOMAIN,
+	//FEM.add_bc_plane(mesh::X,mesh::at|mesh::above, EDGE,
 	//		mesh::X,0.0);
-	//FEM.add_bc_plane(mesh::Y,mesh::at|mesh::below,-DOMAIN,
+	//FEM.add_bc_plane(mesh::Y,mesh::at|mesh::below,-EDGE,
 	//		mesh::Y,0.0);
-	//FEM.add_bc_plane(mesh::Y,mesh::at|mesh::above, DOMAIN,
+	//FEM.add_bc_plane(mesh::Y,mesh::at|mesh::above, EDGE,
 	//		mesh::Y,0.0);
 	FEM.add_bc_plane(mesh::Z,mesh::at|mesh::below,zm,
 			mesh::X|mesh::Y|mesh::Z,0.0);
-	FEM.solve(1e-20);
+	FEM.solve(1e-30);
 
-	unsigned i, nnd = FEM.getnodes();
-	LEsystem test;
-	test.addlayer(-zm,100e3,0.35);
-	test.addload(point2d(0.0,0.0),0.0,690.0,100.0);
+	/*unsigned i, nnd = FEM.getnodes();
 	for (i = 0; i < nnd; i++) {
 		const node3d & n = FEM.getorderednode(i);
 		x = n.x; y = n.y; z = n.z;
 		if (!(x == 0 || y == 0 || z == 0))
+			continue;
+		if (!(x == 0))
 			continue;
 		if (x < xm || x > xp || y < ym || y > yp || z <= zm)
 			continue;
@@ -2401,6 +2545,8 @@ main_real()
 		const node3d & n = FEM.getorderednode(i);
 		x = n.x; y = n.y; z = n.z;
 		if (!(x == 0 || y == 0 || z == 0))
+			continue;
+		if (!(x == 0))
 			continue;
 		if (x < xm || x > xp || y < ym || y > yp || z <= zm)
 			continue;
@@ -2415,7 +2561,31 @@ main_real()
 		double h = hypot(hypot(vx-ux,vy-uy),vz-uz);
 		double v = hypot(hypot(vx,vy),vz);
 		printf("Node %6i: (%+6i,%+6i,%+6i) =\t(%8.2g,%8.2g,%8.2g)\t(%8.2g,%8.2g,%8.2g)\t%8.2g\t(%8.2g)\n",j,int(x),int(y),int(z),vx,vy,vz,ux,uy,uz,h,(v == 0.0 ? 0.0 : h/v));
-	}
+	}*/
+
+	fset<point3d> poly(14);
+	poly[0]  = point3d(-1,-1,-3/3.0);
+	poly[1]  = point3d(-1,-1,-2/3.0);
+	poly[2]  = point3d(-1,-1,-1/3.0);
+	poly[3]  = point3d(-1,-1, 0/3.0);
+	poly[4]  = point3d(-1,-1, 1/3.0);
+	poly[5]  = point3d(-1,-1, 2/3.0);
+	poly[6]  = point3d(-1,-1, 3/3.0);
+	poly[7]  = point3d( 1,-1, 3/3.0);
+	poly[8]  = point3d( 1,-1, 2/3.0);
+	poly[9]  = point3d( 1,-1, 1/3.0);
+	poly[10] = point3d( 1,-1, 0/3.0);
+	poly[11] = point3d( 1,-1,-1/3.0);
+	poly[12] = point3d( 1,-1,-2/3.0);
+	poly[13] = point3d( 1,-1,-3/3.0);
+	FEM.results(face,poly,"face");
+
+	/*fset<point3d> poly(4);
+	poly[0]  = point3d(-1,-1,-1);
+	poly[1]  = point3d(-1, 1,-1);
+	poly[2]  = point3d( 1, 1,-1);
+	poly[3]  = point3d( 1,-1,-1);
+	FEM.results(face,poly,"bot");*/
 
 #if !defined(_MSC_VER) && !defined(DARWIN)
 	clock_gettime(CLOCK_PROF,&stop);
@@ -2423,6 +2593,22 @@ main_real()
 	printf("%f\n",run_time);
 #endif
 
+	return 0;
+}
+
+int
+main_real()
+{
+	run = 1;
+	isvar = false;
+	while (true) {
+		core();
+		isvar = !isvar;
+		if (isvar)
+			continue;
+		if (++run >= 4)
+			break;
+	}
 	return 0;
 }
 
@@ -2439,7 +2625,7 @@ main()
 	m.setprop(material_property::poissons,0.2);
 
 	const double cube[3][2] = {{-10, 10}, {-10, 10}, {-10, 0}};
-	const unsigned ndiv[3] = {80, 80, 50};
+	const unsigned ndiv[3] = {20, 20, 10};
 	unsigned i, j, k;
 	mesh FEM;
 	cset<const element *> face;
@@ -2457,7 +2643,7 @@ main()
 
 	for (k = 0; k < ndiv[2]; k++) {
 		double z = cube[2][1] - k*dz;
-		int p = 1; // (1 << k); // 1; 
+		int p = 1; //(1 << k); // 1; 
 		for (j = 0; j < ndiv[1]; j += p) {
 			double y = cube[1][0] + j*dy;
 			for (i = 0; i < ndiv[0]; i += p) {
@@ -2472,7 +2658,6 @@ main()
 				coord[7] = coord3d(x+p*dx,y+p*dy,z   );
 				//printf("%4.2f\t%4.2f\t%4.2f\n",x,y,z);
 				const element * e = FEM.add(element::block8,m,coord);
-				//FEM.add(element::variable18,m,coord);
 				if (i == ndiv[0]/2)
 					face.add(e);
 			}
@@ -2513,7 +2698,7 @@ main()
 #endif
 	printf("Solving...\n");
 
-	FEM.solve(1e-30);
+	FEM.solve(1e-12);
 
 #if !defined(_MSC_VER) && !defined(DARWIN)
 	clock_gettime(CLOCK_PROF,&stop);
@@ -2546,7 +2731,7 @@ main()
 	poly[1] = point3d(-1,-1,+1);
 	poly[2] = point3d(-1,+1,+1);
 	poly[3] = point3d(-1,+1,-1);
-	FEM.results(face,poly);
+	FEM.results(face,poly,"test");
 
 #if !defined(_MSC_VER) && !defined(DARWIN)
 	clock_gettime(CLOCK_PROF,&stop);
