@@ -340,11 +340,9 @@ struct pavedata : point3d {
 	}
 	~pavedata() {
 	}
-private:
+
 	double data[9][3];
 	fset<double> deflgrad;
-	friend class LEsystem;
-	friend class LEbackcalc;
 	void principle(double v, double E);
 };
 
@@ -406,6 +404,9 @@ public:
 		return length();
 	}
 	LElayer & layer(const unsigned l);
+	const paveload & getload(const unsigned i) {
+		return load[i];
+	}
 
 	LEsystem()
 		: list_owned<LEsystem,LElayer>(), data(), load() {

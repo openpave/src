@@ -1112,7 +1112,7 @@ LEsystem::calculate(resulttype res, double * Q)
 					;
 				if (ib == bm.length() ||
 						MIN(x1-bm[ib-1],bm[ib]-x1)*r[ir-1]
-							< MAX(4,ngqp-6)*M_PI_4)
+							 < MAX(4,ngqp-6)*M_PI_4)
 					continue;
 				if (!bm.add(ib,x2 = x1))
 					goto abort;
