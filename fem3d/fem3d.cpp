@@ -674,7 +674,7 @@ inv_mul_gauss(const unsigned nnd, double (& J)[NDIM][NDIM],
  * a finite element.
  *
  */
-class element {
+class element : public listelement_o<mesh,element> {
 public:
 	// The types of elements.
 	enum element_t {
@@ -699,13 +699,20 @@ public:
 		inf_neg
 	};
 
-	element(const material & m)
-	  : mat(m), nnd(0) {
+	element(mesh * o, const material & m)
+	  : listelement_o<mesh,element>(o), mat(m), nnd(0) {
 	}
+	virtual ~element() {
+	}
+	// These are declared later, once we can access our mesh's node list,
+	// without the problem of having the classes depend on one another.
+	inline unsigned addnode(const coord3d & c) const;
+	inline void updatenode(const node3d & n) const;
+	inline const node3d & getnode(const unsigned i) const;
+	
 	virtual unsigned l2g(const unsigned i) const = 0;
-	virtual smatrix_elem * stiffness(const node_list &) const = 0;
-	virtual void results(const node_list &, const fset<point3d> &,
-		fset<pavedata> &) const = 0;
+	virtual smatrix_elem * stiffness() const = 0;
+	virtual void results(const fset<point3d> &, fset<pavedata> &) const = 0;
 	
 protected:
 	friend class mesh;
@@ -728,8 +735,9 @@ protected:
 template <element::shape_t SZ, unsigned NND>
 class element_base : public element {
 public:
-	element_base(const shape_t x, const shape_t y, const material & m)
-	  : element(m), sx(x), sy(y) {
+	element_base(mesh * o, const shape_t x, const shape_t y,
+			const material & m)
+	  : element(o,m), sx(x), sy(y) {
 	}
 	virtual unsigned l2g(const unsigned i) const {
 		return inel[i];
@@ -742,8 +750,7 @@ protected:
 	// This is the core routine for creating elements.  It is passed a set
 	// of eight corners, and adds the required nodes.  It also sets up the
 	// mask of optional nodes when we are dropping nodes.
-	inline void setup(node_list & node, const fset<coord3d> & c,
-			unsigned * mask = 0) {
+	inline void setup(const fset<coord3d> & c, unsigned * mask = 0) {
 		assert(8 == c.length());
 		assert(nnd == 0);
 		const unsigned nz = unsigned(SZ);
@@ -785,12 +792,7 @@ protected:
 				p.x = double(cc[j].x)+(double(cc[j+4].x-cc[j].x)*i)/(nz-1);
 				p.y = double(cc[j].y)+(double(cc[j+4].y-cc[j].y)*i)/(nz-1);
 				p.z = double(cc[j].z)+(double(cc[j+4].z-cc[j].z)*i)/(nz-1);
-				unsigned k = node.haskey(p);
-				if (k == UINT_MAX) {
-					k = node.length();
-					node.add(p);
-				}
-				inel[nnd++] = k;
+				inel[nnd++] = addnode(p);
 			}
 		}
 		// If we have a mask, initialise it.
@@ -798,7 +800,7 @@ protected:
 			mask[i] = UINT_MAX;
 		// Loop over the nodes, setting the neighbours.
 		for (unsigned i = 0; i < 4*nz; i++) {
-			node3d & n = node[inel[i]];
+			node3d n = getnode(inel[i]);
 			unsigned x_m = UINT_MAX, x_p = UINT_MAX;
 			unsigned y_m = UINT_MAX, y_p = UINT_MAX;
 			unsigned z_m = UINT_MAX, z_p = UINT_MAX;
@@ -819,7 +821,7 @@ protected:
 						mask[i] = y_p = n.yp;
 						// Check the center for the top and bottom.
 						if ((i == 0 || i == 4*(nz-1))) {
-							const node3d & mid = node[n.yp];
+							const node3d & mid = getnode(n.yp);
 							if (mid.xp != UINT_MAX)
 								mask[i == 0 ? 4*nz : 4*nz+1] = mid.xp;
 						}
@@ -848,6 +850,7 @@ protected:
 				}
 			}
 			n.setneighbours(x_m,x_p,y_m,y_p,z_m,z_p);
+			updatenode(n);
 		}
 		// Add the extra nodes to our list and set the mask from the global
 		// node number to the item number in the list.
@@ -864,8 +867,7 @@ protected:
 	//
 	// XXX: need to use mask to make dropping nodes on infinite elements
 	// possible.
-	void setup_infinite(node_list & node, const fset<coord3d> & c,
-			unsigned * mask = 0) {
+	void setup_infinite(const fset<coord3d> & c, unsigned * mask = 0) {
 		fset<coord3d> cc(8);
 		if (c.length() == 2) {
 			// Corner infinite elements are defined by 2 points in
@@ -908,21 +910,21 @@ protected:
 				sy = (double(c[0].y) > 0 ? inf_pos : inf_neg);
 			}
 		}
-		setup(node,cc,mask);
+		setup(cc,mask);
 	}
 	// Build a matrix of the nodal coordinates.
-	void buildxe(const node_list & node, double (* xe)[NDIM]) const {
+	void buildxe(double (* xe)[NDIM]) const {
 		assert(NDIM == 3);
 		for (unsigned i = 0; i < nnd; i++) {
-			const coord3d & c = node[inel[i]];
+			const coord3d & c = getnode(inel[i]);
 			xe[i][0] = c.x; xe[i][1] = c.y; xe[i][2] = c.z;
 		}
 	}
 	// Build a matrix of the nodal deflections.
-	void buildue(const node_list & node, double (* ue)[NDOF]) const {
+	void buildue(double (* ue)[NDOF]) const {
 		assert(NDOF == 3);
 		for (unsigned i = 0; i < nnd; i++) {
-			const node3d & n = node[inel[i]];
+			const node3d & n = getnode(inel[i]);
 			ue[i][0] = n.ux; ue[i][1] = n.uy; ue[i][2] = n.uz;
 		}
 	}
@@ -1063,8 +1065,7 @@ protected:
 		}
 	}
 	// Build the element stiffness matrix.
-	smatrix_elem * buildKe(const node_list & node,
-			const unsigned * mask = 0) const {
+	smatrix_elem * buildKe(const unsigned * mask = 0) const {
 		unsigned i, j, k, l;
 
 		// Build the point stiffness tensor E_abcd
@@ -1074,7 +1075,7 @@ protected:
 		// Element nodal coords
 		double (* xe)[NDIM] = static_cast<double (*)[NDIM]>
 				(alloca(nnd*NDIM*sizeof(double)));
-		buildxe(node,xe);
+		buildxe(xe);
 
 		// Build a list of gauss points.  This will need to be stored
 		// in the element when we do plastic models with history.
@@ -1124,8 +1125,8 @@ protected:
 		return K;
 	}
 	// Output a MATLAB patch of results.
-	void builddata(const node_list & node, const fset<point3d> & c,
-			fset<pavedata> & data, const unsigned * mask = 0) const {
+	void builddata(const fset<point3d> & c, fset<pavedata> & data,
+			const unsigned * mask = 0) const {
 		unsigned n, i, j, k;
 		double l[NDIM], g[NDIM];
 
@@ -1142,8 +1143,8 @@ protected:
 		// Element nodal deflections
 		double (* ue)[NDOF] = static_cast<double (*)[NDOF]>
 				(alloca(nnd*NDOF*sizeof(double)));
-		buildxe(node,xe);
-		buildue(node,ue);
+		buildxe(xe);
+		buildue(ue);
 
 		double * N = static_cast<double *>(alloca(nnd*sizeof(double)));
 		// This matrix is transposed.
@@ -1333,19 +1334,17 @@ private:
 template<element::shape_t SZ>
 class element_block : public element_base<SZ,4*int(SZ)> {
 public:
-	element_block(node_list & node, const material & m,
-			const fset<coord3d> & c)
-	  : element_base<SZ,4*int(SZ)>(element::linear,element::linear,m) {
-		element_base<SZ,4*int(SZ)>::setup(node,c);
+	element_block(mesh * o, const material & m, const fset<coord3d> & c)
+	  : element_base<SZ,4*int(SZ)>(o,element::linear,element::linear,m) {
+		element_base<SZ,4*int(SZ)>::setup(c);
 	}
-	virtual smatrix_elem * stiffness(const node_list & node) const {
+	virtual smatrix_elem * stiffness() const {
 		assert(4*int(SZ) == this->nnd);
-		return element_base<SZ,4*int(SZ)>::buildKe(node);
+		return element_base<SZ,4*int(SZ)>::buildKe();
 	}
-	virtual void results(const node_list & node, const fset<point3d> & c,
-			fset<pavedata> & d) const {
+	virtual void results(const fset<point3d> & c, fset<pavedata> & d) const {
 		assert(4*int(SZ) == this->nnd);
-		element_base<SZ,4*int(SZ)>::builddata(node,c,d);
+		element_base<SZ,4*int(SZ)>::builddata(c,d);
 	}
 };
 
@@ -1355,17 +1354,15 @@ public:
 template<element::shape_t SZ>
 class element_variable : public element_base<SZ,8*int(SZ)+2> {
 public:
-	element_variable(node_list & node, const material & m,
-			const fset<coord3d> & c)
-	  : element_base<SZ,8*int(SZ)+2>(element::absolute,element::absolute,m) {
-		element_base<SZ,8*int(SZ)+2>::setup(node,c,mask);
+	element_variable(mesh * o, const material & m, const fset<coord3d> & c)
+	  : element_base<SZ,8*int(SZ)+2>(o,element::absolute,element::absolute,m) {
+		element_base<SZ,8*int(SZ)+2>::setup(c,mask);
 	}
-	virtual smatrix_elem * stiffness(const node_list & node) const {
-		return element_base<SZ,8*int(SZ)+2>::buildKe(node,mask);
+	virtual smatrix_elem * stiffness() const {
+		return element_base<SZ,8*int(SZ)+2>::buildKe(mask);
 	}
-	virtual void results(const node_list & node, const fset<point3d> & c,
-			fset<pavedata> & d) const {
-		element_base<SZ,8*int(SZ)+2>::builddata(node,c,d,mask);
+	virtual void results(const fset<point3d> & c, fset<pavedata> & d) const {
+		element_base<SZ,8*int(SZ)+2>::builddata(c,d,mask);
 	}
 
 protected:
@@ -1378,19 +1375,17 @@ protected:
 template<element::shape_t SZ>
 class element_infinite : public element_base<SZ,4*int(SZ)> {
 public:
-	element_infinite(node_list & node, const material & m,
-			const fset<coord3d> & c)
-	  : element_base<SZ,4*int(SZ)>(element::linear,element::linear,m) {
-		element_base<SZ,4*int(SZ)>::setup_infinite(node,c);
+	element_infinite(mesh * o, const material & m, const fset<coord3d> & c)
+	  : element_base<SZ,4*int(SZ)>(o,element::linear,element::linear,m) {
+		element_base<SZ,4*int(SZ)>::setup_infinite(c);
 	}
-	virtual smatrix_elem * stiffness(const node_list & node) const {
+	virtual smatrix_elem * stiffness() const {
 		assert(4*int(SZ) == this->nnd);
-		return element_base<SZ,4*int(SZ)>::buildKe(node);
+		return element_base<SZ,4*int(SZ)>::buildKe();
 	}
-	virtual void results(const node_list & node, const fset<point3d> & c,
-			fset<pavedata> & d) const {
+	virtual void results(const fset<point3d> & c, fset<pavedata> & d) const {
 		assert(4*int(SZ) == this->nnd);
-		element_base<SZ,4*int(SZ)>::builddata(node,c,d);
+		element_base<SZ,4*int(SZ)>::builddata(c,d);
 	}
 };
 
@@ -1683,15 +1678,14 @@ struct mesh_bc : public mesh_bc_key {
 /*
  * class mesh - a 3D FEM mesh
  */
-class mesh {
+class mesh : private list_owned<mesh,element> {
 public:
 	// Create an empty mesh.
 	explicit mesh()
-	  : node(), elements(), disp_bc(), f_ext() {
+	  : node(), disp_bc(), f_ext() {
 	}
 	~mesh() {
-		for (unsigned i = 0; i < elements.length(); i++)
-			delete elements[i];
+		// The linked list will delete all the elements.
 	}
 
 	// Add an element, returning a pointer if successful.
@@ -1700,49 +1694,47 @@ public:
 		element * e = 0;
 		switch (t) {
 		case element::block8:
-			e = new element_block<element::linear>(node,m,c);
+			e = new element_block<element::linear>(this,m,c);
 			break;
 		case element::block12:
-			e = new element_block<element::quadratic>(node,m,c);
+			e = new element_block<element::quadratic>(this,m,c);
 			break;
 		case element::block16:
-			e = new element_block<element::cubic>(node,m,c);
+			e = new element_block<element::cubic>(this,m,c);
 			break;
 		case element::infinite8:
-			e = new element_infinite<element::linear>(node,m,c);
+			e = new element_infinite<element::linear>(this,m,c);
 			break;
 		case element::infinite12:
-			e = new element_infinite<element::quadratic>(node,m,c);
+			e = new element_infinite<element::quadratic>(this,m,c);
 			break;
 		case element::infinite16:
-			e = new element_infinite<element::cubic>(node,m,c);
+			e = new element_infinite<element::cubic>(this,m,c);
 			break;
 		case element::variable18:
-			e = new element_variable<element::linear>(node,m,c);
+			e = new element_variable<element::linear>(this,m,c);
 			if (e != 0 && e->nnd == 8) {
 				delete e;
-				e = new element_block<element::linear>(node,m,c);
+				e = new element_block<element::linear>(this,m,c);
 			}
 			break;
 		case element::variable26:
-			e = new element_variable<element::quadratic>(node,m,c);
+			e = new element_variable<element::quadratic>(this,m,c);
 			if (e != 0 && e->nnd == 12) {
 				delete e;
-				e = new element_block<element::quadratic>(node,m,c);
+				e = new element_block<element::quadratic>(this,m,c);
 			}
 			break;
 		case element::variable34:
-			e = new element_variable<element::cubic>(node,m,c);
+			e = new element_variable<element::cubic>(this,m,c);
 			if (e != 0 && e->nnd == 16) {
 				delete e;
-				e = new element_block<element::cubic>(node,m,c);
+				e = new element_block<element::cubic>(this,m,c);
 			}
 			break;
 		}
 		if (e == 0)
 			event_msg(EVENT_ERROR,"Out of memory in mesh::add()!");
-		else
-			elements.add(e);
 		return e;
 	}
 	inline unsigned addnode(const coord3d & c) {
@@ -1771,36 +1763,6 @@ public:
 	}
 	inline const unsigned hasnode(const coord3d & p) const {
 		return node.haskey(p);
-	}
-	// This outputs the results for all the elements in the list
-	// Obviously, the list must be ones returned by add().
-	void results(const fset<const element *> & e,
-			const fset<point3d> & c, const char * dname) {
-		fset<pavedata> data(c.length(),c.length());
-		
-		char fname[128];
-		sprintf(fname,"%s%d_%s.m",dname,run,(isvar?"3d":"1d"));
-		FILE * f = fopen(fname,"w");
-		for (unsigned i = 0; i < e.length(); i++) {
-			e[i]->results(node,c,data);
-			fprintf(f,"%s%s%d{%d} = [ ...\n",dname,(isvar?"3d":"1d"),run,i+1);
-			for (unsigned j = 0; j < data.length(); j++) {
-				pavedata & d = data[j];
-				fprintf(f,"%4g, %4g, %4g",d.x,d.y,d.z);
-				fprintf(f,", %4g, %4g, %4g",d.data[4][0],d.data[4][1],-d.data[4][2]);
-				fprintf(f,", %4g, %4g, %4g",d.data[5][0],d.data[5][1],d.data[5][2]);
-				fprintf(f,", %4g, %4g, %4g",d.data[6][0],d.data[6][1],d.data[6][2]);
-				fprintf(f,", %4g, %4g, %4g",d.data[7][0],d.data[7][1],d.data[7][2]);
-				fprintf(f,", %4g, %4g, %4g",d.data[8][0],d.data[8][1],d.data[8][2]);
-				fprintf(f,", %4g, %4g, %4g",d.data[0][0],d.data[0][1],d.data[0][2]);
-				fprintf(f,", %4g, %4g, %4g",d.data[1][0],d.data[1][1],d.data[1][2]);
-				fprintf(f,", %4g, %4g, %4g",d.data[2][0],d.data[2][1],d.data[2][2]);
-				fprintf(f,", %4g, %4g, %4g",d.data[3][0],d.data[3][1],d.data[3][2]);
-				fprintf(f,"; ... \n");
-			}
-			fprintf(f,"];\n");
-		}
-		fclose(f);
 	}
 
 	// An enum to enable handling the degrees of freedom easily.
@@ -1889,6 +1851,7 @@ public:
 		svector F(nnd), U(nnd), P(nnd), W(nnd), V(nnd);
 		smatrix_diag * d;
 		smatrix_node * p;
+		const element * e = first;
 
 #if !defined(_MSC_VER) && !defined(DARWIN)
 		clock_gettime(CLOCK_PROF,&stop);
@@ -1940,9 +1903,8 @@ public:
 		printf("Assembling Stiffness Matrix...");
 
 		// Loop over the elements building the stiffness matrix.
-		for (n = 0; n < elements.length(); n++) {
-			const element * e = elements[n]; 
-			smatrix_elem * ke = e->stiffness(node);
+		while (e) {
+			smatrix_elem * ke = e->stiffness();
 			if (ke == 0)
 				return false;
 			for (i = 0; i < ke->nnd; i++) {
@@ -2004,6 +1966,7 @@ public:
 				}
 			}
 			delete ke;
+			e = e->next;
 		}
 
 #if !defined(_MSC_VER) && !defined(DARWIN)
@@ -2163,8 +2126,9 @@ public:
 	}
 
 private:
+	friend class listelement_o<mesh,element>;
+	
 	node_list node;
-	sset<element *> elements;
 	koset<mesh_bc_key,mesh_bc> disp_bc;
 	koset<mesh_bc_key,mesh_bc> f_ext;
 };
@@ -2190,6 +2154,34 @@ operator& (const mesh::bcplane l, const mesh::bcplane r)
 {
 	return static_cast<mesh::bcplane>(unsigned(l) & unsigned(r));
 }
+
+/*
+ * Add a node to the mesh's node list, returning the index.
+ */
+unsigned
+element::addnode(const coord3d & c) const
+{
+	return owner->addnode(c);
+}
+
+/*
+ * Add a node to the mesh's node list, returning the index.
+ */
+void
+element::updatenode(const node3d & n) const
+{
+	owner->updatenode(n);
+}
+
+/*
+ * Get a node from the node list, based on the index.
+ */
+inline const node3d &
+element::getnode(const unsigned i) const
+{
+	return owner->getnode(i);
+}
+
 
 inline double
 circlearea(double a, double b, double r)
@@ -2273,6 +2265,41 @@ struct femlayer {
 	material mat;
 	cset<fixed<8> > stops;
 };
+
+/*
+ * This outputs the results for all the elements in the list
+ * Obviously, the list must be ones returned by add().
+ */
+void
+results(const fset<const element *> & e, const fset<point3d> & c,
+		const char * dname)
+{
+	fset<pavedata> data(c.length(),c.length());
+	
+	char fname[128];
+	sprintf(fname,"%s%d_%s.m",dname,run,(isvar?"3d":"1d"));
+	FILE * f = fopen(fname,"w");
+	for (unsigned i = 0; i < e.length(); i++) {
+		e[i]->results(c,data);
+		fprintf(f,"%s%s%d{%d} = [ ...\n",dname,(isvar?"3d":"1d"),run,i+1);
+		for (unsigned j = 0; j < data.length(); j++) {
+			pavedata & d = data[j];
+			fprintf(f,"%4g, %4g, %4g",d.x,d.y,d.z);
+			fprintf(f,", %4g, %4g, %4g",d.data[4][0],d.data[4][1],-d.data[4][2]);
+			fprintf(f,", %4g, %4g, %4g",d.data[5][0],d.data[5][1],d.data[5][2]);
+			fprintf(f,", %4g, %4g, %4g",d.data[6][0],d.data[6][1],d.data[6][2]);
+			fprintf(f,", %4g, %4g, %4g",d.data[7][0],d.data[7][1],d.data[7][2]);
+			fprintf(f,", %4g, %4g, %4g",d.data[8][0],d.data[8][1],d.data[8][2]);
+			fprintf(f,", %4g, %4g, %4g",d.data[0][0],d.data[0][1],d.data[0][2]);
+			fprintf(f,", %4g, %4g, %4g",d.data[1][0],d.data[1][1],d.data[1][2]);
+			fprintf(f,", %4g, %4g, %4g",d.data[2][0],d.data[2][1],d.data[2][2]);
+			fprintf(f,", %4g, %4g, %4g",d.data[3][0],d.data[3][1],d.data[3][2]);
+			fprintf(f,"; ... \n");
+		}
+		fprintf(f,"];\n");
+	}
+	fclose(f);
+}
 
 /*
  * This program is a custom 3D finite element code, intended for
@@ -2578,14 +2605,14 @@ core()
 	poly[11] = point3d( 1,-1,-1/3.0);
 	poly[12] = point3d( 1,-1,-2/3.0);
 	poly[13] = point3d( 1,-1,-3/3.0);
-	FEM.results(face,poly,"face");
+	results(face,poly,"face");
 
 	/*fset<point3d> poly(4);
 	poly[0]  = point3d(-1,-1,-1);
 	poly[1]  = point3d(-1, 1,-1);
 	poly[2]  = point3d( 1, 1,-1);
 	poly[3]  = point3d( 1,-1,-1);
-	FEM.results(face,poly,"bot");*/
+	results(face,poly,"bot");*/
 
 #if !defined(_MSC_VER) && !defined(DARWIN)
 	clock_gettime(CLOCK_PROF,&stop);
@@ -2625,7 +2652,7 @@ main()
 	m.setprop(material_property::poissons,0.2);
 
 	const double cube[3][2] = {{-10, 10}, {-10, 10}, {-10, 0}};
-	const unsigned ndiv[3] = {20, 20, 10};
+	const unsigned ndiv[3] = {80, 80, 50};
 	unsigned i, j, k;
 	mesh FEM;
 	cset<const element *> face;
@@ -2731,7 +2758,7 @@ main()
 	poly[1] = point3d(-1,-1,+1);
 	poly[2] = point3d(-1,+1,+1);
 	poly[3] = point3d(-1,+1,-1);
-	FEM.results(face,poly,"test");
+	results(face,poly,"test");
 
 #if !defined(_MSC_VER) && !defined(DARWIN)
 	clock_gettime(CLOCK_PROF,&stop);
