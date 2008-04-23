@@ -106,7 +106,7 @@ protected:
 	O * owner;					// Our owner.
 
 	// Create an element.
-	listelement_o(O * o, T * p)
+	listelement_o(O * o, T * p = 0)
 	  : listelement_d<T>(p), owner(o) {
 		if (owner != 0) {
 			if (this->prev == 0) {
