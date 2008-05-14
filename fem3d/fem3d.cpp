@@ -58,8 +58,8 @@
 #define _EVENT_IMP
 #define _PROGRESS_IMP
 #if !defined(_MSC_VER) && !defined(DARWIN)
-#include <time.h>
-struct timespec start, stop;
+#include <sys/time.h>
+struct timeval start, stop;
 double run_time;
 #endif
 #include <stdlib.h>
@@ -1854,8 +1854,8 @@ public:
 		const element * e = first;
 
 #if !defined(_MSC_VER) && !defined(DARWIN)
-		clock_gettime(CLOCK_PROF,&stop);
-		run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
+		gettimeofday(&stop,NULL);
+		run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
 		printf(" %f\n",run_time);
 #else
 		printf("\n");
@@ -1871,8 +1871,8 @@ public:
 		}
 
 #if !defined(_MSC_VER) && !defined(DARWIN)
-		clock_gettime(CLOCK_PROF,&stop);
-		run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
+		gettimeofday(&stop,NULL);
+		run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
 		printf(" %f\n",run_time);
 #else
 		printf("\n");
@@ -1894,8 +1894,8 @@ public:
 		}
 
 #if !defined(_MSC_VER) && !defined(DARWIN)
-		clock_gettime(CLOCK_PROF,&stop);
-		run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
+		gettimeofday(&stop,NULL);
+		run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
 		printf(" %f\n",run_time);
 #else
 		printf("\n");
@@ -1970,8 +1970,8 @@ public:
 		}
 
 #if !defined(_MSC_VER) && !defined(DARWIN)
-		clock_gettime(CLOCK_PROF,&stop);
-		run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
+		gettimeofday(&stop,NULL);
+		run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
 		printf(" %f\n",run_time);
 #else
 		printf("\n");
@@ -1988,8 +1988,8 @@ public:
 		}
 
 #if !defined(_MSC_VER) && !defined(DARWIN)
-		clock_gettime(CLOCK_PROF,&stop);
-		run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
+		gettimeofday(&stop,NULL);
+		run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
 		printf(" %f\n",run_time);
 #else
 		printf("\n");
@@ -1999,8 +1999,8 @@ public:
 		K.tidy();
 
 #if !defined(_MSC_VER) && !defined(DARWIN)
-		clock_gettime(CLOCK_PROF,&stop);
-		run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
+		gettimeofday(&stop,NULL);
+		run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
 		printf(" %f\n",run_time);
 #else
 		printf("\n");
@@ -2010,8 +2010,8 @@ public:
 		smatrix M(K);
 
 #if !defined(_MSC_VER) && !defined(DARWIN)
-		clock_gettime(CLOCK_PROF,&stop);
-		run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
+		gettimeofday(&stop,NULL);
+		run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
 		printf(" %f\n",run_time);
 #else
 		printf("\n");
@@ -2021,8 +2021,8 @@ public:
 		M.chol();
 
 #if !defined(_MSC_VER) && !defined(DARWIN)
-		clock_gettime(CLOCK_PROF,&stop);
-		run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
+		gettimeofday(&stop,NULL);
+		run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
 		printf(" %f\n",run_time);
 #else
 		printf("\n");
@@ -2098,8 +2098,8 @@ public:
 			it++;
 			printf("CG step %i with residual %g",it,r);
 #if !defined(_MSC_VER) && !defined(DARWIN)
-			clock_gettime(CLOCK_PROF,&stop);
-			run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
+			gettimeofday(&stop,NULL);
+			run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
 			printf(" %f\n",run_time);
 #else
 			printf("\n");
@@ -2115,8 +2115,8 @@ public:
 		}
 
 #if !defined(_MSC_VER) && !defined(DARWIN)
-		clock_gettime(CLOCK_PROF,&stop);
-		run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
+		gettimeofday(&stop,NULL);
+		run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
 		printf(" %f\n",run_time);
 #else
 		printf("\n");
@@ -2311,7 +2311,7 @@ int
 core()
 {
 #if !defined(_MSC_VER) && !defined(DARWIN)
-	clock_gettime(CLOCK_PROF,&start);
+	gettimeofday(&start,NULL);
 #endif
 
 	LEsystem test;
@@ -2615,8 +2615,8 @@ core()
 	results(face,poly,"bot");*/
 
 #if !defined(_MSC_VER) && !defined(DARWIN)
-	clock_gettime(CLOCK_PROF,&stop);
-	run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
+	gettimeofday(&stop,NULL);
+	run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
 	printf("%f\n",run_time);
 #endif
 
@@ -2643,7 +2643,7 @@ int
 main()
 {
 #if !defined(_MSC_VER) && !defined(DARWIN)
-	clock_gettime(CLOCK_PROF,&start);
+	gettimeofday(&start,NULL);
 #endif
 	printf("Constructing Mesh...");
 
@@ -2691,8 +2691,8 @@ main()
 		}
 	}
 #if !defined(_MSC_VER) && !defined(DARWIN)
-	clock_gettime(CLOCK_PROF,&stop);
-	run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
+	gettimeofday(&stop,NULL);
+	run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
 	printf(" %f\n",run_time);
 #else
 	printf("\n");
@@ -2717,8 +2717,8 @@ main()
 		}
 	}
 #if !defined(_MSC_VER) && !defined(DARWIN)
-	clock_gettime(CLOCK_PROF,&stop);
-	run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
+	gettimeofday(&stop,NULL);
+	run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
 	printf(" %f\n",run_time);
 #else
 	printf("\n");
@@ -2728,8 +2728,8 @@ main()
 	FEM.solve(1e-12);
 
 #if !defined(_MSC_VER) && !defined(DARWIN)
-	clock_gettime(CLOCK_PROF,&stop);
-	run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
+	gettimeofday(&stop,NULL);
+	run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
 	printf(" %f\n",run_time);
 #else
 	printf("\n");
@@ -2761,8 +2761,8 @@ main()
 	results(face,poly,"test");
 
 #if !defined(_MSC_VER) && !defined(DARWIN)
-	clock_gettime(CLOCK_PROF,&stop);
-	run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
+	gettimeofday(&stop,NULL);
+	run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
 	printf("Done: %f\n",run_time);
 #else
 	printf("Done.\n");
@@ -2775,7 +2775,7 @@ int
 main_infinity()
 {
 #if !defined(_MSC_VER) && !defined(DARWIN)
-	clock_gettime(CLOCK_PROF,&start);
+	gettimeofday(&start,NULL);
 #endif
 
 	material m;
@@ -2881,8 +2881,8 @@ main_infinity()
 	}
 
 #if !defined(_MSC_VER) && !defined(DARWIN)
-	clock_gettime(CLOCK_PROF,&stop);
-	run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
+	gettimeofday(&stop,NULL);
+	run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
 	printf("%f\n",run_time);
 #endif
 
