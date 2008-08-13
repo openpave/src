@@ -1780,6 +1780,7 @@ LEbackcalc::backcalc()
 		memcpy(T,P,sizeof(double)*nl);
 		memcpy(O,P,sizeof(double)*nl);
 	}
+	//swarm(nl,P);
 	// Now settle into our true minimisation algorithm.
 	// First we start by using the deflection gradient in
 	// emod space, since it converges faster...
@@ -1930,10 +1931,6 @@ LEbackcalc::seed(unsigned nl, double * P)
  * Only one step is performed, and the algorithm should be called
  * repeatedly to improve the approximation.
  *
- * The algorithm can also be called for a straight Gauss-Newton method
- * or for a differential deflection method, which aids convergence for
- * some bowls.
- *
  * See the ICAP 2006 paper for details.
  */
 double
@@ -2052,7 +2049,7 @@ LEbackcalc::gaussnewton(unsigned nl, double * P, calctype cl)
 	double * W = new double[nl];
 	double * Y = new double[nl];
 	if (H == 0 || S == 0 || W == 0 || Y == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in LEbackcalc::kalman()!");
+		event_msg(EVENT_ERROR,"Out of memory in LEbackcalc::gaussnewton()!");
 		goto abort;
 	}
 	memset(Y,0,sizeof(double)*nl);
@@ -2138,23 +2135,18 @@ double LEbackcalc::kalman(unsigned nl, double * P) {
 		step += W[i]*W[i];
 	}
 	step = sqrt(step);
-	if (step > 1.0) {
-		step = step*brent(nl,P,W);
-	} else {
+	//if (step > 1.0) {
+	//	step = step*brent(nl,P,W);
+	//} else {
 		for (i = 0; i < nl; i++)
 			P[i] = MIN(MAX(1,P[i]+W[i]),9);
-	}
+	//}
 abort:
-	if (W != 0)
-		delete [] W;
-	if (Y != 0)
-		delete [] Y;
-	if (K != 0)
-		delete [] K;
-	if (S != 0)
-		delete [] S;
-	if (H != 0)
-		delete [] H;
+	delete [] W;
+	delete [] Y;
+	delete [] K;
+	delete [] S;
+	delete [] H;
 	return step;
 }
 
@@ -2335,11 +2327,152 @@ double LEbackcalc::conjgrad(unsigned nl, double * P) {
 	for (i = 0, gg = 0.0; i < nl; i++)
 		gg += (P[i]-W[i])*(P[i]-W[i]), P[i] = MIN(MAX(1,W[i]),9);
 abort:
-	if (W != 0)
-		delete [] W;
-	if (G != 0)
-		delete [] G;
-	if (D != 0)
-		delete [] D;
+	delete [] W;
+	delete [] G;
+	delete [] D;
+	return sqrt(gg);
+}
+
+/*
+ * This is a new particle swarm optimisation based solver...
+ */
+#define PARTICLES 100
+double LEbackcalc::swarm(unsigned nl, double * P) {
+	double gg = 0.0, dgg = 0.0, derr = DBL_MAX, werr = -DBL_MAX;
+	double r1 = 0.0, r2 = 0.0;
+	double sderr = sqrt(noise*noise + (precision*precision)/3.0);
+	const double w = 0.0;
+	const double c1 = 0.2;
+	const double c2 = 0.3;
+	const double G = 0.1;
+	unsigned p, i, j, iter = 0;
+	unsigned best = 0;
+
+	double * X = new double[PARTICLES*nl];
+	double * V = new double[PARTICLES*nl];
+	double * B = new double[PARTICLES*nl];
+	double * E = new double[2*PARTICLES];
+	double * R1 = new double[nl*nl];
+	double * R2 = new double[nl*nl];
+	if (X == 0 || V == 0 || B == 0 || E == 0 || R1 == 0 || R2 == 0) {
+		event_msg(EVENT_ERROR,"Out of memory in LEbackcalc::swarm()!");
+		goto abort;
+	}
+	for (p = 0; p < PARTICLES; p++) {
+		for (i = 0; i < nl; i++) {
+			X[p*nl+i] = RAND(MAX(2,P[i]-6.0),MIN(P[i]+4.0,8));
+			V[p*nl+i] = 0.0;
+		}
+		E[2*p] = DBL_MAX;
+	}
+	while (iter++ < 10000) {
+		for (p = 0; p < PARTICLES; p++) {
+			double err = 0.0;
+			for (i = 0; i < nl; i++)
+				layer(i).emod(pow(10,X[p*nl+i]));
+			calculate(LEsystem::disp);
+			for (i = 0; i < defl.length(); i++) {
+				defldata & d = defl[i];
+				d.calculated = result(d).result(pavedata::deflct, pavedata::zz);
+				err += pow(d.measured-d.calculated,2);
+			}
+			err = sqrt(err/defl.length());
+			printf("%4i:",p);
+			for (i = 0; i < nl; i++)
+				printf(" %+4.2f",X[p*nl+i]);
+			for (i = 0; i < nl; i++)
+				printf(" %+4.2f",V[p*nl+i]);
+			printf(" (%g)\n",log10(err));
+			E[2*p+1] = log10(err);
+			if (log10(err) < E[2*p]) {
+				E[2*p] = log10(err);
+				for (i = 0; i < nl; i++)
+					B[p*nl+i] = X[p*nl+i];
+			}
+			if (err < derr)
+				best = p, derr = err;
+			if (err > werr)
+				werr = err;
+		}
+		printf("%i: (%g)\n",best,derr);
+		if (derr < MAX(1e-6,sderr))
+			break;
+		for (p = 0, dgg = 0.0; p < PARTICLES; p++) {
+			/*
+			for (i = 0; i < nl; i++) {
+				R1[i*nl+i] = R2[i*nl+i] = 1.0;
+				for (j = i+1; j < nl; j++) {
+					r1 = RAND(-0.5,0.5); r2 = RAND(-0.5,0.5);
+					R1[i*nl+j] = R1[j*nl+i] = 10*M_PI/180*(r1+r2);
+					r1 = RAND(-0.5,0.5); r2 = RAND(-0.5,0.5);
+					R2[i*nl+j] = R2[j*nl+i] = 10*M_PI/180*(r1+r2);
+				}
+			}
+			orth_gs(nl,R1); orth_gs(nl,R2);
+			r1 = 0.0; r2 = 0.0;
+			for (i = 0; i < nl; i++) {
+				r1 += pow(B[p*nl+i]-X[p*nl+i],2);
+				r2 += pow(B[best*nl+i]-X[p*nl+i],2);
+			}
+			r1 = (r1 > 0.0 ? RAND(0.0,c1)/MAX(sqrt(r1),1.0) : 0.0);
+			r2 = (r2 > 0.0 ? RAND(0.0,c2)/MAX(sqrt(r2),1.0) : 0.0);
+			for (i = 0; i < nl; i++) {
+				V[p*nl+i] *= w;
+				for (j = 0; j < nl; j++)
+					V[p*nl+i] += r1*R1[i*nl+j]*(B[p*nl+j]-X[p*nl+j]);
+				for (j = 0; j < nl; j++)
+					V[p*nl+i] += r2*R2[i*nl+j]*(B[best*nl+j]-X[p*nl+j]);
+			}
+			for (i = 0, gg = 0.0; i < nl; i++) {
+				double x = MIN(MAX(1,X[p*nl+i]+V[p*nl+i]),9);
+				V[p*nl+i] = x-X[p*nl+i], X[p*nl+i] = x;
+				gg += pow(V[p*nl+i],2);
+			}
+			*/
+			for (i = 0; i < nl; i++)
+				V[p*nl+i] *= w;
+			double m2 = log10(werr) - E[2*p+1] + 1.0;
+			m2 = pow(m2*3/4/M_PI,1.0/3.0);
+			for (unsigned q = 0; q < PARTICLES; q++) {
+				if (E[2*q] >= E[2*p+1])
+					continue;
+				double m1 = log10(werr) - E[2*q] + 1.0;
+				m1 = pow(m1*3/4/M_PI,1.0/3.0);
+				printf("%g %g\n",m1,m2);
+				for (i = 0, gg = 0.0; i < nl; i++)
+					gg += pow(B[q*nl+i]-X[p*nl+i],2);
+				r2 = sqrt(gg); gg = MAX(0.1,sqrt(gg));
+				//gg = G*(E[2*p]-E[2*q])/pow(gg,3);
+				gg = G*(E[2*p+1]-E[2*q])/pow(gg,2);
+				for (i = 0; i < nl; i++)
+					V[p*nl+i] += gg*(B[q*nl+i]-X[p*nl+i])/r2;
+			}
+			double r = 0.0;
+			for (i = 0; i < nl; i++)
+				r += pow(V[p*nl+i],2);
+			r = MAX(1.0,sqrt(r));
+			for (i = 0, gg = 0.0; i < nl; i++) {
+				double x = MIN(MAX(1,X[p*nl+i]+V[p*nl+i]/r),9);
+				V[p*nl+i] = x-X[p*nl+i], X[p*nl+i] = x;
+				gg += pow(V[p*nl+i],2);
+			}
+			dgg += sqrt(gg)/PARTICLES;
+		}
+		printf("dgg = %g\n",dgg);
+		if (dgg < MAX(1e-8,tolerance))
+			break;
+	}
+	for (i = 0, gg = 0.0; i < nl; i++) {
+		gg += pow(P[i]-B[best*nl+i],2);
+		P[i] = MIN(MAX(1,B[best*nl+i]),9);
+	}
+	
+abort:
+	delete [] X;
+	delete [] V;
+	delete [] B;
+	delete [] E;
+	delete [] R1;
+	delete [] R2;
 	return sqrt(gg);
 }

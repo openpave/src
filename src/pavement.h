@@ -498,6 +498,7 @@ private:
 			const double s = 0.0, const double * D = 0);
 	double brent(unsigned nl, double * P, double * D);
 	double conjgrad(unsigned nl, double * P);
+	double swarm(unsigned nl, double * P);
 };
 
 #endif // PAVEMENT_H
