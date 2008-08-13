@@ -585,7 +585,7 @@ redo:
 /*
  * MB Road under a single wheel.
  */
-#ifdef BUILD
+#ifdef NOBUILD
 int
 main()
 {

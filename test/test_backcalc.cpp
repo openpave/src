@@ -133,7 +133,7 @@ redo:
 }
 #endif
 
-#ifdef NOBUILD
+#ifdef BUILD
 int
 main()
 {
@@ -238,7 +238,7 @@ redo:
 	
 	for (i = 0, err = 0.0; i < Bowl.layers(); i++) {
 		err += (Bowl.layer(i).emod()/T[i])-1;
-		printf("E-modulus for layer %d = %f (%f)\n",i+1,Bowl.layer(i).emod()/1000,T[i]/1000);
+		printf("E-modulus for layer %d = %f (%f) or %4.2f (%4.2f)\n",i+1,Bowl.layer(i).emod()/1000,T[i]/1000,log10(Bowl.layer(i).emod()),log10(T[i]));
 	}
 	if (rv) {
 		if (err > 0.1)
