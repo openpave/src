@@ -57,10 +57,11 @@
 
 #define _EVENT_IMP
 #define _PROGRESS_IMP
-#if !defined(_MSC_VER) && !defined(DARWIN)
+
+#if defined(DARWIN)
 #include <sys/time.h>
-struct timeval start, stop;
-double run_time;
+#else
+#include <time.h>
 #endif
 #include <stdlib.h>
 #if defined(_MSC_VER)
@@ -79,6 +80,47 @@ extern "C" {
 extern const char * _malloc_options = "ajzSSS";
 };
 #endif
+
+static void timeme(const char * msg = 0)
+{
+#if !defined(_MSC_VER) && !defined(DARWIN)
+#if defined(linux)
+#define CLOCK_PROF CLOCK_PROCESS_CPUTIME_ID
+#endif
+	static struct timespec start;
+	struct timespec stop;
+	double run_time;
+	if (msg == 0) {
+		clock_gettime(CLOCK_PROF,&start);
+		return;
+	}
+	clock_gettime(CLOCK_PROF,&stop);
+	run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
+	printf(" %f%s",run_time,msg);
+#elif defined(DARWIN)
+	static struct timeval start;
+	struct timeval stop;
+	double run_time;
+	if (msg == 0) {
+		gettimeofday(&start,NULL);
+		return;
+	}
+	gettimeofday(&stop,NULL);
+	run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000.0;
+	printf(" %f%s",run_time,msg);
+#elif defined(_MSC_VER)
+	static clock_t start;
+	clock_t stop;
+	double run_time;
+	if (msg == 0) {
+		start = clock();
+		return;
+	}
+	stop = clock();
+	run_time = double(stop - start) / CLOCK_PER_SEC;
+	printf(" %f%s",run_time,msg);
+#endif
+}
 
 #define NDOF 3
 #define NDIM 3
@@ -282,7 +324,7 @@ private:
 /*
  * struct coord3d
  *
- * A mesh point in 3D space.  This is not a point3d for to reasons:
+ * A mesh point in 3D space.  This is not a point3d for two reasons:
  * 1. It sorts differently.
  * 2. We use a fixed point type to make sure the nodes line up.
  */
@@ -434,7 +476,7 @@ private:
  *
  * We use special set type to store nodes, since we have some interesting
  * requirements.  This is basically a left-leaning red-black tree, but
- * without using points...  It uses a fixed array to store the data
+ * without using pointers...  It uses a fixed array to store the data
  * and array indices into that to find the nodes.
  *
  * Since we never delete nodes, this helps with some of the data management,
@@ -1853,14 +1895,7 @@ public:
 		smatrix_node * p;
 		const element * e = first;
 
-#if !defined(_MSC_VER) && !defined(DARWIN)
-		gettimeofday(&stop,NULL);
-		run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
-		printf(" %f\n",run_time);
-#else
-		printf("\n");
-#endif
-		printf("Building external forces...");
+		timeme("\nBuilding external forces...");
 
 		// Start by building the force vector.
 		f_ext.sort();
@@ -1870,14 +1905,7 @@ public:
 			F(node.getorder(f.n))(f.i) = f.d;
 		}
 
-#if !defined(_MSC_VER) && !defined(DARWIN)
-		gettimeofday(&stop,NULL);
-		run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
-		printf(" %f\n",run_time);
-#else
-		printf("\n");
-#endif
-		printf("Setting fixed BCs...");
+		timeme("\nSetting fixed BCs...");
 
 		disp_bc.sort();
 		for (i = 0; i < disp_bc.length(); i++) {
@@ -1893,14 +1921,7 @@ public:
 			}
 		}
 
-#if !defined(_MSC_VER) && !defined(DARWIN)
-		gettimeofday(&stop,NULL);
-		run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
-		printf(" %f\n",run_time);
-#else
-		printf("\n");
-#endif
-		printf("Assembling Stiffness Matrix...");
+		timeme("\nAssembling Stiffness Matrix...");
 
 		// Loop over the elements building the stiffness matrix.
 		while (e) {
@@ -1969,14 +1990,7 @@ public:
 			e = e->next;
 		}
 
-#if !defined(_MSC_VER) && !defined(DARWIN)
-		gettimeofday(&stop,NULL);
-		run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
-		printf(" %f\n",run_time);
-#else
-		printf("\n");
-#endif
-		printf("Finalising BCs...");
+		timeme("\nFinalising BCs...");
 
 		for (i = 0; i < disp_bc.length(); i++) {
 			const mesh_bc & u = disp_bc[i];
@@ -1987,47 +2001,19 @@ public:
 			d->K(u.i,u.i) = 1.0;
 		}
 
-#if !defined(_MSC_VER) && !defined(DARWIN)
-		gettimeofday(&stop,NULL);
-		run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
-		printf(" %f\n",run_time);
-#else
-		printf("\n");
-#endif
-		printf("Tidying up...");
+		timeme("\nTidying up...");
 
 		K.tidy();
 
-#if !defined(_MSC_VER) && !defined(DARWIN)
-		gettimeofday(&stop,NULL);
-		run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
-		printf(" %f\n",run_time);
-#else
-		printf("\n");
-#endif
-		printf("Copying...");
+		timeme("\nCopying...");
 
 		smatrix M(K);
 
-#if !defined(_MSC_VER) && !defined(DARWIN)
-		gettimeofday(&stop,NULL);
-		run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
-		printf(" %f\n",run_time);
-#else
-		printf("\n");
-#endif
-		printf("Computing incomplete Cholesky...");
+		timeme("\nComputing incomplete Cholesky...");
 
 		M.chol();
 
-#if !defined(_MSC_VER) && !defined(DARWIN)
-		gettimeofday(&stop,NULL);
-		run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
-		printf(" %f\n",run_time);
-#else
-		printf("\n");
-#endif
-		printf("Beginning CG...");
+		timeme("\nBeginning CG...");
 
 		// CG solution
 		unsigned it = 0;
@@ -2097,13 +2083,7 @@ public:
 			}
 			it++;
 			printf("CG step %i with residual %g",it,r);
-#if !defined(_MSC_VER) && !defined(DARWIN)
-			gettimeofday(&stop,NULL);
-			run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
-			printf(" %f\n",run_time);
-#else
-			printf("\n");
-#endif
+			timeme("\n");
 		}
 		printf("CG took %i steps with residual %g\n",it,r);
 		printf("Setting results...");
@@ -2114,14 +2094,7 @@ public:
 			u.setdisp(U(i));
 		}
 
-#if !defined(_MSC_VER) && !defined(DARWIN)
-		gettimeofday(&stop,NULL);
-		run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
-		printf(" %f\n",run_time);
-#else
-		printf("\n");
-#endif
-
+		timeme("\n");
 		return true;
 	}
 
@@ -2310,9 +2283,7 @@ results(const fset<const element *> & e, const fset<point3d> & c,
 int
 core()
 {
-#if !defined(_MSC_VER) && !defined(DARWIN)
-	gettimeofday(&start,NULL);
-#endif
+    timeme();
 
 	LEsystem test;
 	test.addlayer(  90.0,3000e3,0.35);
@@ -2614,12 +2585,7 @@ core()
 	poly[3]  = point3d( 1,-1,-1);
 	results(face,poly,"bot");*/
 
-#if !defined(_MSC_VER) && !defined(DARWIN)
-	gettimeofday(&stop,NULL);
-	run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
-	printf("%f\n",run_time);
-#endif
-
+	timeme("\n");
 	return 0;
 }
 
@@ -2642,9 +2608,7 @@ main_real()
 int
 main()
 {
-#if !defined(_MSC_VER) && !defined(DARWIN)
-	gettimeofday(&start,NULL);
-#endif
+	timeme();
 	printf("Constructing Mesh...");
 
 	material m;
@@ -2690,14 +2654,8 @@ main()
 			}
 		}
 	}
-#if !defined(_MSC_VER) && !defined(DARWIN)
-	gettimeofday(&stop,NULL);
-	run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
-	printf(" %f\n",run_time);
-#else
-	printf("\n");
-#endif
-	printf("Setting BCs and forces...");
+	
+	timeme("\nSetting BCs and forces...");
 
 	FEM.add_bc_plane(mesh::Z,mesh::at|mesh::below,cube[2][0],mesh::Z,0.0);
 	FEM.add_bc(coord3d(cube[0][0],cube[1][0],cube[2][0]),mesh::X,0.0);
@@ -2716,25 +2674,12 @@ main()
 			FEM.add_fext(coord3d(x,y,cube[2][1]),mesh::Z,f);
 		}
 	}
-#if !defined(_MSC_VER) && !defined(DARWIN)
-	gettimeofday(&stop,NULL);
-	run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
-	printf(" %f\n",run_time);
-#else
-	printf("\n");
-#endif
-	printf("Solving...\n");
+
+	timeme("\nSolving...\n");
 
 	FEM.solve(1e-12);
 
-#if !defined(_MSC_VER) && !defined(DARWIN)
-	gettimeofday(&stop,NULL);
-	run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
-	printf(" %f\n",run_time);
-#else
-	printf("\n");
-#endif
-	printf("Output...\n");
+	timeme("\nOutput...\n");
 
 	/*int nnd = FEM.getnodes();
 	for (i = 0; i < nnd; i++) {
@@ -2760,13 +2705,7 @@ main()
 	poly[3] = point3d(-1,+1,-1);
 	results(face,poly,"test");
 
-#if !defined(_MSC_VER) && !defined(DARWIN)
-	gettimeofday(&stop,NULL);
-	run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
-	printf("Done: %f\n",run_time);
-#else
-	printf("Done.\n");
-#endif
+	timeme(" Done.\n");
 
 	return 0;
 }
@@ -2774,10 +2713,8 @@ main()
 int
 main_infinity()
 {
-#if !defined(_MSC_VER) && !defined(DARWIN)
-	gettimeofday(&start,NULL);
-#endif
-
+	timeme();
+	
 	material m;
 	m.setprop(material_property::emod,100); // kPa
 	m.setprop(material_property::poissons,0.35);
@@ -2880,12 +2817,8 @@ main_infinity()
 		printf("Node %i: (%i,%i,%i) =\t(%f,%f,%f)\n",j,int(x),int(y),int(z),ux,uy,uz);
 	}
 
-#if !defined(_MSC_VER) && !defined(DARWIN)
-	gettimeofday(&stop,NULL);
-	run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000000.0;
-	printf("%f\n",run_time);
-#endif
-
+	timeme("\n");
+	
 	return 0;
 }
 
