@@ -572,7 +572,8 @@ case "$host" in
 *-cygwin*|*-mingw*|*-msvc*|*-mks*)
     ;;
 *)
-    AC_SEARCH_LIBS(sqrt,m,OS_LIBS="-lm")
+    AC_SEARCH_LIBS(sqrt,m)
+    AC_SEARCH_LIBS(clock_gettime,rt)
     ;;
 esac
 
@@ -625,6 +626,7 @@ if test -n "$OP_DEBUG"; then
     CXXFLAGS="$CXXFLAGS $_DEBUG_FLAGS"
 fi
 
+OS_LIBS=$LIBS
 CFLAGS="$CFLAGS $WARN_CFLAGS"
 CXXFLAGS="$CXXFLAGS $WARN_CXXFLAGS"
 CPPFLAGS="$_CONFIG_H $CPPFLAGS $_DEBUG_DEFINES"
