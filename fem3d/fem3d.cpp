@@ -117,7 +117,7 @@ static void timeme(const char * msg = 0)
 		return;
 	}
 	stop = clock();
-	run_time = double(stop - start) / CLOCK_PER_SEC;
+	run_time = double(stop - start) / CLOCKS_PER_SEC;
 	printf(" %f%s",run_time,msg);
 #endif
 }
