@@ -233,6 +233,67 @@ struct meta_stiffness<0,J,K,L>
 };
 
 /*
+ * Calculate the principle stresses or strains.
+ */
+ematrix
+principle(const ematrix & s)
+{
+	double t1, t2;
+
+    assert(NDIM == 3 && NDOF == 3); 
+    ematrix p(s);
+
+	t1 = p(0,1)*p(0,1) + p(0,2)*p(0,2) + p(1,2)*p(1,2);
+	while (t1 > 1e-30) {
+		if (p(0,2) != 0.0) {
+			t1 = p(2,2)-p(0,0);
+			t2 = (t1 < 0.0 ? -2 : 2)*p(0,2);
+			t1 = t2/(fabs(t1) + hypot(t1,t2));
+			p(0,0) -= t1*p(0,2);
+			p(2,2) += t1*p(0,2);
+			t2 = 1.0/hypot(t1,1.0);
+			p(1,2) *= t2;
+			t2 = p(0,1) *= t2;
+			p(0,1) -= t1*p(1,2);
+			p(1,2) += t1*t2;
+			p(0,2) = 0.0;
+		}
+		if (p(0,1) != 0.0) {
+			t1 = p(1,1)-p(0,0);
+			t2 = (t1 < 0.0 ? -2 : 2)*p(0,1);
+			t1 = t2/(fabs(t1) + hypot(t1,t2));
+			p(0,0) -= t1*p(0,1);
+			p(1,1) += t1*p(0,1);
+			p(1,2) /= hypot(t1,1.0);
+			p(0,2) = -t1*p(1,2);
+			p(0,1) = 0.0;
+		}
+		if (p(1,2) != 0.0) {
+			t1 = p(2,2)-p(1,1);
+			t2 = (t1 < 0.0 ? -2 : 2)*p(1,2);
+			t1 = t2/(fabs(t1) + hypot(t1,t2));
+			p(1,1) -= t1*p(1,2);
+			p(2,2) += t1*p(1,2);
+			p(0,2) /= hypot(t1,1.0);
+			p(0,1) = -t1*p(0,2);
+			p(1,2) = 0.0;
+		}
+		t1 = p(0,1)*p(0,1) + p(0,2)*p(0,2);
+	}
+	p(1,0) = p(0,1) = 0.0;
+	p(2,0) = p(0,2) = 0.0;
+	p(2,1) = p(1,2) = 0.0;
+	for (unsigned i = 0; i < 2; i++) {
+		for (unsigned j = i + 1; j < 3; j++) {
+			if (p(i,i) > p(j,j))
+				swap(p(i,i),p(j,j));
+		}
+	}
+
+	return p;
+}
+
+/*
  * struct material_property
  *
  * A simple wrapper class around an enum of material property names,
@@ -308,13 +369,15 @@ public:
 		meta_stiffness<>::assign(E,lambda,mu);
 	}
 	// Get the point stress tensor, based on the strain.
-	inline void pointstress(ematrix & s, const ematrix & e) const {
+	inline ematrix pointstress(const ematrix & e) const {
 		double E = getprop(material_property::emod);
 		double v = getprop(material_property::poissons);
 		double lambda = v*E/(1+v)/(1-2*v);
 		double mu = E/2/(1+v);
+		ematrix s(0.0);
 
 		meta_stiffness<>::mul(s,e,lambda,mu);
+		return s;
 	}
 
 private:
@@ -1166,7 +1229,7 @@ protected:
 		}}}
 		return K;
 	}
-	// Output a MATLAB patch of results.
+	// Output results to a pavedata structure
 	void builddata(const fset<point3d> & c, fset<pavedata> & data,
 			const unsigned * mask = 0) const {
 		unsigned n, i, j, k;
@@ -1175,10 +1238,6 @@ protected:
 		assert(NDIM == 3 && NDOF == 3);
 		assert(c.length() == data.length());
 		
-		// XXX: Temp
-		double emod = mat.getprop(material_property::emod);
-		double v = mat.getprop(material_property::poissons);
-
 		// Element nodal coords
 		double (* xe)[NDIM] = static_cast<double (*)[NDIM]>
 				(alloca(nnd*NDIM*sizeof(double)));
@@ -1196,7 +1255,7 @@ protected:
 		for (n = 0; n < c.length(); n++) {
 			pavedata & d = data[n];
 			// Stress and strain tensors.
-			ematrix s(0.0), e(0.0);
+			ematrix e(0.0);
 			l[0] = c[n].x, l[1] = c[n].y, l[2] = c[n].z;
 			buildN(true,l[0],l[1],l[2],N,mask);
 			for (j = 0; j < NDIM; j++) {
@@ -1231,7 +1290,9 @@ protected:
 				}
 			}
 			e = (e + ~e)*0.5;
-			mat.pointstress(s,e);
+			ematrix s(mat.pointstress(e));
+			ematrix pe(principle(e));
+			ematrix ps(principle(s));
 			d.data[4][0] = g[0];
 			d.data[4][1] = g[1];
 			d.data[4][2] = g[2];
@@ -1241,8 +1302,28 @@ protected:
 			d.data[1][0] = s(0,1);
 			d.data[1][1] = s(0,2);
 			d.data[1][2] = s(1,2);
-			// XXX: we'll need to fix this...
-			d.principle(v,emod);
+			d.data[2][0] = ps(0,0);
+			d.data[2][1] = ps(1,1);
+			d.data[2][2] = ps(2,2);
+			d.data[3][0] = (ps(0,0) - ps(2,2))*0.5;
+			d.data[3][1] = (ps(0,0) - ps(1,1))*0.5;
+			d.data[3][2] = (ps(1,1) - ps(2,2))*0.5;
+			if (d.data[3][2] > d.data[3][1])
+				swap(d.data[3][2],d.data[3][1]);
+			d.data[5][0] = e(0,0);
+			d.data[5][1] = e(1,1);
+			d.data[5][2] = e(2,2);
+			d.data[6][0] = e(0,1);
+			d.data[6][1] = e(0,2);
+			d.data[6][2] = e(1,2);
+			d.data[7][0] = pe(0,0);
+			d.data[7][1] = pe(1,1);
+			d.data[7][2] = pe(2,2);
+			d.data[8][0] = (pe(0,0) - pe(2,2))*0.5;
+			d.data[8][1] = (pe(0,0) - pe(1,1))*0.5;
+			d.data[8][2] = (pe(1,1) - pe(2,2))*0.5;
+			if (d.data[8][2] > d.data[8][1])
+				swap(d.data[8][2],d.data[8][1]);
 		}
 	}
 
