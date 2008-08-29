@@ -2756,14 +2756,20 @@ main()
 		}
 	}
 
-	timeme("\nSolving...\n");
-
-	FEM.solve(1e-12);
+	for (i = 0; i < FEM.getnodes(); i++) {
+		node3d n = FEM.getorderednode(i);
+		n.ux =  0.0006*(double(n.x)+10.0)/20.0;
+		n.uy =  0.0006*(double(n.y)+10.0)/20.0;
+		n.uz = -0.0015*(double(n.z)+10.0)/10.0;
+		//n.ux = 0.0; n.uy = 0.0; n.uz = 0.0;
+		FEM.updatenode(n);
+	}
+	FEM.solve(1e-30);
+	FEM.solve(1e-30);
 
 	timeme("\nOutput...\n");
 
-	/*int nnd = FEM.getnodes();
-	for (i = 0; i < nnd; i++) {
+	/*for (i = 0; i < FEM.getnodes(); i++) {
 		const node3d & n = FEM.getorderednode(i);
 		double x = n.x;
 		double y = n.y;
@@ -2779,12 +2785,12 @@ main()
 	const node3d & n = FEM.getnode(FEM.hasnode(coord3d(cube[0][1],cube[1][1],cube[2][1])));
 	printf("(%+f,%+f,%+f)\n",n.ux,n.uy,n.uz);
 
-	fset<point3d> poly(4,4);
+	/*fset<point3d> poly(4,4);
 	poly[0] = point3d(-1,-1,-1);
 	poly[1] = point3d(-1,-1,+1);
 	poly[2] = point3d(-1,+1,+1);
 	poly[3] = point3d(-1,+1,-1);
-	results(face,poly,"test");
+	results(face,poly,"test");*/
 
 	timeme(" Done.\n");
 
@@ -2909,7 +2915,7 @@ main_junk()
 	double x, y, a = 0.0, b;
 	double dx, dy, delta = 4.0;
 
-	// Start with the tyre grid.
+	// Start with the tire grid.
 	dx = delta; dy = delta;
 	for (x = -30*dx; x < 30*dx; x += dx) {
 		for (y = -30*dx; y < 30*dy; y += dy) {
