@@ -524,9 +524,7 @@ private:
 	}
 	// Set our results.
 	void setdisp(const tmatrix<double,NDIM,1> & t) {
-		ux = t(0);
-		uy = t(1);
-		uz = t(2);
+		ux = t(0); uy = t(1); uz = t(2);
 	}
 	// Placement new to support inplace init in the list.
 	void *operator new(size_t, void * p) {
@@ -1971,14 +1969,12 @@ public:
 		unsigned i, j, n, nnd = node.length();
 		printf("Solving with %i nodes!",nnd);
 		smatrix K(nnd);
-		svector F(nnd), U(nnd), P(nnd), W(nnd), V(nnd);
+		svector F(nnd), U(nnd), P(nnd), W(nnd), V(nnd), R(nnd);
 		smatrix_diag * d;
 		smatrix_node * p;
 		const element * e = first;
 
 		timeme("\nBuilding external forces...");
-
-		// Start by building the force vector.
 		f_ext.sort();
 		for (i = 0; i < f_ext.length(); i++) {
 			const mesh_bc & f = f_ext[i];
@@ -1986,8 +1982,14 @@ public:
 			F(node.getorder(f.n))(f.i) = f.d;
 		}
 
-		timeme("\nSetting fixed BCs...");
+		timeme("\nSetting approximation of displacement...");
+		for (i = 0; i < nnd; i++) {
+			//node3d & u = node[i];
+			node3d & u = node.getindex(i);
+			U(i)(0) = u.ux; U(i)(1) = u.uy; U(i)(2) = u.uz;
+		}
 
+		timeme("\nSetting fixed BCs...");
 		disp_bc.sort();
 		for (i = 0; i < disp_bc.length(); i++) {
 			const mesh_bc & u = disp_bc[i];
@@ -1995,8 +1997,8 @@ public:
 			n = node.getorder(u.n);
 			// Each bit in fixed means that DOF is fixed.
 			node[u.n].fixed |= (1 << u.i);
+			// The last bit means at least one DOF is non-zero.
 			if (u.d != 0.0) {
-				// The last bit means at least one DOF is non-zero.
 				node[u.n].fixed |= (1 << NDOF);
 				P(n)(u.i) = u.d;
 			}
@@ -2074,9 +2076,8 @@ public:
 			const mesh_bc & u = disp_bc[i];
 			//n = u.n;
 			n = node.getorder(u.n);
-			F(n)(u.i) = u.d;
-			d = &(K.diag[n]);
-			d->K(u.i,u.i) = 1.0;
+			F(n)(u.i) = U(n)(u.i) = u.d;
+			K.diag[n].K(u.i,u.i) = 1.0;
 		}
 
 		timeme("\nTidying up...");
@@ -2093,17 +2094,36 @@ public:
 
 		timeme("\nBeginning CG...");
 
-		// CG solution
 		unsigned it = 0;
 		double r = 0.0, ro = 0.0;
 		for (i = 0; i < nnd; i++)
 			r += tmatrix_scalar<double>(~F(i)*F(i));
 		double ri = r, a;
 		printf("with initial residual %g\n",ri);
-		while (r > tol*ri && it < nnd) {
+		
+		// Now compute first approximation.
+		// CG solution
+		while (true) {
+			for (i = 0; it == 0 && i < nnd; i++) {
+				d = &(K.diag[i]);
+				R(i) = F(i) - d->K*U(i);
+				p = d->col_head;
+				while (p) {
+					   R(i) -= ~(p->K)*U(p->i);
+					R(p->i) -=  (p->K)*U(i);
+					p = p->col_next;
+				}
+			}
+			for (i = 0, r = 0.0; i < nnd; i++)
+				r += tmatrix_scalar<double>(~R(i)*R(i));
+			printf("CG step %i with residual %g",it+1,r);
+			if (r < tol*ri || it >= nnd) {
+				timeme("\n");
+				break;
+			}
 			for (n = 0; n < nnd; n++) {
 				d = &(M.diag[n]);
-				svector_dof t(F(n));
+				svector_dof t(R(n));
 				p = d->col_head;
 				while (p) {
 					t -= ~(p->K)*V(p->i);
@@ -2132,7 +2152,7 @@ public:
 				}
 			}
 			for (i = 0, r = 0.0; i < nnd; i++)
-				r += tmatrix_scalar<double>(~V(i)*F(i));
+				r += tmatrix_scalar<double>(~V(i)*R(i));
 			if (it == 0) {
 				for (i = 0; i < nnd; i++)
 					P(i) = V(i);
@@ -2153,14 +2173,12 @@ public:
 			for (i = 0, a = 0.0; i < nnd; i++)
 				a += tmatrix_scalar<double>(~W(i)*P(i));
 			assert(a > 0.0);
-			ro = r; r = 0.0;
+			ro = r;
 			for (i = 0; i < nnd; i++) {
 				U(i) += (ro/a)*P(i);
-				F(i) -= (ro/a)*W(i);
-				r += tmatrix_scalar<double>(~F(i)*F(i));
+				R(i) -= (ro/a)*W(i);
 			}
 			it++;
-			printf("CG step %i with residual %g",it,r);
 			timeme("\n");
 		}
 		printf("CG took %i steps with residual %g\n",it,r);
