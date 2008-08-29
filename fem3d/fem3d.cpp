@@ -1305,25 +1305,25 @@ protected:
 			d.data[2][0] = ps(0,0);
 			d.data[2][1] = ps(1,1);
 			d.data[2][2] = ps(2,2);
-			d.data[3][0] = (ps(0,0) - ps(2,2))*0.5;
-			d.data[3][1] = (ps(0,0) - ps(1,1))*0.5;
-			d.data[3][2] = (ps(1,1) - ps(2,2))*0.5;
-			if (d.data[3][2] > d.data[3][1])
-				swap(d.data[3][2],d.data[3][1]);
+			d.data[3][0] = fabs(ps(0,0) - ps(2,2))*0.5;
+			d.data[3][1] = fabs(ps(0,0) - ps(1,1))*0.5;
+			d.data[3][2] = fabs(ps(1,1) - ps(2,2))*0.5;
+			if (d.data[3][1] < d.data[3][2])
+				swap(d.data[3][1],d.data[3][2]);
 			d.data[5][0] = e(0,0);
 			d.data[5][1] = e(1,1);
 			d.data[5][2] = e(2,2);
-			d.data[6][0] = e(0,1);
-			d.data[6][1] = e(0,2);
-			d.data[6][2] = e(1,2);
+			d.data[6][0] = 2*e(0,1);
+			d.data[6][1] = 2*e(0,2);
+			d.data[6][2] = 2*e(1,2);
 			d.data[7][0] = pe(0,0);
 			d.data[7][1] = pe(1,1);
 			d.data[7][2] = pe(2,2);
-			d.data[8][0] = (pe(0,0) - pe(2,2))*0.5;
-			d.data[8][1] = (pe(0,0) - pe(1,1))*0.5;
-			d.data[8][2] = (pe(1,1) - pe(2,2))*0.5;
-			if (d.data[8][2] > d.data[8][1])
-				swap(d.data[8][2],d.data[8][1]);
+			d.data[8][0] = fabs(pe(0,0) - pe(2,2));
+			d.data[8][1] = fabs(pe(0,0) - pe(1,1));
+			d.data[8][2] = fabs(pe(1,1) - pe(2,2));
+			if (d.data[8][1] < d.data[8][2])
+				swap(d.data[8][1],d.data[8][2]);
 		}
 	}
 
