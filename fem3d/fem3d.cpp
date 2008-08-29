@@ -125,9 +125,6 @@ static void timeme(const char * msg = 0)
 #define NDOF 3
 #define NDIM 3
 
-int run;
-bool isvar;
-
 /*
  * These are the block matrices used to store the DOF data.  These
  * typedefs just help to make the code more readable.
@@ -2289,6 +2286,9 @@ blockarea(double x1, double x2, double y1, double y2, double r)
 			- circlearea(x2,y1,r) + circlearea(x2,y2,r);
 }
 
+int run;
+bool isvar;
+
 inline double
 mbac(double x, double y) {
 	double scale = M_2PI/256/0.064/1000;
@@ -2324,16 +2324,8 @@ mbac(double x, double y) {
 		-  1.35393401298557*cos((     -y)*scale)-  3.48169603451368*sin((     -y)*scale)
 		+ 0.330157164431708*cos(( -x  -y)*scale)-  1.79254958998406*sin(( -x  -y)*scale)
 		+ 84.123378178028;
-	return -z;
+	return z;
 }
-
-struct femlayer {
-	double thickness;
-	fixed<8> top;
-	fixed<8> bottom;
-	material mat;
-	cset<fixed<8> > stops;
-};
 
 /*
  * This outputs the results for all the elements in the list
@@ -2376,239 +2368,404 @@ results(const fset<const element *> & e, const fset<point3d> & c,
  * full 3D FEM pavement modelling code, but at the moment, I need
  * to get some work done...
  */
-int
+ 
+/*
+ * The basics of a layer used for the FEM.
+ */
+struct femlayer {
+	fixed<8> top;
+	fixed<8> bot;
+	material mat;
+};
+
+/*
+ * A region (in the horizontal plane) which has been or is being
+ * added to the mesh.  It is described by the 'stops' where there
+ * are mesh points.
+ */
+struct region {
+	cset<fixed<8> > xstops;
+	cset<fixed<8> > ystops;
+	
+	region() {
+	}
+	fixed<8> xm() {
+		return xstops[0];
+	}
+	fixed<8> xp() {
+		return xstops[xstops.length()-1];
+	}
+	fixed<8> ym() {
+		return ystops[0];
+	}
+	fixed<8> yp() {
+		return ystops[ystops.length()-1];
+	}
+	bool overlaps(double x1, double y1, double x2, double y2) {
+		fixed<8> fxm(x1), fym(y1), fxp(x2), fyp(y2);
+		return (fxm < xp() && fxp > xm() && fym < yp() && fyp > ym());
+	}
+	bool overlaps(region & r) {
+		return (r.xm() < xp() && r.xp() > xm()
+				 && r.ym() < yp() && r.yp() > ym());
+	}
+};
+
+struct region_list : sset<region> {
+	double xm() {
+		fixed<8> x_m = 0;
+		for (unsigned i = 0; i < length(); i++)
+			x_m = MIN(x_m,(*this)[i].xm());
+		return x_m;
+	}
+	double xp() {
+		fixed<8> x_p = 0;
+		for (unsigned i = 0; i < length(); i++)
+			x_p = MAX(x_p,(*this)[i].xp());
+		return x_p;
+	}
+	double ym() {
+		fixed<8> y_m = 0;
+		for (unsigned i = 0; i < length(); i++)
+			y_m = MIN(y_m,(*this)[i].ym());
+		return y_m;
+	}
+	double yp() {
+		fixed<8> y_p = 0;
+		for (unsigned i = 0; i < length(); i++)
+			y_p = MAX(y_p,(*this)[i].yp());
+		return y_p;
+	}
+	bool overlaps(double x1, double y1, double x2, double y2) {
+		bool rv = false;
+		for (unsigned i = 0; i < length(); i++)
+			rv = rv || (*this)[i].overlaps(x1,y1,x2,y2);
+		return rv;
+	}
+	void merge() {
+		bool didmerge;
+		do {
+			didmerge = false;
+			for (unsigned i = 0; i < length(); i++) {
+				for (unsigned j = i+1; j < length(); j++) {
+					region & r1 = (*this)[i];
+					region & r2 = (*this)[j];
+					if (r1.overlaps(r2)) {
+						r1.xstops.add(r2.xstops); r1.xstops.sort();
+						r1.ystops.add(r2.ystops); r1.ystops.sort();
+						remove(j);
+						didmerge = true;
+					}
+				}
+			}
+		} while (didmerge);
+	}
+};
+
+#define EDGE (4096)
+
+void
 core()
 {
     timeme();
 
 	LEsystem test;
-	test.addlayer(  90.0,3000e3,0.35);
-	test.addlayer( 410.0, 750e3,0.35);
-	test.addlayer(4500.0, 100e3,0.35);
+	test.addlayer(mbac(0,0),3000e3,0.35);
+	test.addlayer(500-mbac(0,0), 750e3,0.35);
+	test.addlayer(1500.0, 100e3,0.35);
 
 	sset<femlayer> layer;
 	for (unsigned i = 0; i < test.layers(); i++) {
 		femlayer t;
-		t.thickness = test.layer(i).thickness();
-		t.top       = -test.layer(i).top();
-		t.bottom    = -test.layer(i).bottom();
+		t.top = test.layer(i).top();
+		t.bot = test.layer(i).bottom();
 		t.mat.setprop(material_property::emod,test.layer(i).emod());
 		t.mat.setprop(material_property::poissons,test.layer(i).poissons());
 		layer.add(t);
 	}
 
-	double x, y, z = 0.0, zmax = 0.0;
-	double dx, dy, dz, delta = 4, step = 1;
+	double x, y, z = 0.0, zmax = 0.0, rmax = 0.0, zp = 0.0, zm = 0.0;
+	double dx, dy, dz, delta = 4;
+	unsigned step = 4;
 	mesh FEM;
 	fset<coord3d> coord(8);
 	cset<const element *> face;
+	cset<fixed<8> > stops;
+	region_list filled, filling;
 
 	test.addload(point2d(0.0,0.0),0.0,690.0,100.0);
+	//test.addload(point2d(-160.0,0.0),0.0,690.0,100.0);
+	//test.addload(point2d( 160.0,0.0),0.0,690.0,100.0);
 
-	// Find the step size, which depends on our tyre.
-	while ((step-2)*delta < test.getload(0).radius())
+	// Find the step size, which depends on our tires.
+	for (unsigned i = 0; i < test.loads(); i++) {
+		double r = test.getload(i).radius();
+		if (r > rmax)
+			rmax = r;
+	}
+	while ((step-2)*delta < rmax)
 		step *= 2;
 
-	// Start with the tyre grid.
+	// Start with the tire grid.
 	dx = delta; dy = delta;
-	for (x = -(step-2)*dx; step > 0 && dx > 0
-			&& x < (step-2)*dx; x += 2*dx) {
-		for (y = -(step-2)*dy; y < (step-2)*dy; y += 2*dy) {
-			if (blockarea(x,x+2*dx,y,y+2*dx,test.getload(0).radius()) == 0.0)
-				continue;
-			FEM.addnode(coord3d(x     ,y     ,0.0));
-			FEM.addnode(coord3d(x  +dx,y     ,0.0));
-			FEM.addnode(coord3d(x+2*dx,y     ,0.0));
-			FEM.addnode(coord3d(x     ,y  +dy,0.0));
-			FEM.addnode(coord3d(x  +dx,y  +dy,0.0));
-			FEM.addnode(coord3d(x+2*dx,y  +dy,0.0));
-			FEM.addnode(coord3d(x     ,y+2*dy,0.0));
-			FEM.addnode(coord3d(x  +dx,y+2*dy,0.0));
-			FEM.addnode(coord3d(x+2*dx,y+2*dy,0.0));
+	for (unsigned i = 0; i < test.loads(); i++) {
+		double lx = test.getload(i).x;
+		double ly = test.getload(i).y;
+		double lr = test.getload(i).radius();
+		double F = -test.getload(i).pressure();
+		for (x = lx - (step-2)*dx; x < lx + (step-2)*dx; x += 2*dx) {
+			for (y = ly -(step-2)*dy; y < ly + (step-2)*dy; y += 2*dy) {
+				double ba = blockarea(x-lx,x+2*dx-lx,y-ly,y+2*dx-ly,lr);
+				//if (ba == 4*dx*dy) {
+				//	FEM.addnode(coord3d(x     ,y     ,0.0));
+				//	FEM.addnode(coord3d(x+2*dx,y     ,0.0));
+				//	FEM.addnode(coord3d(x     ,y+2*dy,0.0));
+				//	FEM.addnode(coord3d(x+2*dx,y+2*dy,0.0));
+				//} else
+				if (ba > 0.0) {
+					FEM.addnode(coord3d(x     ,y     ,0.0));
+					FEM.addnode(coord3d(x  +dx,y     ,0.0));
+					FEM.addnode(coord3d(x+2*dx,y     ,0.0));
+					FEM.addnode(coord3d(x     ,y  +dy,0.0));
+					FEM.addnode(coord3d(x  +dx,y  +dy,0.0));
+					FEM.addnode(coord3d(x+2*dx,y  +dy,0.0));
+					FEM.addnode(coord3d(x     ,y+2*dy,0.0));
+					FEM.addnode(coord3d(x  +dx,y+2*dy,0.0));
+					FEM.addnode(coord3d(x+2*dx,y+2*dy,0.0));
+				}
+			}
 		}
-	}
-	// Add the tire loads
-	double F = -test.getload(0).pressure();
-	for (x = -(step-2)*dx; x <= (step-2)*dx; x += dx) {
-		for (y = -(step-2)*dy; y <= (step-2)*dy; y += dy) {
-			unsigned p = FEM.hasnode(coord3d(x,y,0.0));
-			if (p == UINT_MAX)
-				continue;
-			node3d n = FEM.getnode(p);
-			unsigned x_m = FEM.hasnode(coord3d(x-dx,y,0.0));
-			unsigned x_p = FEM.hasnode(coord3d(x+dx,y,0.0));
-			unsigned y_m = FEM.hasnode(coord3d(x,y-dy,0.0));
-			unsigned y_p = FEM.hasnode(coord3d(x,y+dy,0.0));
-			n.setneighbours(x_m,x_p,y_m,y_p,UINT_MAX,UINT_MAX);
-			FEM.updatenode(n);
-			double f = F*blockarea(x-dx/2,x+dx/2,y-dy/2,y+dy/2,
-					test.getload(0).radius());
-			if (fabs(f) > 0.0)
-				FEM.add_fext(coord3d(x,y,0.0),mesh::Z,f);
+		// Add the tire loads
+		for (x = lx - (step-2)*dx; x <= lx + (step-2)*dx; x += dx) {
+			for (y = ly - (step-2)*dy; y <= ly + (step-2)*dy; y += dy) {
+				unsigned p = FEM.hasnode(coord3d(x,y,0.0));
+				if (p == UINT_MAX)
+					continue;
+				node3d n = FEM.getnode(p);
+				unsigned x_m = FEM.hasnode(coord3d(x-dx,y,0.0));
+				if (x_m == UINT_MAX && hypot(x-dx-lx,y-ly) < lr)
+					x_m = FEM.hasnode(coord3d(x-2*dx,y,0.0));
+				unsigned x_p = FEM.hasnode(coord3d(x+dx,y,0.0));
+				if (x_p == UINT_MAX && hypot(x+dx-lx,y-ly) < lr)
+					x_p = FEM.hasnode(coord3d(x+2*dx,y,0.0));
+				unsigned y_m = FEM.hasnode(coord3d(x,y-dy,0.0));
+				if (y_m == UINT_MAX && hypot(x-lx,y-dy-ly) < lr)
+					y_m = FEM.hasnode(coord3d(x,y-2*dy,0.0));
+				unsigned y_p = FEM.hasnode(coord3d(x,y+dy,0.0));
+				if (y_p == UINT_MAX && hypot(x-lx,y+dy-ly) < lr)
+					y_p = FEM.hasnode(coord3d(x,y+2*dy,0.0));
+				n.setneighbours(x_m,x_p,y_m,y_p,UINT_MAX,UINT_MAX);
+				FEM.updatenode(n);
+				double fxm = 0.0, fxp = 0.0, fym = 0.0, fyp = 0.0;
+				if (x_m != UINT_MAX)
+					fxm = (x - double(FEM.getnode(x_m).x))/2;
+				if (x_p != UINT_MAX)
+					fxp = (double(FEM.getnode(x_p).x) - x)/2;
+				if (y_m != UINT_MAX)
+					fym = (y - double(FEM.getnode(y_m).y))/2;
+				if (y_p != UINT_MAX)
+					fyp = (double(FEM.getnode(y_p).y) - y)/2;
+				double f = F*blockarea(x-fxm-lx,x+fxp-lx,y-fym-ly,y+fyp-ly,lr);
+				if (fabs(f) > 0.0)
+					FEM.add_fext(coord3d(x,y,0.0),mesh::Z,f);
+			}
 		}
+		region r;
+		for (x = lx - step*dx; x <= lx + step*dx; x += 2*dx)
+			r.xstops.add(x);
+		for (y = ly - step*dy; y <= ly + step*dy; y += 2*dy)
+			r.ystops.add(y);
+		r.xstops.sort(); r.ystops.sort();
+		filling.add(r);
 	}
-	step /= 2;
+	filling.merge();
+	step /= 2; delta *= 2; dz = 4*delta;
 
 	// add the depth stops.
+	zmax = layer[layer.length()-1].bot; zp = zm = layer[0].top;
+	stops.add(layer[0].top);
+	while (zm < zmax) {
+		for (z = zm; z < MIN(zp+step*dz,zmax); z += dz)
+			stops.add(MIN(z+dz,zmax));
+		dz *= 2; zm = z;
+	}
+	// now scale them to the layers
 	for (unsigned i = 0; i < layer.length(); i++) {
-		double t = -layer[i].top, b = -layer[i].bottom;
-		layer[i].stops.add(t);
-		layer[i].stops.add(b);
-		double ta = t/test.getload(0).radius();
-		double ba = b/test.getload(0).radius();
-		double za = 1.0;
-		while (za < ba)
-			za += 1.0;
-		// za now holds the first integer multiple of the wheel
-		// radius which is larger than the bottom of this layer.
-		
-		// We now work our way back to the load, adding stops at
-		// the right spacing.
-		while (za > ta) {
-			double md = fabs(16*delta*za);
-			double mt = MAX(za-1.0,ta)*test.getload(0).radius();
-			double mb = MIN(za,ba)*test.getload(0).radius();
-			double d = fabs(mb-mt);
-			while (d > md)
-				d /= 2;
-			md = mt;
-			while (md <= mb) {
-				layer[i].stops.add(md);
-				md += d;
-			} 
-			za -= 1.0;
+		femlayer & l = layer[i];
+		unsigned t = 0, b = 0;
+		while (t < stops.length() && stops[t] < l.top)
+			t++;
+		// Test if we're below all the stops.
+		if (t == stops.length())
+			break;
+		assert(stops[t] == l.top);
+		while (b < stops.length() && stops[b] < l.bot)
+			b++;
+		assert(b < stops.length());
+		if (stops[b] == l.bot)
+			continue;
+		// Find the closest stop.
+		if (stops[b-1]-l.bot < l.bot-stops[b])
+			b--;
+		// Now scale these stops to match the layer.
+		double hl = l.bot - l.top, hs = stops[b] - stops[t];
+		for (unsigned j = b; j > t; j--) {
+			stops[j] = double(l.top) + double(stops[j]-stops[t])*hl/hs;
 		}
-		layer[i].stops.sort();
-		for (unsigned j = 0; j < layer[i].stops.length(); j++)
-			layer[i].stops[j] = -layer[i].stops[j];
-		zmax = layer[i].bottom;
+		t = b; b = stops.length() - 1;
+		hl = zmax - double(l.bot); hs = stops[b] - stops[t];
+		for (unsigned j = b; j > t; j--) {
+			stops[j] = double(l.bot) + double(stops[j]-stops[t])*hl/hs;
+		}
+		stops.sort();
 	}
 
-#define EDGE (8192)
-
-	double xm = 0, xp = 0, ym = 0, yp = 0, zp = 0, zm = 0;
-	// Now add the elements from below the tyre, working outwards.
-	while (zp > zmax || xp < EDGE) {
-		zp = -2*step*delta;
-		dx = delta*2; dy = delta*2;
-		for (unsigned i = 0; i < layer.length(); i++) {
-			for (unsigned j = 1; j < layer[i].stops.length(); j++) {
-				z  = layer[i].stops[j]   - layer[i].top;
-				dz = layer[i].stops[j-1] - layer[i].top;
-				dz = z-dz;
-				element::element_t var = (z > -1000.0 ?
-						element::variable34 : element::variable18);
-				element::element_t inf = (var == element::variable34 ?
-						element::infinite16 : element::infinite8);
-				printf("%f\t%f\t%f\t%f\t%f\n",MIN(step*dx,EDGE),xp,zm,z,zp);
-				for (x = -MIN(step*dx,EDGE); x < MIN(step*dx,EDGE); x += dx) {
-					for (y = -MIN(step*dy,EDGE); y < MIN(step*dy,EDGE); y += dy) {
-						if (xm < xp && (x >= xm && x < xp)
-						 && ym < yp && (y >= ym && y < yp)
-						 && z+double(layer[i].top) >= zm)
+	// Now add the elements from below the tire, working outwards.
+	unsigned zip = step, zim = 0;
+	while (zim < stops.length() || filled.xp() < EDGE) {
+		for (unsigned i = 0, j = 1; j-1 < zip && j < stops.length(); j++) {
+			while (i < layer.length() && stops[j] > layer[i].bot)
+				i++;
+			double z1 = stops[j  ] - layer[i].top;
+			double z2 = stops[j-1] - layer[i].top;
+			printf("%.0f\t%.0f\t%f\t%f\t%f\t%i\n",filling.xp(),filled.xp(),double(stops[MIN(zim,stops.length()-1)]),z1,double(stops[MIN(zip,stops.length()-1)]),i);
+			element::element_t var = (double(stops[j]) <= 0 ?
+					element::variable34 : element::variable18);
+			element::element_t inf = (var == element::variable34 ?
+					element::infinite16 : element::infinite8);
+			for (unsigned k = 0; k < filling.length(); k++) {
+				region & r = filling[k];
+				for (unsigned xi = 1; xi < r.xstops.length(); xi++) {
+					for (unsigned yi = 1; yi < r.ystops.length(); yi++) {
+						double x1 = double(r.xstops[xi-1]);
+						double x2 = double(r.xstops[xi]);
+						double y1 = double(r.ystops[yi-1]);
+						double y2 = double(r.ystops[yi]);
+						if (filled.overlaps(x1,y1,x2,y2) && j <= zim)
 							continue;
-						double o1 = 0.0, o2 = 0.0, o3 = 0.0, o4 = 0.0;
-						double s1 = 1.0, s2 = 1.0, s3 = 1.0, s4 = 1.0;
-						o1 = o2 = o3 = o4 = layer[i].top;
-						double h = layer[i].thickness;
-						double t = layer[i].top;
-						double b = layer[i].bottom;
+						double t[4], b[4], p[8];
+						t[0] = t[1] = t[2] = t[3] = layer[i].top;
+						b[0] = b[1] = b[2] = b[3] = layer[i].bot;
+						double h = layer[i].bot - layer[i].top;
 						if (i == 0) {
-							s1 = (t-mbac(x   ,y   ))/h;
-							s2 = (t-mbac(x   ,y+dy))/h;
-							s3 = (t-mbac(x+dx,y   ))/h;
-							s4 = (t-mbac(x+dx,y+dy))/h;
+							b[0] = mbac(x1,y1);
+							b[1] = mbac(x1,y2);
+							b[2] = mbac(x2,y1);
+							b[3] = mbac(x2,y2);
 						} else if (i == 1) {
-							o1 = mbac(x   ,y   );
-							o2 = mbac(x   ,y+dy);
-							o3 = mbac(x+dx,y   );
-							o4 = mbac(x+dx,y+dy);
-							s1 = (o1-b)/h;
-							s2 = (o2-b)/h;
-							s3 = (o3-b)/h;
-							s4 = (o4-b)/h;
+							t[0] = mbac(x1,y1);
+							t[1] = mbac(x1,y2);
+							t[2] = mbac(x2,y1);
+							t[3] = mbac(x2,y2);
 						}
+						p[0] = -(t[0]+(b[0]-t[0])*z1/h);
+						p[1] = -(t[1]+(b[1]-t[1])*z1/h);
+						p[2] = -(t[2]+(b[2]-t[2])*z1/h);
+						p[3] = -(t[3]+(b[3]-t[3])*z1/h);
+						p[4] = -(t[0]+(b[0]-t[0])*z2/h);
+						p[5] = -(t[1]+(b[1]-t[1])*z2/h);
+						p[6] = -(t[2]+(b[2]-t[2])*z2/h);
+						p[7] = -(t[3]+(b[3]-t[3])*z2/h);
 						coord.resize(8);
-						coord[0] = coord3d(x   ,y   ,o1+s1*(z));
-						coord[1] = coord3d(x   ,y+dy,o2+s2*(z));
-						coord[2] = coord3d(x+dx,y   ,o3+s3*(z));
-						coord[3] = coord3d(x+dx,y+dy,o4+s4*(z));
-						coord[4] = coord3d(x   ,y   ,o1+s1*(z-dz));
-						coord[5] = coord3d(x   ,y+dy,o2+s2*(z-dz));
-						coord[6] = coord3d(x+dx,y   ,o3+s3*(z-dz));
-						coord[7] = coord3d(x+dx,y+dy,o4+s4*(z-dz));
-						const element * e;
-						e = FEM.add(var,layer[i].mat,coord);
-						if (y == 0.0)
-						//if (fixed<8>(z)+layer[i].top == layer[0].bottom)
+						coord[0] = coord3d(x1,y1,p[0]);
+						coord[1] = coord3d(x1,y2,p[1]);
+						coord[2] = coord3d(x2,y1,p[2]);
+						coord[3] = coord3d(x2,y2,p[3]);
+						coord[4] = coord3d(x1,y1,p[4]);
+						coord[5] = coord3d(x1,y2,p[5]);
+						coord[6] = coord3d(x2,y1,p[6]);
+						coord[7] = coord3d(x2,y2,p[7]);
+						const element * e = FEM.add(var,layer[i].mat,coord);
+						if (y1 == 0.0)
+						//if (fixed<8>(z1)+layer[i].top == layer[0].bot)
 							face.add(e);
-						if (x == -EDGE) {
-							if (y == -EDGE) {
+						if (x1 == -EDGE) {
+							if (y1 == -EDGE) {
 								coord.resize(2);
-								coord[0] = coord3d(x   ,y   ,o1+s1*(z));
-								coord[1] = coord3d(x   ,y   ,o1+s1*(z-dz));
+								coord[0] = coord3d(x1,y1,p[0]);
+								coord[1] = coord3d(x1,y1,p[4]);
 								FEM.add(inf,layer[i].mat,coord);
-							} if (y+dy == EDGE) {
+							} if (y2 == EDGE) {
 								coord.resize(2);
-								coord[0] = coord3d(x   ,y+dy,o2+s2*(z));
-								coord[1] = coord3d(x   ,y+dy,o2+s2*(z-dz));
+								coord[0] = coord3d(x1,y2,p[1]);
+								coord[1] = coord3d(x1,y2,p[5]);
 								FEM.add(inf,layer[i].mat,coord);
 							}
 							coord.resize(4);
-							coord[0] = coord3d(x   ,y   ,o1+s1*(z));
-							coord[1] = coord3d(x   ,y+dy,o2+s2*(z));
-							coord[2] = coord3d(x   ,y   ,o1+s1*(z-dz));
-							coord[3] = coord3d(x   ,y+dy,o2+s2*(z-dz));
+							coord[0] = coord3d(x1,y1,p[0]);
+							coord[1] = coord3d(x1,y2,p[1]);
+							coord[2] = coord3d(x1,y1,p[4]);
+							coord[3] = coord3d(x1,y2,p[5]);
 							FEM.add(inf,layer[i].mat,coord);
-						} else if (x+dx == EDGE) {
-							if (y == -EDGE) {
+						} else if (x2 == EDGE) {
+							if (y1 == -EDGE) {
 								coord.resize(2);
-								coord[0] = coord3d(x+dx,y   ,o3+s3*(z));
-								coord[1] = coord3d(x+dx,y   ,o3+s3*(z-dz));
+								coord[0] = coord3d(x2,y1,p[2]);
+								coord[1] = coord3d(x2,y1,p[6]);
 								FEM.add(inf,layer[i].mat,coord);
-							} if (y+dy == EDGE) {
+							} if (y2 == EDGE) {
 								coord.resize(2);
-								coord[0] = coord3d(x+dx,y+dy,o4+s4*(z));
-								coord[1] = coord3d(x+dx,y+dy,o4+s4*(z-dz));
+								coord[0] = coord3d(x2,y2,p[3]);
+								coord[1] = coord3d(x2,y2,p[7]);
 								FEM.add(inf,layer[i].mat,coord);
 							}
 							coord.resize(4);
-							coord[0] = coord3d(x+dx,y   ,o3+s3*(z));
-							coord[1] = coord3d(x+dx,y+dy,o4+s4*(z));
-							coord[2] = coord3d(x+dx,y   ,o3+s3*(z-dz));
-							coord[3] = coord3d(x+dx,y+dy,o4+s4*(z-dz));
+							coord[0] = coord3d(x2,y1,p[2]);
+							coord[1] = coord3d(x2,y2,p[3]);
+							coord[2] = coord3d(x2,y1,p[6]);
+							coord[3] = coord3d(x2,y2,p[7]);
 							FEM.add(inf,layer[i].mat,coord);
 						}
-						if (y == -EDGE) {
+						if (y1 == -EDGE) {
 							coord.resize(4);
-							coord[0] = coord3d(x   ,y   ,o1+s1*(z));
-							coord[1] = coord3d(x+dx,y   ,o3+s3*(z));
-							coord[2] = coord3d(x   ,y   ,o1+s1*(z-dz));
-							coord[3] = coord3d(x+dx,y   ,o3+s3*(z-dz));
+							coord[0] = coord3d(x1,y1,p[0]);
+							coord[1] = coord3d(x2,y1,p[2]);
+							coord[2] = coord3d(x1,y1,p[4]);
+							coord[3] = coord3d(x2,y1,p[6]);
 							FEM.add(inf,layer[i].mat,coord);
-						} if (y+dy == EDGE) {
+						} if (y2 == EDGE) {
 							coord.resize(4);
-							coord[0] = coord3d(x   ,y+dy,o2+s2*(z));
-							coord[1] = coord3d(x+dx,y+dy,o4+s4*(z));
-							coord[2] = coord3d(x   ,y+dy,o2+s2*(z-dz));
-							coord[3] = coord3d(x+dx,y+dy,o4+s4*(z-dz));
+							coord[0] = coord3d(x1,y2,p[1]);
+							coord[1] = coord3d(x2,y2,p[3]);
+							coord[2] = coord3d(x1,y2,p[5]);
+							coord[3] = coord3d(x2,y2,p[7]);
 							FEM.add(inf,layer[i].mat,coord);
 						}
 					}
 				}
-				z = z+double(layer[i].top);
-				if (z <= MAX(zp,zmax))
-					break;
 			}
-			if (z <= MAX(zp,zmax))
-				break;
 		}
-		xm = -MIN(step*dx,EDGE); xp = MIN(step*dx,EDGE);
-		ym = -MIN(step*dy,EDGE); yp = MIN(step*dy,EDGE);
-		if (xm > -EDGE && xp < EDGE
-		 && ym > -EDGE && xp < EDGE)
+		zim = zip; zip += step/2;
+		if (filling.xm() > -EDGE && filling.xp() < EDGE
+		 && filling.ym() > -EDGE && filling.yp() < EDGE) {
 			delta *= 2;
-		zm = z;
+			for (unsigned i = 0; i < filling.length(); i++) {
+				region & r = filling[i];
+				for (unsigned xi = 1; xi < r.xstops.length(); xi++)
+					r.xstops.remove(xi);
+				for (unsigned yi = 1; yi < r.ystops.length(); yi++)
+					r.ystops.remove(yi);
+			}
+		}
+		filled = filling; dx = delta; dy = delta;
+		for (unsigned i = 0; i < filling.length(); i++) {
+			region & r = filling[i];
+			double rx = double(r.xm() + r.xp())/2;
+			double ry = double(r.ym() + r.yp())/2;
+			for (x = r.xm(); x > MAX(rx-step*dx,-EDGE); x -= dx)
+				r.xstops.add(MAX(x-dx,-EDGE));
+			r.xstops.sort();
+			for (x = r.xp(); x < MIN(rx+step*dx, EDGE); x += dx)
+				r.xstops.add(MIN(x+dx, EDGE));
+			r.xstops.sort();
+			for (y = r.ym(); y > MAX(ry-step*dy,-EDGE); y -= dy)
+				r.ystops.add(MAX(y-dy,-EDGE));
+			r.ystops.sort();
+			for (y = r.yp(); y < MIN(ry+step*dy, EDGE); y += dy)
+				r.ystops.add(MIN(y+dy, EDGE));
+			r.ystops.sort();
+		}
+		filling.merge();
 	}
 	//FEM.add_bc_plane(mesh::X,mesh::at|mesh::below,-EDGE,
 	//		mesh::X,0.0);
@@ -2618,19 +2775,47 @@ core()
 	//		mesh::Y,0.0);
 	//FEM.add_bc_plane(mesh::Y,mesh::at|mesh::above, EDGE,
 	//		mesh::Y,0.0);
-	FEM.add_bc_plane(mesh::Z,mesh::at|mesh::below,zm,
+	FEM.add_bc_plane(mesh::Z,mesh::at|mesh::below,-zmax,
 			mesh::X|mesh::Y|mesh::Z,0.0);
+	/*for (unsigned i = 0; i < FEM.getnodes(); i++) {
+		const node3d & n = FEM.getorderednode(i);
+		x = n.x; y = n.y; z = n.z;
+		if (x < -EDGE || x > EDGE || y < -EDGE || y > EDGE || z <= -zmax)
+			continue;
+		test.addpoint(point3d(x,y,-z));
+	}
+	test.calculate(LEsystem::fast);
+	for (unsigned i = 0; i < FEM.getnodes(); i++) {
+		node3d n = FEM.getorderednode(i);
+		x = n.x; y = n.y; z = n.z;
+		if (x < -EDGE || x > EDGE || y < -EDGE || y > EDGE || z <= -zmax) {
+			n.ux = 0.0; n.uy = 0.0; n.uz = 0.0;
+		} else {
+			const pavedata & d = test.result(point3d(x,y,-z));
+			n.ux =  d.result(pavedata::deflct,pavedata::xx);
+			n.uy =  d.result(pavedata::deflct,pavedata::yy);
+			n.uz = -d.result(pavedata::deflct,pavedata::zz);
+		}
+		FEM.updatenode(n);
+	}*/
+	for (unsigned i = 0; i < FEM.getnodes(); i++) {
+		node3d n = FEM.getorderednode(i);
+		n.ux = 0.0; n.uy = 0.0; n.uz = 0.0;
+		FEM.updatenode(n);
+	}
+	FEM.solve(1e-30);
 	FEM.solve(1e-30);
 
-	/*unsigned i, nnd = FEM.getnodes();
+	unsigned i, nnd = FEM.getnodes();
+	test.removepoints();
 	for (i = 0; i < nnd; i++) {
 		const node3d & n = FEM.getorderednode(i);
 		x = n.x; y = n.y; z = n.z;
 		if (!(x == 0 || y == 0 || z == 0))
 			continue;
-		if (!(x == 0))
-			continue;
-		if (x < xm || x > xp || y < ym || y > yp || z <= zm)
+		//if (!(x == 0))
+		//	continue;
+		if (x < -EDGE || x > EDGE || y < -EDGE || y > EDGE || z <= -zmax)
 			continue;
 		test.addpoint(point3d(x,y,-z));
 	}
@@ -2640,9 +2825,9 @@ core()
 		x = n.x; y = n.y; z = n.z;
 		if (!(x == 0 || y == 0 || z == 0))
 			continue;
-		if (!(x == 0))
-			continue;
-		if (x < xm || x > xp || y < ym || y > yp || z <= zm)
+		//if (!(x == 0))
+		//	continue;
+		if (x < -EDGE || x > EDGE || y < -EDGE || y > EDGE || z <= -zmax)
 			continue;
 		const pavedata & d = test.result(point3d(x,y,-z));
 		double ux = n.ux;
@@ -2655,9 +2840,9 @@ core()
 		double h = hypot(hypot(vx-ux,vy-uy),vz-uz);
 		double v = hypot(hypot(vx,vy),vz);
 		printf("Node %6i: (%+6i,%+6i,%+6i) =\t(%8.2g,%8.2g,%8.2g)\t(%8.2g,%8.2g,%8.2g)\t%8.2g\t(%8.2g)\n",j,int(x),int(y),int(z),vx,vy,vz,ux,uy,uz,h,(v == 0.0 ? 0.0 : h/v));
-	}*/
+	}
 
-	fset<point3d> poly(14);
+	/*fset<point3d> poly(14);
 	poly[0]  = point3d(-1,-1,-3/3.0);
 	poly[1]  = point3d(-1,-1,-2/3.0);
 	poly[2]  = point3d(-1,-1,-1/3.0);
@@ -2672,7 +2857,7 @@ core()
 	poly[11] = point3d( 1,-1,-1/3.0);
 	poly[12] = point3d( 1,-1,-2/3.0);
 	poly[13] = point3d( 1,-1,-3/3.0);
-	results(face,poly,"face");
+	results(face,poly,"face");*/
 
 	/*fset<point3d> poly(4);
 	poly[0]  = point3d(-1,-1,-1);
@@ -2682,7 +2867,7 @@ core()
 	results(face,poly,"bot");*/
 
 	timeme("\n");
-	return 0;
+	return;
 }
 
 int
@@ -2692,10 +2877,10 @@ main_real()
 	isvar = false;
 	while (true) {
 		core();
-		isvar = !isvar;
+		//isvar = !isvar;
 		if (isvar)
 			continue;
-		if (++run >= 4)
+		if (++run >= 1)
 			break;
 	}
 	return 0;
