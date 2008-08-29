@@ -2238,15 +2238,15 @@ element::getnode(const unsigned i) const
 
 
 inline double
-circlearea(double a, double b, double r)
+circlearea(double x, double y, double r)
 {
-	a = fabs(a); b = fabs(b);
-	if (hypot(a,b) >= r)
+	x = fabs(x); y = fabs(y);
+	if (hypot(x,y) >= r)
 		return 0.0;
-	double t = M_PI_2 - asin(a/r) - asin(b/r);
-	double ar = (sqrt(r*r-b*b)-a)*b/2;
-	double br = (sqrt(r*r-a*a)-b)*a/2;
-	return (r*r*t/2) - ar -br;
+	double t = M_PI_2 - asin(x/r) - asin(y/r);
+	double xr = (sqrt(r*r-y*y)-x)*y/2;
+	double yr = (sqrt(r*r-x*x)-y)*x/2;
+	return (r*r*t/2) - xr - yr;
 }
 
 inline double
