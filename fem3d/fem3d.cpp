@@ -2009,6 +2009,7 @@ public:
 			smatrix_elem * ke = e->stiffness();
 			if (ke == 0)
 				return false;
+			// Fix up the element matrix to account for displacement BCs
 			for (i = 0; i < ke->nnd; i++) {
 				unsigned gi = e->l2g(i);
 				unsigned ni = node.getorder(gi);
@@ -2016,21 +2017,16 @@ public:
 				// fixup to F for this element.
 				if (node[gi].fixed & (1 << NDOF)) {
 					for (j = 0; j < ke->nnd; j++) {
-						unsigned gj = e->l2g(j);
-						unsigned nj = node.getorder(gj);
-						if (j < i) {
-							if (nj < ni)
-								F(nj) -=  (*ke)(j,i)*P(ni);
-							else
-								F(nj) -= ~(*ke)(j,i)*P(ni);
-						} else {
-							if (nj < ni)
-								F(nj) -=  (*ke)(i,j)*P(ni);
-							else
-								F(nj) -= ~(*ke)(i,j)*P(ni);
-						}
+						unsigned nj = node.getorder(e->l2g(j));
+						if (i > j)
+							F(nj) -=  (*ke)(j,i)*P(ni);
+						else
+							F(nj) -= ~(*ke)(i,j)*P(ni);
 					}
 				}
+			}
+			for (i = 0; i < ke->nnd; i++) {
+				unsigned gi = e->l2g(i);
 				// If this node is free or fixed, we're done.
 				if ((node[gi].fixed & ((1<<NDOF)-1)) == 0
 				 || (node[gi].fixed & ((1<<NDOF)-1)) == ((1<<NDOF)-1))
@@ -2053,6 +2049,7 @@ public:
 					}
 				}
 			}
+			// Now assemble the matrix into K.
 			for (i = 0; i < ke->nnd; i++) {
 				unsigned gi = e->l2g(i);
 				unsigned ni = node.getorder(gi);
