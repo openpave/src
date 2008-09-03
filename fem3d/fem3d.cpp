@@ -387,20 +387,21 @@ private:
  * A mesh point in 3D space.  This is not a point3d for two reasons:
  * 1. It sorts differently.
  * 2. We use a fixed point type to make sure the nodes line up.
+ * 3. It has two z coordinates.  A real one and a relative one.
  */
 struct coord3d {
-	fixed<8> x, y, z;
+	fixed<8> x, y, z, a;
 
 	inline coord3d() {
 	}
 	inline coord3d(double px, double py, double pz)
-	  : x(px), y(py), z(pz) {
+	  : x(px), y(py), z(pz), a(pz) {
 	}
 	inline coord3d(const coord3d & p)
-	  : x(p.x), y(p.y), z(p.z) {
+	  : x(p.x), y(p.y), z(p.z), a(p.a) {
 	}
 	inline coord3d(const point3d & p)
-	  : x(p.x), y(p.y), z(p.z) {
+	  : x(p.x), y(p.y), z(p.z), a(p.z) {
 	}
 	inline ~coord3d () {
 	}
@@ -892,6 +893,7 @@ protected:
 				p.x = double(cc[j].x)+(double(cc[j+4].x-cc[j].x)*i)/(nz-1);
 				p.y = double(cc[j].y)+(double(cc[j+4].y-cc[j].y)*i)/(nz-1);
 				p.z = double(cc[j].z)+(double(cc[j+4].z-cc[j].z)*i)/(nz-1);
+				p.a = p.z;
 				inel[nnd++] = addnode(p);
 			}
 		}
@@ -978,8 +980,8 @@ protected:
 				double x = c[0].x, y = c[0].y;
 				x *= ((x > 0) == (i%4 < 2) ? 1 : 2);
 				y *= ((y > 0) == (i%2 < 1) ? 1 : 2);
-				cc[i  ].x = x; cc[i  ].y = y; cc[i  ].z = c[0].z;
-				cc[i+4].x = x; cc[i+4].y = y; cc[i+4].z = c[1].z;
+				cc[i  ] = c[0]; cc[i  ].x = x; cc[i  ].y = y;
+				cc[i+4] = c[1]; cc[i+4].x = x; cc[i+4].y = y;
 			}
 			sx = (double(c[0].x) > 0 ? inf_pos : inf_neg);
 			sy = (double(c[0].y) > 0 ? inf_pos : inf_neg);
@@ -1017,7 +1019,7 @@ protected:
 		assert(NDIM == 3);
 		for (unsigned i = 0; i < nnd; i++) {
 			const coord3d & c = getnode(inel[i]);
-			xe[i][0] = c.x; xe[i][1] = c.y; xe[i][2] = c.z;
+			xe[i][0] = c.x; xe[i][1] = c.y; xe[i][2] = c.a;
 		}
 	}
 	// Build a matrix of the nodal deflections.
@@ -2788,7 +2790,7 @@ core()
 	test.removepoints();
 	for (i = 0; i < nnd; i++) {
 		const node3d & n = FEM.getorderednode(i);
-		x = n.x; y = n.y; z = n.z;
+		x = n.x; y = n.y; z = n.a;
 		if (!(x == 0 || y == 0 || z == 0))
 			continue;
 		//if (!(x == 0))
@@ -2800,7 +2802,7 @@ core()
 	test.calculate(LEsystem::all);
 	for (i = 0; i < nnd; i++) {
 		const node3d & n = FEM.getorderednode(i);
-		x = n.x; y = n.y; z = n.z;
+		x = n.x; y = n.y; z = n.a;
 		if (!(x == 0 || y == 0 || z == 0))
 			continue;
 		//if (!(x == 0))
