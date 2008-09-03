@@ -41,12 +41,12 @@
 void
 pavedata::principle(double v, double E)
 {
-	unsigned k1, k2;
+	unsigned i, j;
 	double t1, t2;
 
-	for (k1 = 0; k1 < 3; k1++) {
-		data[2][k1] = data[0][k1];
-		data[3][k1] = data[1][k1];
+	for (i = 0; i < 3; i++) {
+		data[2][i] = data[0][i];
+		data[3][i] = data[1][i];
 	}
 	// Find the eigen values of the stress tensor.  This is heavily
 	// optimised for a symmetric 3x3 matrix, to use as few FP registers
@@ -89,21 +89,15 @@ pavedata::principle(double v, double E)
 		}
 		t1 = data[3][0]*data[3][0] + data[3][1]*data[3][1];
 	}
-	data[3][0] = (data[2][0]-data[2][2])/2;
-	data[3][1] = (data[2][0]-data[2][1])/2;
-	data[3][2] = (data[2][1]-data[2][2])/2;
-	for (k1 = 0; k1 < 2; k1++) {
-		for (k2 = k1 + 1; k2 < 3; k2++) {
-			if (data[2][k1] > data[2][k2]) {
-				t1 = data[2][k1];
-				data[2][k1] = data[2][k2];
-				data[2][k2] = t1;
-			}
-			if (data[3][k1] > data[3][k2]) {
-				t1 = data[3][k1];
-				data[3][k1] = data[3][k2];
-				data[3][k2] = t1;
-			}
+	data[3][0] = (data[2][0]-data[2][2])*0.5;
+	data[3][1] = (data[2][0]-data[2][1])*0.5;
+	data[3][2] = (data[2][1]-data[2][2])*0.5;
+	for (i = 0; i < 2; i++) {
+		for (j = i + 1; j < 3; j++) {
+			if (data[2][i] > data[2][j])
+				swap(data[2][i],data[2][j]);
+			if (data[3][i] > data[3][j])
+				swap(data[3][i],data[3][j]);
 		}
 	}
 
@@ -534,7 +528,7 @@ buildabcd_full(const double m, const unsigned nl, const double * h,
 			   const double * v, const double * E,
 			   const double * f, double (* ABCD)[4])
 {
-	unsigned k1, k2, il = (nl-1);
+	unsigned i, j, il = (nl-1);
 
 	memset(ABCD,0,(nl*4)*sizeof(double));
 	if (m <= 0.0)
@@ -611,14 +605,14 @@ buildabcd_full(const double m, const unsigned nl, const double * h,
 		A[(il*4-1)*(nl*4)+il*4+1] = (m*h1+4*v2-2)*K;
 		A[(il*4-1)*(nl*4)+il*4+2] =  m*K;
 		A[(il*4-1)*(nl*4)+il*4+3] = (m*h1-4*v2+2)*K;
-		for (k1 = 0; k1 < 2; k1++) {
-			for (k2 = 0; k2 < 2; k2++) {
-				A[(il*4-4+k1)*(nl*4)+il*4-2+k2] *=  exp(-2*t1);
-				A[(il*4-2+k1)*(nl*4)+il*4-4+k2] *=  (2*t1<MAX_EXP?exp(2*t1):DBL_MAX);
-				A[(il*4-4+k1)*(nl*4)+il*4+0+k2] *= -1.0;
-				A[(il*4-4+k1)*(nl*4)+il*4+2+k2] *= -exp(-2*t1);
-				A[(il*4-2+k1)*(nl*4)+il*4+0+k2] *= -(2*t1<MAX_EXP?exp(2*t1):DBL_MAX);
-				A[(il*4-2+k1)*(nl*4)+il*4+2+k2] *= -1.0;
+		for (i = 0; i < 2; i++) {
+			for (j = 0; j < 2; j++) {
+				A[(il*4-4+i)*(nl*4)+il*4-2+j] *=  exp(-2*t1);
+				A[(il*4-2+i)*(nl*4)+il*4-4+j] *=  (2*t1<MAX_EXP?exp(2*t1):DBL_MAX);
+				A[(il*4-4+i)*(nl*4)+il*4+0+j] *= -1.0;
+				A[(il*4-4+i)*(nl*4)+il*4+2+j] *= -exp(-2*t1);
+				A[(il*4-2+i)*(nl*4)+il*4+0+j] *= -(2*t1<MAX_EXP?exp(2*t1):DBL_MAX);
+				A[(il*4-2+i)*(nl*4)+il*4+2+j] *= -1.0;
 			}
 		}
 	}
@@ -632,10 +626,10 @@ buildabcd_full(const double m, const unsigned nl, const double * h,
 	A[(nl*4-1)*(nl*4)+2] = -m;
 	A[(nl*4-1)*(nl*4)+3] =  2*v[0]-1;
 	B[(nl*4-1)] = 1/m/m;
-	//for (k1 = 0; k1 < nl*4; k1++) {
-	//	for (k2 = 0; k2 < nl*4; k2++) {
-	//		printf("%g",A[k1*(nl*4)+k2]);
-	//		if (k2 == nl*4-1)
+	//for (i = 0; i < nl*4; i++) {
+	//	for (j = 0; j < nl*4; j++) {
+	//		printf("%g",A[i*(nl*4)+j]);
+	//		if (j == nl*4-1)
 	//			printf("\n");
 	//		else
 	//			printf("\t");
@@ -649,26 +643,26 @@ buildabcd_full(const double m, const unsigned nl, const double * h,
 	for (il = 0; il < nl*4; il++) {
 		double pvt = A[il*(nl*4)+il];
 		if (fabs(pvt) < DBL_EPSILON) {
-			for (k1 = il+1; k1 < nl*4; k1++) {
-				if (fabs(pvt = A[k1*(nl*4)+il]) >= DBL_EPSILON)
+			for (i = il+1; i < nl*4; i++) {
+				if (fabs(pvt = A[i*(nl*4)+il]) >= DBL_EPSILON)
 					break;
 			}
-			if (k1 == nl*4)
+			if (i == nl*4)
 				break; // XXX
-			for (k2 = 0; k2 < nl*4; k2++)
-				swap(A[k1*(nl*4)+k2],A[il*(nl*4)+k2]);
-			swap(B[k1],B[il]);
+			for (j = 0; j < nl*4; j++)
+				swap(A[i*(nl*4)+j],A[il*(nl*4)+j]);
+			swap(B[i],B[il]);
 		}
-		for (k2 = nl*4-1; k2 > il; k2--) {
-			double tmp = A[k2*(nl*4)+il]/pvt;
-			for (k1 = nl*4-1; k1 > il; k1--)
-				A[k2*(nl*4)+k1] -= tmp*A[il*(nl*4)+k1];
-			B[k2] -= tmp*B[il];
+		for (j = nl*4-1; j > il; j--) {
+			double tmp = A[j*(nl*4)+il]/pvt;
+			for (i = nl*4-1; i > il; i--)
+				A[j*(nl*4)+i] -= tmp*A[il*(nl*4)+i];
+			B[j] -= tmp*B[il];
 		}
 	}
 	for (il = nl*4; il > 0; il--) {
-		for (k1 = nl*4; k1 > il; k1--)
-			B[il-1] -= A[(il-1)*(nl*4)+(k1-1)]*B[k1-1];
+		for (i = nl*4; i > il; i--)
+			B[il-1] -= A[(il-1)*(nl*4)+(i-1)]*B[i-1];
 		B[il-1] /= A[(il-1)*(nl*4)+(il-1)];
 	}
 	for (il = 0; il < nl; il++) {
@@ -687,7 +681,7 @@ buildabcd(const double m, const unsigned nl, const double * h,
           const double * f, double (* __restrict R)[4][2],
           double (* __restrict ABCD)[4])
 {
-	unsigned k1, k2, il;
+	unsigned i, j, il;
 	double B1[2][4], X[4][4], F[4][4], D[4][4];
 	double CDi[4] = {0, 0, 0, 0};
 	double mi = 1.0/m;
@@ -708,9 +702,9 @@ buildabcd(const double m, const unsigned nl, const double * h,
 		R[il][1][0] = 2*s*m;
 		R[il][1][1] =   s*(1-4*v1+2*m*z) + t1;
 		t1 = 1.0/(t1+s*(3-4*v1));
-		for (k1 = 0; k1 < 2; k1++)
-			for (k2 = 0; k2 < 2; k2++)
-				R[il][k1][k2] *= exp(-2*m*h[il])*t1;
+		for (i = 0; i < 2; i++)
+			for (j = 0; j < 2; j++)
+				R[il][i][j] *= exp(-2*m*h[il])*t1;
 	}
 	R[il][2][0] = 1.0; R[il][3][1] = 1.0;
 	// Now we work back up, building the 4x2 R matrices...
@@ -752,31 +746,31 @@ buildabcd(const double m, const unsigned nl, const double * h,
 			F[3][0] = -s*m; F[3][1] = -s*r3;
 			F[3][2] = -s*m; F[3][3] = -s*r4;
 		}
-		for (k1 = 0; k1 < 2; k1++) {
-			for (k2 = 0; k2 < 2; k2++) {
-				D[k1][k2] = D[k1+2][k2+2] = 1.0;
-				D[k1][k2+2] = exp(-t2);
-				D[k1+2][k2] = (t2<MAX_EXP?exp(t2):DBL_MAX);
+		for (i = 0; i < 2; i++) {
+			for (j = 0; j < 2; j++) {
+				D[i][j] = D[i+2][j+2] = 1.0;
+				D[i][j+2] = exp(-t2);
+				D[i+2][j] = (t2<MAX_EXP?exp(t2):DBL_MAX);
 			}
 		}
 		if (f[il-1] == 1.0) {
 			double t3 = 1.0/(4*v1-4);
-			for (k1 = 0; k1 < 4; k1++) {
-				R[il-1][k1][0] = R[il-1][k1][1] = 0.0;
-				for (k2 = 0; k2 < 4; k2++) {
-					R[il-1][k1][0] += D[k1][k2]*(X[k1][k2]*R[il][k2][0])*t3;
-					R[il-1][k1][1] += D[k1][k2]*(X[k1][k2]*R[il][k2][1])*t3;
+			for (i = 0; i < 4; i++) {
+				R[il-1][i][0] = R[il-1][i][1] = 0.0;
+				for (j = 0; j < 4; j++) {
+					R[il-1][i][0] += D[i][j]*(X[i][j]*R[il][j][0])*t3;
+					R[il-1][i][1] += D[i][j]*(X[i][j]*R[il][j][1])*t3;
 				}
 			}
 		} else {
 			double t3 = 1.0/(4*v1-4)/f[il-1];
-			for (k1 = 0; k1 < 4; k1++) {
-				R[il-1][k1][0] = R[il-1][k1][1] = 0.0;
-				for (k2 = 0; k2 < 4; k2++) {
-					R[il-1][k1][0] += D[k1][k2]*(f[il-1]*X[k1][k2]*R[il][k2][0]
-						+ F[k1][k2]*R[il][k2][0])*t3;
-					R[il-1][k1][1] += D[k1][k2]*(f[il-1]*X[k1][k2]*R[il][k2][1]
-						+ F[k1][k2]*R[il][k2][1])*t3;
+			for (i = 0; i < 4; i++) {
+				R[il-1][i][0] = R[il-1][i][1] = 0.0;
+				for (j = 0; j < 4; j++) {
+					R[il-1][i][0] += D[i][j]*(f[il-1]*X[i][j]*R[il][j][0]
+						+ F[i][j]*R[il][j][0])*t3;
+					R[il-1][i][1] += D[i][j]*(f[il-1]*X[i][j]*R[il][j][1]
+						+ F[i][j]*R[il][j][1])*t3;
 				}
 			}
 		}
@@ -787,11 +781,11 @@ buildabcd(const double m, const unsigned nl, const double * h,
 	B1[1][1] = B1[1][3] = 2*v[0]-1;
 	// Solve for Cinf and Dinf
 	// Abuse CDi as a 2x2 matrix and temp storage
-	for (k1 = 0; k1 < 4; k1++) {
-		CDi[0] += B1[0][k1]*R[0][k1][0];
-		CDi[1] += B1[0][k1]*R[0][k1][1];
-		CDi[2] += B1[1][k1]*R[0][k1][0];
-		CDi[3] += B1[1][k1]*R[0][k1][1];
+	for (i = 0; i < 4; i++) {
+		CDi[0] += B1[0][i]*R[0][i][0];
+		CDi[1] += B1[0][i]*R[0][i][1];
+		CDi[2] += B1[1][i]*R[0][i][0];
+		CDi[3] += B1[1][i]*R[0][i][1];
 	}
 	CDi[3] = CDi[0]*CDi[3]-CDi[1]*CDi[2];
 	CDi[2] = -(CDi[1]/(m*m))/CDi[3];
@@ -1104,9 +1098,9 @@ LEsystem::calculate(resulttype res, double * Q)
 		// Account for big r's by adding extra integration intervals...
 		x1 = 0.0, x2 = 0.0;
 		for (ir = nr; ir > 0 && r[ir-1] > a[ia]*MAX(4,ngqp-6); ir--) {
-			for (unsigned k1 = MAX(4,ngqp-6);
-					k1 <= nbz; k1 += MAX(4,ngqp-6)) {
-				if ((x1 = j1r[k1]/r[ir-1]) < x2)
+			for (unsigned i = MAX(4,ngqp-6);
+					i <= nbz; i += MAX(4,ngqp-6)) {
+				if ((x1 = j1r[i]/r[ir-1]) < x2)
 					continue;
 				for (ib = 1; ib < bm.length() && bm[ib] < x1; ib++)
 					;
@@ -1123,9 +1117,9 @@ LEsystem::calculate(resulttype res, double * Q)
 		// of magnitude.
 		x1 = 0.0, x2 = 0.0;
 		for (iz = nz; iz > 0 && z[iz-1] > 0.0; iz--) {
-			for (unsigned k1 = 1; k1 <= 5
-					&& k1*7*a[ia] < j0r[0]*z[iz-1]; k1++) {
-				if ((x1 = k1*7*a[ia]/z[iz-1]) < x2)
+			for (unsigned i = 1; i <= 5
+					&& i*7*a[ia] < j0r[0]*z[iz-1]; i++) {
+				if ((x1 = i*7*a[ia]/z[iz-1]) < x2)
 					continue;
 				for (ib = 1; ib < bm.length() && bm[ib] < x1; ib++)
 					;
@@ -1177,9 +1171,9 @@ gradloop:
 					buildabcd(m,nl,h,v,E,f,R,ABCD);
 				} else {
 					for (il = 0; il < nl; il++) {
-						for (unsigned k1 = 0; k1 < 4; k1++)
-							ABCD[il][k1] = ABCD[nl+il][k1] -
-								(ABCD[nl+il][k1]-ABCD[2*nl+il][k1])*
+						for (unsigned i = 0; i < 4; i++)
+							ABCD[il][i] = ABCD[nl+il][i] -
+								(ABCD[nl+il][i]-ABCD[2*nl+il][i])*
 								(bm[ib]-m)/(bm[ib]-bm[ib-1]);
 					}
 				}
