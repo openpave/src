@@ -404,6 +404,10 @@ public:
 		return length();
 	}
 	LElayer & layer(const unsigned l);
+
+	const unsigned loads() const {
+		return load.length();
+	}
 	const paveload & getload(const unsigned i) {
 		return load[i];
 	}
