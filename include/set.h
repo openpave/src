@@ -272,7 +272,7 @@ public:
 	}
 	// Add a whole set, at the end.
 	inline bool add(const fset<V> & v) {
-		return add(this->size,v.value,v.size);
+		return add(this->size,&(v[0]),v.length());
 	}
 	// Add an array, at the end.
 	inline bool add(const V * v, const unsigned s = 1) {
@@ -284,7 +284,7 @@ public:
 	}
 	// Insert a set at position p.
 	inline bool add(const unsigned p, const fset<V> & v) {
-		return add(p,v.value,v.size);
+		return add(p,&(v[0]),v.length());
 	}
 	// Add an array at position p. (Actually do the work too).
 	bool add(unsigned p, const V * v, const unsigned s = 1) {
