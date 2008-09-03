@@ -2777,34 +2777,12 @@ core()
 	//		mesh::Y,0.0);
 	FEM.add_bc_plane(mesh::Z,mesh::at|mesh::below,-zmax,
 			mesh::X|mesh::Y|mesh::Z,0.0);
-	/*for (unsigned i = 0; i < FEM.getnodes(); i++) {
-		const node3d & n = FEM.getorderednode(i);
-		x = n.x; y = n.y; z = n.z;
-		if (x < -EDGE || x > EDGE || y < -EDGE || y > EDGE || z <= -zmax)
-			continue;
-		test.addpoint(point3d(x,y,-z));
-	}
-	test.calculate(LEsystem::fast);
-	for (unsigned i = 0; i < FEM.getnodes(); i++) {
-		node3d n = FEM.getorderednode(i);
-		x = n.x; y = n.y; z = n.z;
-		if (x < -EDGE || x > EDGE || y < -EDGE || y > EDGE || z <= -zmax) {
-			n.ux = 0.0; n.uy = 0.0; n.uz = 0.0;
-		} else {
-			const pavedata & d = test.result(point3d(x,y,-z));
-			n.ux =  d.result(pavedata::deflct,pavedata::xx);
-			n.uy =  d.result(pavedata::deflct,pavedata::yy);
-			n.uz = -d.result(pavedata::deflct,pavedata::zz);
-		}
-		FEM.updatenode(n);
-	}*/
 	for (unsigned i = 0; i < FEM.getnodes(); i++) {
 		node3d n = FEM.getorderednode(i);
 		n.ux = 0.0; n.uy = 0.0; n.uz = 0.0;
 		FEM.updatenode(n);
 	}
-	FEM.solve(1e-30);
-	FEM.solve(1e-30);
+	FEM.solve(1e-25);
 
 	unsigned i, nnd = FEM.getnodes();
 	test.removepoints();
@@ -2871,7 +2849,7 @@ core()
 }
 
 int
-main_real()
+main()
 {
 	run = 1;
 	isvar = false;
@@ -2887,7 +2865,7 @@ main_real()
 }
 
 int
-main()
+main_test()
 {
 	timeme();
 	printf("Constructing Mesh...");
@@ -2964,8 +2942,7 @@ main()
 		//n.ux = 0.0; n.uy = 0.0; n.uz = 0.0;
 		FEM.updatenode(n);
 	}
-	FEM.solve(1e-30);
-	FEM.solve(1e-30);
+	FEM.solve(1e-25);
 
 	timeme("\nOutput...\n");
 
@@ -3088,7 +3065,7 @@ main_infinity()
 	FEM.add_bc_plane(mesh::Z,mesh::at|mesh::below,-10,
 			mesh::X|mesh::Y|mesh::Z,0.0);
 
-	FEM.solve(1e-30);
+	FEM.solve(1e-25);
 	int nnd = FEM.getnodes();
 	for (int i = 0; i < nnd; i++) {
 		const node3d & n = FEM.getorderednode(i);
