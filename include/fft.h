@@ -42,12 +42,12 @@
 #ifndef __FFT_H
 #define __FFT_H
 
+#include <mathplus.h>
+
 typedef struct {
 	double re;
 	double im;
 } complex;
-
-#define sqrthalf 0.70710678118654752440084436210484903
 
 template<unsigned A, unsigned B, unsigned N = 34, unsigned M = 2>
 struct SIN {
@@ -93,7 +93,7 @@ fftc(complex * a)
 {
 	const unsigned n = N/8;
 	TRANSFORM(a[0],a[2*n],a[4*n],a[6*n],1.0,0.0);
-	TRANSFORM(a[n],a[3*n],a[5*n],a[7*n],sqrthalf,sqrthalf);
+	TRANSFORM(a[n],a[3*n],a[5*n],a[7*n],M_SQRT1_2,M_SQRT1_2);
 	double wt = -SIN<1,N>::sin(), wpr = -2.0*wt*wt, wpi = -SIN<2,N>::sin();
 	double wr = 1.0, wi = 0.0;
 	for (unsigned i = 1; i < n; i++) {
@@ -142,7 +142,7 @@ fftr(double * a)
 {
 	const unsigned n = N/8;
 	R(a[  0],a[    1],a[4*n],a[4*n+1],1.0,0.0);
-	R(a[2*n],a[2*n+1],a[6*n],a[6*n+1],sqrthalf,sqrthalf);
+	R(a[2*n],a[2*n+1],a[6*n],a[6*n+1],M_SQRT1_2,M_SQRT1_2);
 	double wt = -SIN<1,N>::sin(), wpr = -2.0*wt*wt, wpi = -SIN<2,N>::sin();
 	double wr = 1.0, wi = 0.0;
 	for (unsigned i = 1; i < n; i++) {
@@ -200,7 +200,7 @@ fftc_un(complex * a)
 	fftc_un<N/4>(a+3*N/4);
 	const unsigned n = N/8;
 	UNTRANSFORM(a[0],a[2*n],a[4*n],a[6*n],1.0,0.0);
-	UNTRANSFORM(a[n],a[3*n],a[5*n],a[7*n],sqrthalf,sqrthalf);
+	UNTRANSFORM(a[n],a[3*n],a[5*n],a[7*n],M_SQRT1_2,M_SQRT1_2);
 	double wt = -SIN<1,N>::sin(), wpr = -2.0*wt*wt, wpi = -SIN<2,N>::sin();
 	double wr = 1.0, wi = 0.0;
 	for (unsigned i = 1; i < n; i++) {
@@ -250,7 +250,7 @@ fftr_un(double * a)
 	fftr_un<N/2>(a);
 	const unsigned n = N/8;
 	V(a[  0],a[    1],a[4*n],a[4*n+1],1.0,0.0);
-	V(a[2*n],a[2*n+1],a[6*n],a[6*n+1],sqrthalf,sqrthalf);
+	V(a[2*n],a[2*n+1],a[6*n],a[6*n+1],M_SQRT1_2,M_SQRT1_2);
 	double wt = -SIN<1,N>::sin(), wpr = -2.0*wt*wt, wpi = -SIN<2,N>::sin();
 	double wr = 1.0, wi = 0.0;
 	for (unsigned i = 1; i < n; i++) {
