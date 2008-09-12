@@ -28,6 +28,7 @@ LIBS =                                 \
 CXXSRCS =                              \
 	test.cpp                       \
 	test_backcalc.cpp              \
+	test_fft.cpp                   \
 	test_matrix.cpp                \
 	test_pavement.cpp              \
 	test_set.cpp                   \
