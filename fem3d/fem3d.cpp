@@ -72,6 +72,8 @@
 #include "fixed.h"
 #include "set.h"
 #include "tmatrix.h"
+#include "matrix.h"
+#include "reliability.h"
 #include "pavement.h"
 
 #if defined(__FreeBSD__)
@@ -464,7 +466,7 @@ struct node3d : public coord3d {
 	// These are a union to save space.  We only need the neighbours while
 	// building the mesh.  Once we start to solve, they are no longer
 	// needed and can be replaced by the displacements
-	union {
+	//union {
 		// Neighbour in (x,y,z) plus/minus directions.
 		// UINT_MAX if not there...
 		struct {
@@ -474,7 +476,7 @@ struct node3d : public coord3d {
 		struct {
 			double ux, uy, uz;
 		};
-	};
+	//};
 	// Set new neighbours.  If this conflicts with what we know, we
 	// complain (if we're debugging).
 	void setneighbours(const unsigned x_m, const unsigned x_p,
@@ -1881,6 +1883,9 @@ public:
 	inline const node3d & getorderednode(const unsigned i) const {
 		return node.getindex(i);
 	}
+	inline const unsigned getorderofnode(const unsigned i) const {
+		return node.getorder(i);
+	}
 	inline const unsigned hasnode(const coord3d & p) const {
 		return node.haskey(p);
 	}
@@ -2464,6 +2469,28 @@ struct region_list : sset<region> {
 	}
 };
 
+enum search_edge {
+    CLEAR    = 0x00,
+	DONE_X_P = 0x01,
+	DONE_Y_P = 0x02,
+	DONE_X_M = 0x04,
+	DONE_Y_M = 0x08,
+	FROM_X_P = 0x10,
+	FROM_Y_P = 0x20,
+	FROM_X_M = 0x40,
+	FROM_Y_M = 0x80
+};
+inline search_edge
+operator| (const search_edge l, const search_edge r)
+{
+	return static_cast<search_edge>(unsigned(l) | unsigned(r));
+}
+inline search_edge
+operator& (const search_edge l, const search_edge r)
+{
+	return static_cast<search_edge>(unsigned(l) & unsigned(r));
+}
+
 #define EDGE (4096)
 
 void
@@ -2780,12 +2807,126 @@ core()
 	FEM.add_bc_plane(mesh::Z,mesh::at|mesh::below,-zmax,
 			mesh::X|mesh::Y|mesh::Z,0.0);
 	for (unsigned i = 0; i < FEM.getnodes(); i++) {
-		node3d n = FEM.getorderednode(i);
+		node3d n = FEM.getnode(i);
 		n.ux = 0.0; n.uy = 0.0; n.uz = 0.0;
 		FEM.updatenode(n);
 	}
+	
+	// Generate our random fields.
+	unsigned np = 0;
+	while (double(FEM.getorderednode(np).z) == 0.0)
+		np++;
+	double * A = new double[np];
+	double * B = new double[np];
+	double * C = new double[np*np];
+	if (A == 0 || B == 0 || C == 0) {
+		printf("Ooops, out of memory...\n");
+		return;
+	}
+
+	for (unsigned i = 0; i < np; i++) {
+		A[i] = B[i] = 0.0;
+		for (unsigned j = 0; j < np; j++)
+			C[i*np+j] = 0.0;
+	}
+
+#define SEARCH_DEPTH 24
+
+	for (unsigned i = 0; i < np; i++) {
+		A[i] = stdnormal_rnd();
+
+		search_edge search_mask[SEARCH_DEPTH+1];
+		const node3d * search_node[SEARCH_DEPTH+1];
+		int depth = 0;
+		const node3d & p1 = FEM.getorderednode(i);
+		search_node[depth] = &p1;
+		search_mask[depth] = CLEAR;
+		while (depth >= 0) {
+			unsigned j = UINT_MAX;
+			search_edge mask = CLEAR;
+			for (int k = 0; k < depth-1; k++)
+				mask = mask | search_mask[k];
+			if (depth == SEARCH_DEPTH) {
+				// Fall through.
+			} else if ((search_mask[depth] & DONE_X_P) == CLEAR
+			  && (mask & FROM_X_P) == CLEAR
+			  && search_node[depth]->xp != UINT_MAX) {
+			    j = search_node[depth]->xp;
+			    search_mask[depth] = search_mask[depth] | DONE_X_P | FROM_X_M;
+			    search_node[++depth] = &(FEM.getnode(j));
+			    search_mask[depth] = CLEAR;
+			    continue;
+			} else if ((search_mask[depth] & DONE_Y_P) == CLEAR
+			  && (mask & FROM_Y_P) == CLEAR
+			  && search_node[depth]->yp != UINT_MAX) {
+			    j = search_node[depth]->yp;
+			    search_mask[depth] = search_mask[depth] | DONE_Y_P | FROM_Y_M;
+			    search_node[++depth] = &(FEM.getnode(j));
+			    search_mask[depth] = CLEAR;
+			    continue;
+			} else if ((search_mask[depth] & DONE_X_M) == CLEAR
+			  && (mask & FROM_X_M) == CLEAR
+			  && search_node[depth]->xm != UINT_MAX) {
+			    j = search_node[depth]->xm;
+			    search_mask[depth] = search_mask[depth] | DONE_X_M | FROM_X_P;
+			    search_node[++depth] = &(FEM.getnode(j));
+			    search_mask[depth] = CLEAR;
+			    continue;
+			} else if ((search_mask[depth] & DONE_Y_M) == CLEAR
+			  && (mask & FROM_Y_M) == CLEAR
+			  && search_node[depth]->ym != UINT_MAX) {
+			    j = search_node[depth]->ym;
+			    search_mask[depth] = search_mask[depth] | DONE_Y_M | FROM_Y_P;
+			    search_node[++depth] = &(FEM.getnode(j));
+			    search_mask[depth] = CLEAR;
+			    continue;
+			} else {
+				// Fall through.
+			}
+			j = FEM.hasnode(*search_node[depth]);
+			depth--;
+			const node3d & p2 = FEM.getnode(j);
+			unsigned k = FEM.getorderofnode(j);
+			double r = fabs(hypot(p1.x-p2.x,p1.y-p2.y));
+			C[k*np+i] = C[i*np+k] = (r > 6000.0 ? 0.0
+				: 5.0*(1-1.5*r/6000.0+0.5*pow(r/6000.0,3)));
+			//printf("%f %f %u %i %u (%u) %f %f\n",double(p1.x),double(p1.y),
+			//	i,depth+1,j,k,double(p2.x),double(p2.y));
+		}
+	}
+	printf("Here...\n");
+
+	/*for (unsigned i = 0; i < np; i++) {
+		const node3d & p1 = FEM.getorderednode(i);
+		for (unsigned j = 0; j < np; j++) {
+			const node3d & p2 = FEM.getorderednode(j);
+			double r = fabs(hypot(p1.x-p2.x,p1.y-p2.y));
+			C[j*np+i] = (r > 6000.0 ? 0.0
+				: 5.0*(1-1.5*r/6000.0+0.5*pow(r/6000.0,3)));
+		}
+	}*/
+
+	FILE * f = fopen("junk.m","w");
+	fprintf(f,"A = sparse(%d,%d);\n",np+1,np+1);
+	for (unsigned i = 0; i < np; i++) {
+		for (unsigned j = 0; j < np; j++) {
+			if (fabs(C[i*np+j]) > 1e-9)
+				fprintf(f,"A(%d,%d) = %4g;\n",i+1,j+1,C[i*np+j]);
+		}
+	}
+	fclose(f);
+
+	decmp_chol(np,C);
+	printf("Now we're here...\n");
+	for (unsigned i = 0; i < np; i++) {
+		B[i] = C[i*np+i]*A[i];
+		for (unsigned j = 0; j < i; j++)
+			B[i] += C[j*np+i]*A[j];
+	}
+		
 	FEM.solve(1e-25);
 
+	/*
 	unsigned i, nnd = FEM.getnodes();
 	test.removepoints();
 	for (i = 0; i < nnd; i++) {
@@ -2820,7 +2961,7 @@ core()
 		double h = hypot(hypot(vx-ux,vy-uy),vz-uz);
 		double v = hypot(hypot(vx,vy),vz);
 		printf("Node %6i: (%+6i,%+6i,%+6i) =\t(%8.2g,%8.2g,%8.2g)\t(%8.2g,%8.2g,%8.2g)\t%8.2g\t(%8.2g)\n",j,int(x),int(y),int(z),vx,vy,vz,ux,uy,uz,h,(v == 0.0 ? 0.0 : h/v));
-	}
+	}*/
 
 	/*fset<point3d> poly(14);
 	poly[0]  = point3d(-1,-1,-3/3.0);
