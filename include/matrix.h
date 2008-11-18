@@ -722,6 +722,16 @@ operator- (const matrix & b) {
 #define ITER_MAX 0
 
 /*
+ * Returns the size of the triangular matrix storage array
+ */
+#define T_SIZE(n)    ((n)*((n)+1)/2)
+/*
+ * Returns the index into the triangluar matrix storage array
+ * This is in column major format, so loops over i are efficent.
+ */
+#define T_IDX(i,j)   ((j)*((j)+1)/2+(i))
+
+/*
  * Returns the size of the special banded matrix storage array
  */
 #define B_SIZE(n,w)    (((w)+1)*(n)-(w)*((w)+1)/2)
@@ -743,6 +753,7 @@ bool equ_lu(const unsigned n, const double * A, const double * b, double * x,
 double inv_mul_lu(const unsigned n, const unsigned m, double * A, double * B);
 bool inv_lu(const unsigned n, double * A);
 bool decmp_chol(const unsigned n, double * A);
+bool decmp_chol_tri(const unsigned n, double * A);
 bool decmp_chol(const unsigned n, const unsigned w, double * A);
 void bksub_chol(const unsigned n, const double * A, double * b,
 	const unsigned m = 1, const unsigned c = 0);

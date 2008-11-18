@@ -385,7 +385,7 @@ abort:
 }
 
 /*
- * Cholesky Decomposition of postive definite nxn matrix A.
+ * Cholesky Decomposition of symmetic postive definite nxn matrix A.
  *
  * Returns L in the lower triangle of A.
  */
@@ -397,7 +397,7 @@ decmp_chol(const unsigned n, double * A)
 
 	for (i = 0; i < n; i++) {
 		for (j = i; j < n; j++) {
-			sum = A[i*n+j];
+			sum = A[j*n+i];
 			for (k = 0; k < i; k++)
 				sum -= A[i*n+k]*A[j*n+k];
 			if (i == j) {
@@ -414,6 +414,35 @@ decmp_chol(const unsigned n, double * A)
 }
 
 /*
+ * Cholesky Decomposition of symmetic postive definite triangular matrix A.
+ *
+ * Returns U in the trianglar matrix.
+ */
+bool
+decmp_chol_tri(const unsigned n, double * A)
+{
+	unsigned i, j, k;
+	double sum;
+
+	for (i = 0; i < n; i++) {
+		for (j = i; j < n; j++) {
+			sum = A[T_IDX(i,j)];
+			for (k = 0; k < i; k++)
+				sum -= A[T_IDX(k,i)]*A[T_IDX(k,j)];
+			if (i == j) {
+				if (sum <= 0.0) {
+					event_msg(EVENT_WARN,"Non-positive definite matrix in decmp_chol_tri(%f)!",sum);
+					return false;
+				}
+				A[T_IDX(i,i)] = 1.0/sqrt(sum);
+			} else
+				A[T_IDX(i,j)] = sum*A[T_IDX(i,i)];
+		}
+	}
+	return true;
+}
+
+/*
  * Cholesky Decomposition of postive definite nxn matrix A.  The matrix is banded,
  * with bandwidth 2*w+1, and only the upper triangle is stored.
  *
@@ -423,23 +452,20 @@ bool
 decmp_chol(const unsigned n, const unsigned w, double * A)
 {
 	unsigned i, j, k;
-	double sum, c, y, t;
 	
 	for (i = 0; i < n; i++) {
 		for (j = i; j <= i+w && j < n; j++) {
-			sum = A[B_IDX(n,w,i,j)];
-			for (k = (w>j?0:j-w), c = 0.0; k < i; k++) {
-				y = -fma(A[B_IDX(n,w,k,i)],A[B_IDX(n,w,k,j)],c);
-				t = sum + y; c = (t - sum) - y; sum = t;
-			}
+			double sum = A[B_IDX(n,w,i,j)];
+			for (k = (w>j?0:j-w); k < i; k++)
+				sum -= A[B_IDX(n,w,k,i)]*A[B_IDX(n,w,k,j)];
 			if (i == j) {
 				if (sum <= 0) {
 					event_msg(EVENT_WARN,"Non-positive definite matrix in decmp_chol(%f)!",double(sum));
 					return false;
 				}
-				A[B_IDX(n,w,i,i)] = sqrt(sum);
+				A[B_IDX(n,w,i,i)] = 1.0/sqrt(sum);
 			} else
-				A[B_IDX(n,w,i,j)] = sum/A[B_IDX(n,w,i,i)];
+				A[B_IDX(n,w,i,j)] = sum*A[B_IDX(n,w,i,i)];
 		}
 	}
 	return true;
@@ -478,21 +504,16 @@ bksub_chol(const unsigned n, const unsigned w, const double * A,
            double * b, const unsigned m, const unsigned c)
 {
 	unsigned i, k;
-	double s, y, t;
 	
 	for (i = 0; i < n; i++) {
-		for (k = (w>i?0:i-w), s = 0.0; k < i; k++) {
-			y = -fma(A[B_IDX(n,w,k,i)],b[k*m+c],s); t = b[i*m+c] + y;
-			s = t - b[i*m+c] - y; b[i*m+c] = t;
-		}
-		b[i*m+c] /= A[B_IDX(n,w,i,i)];
+		for (k = (w>i?0:i-w); k < i; k++)
+			b[i*m+c] -= A[B_IDX(n,w,k,i)]*b[k*m+c];
+		b[i*m+c] *= A[B_IDX(n,w,i,i)];
 	}
 	for (i = n; i > 0; i--) {
-		for (k = i, s = 0.0; k < i+w && k < n; k++) {
-			y = -fma(A[B_IDX(n,w,i-1,k)],b[k*m+c],s); t = b[(i-1)*m+c] + y;
-			s = t - b[(i-1)*m+c] - y; b[(i-1)*m+c] = t;
-		}
-		b[(i-1)*m+c] /= A[B_IDX(n,w,i-1,i-1)];
+		for (k = i; k < i+w && k < n; k++)
+			b[(i-1)*m+c] -= A[B_IDX(n,w,i-1,k)]*b[k*m+c];
+		b[(i-1)*m+c] *= A[B_IDX(n,w,i-1,i-1)];
 	}
 }
 
