@@ -2805,7 +2805,7 @@ core()
 		np++;
 	double * A = new double[np];
 	double * B = new double[np];
-	double * C = new double[np*np];
+	double * C = new double[T_SIZE(np)];
 	if (A == 0 || B == 0 || C == 0) {
 		printf("Ooops, out of memory...\n");
 		return;
@@ -2814,20 +2814,28 @@ core()
 	for (unsigned i = 0; i < np; i++) {
 		A[i] = stdnormal_rnd();
 		const node3d & p1 = FEM.getorderednode(i);
-		for (unsigned j = 0; j < np; j++) {
+		for (unsigned j = i; j < np; j++) {
 			const node3d & p2 = FEM.getorderednode(j);
 			double r = fabs(hypot(p1.x-p2.x,p1.y-p2.y));
-			C[j*np+i] = (r > 6000.0 ? 0.0
+			C[T_IDX(i,j)] = (r > 6000.0 ? 0.0
 				: 5.0*(1-1.5*r/6000.0+0.5*pow(r/6000.0,3)));
 		}
 	}
-	decmp_chol(np,C);
+	decmp_chol_tri(np,C);
 	printf("Now we're here...\n");
 	for (unsigned i = 0; i < np; i++) {
-		B[i] = C[i*np+i]*A[i];
+		B[i] = C[T_IDX(i,i)]*A[i];
 		for (unsigned j = 0; j < i; j++)
-			B[i] += C[j*np+i]*A[j];
+			B[i] += C[T_IDX(j,i)]*A[j];
 	}
+
+	FILE * f = fopen("junk.csv","w");
+	fprintf(f,"X\t,Y\t,Z,\tA\n");
+	for (unsigned i = 0; i < np; i++) {
+		const node3d & p1 = FEM.getorderednode(i);
+		fprintf(f,"%6g,\t%6g,\t%6g,\t%6g\n",double(p1.x),double(p1.y),B[i],A[i]);
+	}
+	fclose(f);
 		
 	FEM.solve(1e-25);
 
