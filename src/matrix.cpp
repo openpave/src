@@ -434,9 +434,9 @@ decmp_chol_tri(const unsigned n, double * A)
 					event_msg(EVENT_WARN,"Non-positive definite matrix in decmp_chol_tri(%f)!",sum);
 					return false;
 				}
-				A[T_IDX(i,i)] = 1.0/sqrt(sum);
+				A[T_IDX(i,i)] = sqrt(sum);
 			} else
-				A[T_IDX(i,j)] = sum*A[T_IDX(i,i)];
+				A[T_IDX(i,j)] = sum/A[T_IDX(i,i)];
 		}
 	}
 	return true;
