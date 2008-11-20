@@ -596,6 +596,20 @@ if test "$ac_cv_func_fma" = "no"; then
 fi
 fi
 
+AC_CACHE_CHECK(
+    [for random()],
+    ac_cv_func_random,
+    [AC_TRY_LINK([
+        #include <stdlib.h>
+        ],
+        [int foo = random()],
+        [ac_cv_func_random=yes],
+        [ac_cv_func_random=no])
+    ])
+if test "$ac_cv_func_random" = "yes"; then
+    DEFINES="$DEFINES HAVE_RANDOM"
+fi
+
 dnl If the user passed in arg to --enable-optimize or --enable-debug,
 dnl make sure that we use it.
 if test -n "$_SAVE_OPTIMIZE_FLAGS"; then
