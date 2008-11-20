@@ -2196,6 +2196,39 @@ if test "$ac_cv_func_fma" = "no"; then
 fi
 fi
 
+echo $ac_n "checking for random()""... $ac_c" 1>&6
+echo "configure:2201: checking for random()" >&5
+if eval "test \"`echo '$''{'ac_cv_func_random'+set}'`\" = set"; then
+  echo $ac_n "(cached) $ac_c" 1>&6
+else
+  cat > conftest.$ac_ext <<EOF
+#line 2206 "configure"
+#include "confdefs.h"
+
+        #include <stdlib.h>
+        
+int main() {
+int foo = random()
+; return 0; }
+EOF
+if { (eval echo configure:2215: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+  rm -rf conftest*
+  ac_cv_func_random=yes
+else
+  echo "configure: failed program was:" >&5
+  cat conftest.$ac_ext >&5
+  rm -rf conftest*
+  ac_cv_func_random=no
+fi
+rm -f conftest*
+    
+fi
+
+echo "$ac_t""$ac_cv_func_random" 1>&6
+if test "$ac_cv_func_random" = "yes"; then
+    DEFINES="$DEFINES HAVE_RANDOM"
+fi
+
 if test -n "$_SAVE_OPTIMIZE_FLAGS"; then
     _OPTIMIZE_FLAGS="$_SAVE_OPTIMIZE_FLAGS"
 fi
@@ -2298,7 +2331,7 @@ if test -n "$OP_PROJECT_fem3d"; then
 fi
 
 echo $ac_n "checking if config.h needs rebuilding""... $ac_c" 1>&6
-echo "configure:2302: checking if config.h needs rebuilding" >&5
+echo "configure:2335: checking if config.h needs rebuilding" >&5
 
 echo "$ac_t""done" 1>&6
 
