@@ -28,6 +28,7 @@
 
 **************************************************************************/
 
+#include "event.h"
 #include <stdio.h>
 #include <math.h>
 #include "fft.h"
@@ -36,12 +37,11 @@ double
 myrand()
 {
   static int pos = 0;
-  static unsigned long in[4] = {0,0,0,0};
-  static unsigned long t[16];
-  register unsigned long y;
-  register unsigned long x;
-  register unsigned long sum;
+  static unsigned in[4] = {0,0,0,0};
+  static unsigned t[16];
+  unsigned x, y, sum;
   int rounds;
+  
   if (!pos) {
     x = 0;
     sum = 0;
@@ -80,6 +80,8 @@ template<unsigned N>
 void
 doitr8()
 {
+  timeme();
+
   double x8[N];
   double y8[N];
   double z8[N];
@@ -112,13 +114,16 @@ doitr8()
   for (unsigned i = 0; i < N; i++) {
     diff = x8[i] - z8[i]; error += diff * diff;
   }
-  printf("%6d r8 %.30f\n",N,sqrt(error/(N/2))/(N/2));
+  printf("%6d r8 %.30f ",N,sqrt(error/(N/2))/(N/2));
+  timeme("\n");
 }
 
 template<unsigned N>
 void
 doitc8()
 {
+  timeme();
+  
   complex x8[N];
   complex y8[N];
   complex z8[N];
@@ -148,7 +153,8 @@ doitc8()
     diff = x8[i].re - z8[i].re; error += diff * diff;
     diff = x8[i].im - z8[i].im; error += diff * diff;
   }
-  printf("%6d c8 %.30f\n",N,sqrt(error/N)/N);
+  printf("%6d c8 %.30f ",N,sqrt(error/N)/N);
+  timeme("\n");
 }
 
 #ifdef BUILD

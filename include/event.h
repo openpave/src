@@ -61,6 +61,7 @@ extern void event_progress_bar(const int level, const double p,
 							   const char *fmt,...) OP_PRINTF(3,4);
 extern void event_progress(const int type, const int marker,
 						   const char *fmt,...) OP_PRINTF(3,4);
+extern void timeme(const char * msg = 0);
 
 #ifdef _EVENT_IMP
 
@@ -79,6 +80,51 @@ void event_msg(const int level, const char * fmt, ...)
 	if (level < EVENT_DEBUG && fmt != NULL)
 		vfprintf(stderr,fmt,args);
 	va_end(args);
+}
+
+#if defined(DARWIN)
+#include <sys/time.h>
+#else
+#include <time.h>
+#endif
+
+void timeme(const char * msg)
+{
+#if !defined(_MSC_VER) && !defined(DARWIN)
+#if defined(linux)
+#define CLOCK_PROF CLOCK_PROCESS_CPUTIME_ID
+#endif
+	static struct timespec start;
+	struct timespec stop;
+	double run_time;
+	if (msg == 0) {
+		clock_gettime(CLOCK_PROF,&start);
+		return;
+	}
+	clock_gettime(CLOCK_PROF,&stop);
+	run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
+#elif defined(DARWIN)
+	static struct timeval start;
+	struct timeval stop;
+	double run_time;
+	if (msg == 0) {
+		gettimeofday(&start,NULL);
+		return;
+	}
+	gettimeofday(&stop,NULL);
+	run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000.0;
+#elif defined(_MSC_VER)
+	static clock_t start;
+	clock_t stop;
+	double run_time;
+	if (msg == 0) {
+		start = clock();
+		return;
+	}
+	stop = clock();
+	run_time = double(stop - start) / CLOCKS_PER_SEC;
+#endif
+	printf(" %f%s",run_time,msg);
 }
 
 #undef _EVENT_IMP
@@ -157,6 +203,7 @@ void event_progress(const int type, const int marker,
 	}
 	va_end(args);
 }
+
 #undef _PROGRESS_IMP
 #endif
 
