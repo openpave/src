@@ -309,10 +309,10 @@ template<unsigned N>
 inline void
 fftr_mul(double * a, double * b)
 {
-	a[0] *= b[0];
-	a[1] *= b[1];
-	fftc_mul<(N-2)/2>(reinterpret_cast<complex *>(&a[2]),
-			reinterpret_cast<complex *>(&b[2]));
+	double t0 = a[0]*b[0], t1 = a[1]*b[1];
+	fftc_mul<N/2>(reinterpret_cast<complex *>(a),
+			reinterpret_cast<complex *>(b));
+	a[0] = t0; a[1] = t1; 
 }
 template<>
 inline void
