@@ -32,6 +32,7 @@ CXXSRCS =                              \
 	test_matrix.cpp                \
 	test_pavement.cpp              \
 	test_set.cpp                   \
+	test_thermal.cpp               \
 	$(NULL)
 
 include $(topsrcdir)/build/rules.mk

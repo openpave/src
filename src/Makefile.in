@@ -25,10 +25,12 @@ CXXSRCS = \
 	matrix.cpp          \
 	pavement.cpp        \
 	reliability.cpp     \
+	thermal.cpp         \
 	$(NULL)
 
 EXPORTS = \
 	pavement.h          \
+	thermal.h           \
 	$(NULL)
 
 include $(topsrcdir)/build/rules.mk

@@ -157,7 +157,7 @@ doitc8()
   timeme("\n");
 }
 
-#ifdef BUILD
+#ifdef NOBUILD
 int
 main()
 {

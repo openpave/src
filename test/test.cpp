@@ -31,20 +31,9 @@
 #define _EVENT_IMP
 #define _PROGRESS_IMP
 #include "event.h"
-#include "traffic.h"
 #include "reliability.h"
 #include <stdlib.h>
 #include <time.h>
-
-#ifdef NOBUILD
-int
-main()
-{
-	WIMsurvey WIM(str2time("000101",NULL),str2time("040101",NULL));
-
-	WIM.ProcessRSADir("C:/Work/SANRAL LEF/NEURAL/2030","C:/Work/SANRAL LEF/NEURAL/2030.WIM");
-}
-#endif
 
 #ifdef NOBUILD
 /* Bessel J_0(x) function in double precision */

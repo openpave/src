@@ -54,19 +54,20 @@ DllMain(HANDLE hModule, DWORD fdwReason, LPVOID lpReserved)
 #define _PROGRESS_IMP
 #include "event.h"
 #include "pavement.h"
+#include "thermal.h"
 #include "libop.h"
 
 int OP_EXPORT
-OP_LE_Calc(const int flags,
-           const int nl, const double * h, const double * E,
+OP_LE_Calc(const unsigned flags,
+           const unsigned nl, const double * h, const double * E,
              const double * v, const double * f,
-           const int na, const double * ax, const double * ay,
+           const unsigned na, const double * ax, const double * ay,
              const double * al, const double * ap, const double * ar,
-           const int np, const double * px, const double * py,
+           const unsigned np, const double * px, const double * py,
              const double * pz, double (* res)[27])
 {
 	LEsystem pave;
-	int i;
+	unsigned i;
 	bool rv = false;
 
 	for (i = 0; i < nl; i++) {
@@ -137,4 +138,65 @@ OP_LE_Calc(const int flags,
 	_clearfp();
 #endif
 	return rv;
+}
+
+int OP_EXPORT
+OP_HT_Init(const int nl, const double * h, const double * D,
+           const int nn, const double * nd, const double * nt,
+           const int nw, const double dt)
+{
+	int i;
+
+	if (!(nw == 1 || nw == 2 || nw == 4)) {
+		event_msg(EVENT_WARN, "Invalid bandwidth!");
+		return 0;
+	}
+	if (nn < nw+1 || (nn-1)%nw != 0) {
+		event_msg(EVENT_WARN, "Bad temperature mesh! Nodes must match bandwidth!");
+		return 0;
+	}
+	// Set up layer top and bottom.
+	for (i = 0; i < nl-1; i++) {
+		if (h[i] <= 0.0) {
+			event_msg(EVENT_WARN,"Invalid Layer thickness!");
+			return 0;
+		}
+	}
+	FEMthermal * rv = new FEMthermal(nl,h,D,nn,nd,nt,dt,nw);
+
+#if defined(_MSC_VER) || defined(__MINGW32__)
+	_clearfp();
+#endif
+	return reinterpret_cast<int>(rv);
+}
+
+void OP_EXPORT
+OP_HT_Step(const int token, const int nt, const double * tt, const double tb)
+{
+	FEMthermal * system = reinterpret_cast<FEMthermal *>(token);
+	
+	for (int i = 0; i < nt; i++)
+		system->step(tt[i],tb);
+#if defined(_MSC_VER) || defined(__MINGW32__)
+	_clearfp();
+#endif
+}
+
+void OP_EXPORT
+OP_HT_Interpolate(const int token, const int np, const double * pd,
+                  double * pt)
+{
+	FEMthermal * system = reinterpret_cast<FEMthermal *>(token);
+	
+	system->interpolate(np,pd,pt);
+#if defined(_MSC_VER) || defined(__MINGW32__)
+	_clearfp();
+#endif
+}
+
+void OP_EXPORT
+OP_HT_Reset(const int token)
+{
+	FEMthermal * system = reinterpret_cast<FEMthermal *>(token);
+	delete system;
 }

@@ -33,7 +33,9 @@
 
 *************************************************************************/
 
-#include "config.h"
+#ifndef __LIBOP_H
+#define __LIBOP_H
+
 
 BEGIN_C_DECLS
 
@@ -57,25 +59,40 @@ Declare Function OP_LE_Calc Lib "libop.dll" Alias "_OP_LE_Calc@68" ( _
  *
  * Note: VB uses Fortan array storage (cols first) so the results are Res(1,i).
  */
-extern "C" {
 int OP_EXPORT OP_LE_Calc(
-	const int flags,				// Flags to choose method
-	const int nl, 					// Number of layers
-	const double * h,				// Layer thickness (0 for semi-inf)
-	const double * E,				// Elastic modulus
-	const double * v,				// Poisson's ratio
-	const double * f,				// Friction (0.0 to 1.0)
-	const int na,					// Number of loads
-	const double * ax,				// Center X location
-	const double * ay,				// Center Y location
-	const double * al,				// Load (0 for auto) 
-	const double * ap,				// Pressure (0 for auto)
-	const double * ar,				// Radius (0 for auto)
-	const int np,					// Number of evaluation points
-	const double * px,				// Point X
-	const double * py,				// Point Y
-	const double * pz,				// Point Z
-	double (* res)[27]);			// Results
-}
+	const unsigned flags,           // Flags to choose method
+	const unsigned nl,              // Number of layers
+	const double * h,               // Layer thickness (0 for semi-inf)
+	const double * E,               // Elastic modulus
+	const double * v,               // Poisson's ratio
+	const double * f,               // Friction (0.0 to 1.0)
+	const unsigned na,              // Number of loads
+	const double * ax,              // Center X location
+	const double * ay,              // Center Y location
+	const double * al,              // Load (0 for auto) 
+	const double * ap,              // Pressure (0 for auto)
+	const double * ar,              // Radius (0 for auto)
+	const unsigned np,              // Number of evaluation points
+	const double * px,              // Point X
+	const double * py,              // Point Y
+	const double * pz,              // Point Z
+	double (* res)[27]);            // Results
+
+int OP_EXPORT
+OP_HT_Init(const int nl, const double * h, const double * D,
+           const int nn, const double * nd, const double * nt,
+           const int nw, const double dt);
+
+void OP_EXPORT
+OP_HT_Step(const int token, const int nt, const double * tt, const double tb);
+
+void OP_EXPORT
+OP_HT_Interpolate(const int token, const int np, const double * pd,
+                    double * pt);
+
+void OP_EXPORT
+OP_HT_Reset(const int token);
 
 END_C_DECLS
+
+#endif // LIBOP_H
