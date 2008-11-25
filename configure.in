@@ -195,13 +195,13 @@ case "$host" in
         AC_CHECK_PROGS(ICC, icl.exe)
         if test -n "$ICC"; then
             echo 'main() { return 0; }' > dummy.c
-            ${ICC} -o dummy dummy.c >/dev/null 2>&1
+            ${ICC} /Fedummy.exe dummy.c >/dev/null 2>&1
             if test $? = 0; then
                 CC="$ICC"
                 USING_CC=intel
                 WIN32=1
             else
-                AC_MSG_WARN([$(CC) test failed.  Using normal feature tests])
+                AC_MSG_WARN(["$ICC" test failed. Using normal feature tests])
             fi
             rm -f dummy dummy.o dummy.obj dummy.exe dummy.c
         fi
@@ -210,13 +210,13 @@ case "$host" in
         AC_CHECK_PROGS(MSVC, cl.exe)
         if test -n "$MSVC"; then
             echo 'main() { return 0; }' > dummy.c
-            ${MSVC} -o dummy dummy.c >/dev/null 2>&1
+            ${MSVC} /Fedummy.exe dummy.c >/dev/null 2>&1
             if test $? = 0; then
                 CC="$MSVC"
                 USING_CC=ms
                 WIN32=1
             else
-                AC_MSG_WARN([$(CC) test failed.  Using normal feature tests])
+                AC_MSG_WARN(["$MSVC" test failed. Using normal feature tests])
             fi
             rm -f dummy dummy.o dummy.obj dummy.exe dummy.c
         fi
