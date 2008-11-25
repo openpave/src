@@ -896,13 +896,13 @@ done
 
         if test -n "$ICC"; then
             echo 'main() { return 0; }' > dummy.c
-            ${ICC} -o dummy dummy.c >/dev/null 2>&1
+            ${ICC} /Fedummy.exe dummy.c >/dev/null 2>&1
             if test $? = 0; then
                 CC="$ICC"
                 USING_CC=intel
                 WIN32=1
             else
-                echo "configure: warning: $(CC) test failed.  Using normal feature tests" 1>&2
+                echo "configure: warning: "$ICC" test failed. Using normal feature tests" 1>&2
             fi
             rm -f dummy dummy.o dummy.obj dummy.exe dummy.c
         fi
@@ -944,13 +944,13 @@ done
 
         if test -n "$MSVC"; then
             echo 'main() { return 0; }' > dummy.c
-            ${MSVC} -o dummy dummy.c >/dev/null 2>&1
+            ${MSVC} /Fedummy.exe dummy.c >/dev/null 2>&1
             if test $? = 0; then
                 CC="$MSVC"
                 USING_CC=ms
                 WIN32=1
             else
-                echo "configure: warning: $(CC) test failed.  Using normal feature tests" 1>&2
+                echo "configure: warning: "$MSVC" test failed. Using normal feature tests" 1>&2
             fi
             rm -f dummy dummy.o dummy.obj dummy.exe dummy.c
         fi
