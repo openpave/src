@@ -2282,28 +2282,6 @@ struct region_list : sset<region> {
 	}
 };
 
-enum search_edge {
-    CLEAR    = 0x00,
-	DONE_X_P = 0x01,
-	DONE_Y_P = 0x02,
-	DONE_X_M = 0x04,
-	DONE_Y_M = 0x08,
-	FROM_X_P = 0x10,
-	FROM_Y_P = 0x20,
-	FROM_X_M = 0x40,
-	FROM_Y_M = 0x80
-};
-inline search_edge
-operator| (const search_edge l, const search_edge r)
-{
-	return static_cast<search_edge>(unsigned(l) | unsigned(r));
-}
-inline search_edge
-operator& (const search_edge l, const search_edge r)
-{
-	return static_cast<search_edge>(unsigned(l) & unsigned(r));
-}
-
 #define EDGE (4096)
 
 void
