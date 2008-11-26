@@ -924,72 +924,11 @@ protected:
 			ue[i][0] = n.ux; ue[i][1] = n.uy; ue[i][2] = n.uz;
 		}
 	}
-	// build the shape function vector.
-	void buildN(const bool ismap, const double & gx,
+	// build the shape function vector and derivative matrix.
+	void buildSF(const bool ismap, const double & gx,
 			const double & gy, const double & gz,
-			double * N, const unsigned * mask = 0) const {
-		const unsigned nz = unsigned(SZ);
-		double Nx = 0, Ny = 0, Nz = 0;
-
-		assert(NDIM == 3);
-		// Loop over each level in the element.
-		for (unsigned i = 0, j; i < nz; i++) {
-			Nz = getN(ismap,SZ,i,gz);
-			// Start with the corners.
-			for (unsigned l = 0; l < 4; l++) {
-				Nx = getN(ismap,sx,l/2,gx); Ny = getN(ismap,sy,l%2,gy);
-				N[i*4+l] = Nx*Ny*Nz;
-			}
-			// If we don't have extra nodes we're done.
-			if (!mask)
-				continue;
-			// Build the extra nodes at the half points.
-			for (unsigned l = 0; l < 4; l++) {
-				if ((j = mask[i*4+l]) == 0)
-					continue;
-				switch (l) {
-				case 0: case 3:
-					Nx = N_2(l/2,gx); Ny = 1-fabs(gy);
-					break;
-				case 1: case 2:
-					Nx = 1-fabs(gx);  Ny = N_2(l%2,gy);
-					break;
-				}
-				N[j] = Nx*Ny*Nz;
-			}
-			// If we're not the top or bottom we're done.  Else, build
-			// those.
-			if (i > 0 && i < nz-1)
-				continue;
-			if ((j = mask[(i == 0 ? 4*nz : 4*nz+1)]) == 0)
-				continue;
-			Nx = 1-fabs(gx); Ny = 1-fabs(gy);
-			N[j] = Nx*Ny*Nz;
-		}
-		if (!mask)
-			return;
-		// Correct the shape functions for the corners and sides,
-		// depending on the existance of the extra nodes.
-		for (unsigned l = 0; l < 4*nz; l++) {
-			if (mask[l] != 0)
-				N[l] -= N[mask[l]]/2;
-			const int Jxy[4] = {+2,-1,+1,-2};
-			if (mask[l+Jxy[l%4]] != 0)
-				N[l] -= N[mask[l+Jxy[l%4]]]/2;
-			if (l < 4 && mask[4*nz] != 0)
-				N[l] += N[mask[4*nz]]/4;
-			if (l >= 4*(nz-1) && mask[4*nz+1] != 0)
-				N[l] += N[mask[4*nz+1]]/4;
-		}
-		for (unsigned l = 0; mask[4*nz] != 0 && l < 4; l++)
-			N[mask[l]] -= N[mask[4*nz]]/2;
-		for (unsigned l = 4*(nz-1); mask[4*nz+1] != 0 && l < 4*nz; l++)
-			N[mask[l]] -= N[mask[4*nz+1]]/2;
-	}
-	// build the shape function derivative matrix.
-	void builddNdr(const bool ismap, const double & gx,
-			const double & gy, const double & gz,
-			double (* dNdr)[NDIM], const unsigned * mask = 0) const {
+			double * N, double (* dNdr)[NDIM],
+			const unsigned * mask = 0) const {
 		const unsigned nz = unsigned(SZ);
 		double Nx = 0, Ny = 0, Nz = 0, dNdx = 0, dNdy = 0, dNdz = 0;
 
@@ -1001,6 +940,7 @@ protected:
 			for (unsigned l = 0; l < 4; l++) {
 				Nx = getN(ismap,sx,l/2,gx); dNdx = getdN(ismap,sx,l/2,gx);
 				Ny = getN(ismap,sy,l%2,gy); dNdy = getdN(ismap,sy,l%2,gy);
+				N[i*4+l] = Nx*Ny*Nz;
 				dNdr[i*4+l][0] = dNdx*Ny*Nz;
 				dNdr[i*4+l][1] = Nx*dNdy*Nz;
 				dNdr[i*4+l][2] = Nx*Ny*dNdz;
@@ -1022,6 +962,7 @@ protected:
 					Ny = N_2(l%2,gy); dNdy = dN_2(l%2,gy);
 					break;
 				}
+				N[j] = Nx*Ny*Nz;
 				dNdr[j][0] = dNdx*Ny*Nz;
 				dNdr[j][1] = Nx*dNdy*Nz;
 				dNdr[j][2] = Nx*Ny*dNdz;
@@ -1034,6 +975,7 @@ protected:
 				continue;
 			Nx = 1-fabs(gx); dNdx = -SGN(gx);
 			Ny = 1-fabs(gy); dNdy = -SGN(gy);
+			N[j] = Nx*Ny*Nz;
 			dNdr[j][0] = dNdx*Ny*Nz;
 			dNdr[j][1] = Nx*dNdy*Nz;
 			dNdr[j][2] = Nx*Ny*dNdz;
@@ -1042,22 +984,44 @@ protected:
 			return;
 		// Correct the shape functions for the corners and sides,
 		// depending on the existance of the extra nodes.
-		for (unsigned i = 0; i < 3; i++) {
-			for (unsigned l = 0; l < 4*nz; l++) {
-				if (mask[l] != 0)
-					dNdr[l][i] -= dNdr[mask[l]][i]/2;
-				const int Jxy[4] = {+2,-1,+1,-2};
-				if (mask[l+Jxy[l%4]] != 0)
-					dNdr[l][i] -= dNdr[mask[l+Jxy[l%4]]][i]/2;
-				if (l < 4 && mask[4*nz] != 0)
-					dNdr[l][i] += dNdr[mask[4*nz]][i]/4;
-				if (l >= 4*(nz-1) && mask[4*nz+1] != 0)
-					dNdr[l][i] += dNdr[mask[4*nz+1]][i]/4;
+		for (unsigned l = 0; l < 4*nz; l++) {
+			if (mask[l] != 0) {
+				N[l] -= N[mask[l]]/2;
+				dNdr[l][0] -= dNdr[mask[l]][0]/2;
+				dNdr[l][1] -= dNdr[mask[l]][1]/2;
+				dNdr[l][2] -= dNdr[mask[l]][2]/2;
 			}
-			for (unsigned l = 0; mask[4*nz] != 0 && l < 4; l++)
-				dNdr[mask[l]][i] -= dNdr[mask[4*nz]][i]/2;
-			for (unsigned l = 4*(nz-1); mask[4*nz+1] != 0 && l < 4*nz; l++)
-				dNdr[mask[l]][i] -= dNdr[mask[4*nz+1]][i]/2;
+			const int Jxy[4] = {+2,-1,+1,-2};
+			if (mask[l+Jxy[l%4]] != 0) {
+				N[l] -= N[mask[l+Jxy[l%4]]]/2;
+				dNdr[l][0] -= dNdr[mask[l+Jxy[l%4]]][0]/2;
+				dNdr[l][1] -= dNdr[mask[l+Jxy[l%4]]][1]/2;
+				dNdr[l][2] -= dNdr[mask[l+Jxy[l%4]]][2]/2;
+			}
+			if (l < 4 && mask[4*nz] != 0) {
+				N[l] += N[mask[4*nz]]/4;
+				dNdr[l][0] += dNdr[mask[4*nz]][0]/4;
+				dNdr[l][1] += dNdr[mask[4*nz]][1]/4;
+				dNdr[l][2] += dNdr[mask[4*nz]][2]/4;
+			}
+			if (l >= 4*(nz-1) && mask[4*nz+1] != 0) {
+				N[l] += N[mask[4*nz+1]]/4;
+				dNdr[l][0] += dNdr[mask[4*nz+1]][0]/4;
+				dNdr[l][1] += dNdr[mask[4*nz+1]][1]/4;
+				dNdr[l][2] += dNdr[mask[4*nz+1]][2]/4;
+			}
+		}
+		for (unsigned l = 0; mask[4*nz] != 0 && l < 4; l++) {
+			N[mask[l]] -= N[mask[4*nz]]/2;
+			dNdr[mask[l]][0] -= dNdr[mask[4*nz]][0]/2;
+			dNdr[mask[l]][1] -= dNdr[mask[4*nz]][1]/2;
+			dNdr[mask[l]][2] -= dNdr[mask[4*nz]][2]/2;
+		}
+		for (unsigned l = 4*(nz-1); mask[4*nz+1] != 0 && l < 4*nz; l++) {
+			N[mask[l]] -= N[mask[4*nz+1]]/2;
+			dNdr[mask[l]][0] -= dNdr[mask[4*nz+1]][0]/2;
+			dNdr[mask[l]][1] -= dNdr[mask[4*nz+1]][1]/2;
+			dNdr[mask[l]][2] -= dNdr[mask[4*nz+1]][2]/2;
 		}
 	}
 	// Build the element stiffness matrix.
@@ -1087,6 +1051,7 @@ protected:
 			return 0;
 		}
 
+		double * N = static_cast<double *>(alloca(nnd*sizeof(double)));
 		// This matrix is transposed.
 		double (* dNdr)[NDIM] = static_cast<double (*)[NDIM]>
 				(alloca(nnd*NDIM*sizeof(double)));
@@ -1096,7 +1061,7 @@ protected:
 		for (unsigned gj = 0; gj < ny; gj++) {
 		for (unsigned gk = 0; gk < nz; gk++) {
 			double gw = gx[gi][1]*gy[gj][1]*gz[gk][1];
-			builddNdr(true,gx[gi][0],gy[gj][0],gz[gk][0],dNdr,mask);
+			buildSF(true,gx[gi][0],gy[gj][0],gz[gk][0],N,dNdr,mask);
 			for (i = 0; i < NDIM; i++) {
 				for (j = 0; j < NDIM; j++) {
 					J[i][j] = 0.0;
@@ -1106,7 +1071,7 @@ protected:
 			}
 			if (sx == inf_pos || sx == inf_neg
 			 || sy == inf_pos || sy == inf_neg)
-				builddNdr(false,gx[gi][0],gy[gj][0],gz[gk][0],dNdr,mask);
+				buildSF(false,gx[gi][0],gy[gj][0],gz[gk][0],N,dNdr,mask);
 			// This returns det(J);
 			gw *= inv_mul_gauss(nnd,J,dNdr);
 			assert(gw > 0.0);
@@ -1148,14 +1113,13 @@ protected:
 			// Stress and strain tensors.
 			ematrix e(0.0);
 			l[0] = c[n].x, l[1] = c[n].y, l[2] = c[n].z;
-			buildN(true,l[0],l[1],l[2],N,mask);
+			buildSF(true,l[0],l[1],l[2],N,dNdr,mask);
 			for (j = 0; j < NDIM; j++) {
 				g[j] = 0.0;
 				for (k = 0; k < nnd; k++)
 					g[j] += N[k]*xe[k][j];
 			}
 			d.x = g[0], d.y = g[1], d.z = g[2];
-			builddNdr(true,l[0],l[1],l[2],dNdr,mask);
 			for (i = 0; i < NDIM; i++) {
 				for (j = 0; j < NDIM; j++) {
 					J[i][j] = 0.0;
@@ -1164,10 +1128,8 @@ protected:
 				}
 			}
 			if (sx == inf_pos || sx == inf_neg
-			 || sy == inf_pos || sy == inf_neg) {
-				buildN(false,l[0],l[1],l[2],N,mask);
-				builddNdr(false,l[0],l[1],l[2],dNdr,mask);
-			}
+			 || sy == inf_pos || sy == inf_neg)
+				buildSF(false,l[0],l[1],l[2],N,dNdr,mask);
 			inv_mul_gauss(nnd,J,dNdr);
 			for (j = 0; j < NDOF; j++) {
 				g[j] = 0.0;
