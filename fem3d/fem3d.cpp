@@ -74,7 +74,7 @@
 #if defined(__FreeBSD__)
 #include <stdlib.h>
 extern "C" {
-extern const char * _malloc_options = "ajzSSS";
+extern const char * _malloc_options = "ajz";
 };
 #endif
 
@@ -247,47 +247,6 @@ principle(const ematrix & s)
 }
 
 /*
- * struct material_property
- *
- * A simple wrapper class around an enum of material property names,
- * to enable them to be used in a set, so we can add more properties
- * as we go.  The next step will be to work on how to make this a 3D
- * spatial estimator.
- */
-struct material_property {
-	enum property_t {
-		emod,
-		poissons,
-	} property;
-
-	inline material_property(const property_t p)
-	  : property(p) {
-	}
-	inline bool operator== (const material_property & p) {
-		return (property == p.property);
-	}
-};
-
-/*
- * struct material_property_value.
- *
- * A simple class to store the properties value (as a double).
- */
-struct material_property_value
-  : public material_property
-{
-	double value;
-
-	inline material_property_value(
-		const material_property::property_t p, const double & v)
-	  : material_property(p), value(v) {
-	}
-	inline operator double() {
-		return value;
-	}
-};
-
-/*
  * class material
  *
  * This class represents a material.  It will eventually grow to
@@ -296,37 +255,20 @@ struct material_property_value
  */
 class material {
 public:
-	inline material() {
+	inline material(const double e, const double poissons)
+	  : emod(e), v(poissons) {
 	}
-	inline void setprop(const material_property::property_t p,
-			const double & v) {
-		props.add(material_property_value(p,v));
-	}
-	inline bool hasprop(const material_property::property_t p) const {
-		return props.haskey(material_property(p)) != UINT_MAX;
-	}
-	inline double getprop(const material_property::property_t p) const {
-		if (!hasprop(p))
-			event_msg(EVENT_ERROR,"Access to undefined material property!");
-		return double(props[material_property(p)]);
-	}
-
 	// Get the point stiffness tensor.  This should be made to cache
 	// the result.
 	inline void pointstiffness(smatrix_dof (& E)[NDIM][NDIM]) const {
-		double e = getprop(material_property::emod);
-		double v = getprop(material_property::poissons);
-		double lambda = v*e/(1+v)/(1-2*v);
-		double mu = e/2/(1+v);
-
+		double lambda = v*emod/(1+v)/(1-2*v);
+		double mu = emod/2/(1+v);
 		meta_stiffness<>::assign(E,lambda,mu);
 	}
 	// Get the point stress tensor, based on the strain.
 	inline ematrix pointstress(const ematrix & e) const {
-		double E = getprop(material_property::emod);
-		double v = getprop(material_property::poissons);
-		double lambda = v*E/(1+v)/(1-2*v);
-		double mu = E/2/(1+v);
+		double lambda = v*emod/(1+v)/(1-2*v);
+		double mu = emod/2/(1+v);
 		ematrix s(0.0);
 
 		meta_stiffness<>::mul(s,e,lambda,mu);
@@ -334,7 +276,8 @@ public:
 	}
 
 private:
-	ksset<material_property,material_property_value> props;
+	double emod;
+	double v;
 };
 
 /*
@@ -2242,44 +2185,6 @@ blockarea(double x1, double x2, double y1, double y2, double r)
 int run;
 bool isvar;
 
-inline double
-mbac(double x, double y) {
-	double scale = M_2PI/256/0.064/1000;
-
-	if (!isvar) {
-		x = 0.0;
-		y = 0.0;
-	}
-
-	if (run == 2) {
-		x += 4096.0;
-		y -= 4096.0;
-	}
-	if (run == 3) {
-		x -= 4096.0;
-		y += 4096.0;
-	}
-
-	double z =
-		-0.0872045842247668*cos((2*x+2*y)*scale)-0.0452662392539107*sin((2*x+2*y)*scale)
-		- 0.184435825482528*cos((  x+2*y)*scale)-0.0726316322322595*sin((  x+2*y)*scale)
-		+ 0.160559398768653*cos((    2*y)*scale)-  1.12338374978589*sin((   +2*y)*scale)
-		+  0.49075391336994*cos(( -x+2*y)*scale)-  0.36683072201147*sin(( -x+2*y)*scale)
-		+0.0633085922234123*cos((2*x  +y)*scale)- 0.356724327448318*sin((2*x  +y)*scale)
-		+ 0.330157164431708*cos((  x  +y)*scale)+  1.79254958998406*sin((  x  +y)*scale)
-		-  1.35393401298557*cos((     +y)*scale)+  3.48169603451368*sin((     +y)*scale)
-		+ 0.395617172728359*cos(( -x  +y)*scale)+ 0.489428373430067*sin(( -x  +y)*scale)
-		+ 0.147319009672208*cos((2*x    )*scale)+ 0.599566696447458*sin((2*x    )*scale)
-		- 0.287702814615793*cos((  x    )*scale)-  2.27887613714944*sin((  x    )*scale)
-		- 0.287702814615793*cos((- x    )*scale)+  2.27887613714944*sin(( -x    )*scale)
-		- 0.307530369157015*cos((2*x  -y)*scale)- 0.550319469491258*sin((2*x  -y)*scale)
-		+ 0.395617172728359*cos((  x  -y)*scale)- 0.489428373430067*sin((  x  -y)*scale)
-		-  1.35393401298557*cos((     -y)*scale)-  3.48169603451368*sin((     -y)*scale)
-		+ 0.330157164431708*cos(( -x  -y)*scale)-  1.79254958998406*sin(( -x  -y)*scale)
-		+ 84.123378178028;
-	return z;
-}
-
 /*
  * This outputs the results for all the elements in the list
  * Obviously, the list must be ones returned by add().
@@ -2328,7 +2233,7 @@ results(const fset<const element *> & e, const fset<point3d> & c,
 struct femlayer {
 	fixed<8> top;
 	fixed<8> bot;
-	material mat;
+	material * mat;
 };
 
 /*
@@ -2445,17 +2350,17 @@ core()
     timeme();
 
 	LEsystem test;
-	test.addlayer(mbac(0,0),3000e3,0.35);
-	test.addlayer(500-mbac(0,0), 750e3,0.35);
+	test.addlayer(  90.0,3000e3,0.35);
+	test.addlayer( 410.0, 750e3,0.35);
 	test.addlayer(1500.0, 100e3,0.35);
 
 	sset<femlayer> layer;
 	for (unsigned i = 0; i < test.layers(); i++) {
+		const LElayer & l = test.layer(i);
 		femlayer t;
-		t.top = test.layer(i).top();
-		t.bot = test.layer(i).bottom();
-		t.mat.setprop(material_property::emod,test.layer(i).emod());
-		t.mat.setprop(material_property::poissons,test.layer(i).poissons());
+		t.top = l.top();
+		t.bot = l.bottom();
+		t.mat = new material(l.emod(),l.poissons());
 		layer.add(t);
 	}
 
@@ -2601,8 +2506,8 @@ core()
 		for (unsigned i = 0, j = 1; j-1 < zip && j < stops.length(); j++) {
 			while (i < layer.length() && stops[j] > layer[i].bot)
 				i++;
-			double z1 = stops[j  ] - layer[i].top;
-			double z2 = stops[j-1] - layer[i].top;
+			double z1 = stops[j  ];
+			double z2 = stops[j-1];
 			printf("%.0f\t%.0f\t%f\t%f\t%f\t%i\n",filling.xp(),filled.xp(),double(stops[MIN(zim,stops.length()-1)]),z1,double(stops[MIN(zip,stops.length()-1)]),i);
 			element::element_t var = (double(stops[j]) <= 0 ?
 					element::variable34 : element::variable18);
@@ -2618,93 +2523,70 @@ core()
 						double y2 = double(r.ystops[yi]);
 						if (filled.overlaps(x1,y1,x2,y2) && j <= zim)
 							continue;
-						double t[4], b[4], p[8];
-						t[0] = t[1] = t[2] = t[3] = layer[i].top;
-						b[0] = b[1] = b[2] = b[3] = layer[i].bot;
-						double h = layer[i].bot - layer[i].top;
-						if (i == 0) {
-							b[0] = mbac(x1,y1);
-							b[1] = mbac(x1,y2);
-							b[2] = mbac(x2,y1);
-							b[3] = mbac(x2,y2);
-						} else if (i == 1) {
-							t[0] = mbac(x1,y1);
-							t[1] = mbac(x1,y2);
-							t[2] = mbac(x2,y1);
-							t[3] = mbac(x2,y2);
-						}
-						p[0] = -(t[0]+(b[0]-t[0])*z1/h);
-						p[1] = -(t[1]+(b[1]-t[1])*z1/h);
-						p[2] = -(t[2]+(b[2]-t[2])*z1/h);
-						p[3] = -(t[3]+(b[3]-t[3])*z1/h);
-						p[4] = -(t[0]+(b[0]-t[0])*z2/h);
-						p[5] = -(t[1]+(b[1]-t[1])*z2/h);
-						p[6] = -(t[2]+(b[2]-t[2])*z2/h);
-						p[7] = -(t[3]+(b[3]-t[3])*z2/h);
 						coord.resize(8);
-						coord[0] = coord3d(x1,y1,p[0]);
-						coord[1] = coord3d(x1,y2,p[1]);
-						coord[2] = coord3d(x2,y1,p[2]);
-						coord[3] = coord3d(x2,y2,p[3]);
-						coord[4] = coord3d(x1,y1,p[4]);
-						coord[5] = coord3d(x1,y2,p[5]);
-						coord[6] = coord3d(x2,y1,p[6]);
-						coord[7] = coord3d(x2,y2,p[7]);
-						const element * e = FEM.add(var,layer[i].mat,coord);
+						coord[0] = coord3d(x1,y1,-z1);
+						coord[1] = coord3d(x1,y2,-z1);
+						coord[2] = coord3d(x2,y1,-z1);
+						coord[3] = coord3d(x2,y2,-z1);
+						coord[4] = coord3d(x1,y1,-z2);
+						coord[5] = coord3d(x1,y2,-z2);
+						coord[6] = coord3d(x2,y1,-z2);
+						coord[7] = coord3d(x2,y2,-z2);
+						const element * e = FEM.add(var,*(layer[i].mat),coord);
 						if (y1 == 0.0)
 						//if (fixed<8>(z1)+layer[i].top == layer[0].bot)
 							face.add(e);
 						if (x1 == -EDGE) {
 							if (y1 == -EDGE) {
 								coord.resize(2);
-								coord[0] = coord3d(x1,y1,p[0]);
-								coord[1] = coord3d(x1,y1,p[4]);
-								FEM.add(inf,layer[i].mat,coord);
+								coord[0] = coord3d(x1,y1,-z1);
+								coord[1] = coord3d(x1,y1,-z2);
+								FEM.add(inf,*(layer[i].mat),coord);
 							} if (y2 == EDGE) {
 								coord.resize(2);
-								coord[0] = coord3d(x1,y2,p[1]);
-								coord[1] = coord3d(x1,y2,p[5]);
-								FEM.add(inf,layer[i].mat,coord);
+								coord[0] = coord3d(x1,y2,-z1);
+								coord[1] = coord3d(x1,y2,-z2);
+								FEM.add(inf,*(layer[i].mat),coord);
 							}
 							coord.resize(4);
-							coord[0] = coord3d(x1,y1,p[0]);
-							coord[1] = coord3d(x1,y2,p[1]);
-							coord[2] = coord3d(x1,y1,p[4]);
-							coord[3] = coord3d(x1,y2,p[5]);
-							FEM.add(inf,layer[i].mat,coord);
+							coord[0] = coord3d(x1,y1,-z1);
+							coord[1] = coord3d(x1,y2,-z1);
+							coord[2] = coord3d(x1,y1,-z2);
+							coord[3] = coord3d(x1,y2,-z2);
+							FEM.add(inf,*(layer[i].mat),coord);
 						} else if (x2 == EDGE) {
 							if (y1 == -EDGE) {
 								coord.resize(2);
-								coord[0] = coord3d(x2,y1,p[2]);
-								coord[1] = coord3d(x2,y1,p[6]);
-								FEM.add(inf,layer[i].mat,coord);
+								coord[0] = coord3d(x2,y1,-z1);
+								coord[1] = coord3d(x2,y1,-z2);
+								FEM.add(inf,*(layer[i].mat),coord);
 							} if (y2 == EDGE) {
 								coord.resize(2);
-								coord[0] = coord3d(x2,y2,p[3]);
-								coord[1] = coord3d(x2,y2,p[7]);
-								FEM.add(inf,layer[i].mat,coord);
+								coord[0] = coord3d(x2,y2,-z1);
+								coord[1] = coord3d(x2,y2,-z2);
+								FEM.add(inf,*(layer[i].mat),coord);
 							}
 							coord.resize(4);
-							coord[0] = coord3d(x2,y1,p[2]);
-							coord[1] = coord3d(x2,y2,p[3]);
-							coord[2] = coord3d(x2,y1,p[6]);
-							coord[3] = coord3d(x2,y2,p[7]);
-							FEM.add(inf,layer[i].mat,coord);
+							coord[0] = coord3d(x2,y1,-z1);
+							coord[1] = coord3d(x2,y2,-z1);
+							coord[2] = coord3d(x2,y1,-z2);
+							coord[3] = coord3d(x2,y2,-z2);
+							FEM.add(inf,*(layer[i].mat),coord);
 						}
 						if (y1 == -EDGE) {
 							coord.resize(4);
-							coord[0] = coord3d(x1,y1,p[0]);
-							coord[1] = coord3d(x2,y1,p[2]);
-							coord[2] = coord3d(x1,y1,p[4]);
-							coord[3] = coord3d(x2,y1,p[6]);
-							FEM.add(inf,layer[i].mat,coord);
+							coord[0] = coord3d(x1,y1,-z1);
+							coord[1] = coord3d(x2,y1,-z1);
+							coord[2] = coord3d(x1,y1,-z2);
+							coord[3] = coord3d(x2,y1,-z2);
+							FEM.add(inf,*(layer[i].mat),coord);
 						} if (y2 == EDGE) {
 							coord.resize(4);
-							coord[0] = coord3d(x1,y2,p[1]);
-							coord[1] = coord3d(x2,y2,p[3]);
-							coord[2] = coord3d(x1,y2,p[5]);
-							coord[3] = coord3d(x2,y2,p[7]);
-							FEM.add(inf,layer[i].mat,coord);
+							coord[0] = coord3d(x1,y2,-z1);
+							coord[1] = coord3d(x2,y2,-z1);
+							coord[2] = coord3d(x1,y2,-z2);
+							coord[3] = coord3d(x2,y2,-z2);
+							FEM.add(inf,*(layer[i].mat),coord);
 						}
 					}
 				}
@@ -2754,6 +2636,7 @@ core()
 			mesh::X|mesh::Y|mesh::Z,0.0);
 	
 	// Generate our random fields.
+	/*
 	unsigned np = 0;
 	while (double(FEM.getorderednode(np).z) == 0.0)
 		np++;
@@ -2790,6 +2673,7 @@ core()
 		fprintf(f,"%6g,\t%6g,\t%6g,\t%6g\n",double(p1.x),double(p1.y),B[i],A[i]);
 	}
 	fclose(f);
+	*/
 		
 	FEM.solve(1e-25);
 
@@ -2855,6 +2739,8 @@ core()
 	results(face,poly,"bot");*/
 
 	timeme("\n");
+	for (unsigned i = 0; i < layer.length(); i++)
+		delete layer[i].mat;
 	return;
 }
 
@@ -2880,9 +2766,7 @@ main_test()
 	timeme();
 	printf("Constructing Mesh...");
 
-	material m;
-	m.setprop(material_property::emod,1000);
-	m.setprop(material_property::poissons,0.2);
+	material m(1000,0.2);
 
 	const double cube[3][2] = {{-10, 10}, {-10, 10}, {-10, 0}};
 	const unsigned ndiv[3] = {80, 80, 50};
@@ -2989,9 +2873,7 @@ main_infinity()
 {
 	timeme();
 	
-	material m;
-	m.setprop(material_property::emod,100); // kPa
-	m.setprop(material_property::poissons,0.35);
+	material m(100,0.35);
 	mesh FEM;
 
 	sset<coord3d> coord(0,8);
