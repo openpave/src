@@ -73,7 +73,7 @@
 class set {
 public:
 	// The length. Nice for lots of things...
-	inline const unsigned length() const {
+	inline unsigned length() const {
 		return size;
 	}
 	// Check if an index is within the set...
@@ -401,8 +401,8 @@ protected:
 			return;
 		for (i = l, j = r-1, k = 0; ;
 				p = (p==i?j++:(p==j?i--:p)), k++) {
-			while (++i < p && !(this->value[i] > this->value[p]));
-			while (p < --j && !(this->value[p] > this->value[j]));
+			while (++i < p && !(this->value[i] > this->value[p])) {};
+			while (p < --j && !(this->value[p] > this->value[j])) {};
 			if (i >= j)
 				break;
 			swap(this->value[i],this->value[j]);
@@ -931,8 +931,8 @@ protected:
 			return;
 		for (i = l, j = r-1, k = 0; ;
 						p = (p==i?j++:(p==j?i--:p)), k++) {
-			while (++i < p && !(this->value[i] > this->value[p]));
-			while (p < --j && !(this->value[p] > this->value[j]));
+			while (++i < p && !(this->value[i] > this->value[p])) {};
+			while (p < --j && !(this->value[p] > this->value[j])) {};
 			if (i >= j)
 				break;
 			swap(this->value[i],this->value[j]);
@@ -1440,8 +1440,8 @@ protected:
 			return;
 		for (i = l, j = r-1, k = 0; ;
 				p = (p==i?j++:(p==j?i--:p)), k++) {
-			while (++i < p && !(this->key[i] > this->key[p]));
-			while (p < --j && !(this->key[p] > this->key[j]));
+			while (++i < p && !(this->key[i] > this->key[p])) {};
+			while (p < --j && !(this->key[p] > this->key[j])) {};
 			if (i >= j)
 				break;
 			swap(this->key[i],this->key[j]);
@@ -1512,8 +1512,8 @@ protected:
 			return;
 		for (i = l, j = r-1, k = 0; ;
 				p = (p==i?j++:(p==j?i--:p)), k++) {
-			while (++i < p && !(this->value[i] > this->value[p]));
-			while (p < --j && !(this->value[p] > this->value[j]));
+			while (++i < p && !(this->value[i] > this->value[p])) {};
+			while (p < --j && !(this->value[p] > this->value[j])) {};
 			if (i >= j)
 				break;
 			swap(this->key[i],this->key[j]);

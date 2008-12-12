@@ -391,7 +391,7 @@ public:
 	bool calc_odemark();
 	bool calc_fastnum();
 
-	const unsigned results() const {
+	inline unsigned results() const {
 		return data.length();
 	}
 	const pavedata & result(const point3d & p) const {
@@ -400,12 +400,12 @@ public:
 	const pavedata & result(const unsigned i) const {
 		return data[i];
 	}
-	const unsigned layers() const {
+	inline unsigned layers() const {
 		return length();
 	}
 	LElayer & layer(const unsigned l);
 
-	const unsigned loads() const {
+	inline unsigned loads() const {
 		return load.length();
 	}
 	const paveload & getload(const unsigned i) {
@@ -453,13 +453,13 @@ struct defldata : point3d {
  */
 class LEbackcalc : public LEsystem {
 public:
-	bool adddefl(const point3d & p, double d) {
+	inline bool adddefl(const point3d & p, double d) {
 		return defl.add(defldata(p,d));
 	}
-	bool adddefl(const defldata & d) {
+	inline bool adddefl(const defldata & d) {
 		return defl.add(d);
 	}
-	const unsigned deflections() {
+	inline unsigned deflections() {
 		return defl.length();
 	}
 	const defldata & getdefl(const unsigned i) {
