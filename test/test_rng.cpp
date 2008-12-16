@@ -1,6 +1,6 @@
 /**************************************************************************
 
-	TEST_THERMAL.CPP - A test harness for OpenPave.org code.
+	TEST_RNG.CPP - A test harness for rng.h.
 
 	$OpenPave$
 
@@ -19,58 +19,43 @@
 
 	The Initial Developer of the Original Software is Jeremy Lea.
 
-	Portions Copyright (C) 2008 OpenPave.org.
+	Portions Copyright (C) 2006-2008 OpenPave.org.
 
 	Contributor(s): Jeremy Lea <reg@openpave.org>.
 
 	History:
-		2008/11/21 - Created by Jeremy Lea <reg@openpave.org>
+		2008/09/12 - Created by Jeremy Lea <reg@openpave.org>
 
 **************************************************************************/
 
-#include "thermal.h"
-#include "mathplus.h"
+#include "event.h"
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include "rng.h"
 
-#ifdef NOBUILD
-
-#define NT 800
-#define TB 15.0
-#define ALPHA 2000.0
-
-double solution(double t, double z) {
-	double d = 1.0/24.0;
-	double y = 1.0/24.0/365.0;
-	double D = sqrt(2*ALPHA/d);
-	double Y = sqrt(2*ALPHA/y);
-	return TB+10.0*exp(-z/Y)*sin(t*y-z/Y)+5.0*exp(-z/D)*sin(t*d-z/D);
-}
-
+#ifdef BUILD
 int
-main()
+main(int argc, char * argv[])
 {
-	int t;
-	double tt, tb = TB;
-	double h, D = ALPHA;
-	double nd[NT+1], nt[NT+1];
-	double pd = 50.0, pt, at;
-	
-	for (t = 0; t < NT+1; t++) {
-		nd[t] = (2000.0/NT)*t;
-		nt[t] = solution(0,nd[t]);
-	}
-	h = nd[NT];
-	FEMthermal * system = new FEMthermal(1,&h,&D,NT+1,nd,nt,1,1);
+	int i, cnt, seed;
+	double x, y, pi;
+	const int NUM = 1000000;
 
-	for (t = 1; t < 24*365*30; t++) {
-		tt = solution(t,0);
-		tb = solution(t,h);
-		system->step(tt,tb);
-		system->interpolate(1,&pd,&pt);
-		at = solution(t,pd);
-		printf("%10.6g\t%10.6g\t%10.6g\n",pt,at,pt-at);
+	if (argc >= 2)
+		seed = strtol(argv[1], NULL, 10);
+	else
+		seed = 12345;
+	cnt = 0;
+	rng RNG(seed);
+	for (i = 0; i < NUM; i++) {
+		x = RNG.c0o1();
+		y = RNG.c0o1();
+		if (x*x + y*y < 1.0)
+			cnt++;
 	}
-	delete system;
+	pi = double(cnt) / NUM * 4;
+	printf("%f\n", pi);
+	return 0;
 }
-
 #endif
