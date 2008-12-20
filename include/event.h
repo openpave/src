@@ -77,8 +77,10 @@ void event_msg(const int level, const char * fmt, ...)
 	va_list args;
 
 	va_start(args,fmt);
-	if (level < EVENT_DEBUG && fmt != NULL)
+	if (level < EVENT_DEBUG && fmt != NULL) {
 		vfprintf(stderr,fmt,args);
+		fprintf(stderr,"\n");
+	}
 	va_end(args);
 }
 
@@ -148,13 +150,13 @@ void event_progress_bar(const int level, const double p,
 	va_start(args,fmt);
 	if (strlen(buf) > 0) {
 		memset(buf,'\b',strlen(buf));
-		event_msg(EVENT_NOTE,"%s",buf);
+		fprintf(stderr,"%s",buf);
 		buf[0] = '\0';
 	}
-	if (level == 0)
-		event_msg(EVENT_NOTE,fmt,args);
+	if (level == 0 && fmt != NULL)
+		vfprintf(stderr,fmt,args);
 	sprintf(buf,"(%3.0f%%)",(p<0.0?0.0:(p>1.0?1.0:p))*100);
-	event_msg(EVENT_NOTE,"%s",buf);
+	fprintf(stderr,"%s",buf);
 	va_end(args);
 }
 
@@ -195,7 +197,7 @@ void event_progress(const int type, const int marker,
 		if (level < 3)
 			max[level] = 0, mark[level] = 0;
 		if (level == 0)
-			event_msg(EVENT_NOTE,"\n");
+			fprintf(stderr,"\n");
 		break;
 		level--;
 	default:
