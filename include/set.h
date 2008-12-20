@@ -164,8 +164,10 @@ protected:
 		V _v;
 		explicit _V() : _v() {}
 		explicit _V(const V & v) : _v(v) {}
-		void *operator new(size_t, void * p) {
+		void * operator new(size_t, void * p) {
 			return p;
+		} 
+		void operator delete(void * , void *) {
 		} 
 	};
 
@@ -629,8 +631,10 @@ protected:
 		V _v;
 		explicit _V() : _v() {}
 		explicit _V(const V & v) : _v(v) {}
-		void *operator new(size_t, void * p) {
+		void * operator new(size_t, void * p) {
 			return p;
+		} 
+		void operator delete(void * , void *) {
 		} 
 	};
 
@@ -770,8 +774,10 @@ protected:
 		V _v;
 		explicit _V() : _v() {}
 		explicit _V(const V & v) : _v(v) {}
-		void *operator new(size_t, void * p) {
+		void * operator new(size_t, void * p) {
 			return p;
+		} 
+		void operator delete(void * , void *) {
 		} 
 	};
 
@@ -1101,8 +1107,10 @@ protected:
 		V _v;
 		explicit _V() : _v() {}
 		explicit _V(const V & v) : _v(v) {}
-		void *operator new(size_t, void * p) {
+		void * operator new(size_t, void * p) {
 			return p;
+		} 
+		void operator delete(void * , void *) {
 		} 
 	};
 
@@ -1245,16 +1253,20 @@ protected:
 		K _k;
 		explicit _K() : _k() {}
 		explicit _K(const K & k) : _k(k) {}
-		void *operator new(size_t, void * p) {
+		void * operator new(size_t, void * p) {
 			return p;
+		} 
+		void operator delete(void * , void *) {
 		} 
 	};
 	struct _V {                // Placement new wrapper
 		V _v;
 		explicit _V() : _v() {}
 		explicit _V(const V & v) : _v(v) {}
-		void *operator new(size_t, void * p) {
+		void * operator new(size_t, void * p) {
 			return p;
+		} 
+		void operator delete(void * , void *) {
 		} 
 	};
 
