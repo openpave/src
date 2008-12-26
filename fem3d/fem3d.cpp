@@ -424,6 +424,8 @@ private:
 	void *operator new(size_t, void * p) {
 		return p;
 	} 
+	void operator delete(void *, void *) {
+	} 
 };
 
 /*
@@ -917,12 +919,44 @@ protected:
 			xe[i][0] = c.x; xe[i][1] = c.y;
 			xe[i][2] = node_depth_callback(c,owner,&mat);
 		}
+		if (sx == inf_pos) {
+			xe[2][2] = xe[0][2]; xe[3][2] = xe[1][2];
+			xe[6][2] = xe[4][2]; xe[7][2] = xe[5][2];
+		}
+		if (sx == inf_neg) {
+			xe[0][2] = xe[2][2]; xe[1][2] = xe[3][2];
+			xe[4][2] = xe[6][2]; xe[5][2] = xe[7][2];
+		}
+		if (sy == inf_pos) {
+			xe[1][2] = xe[0][2]; xe[3][2] = xe[2][2];
+			xe[5][2] = xe[4][2]; xe[7][2] = xe[6][2];
+		}
+		if (sy == inf_neg) {
+			xe[0][2] = xe[1][2]; xe[2][2] = xe[3][2];
+			xe[4][2] = xe[5][2]; xe[6][2] = xe[7][2];
+		}
 	}
 	// Build a matrix of the emod delta values.
 	void buildEe(double * Ee) const {
 		for (unsigned i = 0; i < nnd; i++) {
 			const coord3d & c = getnode(inel[i]);
 			Ee[i] = node_emod_callback(c,owner,&mat) - mat.emod;
+		}
+		if (sx == inf_pos) {
+			Ee[2] = Ee[0]; Ee[3] = Ee[1];
+			Ee[6] = Ee[4]; Ee[7] = Ee[5];
+		}
+		if (sx == inf_neg) {
+			Ee[0] = Ee[2]; Ee[1] = Ee[3];
+			Ee[4] = Ee[6]; Ee[5] = Ee[7];
+		}
+		if (sy == inf_pos) {
+			Ee[1] = Ee[0]; Ee[3] = Ee[2];
+			Ee[5] = Ee[4]; Ee[7] = Ee[6];
+		}
+		if (sy == inf_neg) {
+			Ee[0] = Ee[1]; Ee[2] = Ee[3];
+			Ee[4] = Ee[5]; Ee[6] = Ee[7];
 		}
 	}
 	// Build a matrix of the nodal deflections.
@@ -1128,7 +1162,6 @@ protected:
 		for (n = 0; n < c.length(); n++) {
 			pavedata & d = data[n];
 			// Stress and strain tensors.
-			ematrix e(0.0);
 			l[0] = c[n].x, l[1] = c[n].y, l[2] = c[n].z;
 			buildSF(true,l[0],l[1],l[2],N,dNdr,mask);
 			for (j = 0; j < NDIM; j++) {
@@ -1156,6 +1189,7 @@ protected:
 			double emod = 0.0;
 			for (k = 0; k < nnd; k++)
 				emod += N[k]*Ee[k];
+			ematrix e(0.0);
 			for (i = 0; i < NDIM; i++) {
 				for (j = 0; j < NDOF; j++) {
 					for (k = 0; k < nnd; k++)
@@ -1319,8 +1353,7 @@ private:
 		case cubic:     return dN_4(n,r);
 		case inf_pos:   return (ismap ? dMpi(n,r) : dNpi(n,r));
 		case inf_neg:   return (ismap ? dMni(n,r) : dNni(n,r));
-		}
-		assert(false); return 0.0;
+		} assert(false); return 0.0;
 	}
 };
 
@@ -1595,6 +1628,8 @@ public:
 				for (unsigned k = 0; k < i; k++)
 					d->K(i,i) -= d->K(k,i)*d->K(k,i);
 				assert(d->K(i,i) > 0.0);
+				if (d->K(i,i) < DBL_EPSILON)
+					printf("OOOOPS... (%g) %i/%i %i",d->K(i,i),n,nnd,i);
 				// NOTE: We store the inverse of the diagonal to avoid
 				// divisions.
 				d->K(i,i) = 1.0/sqrt(d->K(i,i));
