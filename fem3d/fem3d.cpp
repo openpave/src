@@ -2254,7 +2254,7 @@ sset<femlayer> layer;
 double * L[6];
 
 double
-node_depth_callback(const coord3d & c, const mesh * FEM, const material * mat)
+node_depth_callback_real(const coord3d & c, const mesh * FEM, const material * mat)
 {
 	unsigned i = 0, n;
 	
@@ -2279,7 +2279,7 @@ node_depth_callback(const coord3d & c, const mesh * FEM, const material * mat)
 }
 
 double
-node_emod_callback(const coord3d & c, const mesh * FEM, const material * mat)
+node_emod_callback_real(const coord3d & c, const mesh * FEM, const material * mat)
 {
 	unsigned i = 0, n;
 	
@@ -2482,7 +2482,7 @@ LEresults(const fset<const element *> & e, const fset<point3d> & c,
 #define EDGE (4096)
 
 int
-main()
+main_real()
 {
 	timeme();
 
@@ -2684,8 +2684,8 @@ main()
 			double z1 = stop[j  ];
 			double z2 = stop[j-1];
 			printf("%.0f\t%.0f\t%f\t%i\n",filling.xp(),filled.xp(),z1,i);
-			element::element_t var = (double(stop[j]) <= 0 ?
-					element::variable34 : element::variable18);
+			element::element_t var = (i == 0 ?
+					element::variable34 : element::variable26);
 			element::element_t inf = (var == element::variable34 ?
 					element::infinite16 : var == element::variable26 ?
 					element::infinite12 : element::infinite8);
@@ -2976,19 +2976,19 @@ main()
 }
 
 double
-node_depth_callback_test(const coord3d & c, const mesh * FEM, const material * mat)
+node_depth_callback(const coord3d & c, const mesh * FEM, const material * mat)
 {
 	return c.z;
 }
 
 double
-node_emod_callback_test(const coord3d & c, const mesh * FEM, const material * mat)
+node_emod_callback(const coord3d & c, const mesh * FEM, const material * mat)
 {
 	return mat->emod;
 }
 
 int
-main_test()
+main()
 {
 	timeme();
 	printf("Constructing Mesh...");
@@ -2996,7 +2996,7 @@ main_test()
 	material m(1000,0.2);
 
 	const double cube[3][2] = {{-10, 10}, {-10, 10}, {-10, 0}};
-	const unsigned ndiv[3] = {8, 8, 8};
+	const unsigned ndiv[3] = {1, 1, 1};
 	unsigned i, j, k;
 	mesh FEM;
 	cset<const element *> face;
