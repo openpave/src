@@ -713,7 +713,7 @@ public:
 	virtual smatrix_elem * stiffness() const = 0;
 	virtual void results(const fset<point3d> &, fset<pavedata> &) const = 0;
 	
-protected:
+//protected:
 	friend class mesh;
 
 	const material & mat;
