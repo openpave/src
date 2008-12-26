@@ -2238,13 +2238,15 @@ bool isvar;
 struct femlayer {
 	fixed<8> top;
 	fixed<8> bot;
+	fixed<8> etop;
+	fixed<8> ebot;
 	material mat;
 	
 	femlayer()
-	  : top(0.0), bot(0.0), mat(0.0,0.0) {
+	  : top(0.0), bot(0.0), etop(0.0), ebot(0.0), mat(0.0,0.0) {
 	}
 	femlayer(double t, double b, double e, double v)
-	  : top(t), bot(b), mat(e,v) {
+	  : top(t), bot(b), etop(0.0), ebot(0.0), mat(e,v) {
 	}
 };
 
@@ -2333,22 +2335,22 @@ blockarea(double x1, double x2, double y1, double y2, double r)
  * are mesh points.
  */
 struct region {
-	cset<fixed<8> > xstops;
-	cset<fixed<8> > ystops;
+	cset<fixed<8> > xstop;
+	cset<fixed<8> > ystop;
 	
 	region() {
 	}
 	fixed<8> xm() {
-		return xstops[0];
+		return xstop[0];
 	}
 	fixed<8> xp() {
-		return xstops[xstops.length()-1];
+		return xstop[xstop.length()-1];
 	}
 	fixed<8> ym() {
-		return ystops[0];
+		return ystop[0];
 	}
 	fixed<8> yp() {
-		return ystops[ystops.length()-1];
+		return ystop[ystop.length()-1];
 	}
 	bool overlaps(double x1, double y1, double x2, double y2) {
 		fixed<8> fxm(x1), fym(y1), fxp(x2), fyp(y2);
@@ -2400,8 +2402,8 @@ struct region_list : sset<region> {
 					region & r1 = (*this)[i];
 					region & r2 = (*this)[j];
 					if (r1.overlaps(r2)) {
-						r1.xstops.add(r2.xstops); r1.xstops.sort();
-						r1.ystops.add(r2.ystops); r1.ystops.sort();
+						r1.xstop.add(r2.xstop); r1.xstop.sort();
+						r1.ystop.add(r2.ystop); r1.ystop.sort();
 						remove(j);
 						didmerge = true;
 					}
@@ -2464,26 +2466,32 @@ main()
 		layer.add(femlayer(l.top(),l.bottom(),l.emod(),l.poissons()));
 	}
 
-	double x, y, z = 0.0, zmax = 0.0, rmax = 0.0, zp = 0.0, zm = 0.0;
+	double x = 0.0, y = 0.0, z = 0.0, zmax = 0.0, rmax = 0.0;
 	double dx, dy, dz, delta = 4;
 	unsigned step = 4;
 	mesh FEM;
 	fset<coord3d> coord(8);
 	cset<const element *> face;
 	cset<const element *> base;
-	cset<fixed<8> > stops;
+	sset<fixed<8> > stop;
+	sset<unsigned> level;
 	region_list filled, filling;
 
-	test.addload(point2d(0.0,0.0),0.0,690.0,100.0);
-	//test.addload(point2d(-160.0,0.0),0.0,690.0,100.0);
-	//test.addload(point2d( 160.0,0.0),0.0,690.0,100.0);
+	//test.addload(point2d(0.0,0.0),0.0,690.0,100.0);
+	test.addload(point2d(-160.0,0.0),0.0,690.0,100.0);
+	test.addload(point2d( 160.0,0.0),0.0,690.0,100.0);
 
 	// Find the step size, which depends on our tires.
 	for (unsigned i = 0; i < test.loads(); i++) {
+		x += test.getload(i).x;
+		y += test.getload(i).y;
 		double r = test.getload(i).radius();
 		if (r > rmax)
 			rmax = r;
 	}
+	x /= test.loads(); y /= test.loads();
+	assert(x == 0.0);
+	assert(y == 0.0);
 	while ((step-2)*delta < rmax)
 		step *= 2;
 
@@ -2492,17 +2500,13 @@ main()
 	for (unsigned i = 0; i < test.loads(); i++) {
 		double lx = test.getload(i).x;
 		double ly = test.getload(i).y;
+		lx = 2*dx*(lx < 0 ? floor(lx/dx/2) : ceil(lx/dx/2));
+		ly = 2*dy*(ly < 0 ? floor(ly/dy/2) : ceil(ly/dy/2));
 		double lr = test.getload(i).radius();
 		double F = -test.getload(i).pressure();
 		for (x = lx - (step-2)*dx; x < lx + (step-2)*dx; x += 2*dx) {
 			for (y = ly -(step-2)*dy; y < ly + (step-2)*dy; y += 2*dy) {
 				double ba = blockarea(x-lx,x+2*dx-lx,y-ly,y+2*dx-ly,lr);
-				//if (ba == 4*dx*dy) {
-				//	FEM.addnode(coord3d(x     ,y     ,0.0));
-				//	FEM.addnode(coord3d(x+2*dx,y     ,0.0));
-				//	FEM.addnode(coord3d(x     ,y+2*dy,0.0));
-				//	FEM.addnode(coord3d(x+2*dx,y+2*dy,0.0));
-				//} else
 				if (ba > 0.0) {
 					FEM.addnode(coord3d(x     ,y     ,0.0));
 					FEM.addnode(coord3d(x  +dx,y     ,0.0));
@@ -2553,76 +2557,115 @@ main()
 		}
 		region r;
 		for (x = lx - step*dx; x <= lx + step*dx; x += 2*dx)
-			r.xstops.add(x);
+			r.xstop.add(x);
 		for (y = ly - step*dy; y <= ly + step*dy; y += 2*dy)
-			r.ystops.add(y);
-		r.xstops.sort(); r.ystops.sort();
+			r.ystop.add(y);
+		r.xstop.sort(); r.ystop.sort();
 		filling.add(r);
 	}
 	filling.merge();
-	step /= 2; delta *= 2; dz = 4*delta;
+	printf("Loads: [%f %f] x [%f %f]\n",filling.xm(),filling.xp(),
+			filling.ym(),filling.yp());
+	for (unsigned i = 0; i < filling.length(); i++) {
+		region & r = filling[i];
+		printf(" %i: [%f %f] x [%f %f]\n",i,double(r.xm()),double(r.xp()),double(r.ym()),double(r.yp()));
+	}
+	step /= 2; delta *= 2;
 
-	// add the depth stops.
-	zmax = layer[layer.length()-1].bot; zp = zm = layer[0].top;
-	stops.add(layer[0].top);
-	while (zm < zmax) {
-		for (z = zm; z < MIN(zp+step*dz,zmax); z += dz)
-			stops.add(MIN(z+dz,zmax));
-		dz *= 2; zm = z;
-	}
-	// now scale them to the layers
+	// Find the equivalent layer top and bottom.
+	// XXX: This relies on decreasing emod with depth.
 	for (unsigned i = 0; i < layer.length(); i++) {
-		femlayer & l = layer[i];
-		unsigned t = 0, b = 0;
-		while (t < stops.length() && stops[t] < l.top)
-			t++;
-		// Test if we're below all the stops.
-		if (t == stops.length())
-			break;
-		assert(stops[t] == l.top);
-		while (b < stops.length() && stops[b] < l.bot)
-			b++;
-		assert(b < stops.length());
-		if (stops[b] == l.bot)
-			continue;
-		// Find the closest stop.
-		if (stops[b-1]-l.bot < l.bot-stops[b])
-			b--;
-		// Now scale these stops to match the layer.
-		double hl = l.bot - l.top, hs = stops[b] - stops[t];
-		for (unsigned j = b; j > t; j--) {
-			stops[j] = double(l.top) + double(stops[j]-stops[t])*hl/hs;
+		double h = layer[i].bot - layer[i].top, he = h;
+		layer[i].etop = (i == 0 ? 0.0 : double(layer[i-1].ebot));
+		for (unsigned j = i+1; j < layer.length(); j++) {
+			double v = layer[j-1].mat.v;
+			double E = layer[j-1].mat.emod;
+			double v1 = layer[j].mat.v;
+			double E1 = layer[j].mat.emod;
+			he *= pow(E/E1*(1+v1*v1)/(1+v*v),1.0/3.0);
 		}
-		t = b; b = stops.length() - 1;
-		hl = zmax - double(l.bot); hs = stops[b] - stops[t];
-		for (unsigned j = b; j > t; j--) {
-			stops[j] = double(l.bot) + double(stops[j]-stops[t])*hl/hs;
-		}
-		stops.sort();
+		layer[i].ebot = double(layer[i].etop) + he;
 	}
+	unsigned zskip = step, zi = 0;
+	// add the depth stops.
+	assert(step % zskip == 0);
+	dz = zskip*delta;
+	zmax = layer[layer.length()-1].ebot; z = layer[0].etop;
+	stop.add(z); level.add(zi);
+	while (z < zmax) {
+		unsigned zscale = 4; //(zi == 0 ? 4 : zi == 1 ? 6 : 8);
+		for (; z < zscale*step*dz/zskip; z += dz) {
+			stop.add(z+dz); level.add(zi);
+		}
+		dz *= 2; zi++;
+	}
+	for (unsigned j = 0; j < stop.length(); j++)
+		stop[j] = double(stop[j])*zmax/z;
+	// now scale them to the layers
+	for (unsigned i = 0, t = 0, b; i < layer.length(); i++) {
+		femlayer & l = layer[i];
+		assert(t < stop.length());
+		assert(stop[t] == l.etop);
+		b = t;
+		while (b < stop.length() && stop[b] < l.ebot)
+			b++;
+		assert(b < stop.length());
+		// Find the closest stop.
+		if (fabs(stop[b-1]-l.ebot) < fabs(l.ebot-stop[b]))
+			b--;
+		if (b == t)
+			b = t+1;
+		unsigned s = 1;
+		//if (i == 0)
+		//	s = 3; // Make sure we have three nodes in the top layer.
+		while (b < stop.length() && (b-t)%s > 0)
+			b++;
+		if (b == stop.length()) {
+			b = stop.length() - 1;
+			s = b-t;
+		} else
+			s--;
+		for (unsigned j = t+1; j < b; j++, b -= s) {
+			for (unsigned k = 0; k < s; k++) {
+				stop.remove(j); level.remove(j);
+			}
+		}
+		// Now scale these stop to match the layer.
+		double hl = l.bot - l.top, hs = stop[b] - stop[t];
+		for (unsigned j = t; j < b; j++)
+			stop[j] = double(l.bot) - double(stop[b]-stop[j])*hl/hs;
+		t = b; b = stop.length() - 1;
+		assert(double(stop[b]) == zmax);
+		hl = zmax - double(l.ebot); hs = stop[b] - stop[t];
+		for (unsigned j = t; j < b; j++)
+			stop[j] = zmax - double(stop[b]-stop[j])*hl/hs;
+	}
+	stop[stop.length()-1] = zmax = layer[layer.length()-1].bot;
 
 	// Now add the elements from below the tire, working outwards.
-	unsigned zip = step, zim = 0;
-	while (zim < stops.length() || filled.xp() < EDGE) {
-		for (unsigned i = 0, j = 1; j-1 < zip && j < stops.length(); j++) {
-			while (i < layer.length() && stops[j] > layer[i].bot)
+	zi = 0;
+	while (zi <= level[level.length()-1] || filled.xp() < EDGE) {
+		for (unsigned i = 0, j = 1; j < stop.length() && level[j] <= zi; j++) {
+			while (i < layer.length() && stop[j] > layer[i].bot)
 				i++;
-			double z1 = stops[j  ];
-			double z2 = stops[j-1];
-			printf("%.0f\t%.0f\t%f\t%f\t%f\t%i\n",filling.xp(),filled.xp(),double(stops[MIN(zim,stops.length()-1)]),z1,double(stops[MIN(zip,stops.length()-1)]),i);
-			element::element_t var = (double(stops[j]) <= 0 ?
+			assert(i < layer.length());
+			double z1 = stop[j  ];
+			double z2 = stop[j-1];
+			printf("%.0f\t%.0f\t%f\t%i\n",filling.xp(),filled.xp(),z1,i);
+			element::element_t var = (double(stop[j]) <= 0 ?
 					element::variable34 : element::variable18);
 			element::element_t inf = (var == element::variable34 ?
-					element::infinite16 : element::infinite8);
+					element::infinite16 : var == element::variable26 ?
+					element::infinite12 : element::infinite8);
 			for (unsigned k = 0; k < filling.length(); k++) {
 				region & r = filling[k];
-				for (unsigned xi = 1; xi < r.xstops.length(); xi++) {
-					for (unsigned yi = 1; yi < r.ystops.length(); yi++) {
-						double x1 = double(r.xstops[xi-1]);
-						double x2 = double(r.xstops[xi]);
-						double y1 = double(r.ystops[yi-1]);
-						double y2 = double(r.ystops[yi]);
-						if (filled.overlaps(x1,y1,x2,y2) && j <= zim)
+				for (unsigned xi = 1; xi < r.xstop.length(); xi++) {
+					for (unsigned yi = 1; yi < r.ystop.length(); yi++) {
+						double x1 = double(r.xstop[xi-1]);
+						double x2 = double(r.xstop[xi]);
+						double y1 = double(r.ystop[yi-1]);
+						double y2 = double(r.ystop[yi]);
+						if (filled.overlaps(x1,y1,x2,y2) && level[j] < zi)
 							continue;
 						coord.resize(8);
 						coord[0] = coord3d(x1,y1,-z1);
@@ -2636,7 +2679,7 @@ main()
 						const element * e = FEM.add(var,layer[i].mat,coord);
 						if (y1 == 0.0)
 							face.add(e);
-						if (stops[j] == layer[0].bot)
+						if (stop[j] == layer[0].bot)
 							base.add(e);
 						if (x1 == -EDGE) {
 							if (y1 == -EDGE) {
@@ -2694,37 +2737,61 @@ main()
 				}
 			}
 		}
-		zim = zip; zip += step/2;
+		zi++;
+	printf("Just: [%f %f] x [%f %f]\n",filling.xm(),filling.xp(),
+			filling.ym(),filling.yp());
+	for (unsigned i = 0; i < filling.length(); i++) {
+		region & r = filling[i];
+		printf(" %i: [%f %f] x [%f %f]\n",i,double(r.xm()),double(r.xp()),double(r.ym()),double(r.yp()));
+	}
 		if (filling.xm() > -EDGE && filling.xp() < EDGE
 		 && filling.ym() > -EDGE && filling.yp() < EDGE) {
 			delta *= 2;
 			for (unsigned i = 0; i < filling.length(); i++) {
 				region & r = filling[i];
-				for (unsigned xi = 1; xi < r.xstops.length(); xi++)
-					r.xstops.remove(xi);
-				for (unsigned yi = 1; yi < r.ystops.length(); yi++)
-					r.ystops.remove(yi);
+				assert(r.xstop.length()%2 == 1);
+				assert(r.ystop.length()%2 == 1);
+				for (unsigned xi = 1; xi < r.xstop.length(); xi++)
+					r.xstop.remove(xi);
+				for (unsigned yi = 1; yi < r.ystop.length(); yi++)
+					r.ystop.remove(yi);
 			}
 		}
+	printf("Filled: [%f %f] x [%f %f]\n",filling.xm(),filling.xp(),
+			filling.ym(),filling.yp());
+	for (unsigned i = 0; i < filling.length(); i++) {
+		region & r = filling[i];
+		printf(" %i: [%f %f] x [%f %f]\n",i,double(r.xm()),double(r.xp()),double(r.ym()),double(r.yp()));
+	}
 		filled = filling; dx = delta; dy = delta;
 		for (unsigned i = 0; i < filling.length(); i++) {
 			region & r = filling[i];
 			double rx = double(r.xm() + r.xp())/2;
 			double ry = double(r.ym() + r.yp())/2;
+			rx = 2*dx*(rx < 0 ? floor(rx/dx/2) : ceil(rx/dx/2));
+			ry = 2*dy*(ry < 0 ? floor(ry/dy/2) : ceil(ry/dy/2));
 			for (x = r.xm(); x > MAX(rx-step*dx,-EDGE); x -= dx)
-				r.xstops.add(MAX(x-dx,-EDGE));
-			r.xstops.sort();
+				r.xstop.add(MAX(x-dx,-EDGE));
+			r.xstop.sort();
 			for (x = r.xp(); x < MIN(rx+step*dx, EDGE); x += dx)
-				r.xstops.add(MIN(x+dx, EDGE));
-			r.xstops.sort();
+				r.xstop.add(MIN(x+dx, EDGE));
+			r.xstop.sort();
 			for (y = r.ym(); y > MAX(ry-step*dy,-EDGE); y -= dy)
-				r.ystops.add(MAX(y-dy,-EDGE));
-			r.ystops.sort();
+				r.ystop.add(MAX(y-dy,-EDGE));
+			r.ystop.sort();
 			for (y = r.yp(); y < MIN(ry+step*dy, EDGE); y += dy)
-				r.ystops.add(MIN(y+dy, EDGE));
-			r.ystops.sort();
+				r.ystop.add(MIN(y+dy, EDGE));
+			r.ystop.sort();
+			assert(r.xstop.length()%2 == 1);
+			assert(r.ystop.length()%2 == 1);
 		}
 		filling.merge();
+	printf("Filling: [%f %f] x [%f %f]\n",filling.xm(),filling.xp(),
+			filling.ym(),filling.yp());
+	for (unsigned i = 0; i < filling.length(); i++) {
+		region & r = filling[i];
+		printf(" %i: [%f %f] x [%f %f]\n",i,double(r.xm()),double(r.xp()),double(r.ym()),double(r.yp()));
+	}
 	}
 	//FEM.add_bc_plane(mesh::X,mesh::at|mesh::below,-EDGE,
 	//		mesh::X,0.0);
@@ -2838,6 +2905,7 @@ main()
 		test.addpoint(point3d(x,y,-z));
 	}
 	test.calculate(LEsystem::all);
+
 	for (i = 0; i < nnd; i++) {
 		const node3d & n = FEM.getorderednode(i);
 		x = n.x; y = n.y; z = n.z; // XXX
