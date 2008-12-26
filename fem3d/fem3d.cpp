@@ -2424,26 +2424,57 @@ results(const fset<const element *> & e, const fset<point3d> & c,
 	fset<pavedata> data(c.length(),c.length());
 	
 	char fname[128];
-	sprintf(fname,"%s%d_%s.m",dname,run,(isvar?"3d":"1d"));
-	FILE * f = fopen(fname,"w");
+	sprintf(fname,"%s_%s_%05d.bin",dname,(isvar?"3d":"1d"),run);
+	FILE * f = fopen(fname,"wb");
 	for (unsigned i = 0; i < e.length(); i++) {
 		e[i]->results(c,data);
-		fprintf(f,"%s%s%d{%d} = [ ...\n",dname,(isvar?"3d":"1d"),run,i+1);
 		for (unsigned j = 0; j < data.length(); j++) {
-			pavedata & d = data[j];
-			fprintf(f,"%4g, %4g, %4g",d.x,d.y,d.z);
-			fprintf(f,", %4g, %4g, %4g",d.data[4][0],d.data[4][1],-d.data[4][2]);
-			fprintf(f,", %4g, %4g, %4g",d.data[5][0],d.data[5][1],d.data[5][2]);
-			fprintf(f,", %4g, %4g, %4g",d.data[6][0],d.data[6][1],d.data[6][2]);
-			fprintf(f,", %4g, %4g, %4g",d.data[7][0],d.data[7][1],d.data[7][2]);
-			fprintf(f,", %4g, %4g, %4g",d.data[8][0],d.data[8][1],d.data[8][2]);
-			fprintf(f,", %4g, %4g, %4g",d.data[0][0],d.data[0][1],d.data[0][2]);
-			fprintf(f,", %4g, %4g, %4g",d.data[1][0],d.data[1][1],d.data[1][2]);
-			fprintf(f,", %4g, %4g, %4g",d.data[2][0],d.data[2][1],d.data[2][2]);
-			fprintf(f,", %4g, %4g, %4g",d.data[3][0],d.data[3][1],d.data[3][2]);
-			fprintf(f,"; ... \n");
+			fwrite(&(data[j].x),sizeof(double),3,f);
+			fwrite(&(data[j].data[0][0]),sizeof(double),27,f);
 		}
-		fprintf(f,"];\n");
+		
+	}
+	fclose(f);
+}
+
+void
+LEresults(const fset<const element *> & e, const fset<point3d> & c,
+		const char * dname, LEsystem & le)
+{
+	fset<pavedata> data(c.length(),c.length());
+	
+	le.removepoints();
+	for (unsigned i = 0; i < e.length(); i++) {
+		e[i]->results(c,data);
+		unsigned il = 0;
+		while (&(layer[il].mat) != &(e[i]->mat))
+			il++;
+		for (unsigned j = 0; j < data.length(); j++) {
+			data[j].z *= -1;
+			le.addpoint(data[j],il);
+		}
+	}
+	le.calculate(LEsystem::all);
+
+	char fname[128];
+	sprintf(fname,"%s_%s_%05d.bin",dname,"3d",run);
+	FILE * f = fopen(fname,"wb");
+	for (unsigned i = 0; i < e.length(); i++) {
+		e[i]->results(c,data);
+		unsigned il = 0;
+		while (&(layer[il].mat) != &(e[i]->mat))
+			il++;
+		for (unsigned j = 0; j < data.length(); j++) {
+			data[j].z *= -1;
+			pavedata d(le.result(data[j],il));
+			d.z *= -1; d.data[4][2] *= -1;
+			swap(d.data[3][0],d.data[3][2]);
+			swap(d.data[8][0],d.data[8][2]);
+			d.data[1][1] *= -1; d.data[1][2] *= -1;
+			d.data[6][1] *= -1; d.data[6][2] *= -1;
+			fwrite(&(d.x),sizeof(double),3,f);
+			fwrite(&(d.data[0][0]),sizeof(double),27,f);
+		}
 	}
 	fclose(f);
 }
@@ -2472,6 +2503,7 @@ main()
 	mesh FEM;
 	fset<coord3d> coord(8);
 	cset<const element *> face;
+	cset<const element *> road;
 	cset<const element *> base;
 	sset<fixed<8> > stop;
 	sset<unsigned> level;
@@ -2677,6 +2709,8 @@ main()
 						coord[6] = coord3d(x2,y1,-z2);
 						coord[7] = coord3d(x2,y2,-z2);
 						const element * e = FEM.add(var,layer[i].mat,coord);
+						if (x1 == 0.0)
+							road.add(e);
 						if (y1 == 0.0)
 							face.add(e);
 						if (stop[j] == layer[0].bot)
@@ -2808,45 +2842,51 @@ main()
 	unsigned np = 0;
 	while (double(FEM.getorderednode(np).z) == 0.0)
 		np++;
-	double * A = new double[np];
-	double * C = new double[T_SIZE(np)];
-	if (A == 0 || C == 0) {
-		event_msg(EVENT_ERROR,"Ooops, out of memory...");
-		return 0;
-	}
 	for (unsigned l = 0; l < 2*layer.length(); l++) {
 		L[l] = new double[np];
-		if (L[l] == 0) {
+		/*double * C = new double[T_SIZE(np)];
+		if (L[l] == 0 || C == 0) {
 			event_msg(EVENT_ERROR,"Ooops, out of memory...");
 			return 0;
 		}
-		/*for (unsigned i = 0; i < np; i++) {
+
+		for (unsigned i = 0; i < np; i++) {
 			const node3d & p1 = FEM.getorderednode(i);
 			for (unsigned j = i; j < np; j++) {
 				const node3d & p2 = FEM.getorderednode(j);
 				double r = fabs(hypot(p1.x-p2.x,p1.y-p2.y));
 				C[T_IDX(i,j)] = (r > 6000.0 ? 0.0
-					: 1.0*(1-1.5*r/6000.0+0.5*pow(r/6000.0,3)));
+					: 5.0*(1-1.5*r/6000.0+0.5*pow(r/6000.0,3)));
 			}
 		}
 		decmp_chol_tri(np,C);
+
 		char fname[128];
 		sprintf(fname,"cor%d.tri",l);
-		FILE * f = fopen(fname,"w");
+		FILE * f = fopen(fname,"wb");
 		fwrite(C,sizeof(double),T_SIZE(np),f);
-		fclose(f);*/
+		fclose(f);
+
+		delete C;*/
 	}
 		
 	run = 1;
 	isvar = false;
 	rng RNG;
 	while (true) {
-		isvar = !isvar;
+		//isvar = !isvar;
 
 		for (unsigned l = 0; isvar && l < 2*layer.length(); l++) {
+			double * A = new double[np];
+			double * C = new double[T_SIZE(np)];
+			if (A == 0 || C == 0) {
+				event_msg(EVENT_ERROR,"Ooops, out of memory...");
+				return 0;
+			}
+			
 			char fname[128];
 			sprintf(fname,"cor%d.tri",l);
-			FILE * f = fopen(fname,"r");
+			FILE * f = fopen(fname,"rb");
 			fread(C,sizeof(double),T_SIZE(np),f);
 			fclose(f);		
 
@@ -2856,37 +2896,40 @@ main()
 				for (unsigned j = 0; j < i; j++)
 					L[l][i] += C[T_IDX(j,i)]*A[j];
 			}
+			delete A;
+			delete C;
 		}
 
-		FEM.solve(1e-25);
+		for (unsigned i = 0; i < FEM.getnodes(); i++) {
+			node3d n = FEM.getnode(i);
+			n.ux = 0.0; n.uy = 0.0; n.uz = 0.0;
+			FEM.updatenode(n);
+		}
+		FEM.solve(1e-33);
 
-		fset<point3d> fpoly(14);
-		fpoly[0]  = point3d(-1,-1,-3/3.0);
-		fpoly[1]  = point3d(-1,-1,-2/3.0);
-		fpoly[2]  = point3d(-1,-1,-1/3.0);
-		fpoly[3]  = point3d(-1,-1, 0/3.0);
-		fpoly[4]  = point3d(-1,-1, 1/3.0);
-		fpoly[5]  = point3d(-1,-1, 2/3.0);
-		fpoly[6]  = point3d(-1,-1, 3/3.0);
-		fpoly[7]  = point3d( 1,-1, 3/3.0);
-		fpoly[8]  = point3d( 1,-1, 2/3.0);
-		fpoly[9]  = point3d( 1,-1, 1/3.0);
-		fpoly[10] = point3d( 1,-1, 0/3.0);
-		fpoly[11] = point3d( 1,-1,-1/3.0);
-		fpoly[12] = point3d( 1,-1,-2/3.0);
-		fpoly[13] = point3d( 1,-1,-3/3.0);
-		results(face,fpoly,"face");
-
-		fset<point3d> bpoly(4);
-		bpoly[0]  = point3d(-1,-1,-1);
-		bpoly[1]  = point3d(-1, 1,-1);
-		bpoly[2]  = point3d( 1, 1,-1);
-		bpoly[3]  = point3d( 1,-1,-1);
-		results(base,bpoly,"base");
+		fset<point3d> poly(4);
+		poly[0] = point3d(-1,-1,-1);
+		poly[1] = point3d(-1,-1, 1);
+		poly[2] = point3d( 1,-1, 1);
+		poly[3] = point3d( 1,-1,-1);
+		results(face,poly,"face");
+		LEresults(face,poly,"face",test);
+		poly[0] = point3d(-1,-1,-1);
+		poly[1] = point3d(-1,-1, 1);
+		poly[2] = point3d(-1, 1, 1);
+		poly[3] = point3d(-1, 1,-1);
+		results(road,poly,"long");
+		LEresults(road,poly,"long",test);
+		poly[0] = point3d(-1,-1,-1);
+		poly[1] = point3d(-1, 1,-1);
+		poly[2] = point3d( 1, 1,-1);
+		poly[3] = point3d( 1,-1,-1);
+		results(base,poly,"base");
+		LEresults(base,poly,"base",test);
 
 		//if (isvar)
 		//	continue;
-		if (++run > 1)
+		//if (++run > 300)
 			break;
 	}
 
