@@ -68,7 +68,7 @@
 #include "set.h"
 #include "tmatrix.h"
 #include "matrix.h"
-#include "reliability.h"
+#include "rng.h"
 #include "pavement.h"
 
 #if defined(__FreeBSD__)
@@ -2679,6 +2679,7 @@ main()
 		
 	run = 1;
 	isvar = false;
+	rng RNG;
 	while (true) {
 		isvar = !isvar;
 
@@ -2690,7 +2691,7 @@ main()
 			fclose(f);		
 
 			for (unsigned i = 0; i < np; i++) {
-				A[i] = stdnormal_rnd();
+				A[i] = RNG.stdnormal();
 				L[l][i] = C[T_IDX(i,i)]*A[i];
 				for (unsigned j = 0; j < i; j++)
 					L[l][i] += C[T_IDX(j,i)]*A[j];
