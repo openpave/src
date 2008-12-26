@@ -421,7 +421,7 @@ private:
 		ux = t(0); uy = t(1); uz = t(2);
 	}
 	// Placement new to support inplace init in the list.
-	void *operator new(size_t, void * p) {
+	void * operator new(size_t, void * p) {
 		return p;
 	} 
 	void operator delete(void *, void *) {
@@ -1467,6 +1467,7 @@ class smatrix_diag {
 		}
 		return true;
 	}
+	
 	friend class smatrix;
 	friend class mesh;
 
@@ -1546,7 +1547,7 @@ public:
 		// We've either run off the end, or we don't have a matching
 		// node.  In this case we need to add one.
 		if (!d->expand(1))
-				return false;
+			return false;
 		// Now fill in the new element.
 		n = &(d->nodes[(d->nnz)++]);
 	  	if (j < i) {
@@ -1634,6 +1635,7 @@ public:
 		}*/
 		// Now call tidy to magically add these nodes.
 		tidy();
+
 		// Do the decomposition.
 		for (unsigned n = 0; n < nnd; n++) {
 			d = &(diag[n]);
@@ -1989,21 +1991,17 @@ public:
 				if ((node[gi].fixed & ((1<<NDOF)-1)) == 0
 				 || (node[gi].fixed & ((1<<NDOF)-1)) == ((1<<NDOF)-1))
 					continue;
-				// Zero out the columns which are fixed.
-				for (j = 0; j < (i+1); j++) {
+				// Zero out the columns/rows which are fixed.
+				for (j = 0; j < ke->nnd; j++) {
 					for (unsigned k = 0; k < NDOF; k++) {
 						if ((node[gi].fixed & (1<<k)) == 0)
 							continue;
-						for (unsigned l = 0; l < NDOF; l++)
-							(*ke)(j,i)(l,k) = 0.0;
-					}
-				}
-				for (j = i; j < ke->nnd; j++) {
-					for (unsigned k = 0; k < NDOF; k++) {
-						if ((node[gi].fixed & (1<<k)) == 0)
-							continue;
-						for (unsigned l = 0; l < NDOF; l++)
-							(*ke)(i,j)(k,l) = 0.0;
+						for (unsigned l = 0; l < NDOF; l++) {
+							if (i > j)
+								(*ke)(j,i)(l,k) = 0.0;
+							else
+								(*ke)(i,j)(k,l) = 0.0;
+						}
 					}
 				}
 			}
@@ -2057,33 +2055,34 @@ public:
 		double ri = r, a;
 		printf("with initial residual %g\n",ri);
 		
-		// Now compute first approximation.
 		// CG solution
 		while (true) {
+			// Compute first approximation on iteration 0.
 			for (i = 0; it == 0 && i < nnd; i++) {
 				d = &(K.diag[i]);
 				R(i) = F(i) - d->K*U(i);
 				p = d->col_head;
-				while (p) {
+				for (unsigned k = 0; k < d->nnz; k++, p++) { //while (p) {
 					   R(i) -= ~(p->K)*U(p->i);
 					R(p->i) -=  (p->K)*U(i);
-					p = p->col_next;
+					//p = p->col_next;
 				}
 			}
 			for (i = 0, r = 0.0; i < nnd; i++)
 				r += tmatrix_scalar<double>(~R(i)*R(i));
-			printf("CG step %i with residual %g",it+1,r);
+			printf("CG step %i with residual %g",it,r);
 			if (r < tol*ri || it >= nnd) {
 				timeme("\n");
 				break;
 			}
+			// Forward substitution of IC preconditioner.
 			for (n = 0; n < nnd; n++) {
 				d = &(M.diag[n]);
 				svector_dof t(R(n));
 				p = d->col_head;
-				while (p) {
+				for (unsigned k = 0; k < d->nnz; k++, p++) { //while (p) {
 					t -= ~(p->K)*V(p->i);
-					p = p->col_next;
+					//p = p->col_next;
 				}
 				for (i = 0; i < NDOF; i++) {
 					for (j = 0; j < i; j++)
@@ -2092,6 +2091,7 @@ public:
 				}
 				V(n) = t;
 			}
+			// Backward substitution of IC preconditioner.
 			for (n = nnd; n > 0; n--) {
 				d = &(M.diag[n-1]);
 				svector_dof t(V(n-1));
@@ -2102,11 +2102,12 @@ public:
 				}
 				V(n-1) = t;
 				p = d->col_head;
-				while (p) {
+				for (unsigned k = 0; k < d->nnz; k++, p++) { //while (p) {
 					V(p->i) -= (p->K)*t;
-					p = p->col_next;
+					//p = p->col_next;
 				}
 			}
+			// Update search direction
 			for (i = 0, r = 0.0; i < nnd; i++)
 				r += tmatrix_scalar<double>(~V(i)*R(i));
 			if (it == 0) {
@@ -2116,14 +2117,15 @@ public:
 				for (i = 0; i < nnd; i++)
 					P(i) = V(i) + (r/ro)*P(i);
 			}
+			// Multiply by stiffness matrix to get step.
 			for (i = 0; i < nnd; i++) {
 				d = &(K.diag[i]);
 				W(i) = d->K*P(i);
 				p = d->col_head;
-				while (p) {
+				for (unsigned k = 0; k < d->nnz; k++, p++) { //while (p) {
 					   W(i) += ~(p->K)*P(p->i);
 					W(p->i) +=  (p->K)*P(i);
-					p = p->col_next;
+					//p = p->col_next;
 				}
 			}
 			for (i = 0, a = 0.0; i < nnd; i++)
@@ -2134,6 +2136,19 @@ public:
 				U(i) += (ro/a)*P(i);
 				R(i) -= (ro/a)*W(i);
 			}
+			// Get real error.
+			/*for (i = 0; i < nnd; i++) {
+				d = &(K.diag[i]);
+				W(i) = F(i) - d->K*U(i);
+				p = d->col_head;
+				for (unsigned k = 0; k < d->nnz; k++, p++) {
+					   W(i) -= ~(p->K)*U(p->i);
+					W(p->i) -=  (p->K)*U(i);
+				}
+			}
+			for (i = 0, a = 0.0; i < nnd; i++)
+				a += tmatrix_scalar<double>(~W(i)*W(i));
+			printf(" (%g)",a);*/
 			it++;
 			timeme("\n");
 		}
