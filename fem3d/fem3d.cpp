@@ -193,8 +193,8 @@ principle(const ematrix & s)
 {
 	double t1, t2;
 
-    assert(NDIM == 3 && NDOF == 3); 
-    ematrix p(s);
+	assert(NDIM == 3 && NDOF == 3); 
+	ematrix p(s);
 
 	t1 = p(0,1)*p(0,1) + p(0,2)*p(0,2) + p(1,2)*p(1,2);
 	while (t1 > 1e-30) {
@@ -1418,12 +1418,14 @@ public:
 	}
 };
 
+class smatrix_diag;            // Forward declare.
 class smatrix;                 // Forward declare.
 
 /*
  * class smatrix_node - a node in a stiffness matrix
  */
 class smatrix_node {
+	friend class smatrix_diag;
 	friend class smatrix;
 	friend class mesh;
 
@@ -1436,6 +1438,35 @@ class smatrix_node {
  * class smatrix_diag - a diagonal in a stiffness matrix
  */
 class smatrix_diag {
+	// Add one element to the storage, fixing up as needed.
+	// The new elements will always start at nodes[nnz];
+	bool expand(unsigned nn) {
+		if (nnz+nn > nnd) {
+			// We're out of space, so allocate more.
+			nnd = nnz+nn;
+			smatrix_node * temp =
+					static_cast<smatrix_node *>
+					(realloc(nodes,nnd*sizeof(smatrix_node)));
+			if (temp == 0) {
+				event_msg(EVENT_ERROR,"Out of memory in smatrix_diag::insert()!");
+				return false;
+			}
+			// If realloc moved us we need to fix up everyone's pointers.
+			// This is finds the offset into the old array, and then adds
+			// that to the new array.
+			if (nodes != temp) {
+				if (col_head != 0)
+					col_head = temp + (col_head - nodes);
+				for (unsigned k = 0; k < nnz; k++) {
+					smatrix_node * n = &(temp[k]);
+					if (n->col_next != 0)
+						n->col_next = temp + (n->col_next - nodes);
+				}
+				nodes = temp;
+			}
+		}
+		return true;
+	}
 	friend class smatrix;
 	friend class mesh;
 
@@ -1470,13 +1501,8 @@ public:
 		for (unsigned i = 0; i < nnd; i++) {
 			smatrix_diag * d = &(A.diag[i]);
 			// Pre-allocate the space.
-			diag[i].nodes = static_cast<smatrix_node *>
-					(malloc(d->nnz*sizeof(smatrix_node)));
-			if (diag[i].nodes == 0) {
-				event_msg(EVENT_ERROR,"Out of memory in smatrix::smatrix()!");
+			if (!diag[i].expand(d->nnz))
 				return;
-			}
-			diag[i].nnd = d->nnz;
 			append(i,i,d->K);
 			smatrix_node * p = d->col_head;
 			while (p) {
@@ -1519,30 +1545,8 @@ public:
 		}
 		// We've either run off the end, or we don't have a matching
 		// node.  In this case we need to add one.
-		if (d->nnz+1 > d->nnd) {
-			// We're out of space, so allocate more.
-			d->nnd = d->nnz+1;
-			smatrix_node * temp =
-					static_cast<smatrix_node *>
-					(realloc(d->nodes,d->nnd*sizeof(smatrix_node)));
-			if (temp == 0) {
-				event_msg(EVENT_ERROR,"Out of memory in smatrix_diag::insert()!");
+		if (!d->expand(1))
 				return false;
-			}
-			// If realloc moved us we need to fix up everyone's pointers.
-			// This is finds the offset into the old array, and then adds
-			// that to the new array.
-			if (d->nodes != temp) {
-				if (d->col_head != 0)
-					d->col_head = temp + (d->col_head - d->nodes);
-				for (unsigned k = 0; k < d->nnz; k++) {
-					n = &(temp[k]);
-					if (n->col_next != 0)
-						n->col_next = temp + (n->col_next - d->nodes);
-				}
-				d->nodes = temp;
-			}
-		}
 		// Now fill in the new element.
 		n = &(d->nodes[(d->nnz)++]);
 	  	if (j < i) {
@@ -1592,6 +1596,45 @@ public:
 		smatrix_diag * d;
 		smatrix_node * p;
 
+		// We want to do a level 1 fill, so we need to insert nodes.  We
+		// rely on some tricks here...  We know that we don't use nnz, only
+		// col_next, while tidy with only use nnz not col_next.  So we add
+		// nodes ourself without using append.  We also know that we're
+		// adding zeros, so we memset().
+		/*for (unsigned n = 0; n < nnd; n++) {
+			d = &(diag[n]);
+			p = d->col_head;
+			for (unsigned r = (p ? p->i : n); r < n; r++) {
+				p = d->col_head;
+				while (p && p->i < r)
+					p = p->col_next;
+				if (p && p->i == r)
+					continue;
+				smatrix_node * pi = diag[r].col_head;
+				smatrix_node * pj = d->col_head;
+				bool wouldadd = false;
+				while (pi != 0 && pj != 0) {
+					if (pi->i > pj->i)
+						pj = pj->col_next;
+					else if (pi->i < pj->i)
+						pi = pi->col_next;
+					else {
+						wouldadd = true;
+						break;
+					}
+				}
+				if (true || wouldadd) {
+					if (!d->expand(1))
+						return; // oops.
+					pj = &(d->nodes[(d->nnz)++]);
+					memset(pj,0,sizeof(smatrix_node));
+					pj->i = r;
+				}
+			}
+		}*/
+		// Now call tidy to magically add these nodes.
+		tidy();
+		// Do the decomposition.
 		for (unsigned n = 0; n < nnd; n++) {
 			d = &(diag[n]);
 			p = d->col_head;
@@ -2393,7 +2436,7 @@ results(const fset<const element *> & e, const fset<point3d> & c,
 int
 main()
 {
-    timeme();
+	timeme();
 
 	LEsystem test;
 	test.addlayer(  90.0,3000e3,0.35);
