@@ -756,35 +756,7 @@ protected:
 		coord3d cc[8], p, m;
 		
 		memcpy(cc,&c[0],8*sizeof(coord3d));
-		// First, sort the corners into the order we expect.
-		do {
-			m.x = cc[0].x + cc[1].x + cc[4].x + cc[5].x;
-			p.x = cc[2].x + cc[3].x + cc[6].x + cc[7].x;
-			m.y = cc[0].y + cc[2].y + cc[4].y + cc[6].y;
-			p.y = cc[1].y + cc[3].y + cc[5].y + cc[7].y;
-			m.z = cc[0].z + cc[1].z + cc[2].z + cc[3].z;
-			p.z = cc[4].z + cc[5].z + cc[6].z + cc[7].z;
-			if (p.x > m.x && p.y > m.y && p.z > m.z)
-				break;
-			if (p.x < m.x) {
-				swap(cc[0],cc[2]); swap(cc[4],cc[6]);
-				swap(cc[1],cc[3]); swap(cc[5],cc[7]);
-				continue;
-			}
-			if (p.y < m.y) {
-				swap(cc[0],cc[1]); swap(cc[4],cc[5]);
-				swap(cc[2],cc[3]); swap(cc[6],cc[7]);
-				continue;
-			}
-			if (p.z < m.z) {
-				swap(cc[0],cc[4]); swap(cc[2],cc[6]);
-				swap(cc[1],cc[5]); swap(cc[3],cc[7]);
-				continue;
-			}
-			event_msg(EVENT_ERROR,"Bad or degenerate element shape!");
-			return;
-		} while(true);
-		
+		coord_sort(cc);
 		// Add the corner nodes.
 		for (unsigned i = 0; i < nz; i++) {
 			for (unsigned j = 0; j < 4; j++) {
@@ -795,7 +767,7 @@ protected:
 			}
 		}
 		// If we have a mask, initialise it.
-		for (unsigned i = 0; mask != 0 && i < (4*nz+2); i++)
+		for (unsigned i = 0; mask != 0 && i < 5*nz; i++)
 			mask[i] = UINT_MAX;
 		// Loop over the nodes, setting the neighbours.
 		for (unsigned i = 0; i < 4*nz; i++) {
@@ -822,7 +794,7 @@ protected:
 						if ((i == 0 || i == 4*(nz-1))) {
 							const node3d & mid = getnode(n.yp);
 							if (mid.xp != UINT_MAX)
-								mask[i == 0 ? 4*nz : 4*nz+1] = mid.xp;
+								mask[4*nz+(i/4)] = mid.xp;
 						}
 					}
 					break;
@@ -853,7 +825,7 @@ protected:
 		}
 		// Add the extra nodes to our list and set the mask from the global
 		// node number to the item number in the list.
-		for (unsigned i = 0; mask && i < 4*nz+2; i++) {
+		for (unsigned i = 0; mask && i < 5*nz; i++) {
 			if (mask[i] != UINT_MAX) {
 				inel[nnd] = mask[i];
 				mask[i] = nnd++;
@@ -973,11 +945,12 @@ protected:
 			double * N, double (* dNdr)[NDIM],
 			const unsigned * mask = 0) const {
 		const unsigned nz = unsigned(SZ);
+		unsigned j;
 		double Nx = 0, Ny = 0, Nz = 0, dNdx = 0, dNdy = 0, dNdz = 0;
 
 		assert(NDIM == 3);
 		// Loop over each level in the element.
-		for (unsigned i = 0, j; i < nz; i++) {
+		for (unsigned i = 0; i < nz; i++) {
 			Nz = getN(ismap,SZ,i,gz); dNdz = getdN(ismap,SZ,i,gz);
 			// Start with the corners.
 			for (unsigned l = 0; l < 4; l++) {
@@ -1012,9 +985,7 @@ protected:
 			}
 			// If we're not the top or bottom we're done.  Else, build
 			// those.
-			if (i > 0 && i < nz-1)
-				continue;
-			if ((j = mask[(i == 0 ? 4*nz : 4*nz+1)]) == 0)
+			if ((j = mask[4*nz+i]) == 0)
 				continue;
 			Nx = 1-fabs(gx); dNdx = -SGN(gx);
 			Ny = 1-fabs(gy); dNdy = -SGN(gy);
@@ -1028,43 +999,33 @@ protected:
 		// Correct the shape functions for the corners and sides,
 		// depending on the existance of the extra nodes.
 		for (unsigned l = 0; l < 4*nz; l++) {
-			if (mask[l] != 0) {
-				N[l] -= N[mask[l]]/2;
-				dNdr[l][0] -= dNdr[mask[l]][0]/2;
-				dNdr[l][1] -= dNdr[mask[l]][1]/2;
-				dNdr[l][2] -= dNdr[mask[l]][2]/2;
+			if ((j = mask[l]) != 0) {
+				N[l] -= N[j]/2;
+				dNdr[l][0] -= dNdr[j][0]/2;
+				dNdr[l][1] -= dNdr[j][1]/2;
+				dNdr[l][2] -= dNdr[j][2]/2;
 			}
 			const int Jxy[4] = {+2,-1,+1,-2};
-			if (mask[l+Jxy[l%4]] != 0) {
-				N[l] -= N[mask[l+Jxy[l%4]]]/2;
-				dNdr[l][0] -= dNdr[mask[l+Jxy[l%4]]][0]/2;
-				dNdr[l][1] -= dNdr[mask[l+Jxy[l%4]]][1]/2;
-				dNdr[l][2] -= dNdr[mask[l+Jxy[l%4]]][2]/2;
+			if ((j = mask[l+Jxy[l%4]]) != 0) {
+				N[l] -= N[j]/2;
+				dNdr[l][0] -= dNdr[j][0]/2;
+				dNdr[l][1] -= dNdr[j][1]/2;
+				dNdr[l][2] -= dNdr[j][2]/2;
 			}
-			if (l < 4 && mask[4*nz] != 0) {
-				N[l] += N[mask[4*nz]]/4;
-				dNdr[l][0] += dNdr[mask[4*nz]][0]/4;
-				dNdr[l][1] += dNdr[mask[4*nz]][1]/4;
-				dNdr[l][2] += dNdr[mask[4*nz]][2]/4;
-			}
-			if (l >= 4*(nz-1) && mask[4*nz+1] != 0) {
-				N[l] += N[mask[4*nz+1]]/4;
-				dNdr[l][0] += dNdr[mask[4*nz+1]][0]/4;
-				dNdr[l][1] += dNdr[mask[4*nz+1]][1]/4;
-				dNdr[l][2] += dNdr[mask[4*nz+1]][2]/4;
+			if ((j = mask[4*nz+(l/4)]) != 0) {
+				N[l] += N[j]/4;
+				dNdr[l][0] += dNdr[j][0]/4;
+				dNdr[l][1] += dNdr[j][1]/4;
+				dNdr[l][2] += dNdr[j][2]/4;
 			}
 		}
-		for (unsigned l = 0; mask[4*nz] != 0 && l < 4; l++) {
-			N[mask[l]] -= N[mask[4*nz]]/2;
-			dNdr[mask[l]][0] -= dNdr[mask[4*nz]][0]/2;
-			dNdr[mask[l]][1] -= dNdr[mask[4*nz]][1]/2;
-			dNdr[mask[l]][2] -= dNdr[mask[4*nz]][2]/2;
-		}
-		for (unsigned l = 4*(nz-1); mask[4*nz+1] != 0 && l < 4*nz; l++) {
-			N[mask[l]] -= N[mask[4*nz+1]]/2;
-			dNdr[mask[l]][0] -= dNdr[mask[4*nz+1]][0]/2;
-			dNdr[mask[l]][1] -= dNdr[mask[4*nz+1]][1]/2;
-			dNdr[mask[l]][2] -= dNdr[mask[4*nz+1]][2]/2;
+		for (unsigned l = 0; l < 4*nz; l++) {
+			if ((j = mask[4*nz+(l/4)]) != 0) {
+				N[mask[l]] -= N[j]/2;
+				dNdr[mask[l]][0] -= dNdr[j][0]/2;
+				dNdr[mask[l]][1] -= dNdr[j][1]/2;
+				dNdr[mask[l]][2] -= dNdr[j][2]/2;
+			}
 		}
 	}
 	// Build the element stiffness matrix.
@@ -1235,6 +1196,38 @@ protected:
 	}
 
 private:
+	// This sorts the corners into the order we expect.
+	inline void coord_sort(coord3d (& cc)[8]) {
+		coord3d p, m;
+
+		do {
+			m.x = cc[0].x + cc[1].x + cc[4].x + cc[5].x;
+			p.x = cc[2].x + cc[3].x + cc[6].x + cc[7].x;
+			m.y = cc[0].y + cc[2].y + cc[4].y + cc[6].y;
+			p.y = cc[1].y + cc[3].y + cc[5].y + cc[7].y;
+			m.z = cc[0].z + cc[1].z + cc[2].z + cc[3].z;
+			p.z = cc[4].z + cc[5].z + cc[6].z + cc[7].z;
+			if (p.x > m.x && p.y > m.y && p.z > m.z)
+				break;
+			if (p.x < m.x) {
+				swap(cc[0],cc[2]); swap(cc[4],cc[6]);
+				swap(cc[1],cc[3]); swap(cc[5],cc[7]);
+				continue;
+			}
+			if (p.y < m.y) {
+				swap(cc[0],cc[1]); swap(cc[4],cc[5]);
+				swap(cc[2],cc[3]); swap(cc[6],cc[7]);
+				continue;
+			}
+			if (p.z < m.z) {
+				swap(cc[0],cc[4]); swap(cc[2],cc[6]);
+				swap(cc[1],cc[5]); swap(cc[3],cc[7]);
+				continue;
+			}
+			event_msg(EVENT_ERROR,"Bad or degenerate element shape!");
+			return;
+		} while(true);
+	}
 	// This gets the right gauss function based on the shape function.
 	static inline void getgauss(const shape_t t, unsigned & n,
 			const double (*& g)[2]) {
@@ -1341,8 +1334,7 @@ private:
 		case cubic:     return N_4(n,r);
 		case inf_pos:   return (ismap ? Mpi(n,r) : Npi(n,r));
 		case inf_neg:   return (ismap ? Mni(n,r) : Nni(n,r));
-		}
-		assert(false); return 0.0;
+		} assert(false); return 0.0;
 	}
 	static inline double getdN(const bool ismap, const shape_t s,
 			const unsigned n, const double r) {
@@ -1381,21 +1373,21 @@ public:
  * class element_variable - a variable node finite element
  */
 template<element::shape_t SZ>
-class element_variable : public element_base<SZ,8*int(SZ)+2> {
+class element_variable : public element_base<SZ,9*int(SZ)> {
 public:
 	element_variable(mesh * o, const material & m, const fset<coord3d> & c)
-	  : element_base<SZ,8*int(SZ)+2>(o,element::absolute,element::absolute,m) {
-		element_base<SZ,8*int(SZ)+2>::setup(c,mask);
+	  : element_base<SZ,9*int(SZ)>(o,element::absolute,element::absolute,m) {
+		element_base<SZ,9*int(SZ)>::setup(c,mask);
 	}
 	virtual smatrix_elem * stiffness() const {
-		return element_base<SZ,8*int(SZ)+2>::buildKe(mask);
+		return element_base<SZ,9*int(SZ)>::buildKe(mask);
 	}
 	virtual void results(const fset<point3d> & c, fset<pavedata> & d) const {
-		element_base<SZ,8*int(SZ)+2>::builddata(c,d,mask);
+		element_base<SZ,9*int(SZ)>::builddata(c,d,mask);
 	}
 
 protected:
-	unsigned mask[4*int(SZ)+2];
+	unsigned mask[5*int(SZ)];
 };
 
 /*
@@ -2996,7 +2988,7 @@ main()
 	material m(1000,0.2);
 
 	const double cube[3][2] = {{-10, 10}, {-10, 10}, {-10, 0}};
-	const unsigned ndiv[3] = {1, 1, 1};
+	const unsigned ndiv[3] = {4, 4, 2};
 	unsigned i, j, k;
 	mesh FEM;
 	cset<const element *> face;
@@ -3014,7 +3006,7 @@ main()
 
 	for (k = 0; k < ndiv[2]; k++) {
 		double z = cube[2][1] - k*dz;
-		int p = 1; //(1 << k); // 1; 
+		int p = (1 << k); // 1; 
 		for (j = 0; j < ndiv[1]; j += p) {
 			double y = cube[1][0] + j*dy;
 			for (i = 0; i < ndiv[0]; i += p) {
@@ -3028,7 +3020,7 @@ main()
 				coord[6] = coord3d(x+p*dx,y     ,z   );
 				coord[7] = coord3d(x+p*dx,y+p*dy,z   );
 				//printf("%4.2f\t%4.2f\t%4.2f\n",x,y,z);
-				const element * e = FEM.add(element::block8,m,coord);
+				const element * e = FEM.add(element::variable18,m,coord);
 				if (i == ndiv[0]/2)
 					face.add(e);
 			}
