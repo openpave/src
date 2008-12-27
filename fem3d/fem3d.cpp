@@ -1997,9 +1997,9 @@ public:
 						if ((node[gi].fixed & (1<<k)) == 0)
 							continue;
 						for (unsigned l = 0; l < NDOF; l++) {
-							if (i > j)
+							if (i >= j)
 								(*ke)(j,i)(l,k) = 0.0;
-							else
+							if (i <= j)
 								(*ke)(i,j)(k,l) = 0.0;
 						}
 					}
