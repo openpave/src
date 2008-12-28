@@ -680,9 +680,15 @@ public:
 		block8,
 		block12,
 		block16,
+		block18,
+		block27,
+		block36,
 		variable18,
 		variable26,
 		variable34,
+		adaptor18,
+		adaptor26,
+		adaptor34,
 		infinite8,
 		infinite12,
 		infinite16
@@ -747,27 +753,32 @@ protected:
 	unsigned inel[NND];        // Local to Global node mapping.
 
 	// This is the core routine for creating elements.  It is passed a set
-	// of eight corners, and adds the required nodes.  It also sets up the
-	// mask of optional nodes when we are dropping nodes.
-	inline void setup(const fset<coord3d> & c, unsigned * mask = 0) {
+	// of eight corners, and adds the required nodes.
+	inline void setup_block(const fset<coord3d> & c) {
 		assert(8 == c.length());
 		assert(nnd == 0);
-		const unsigned nz = unsigned(SZ);
-		coord3d cc[8], p, m;
+		coord3d cc[8];
 		
 		memcpy(cc,&c[0],8*sizeof(coord3d));
 		coord_sort(cc);
-		// Add the corner nodes.
-		for (unsigned i = 0; i < nz; i++) {
-			for (unsigned j = 0; j < 4; j++) {
-				p.x = double(cc[j].x)+(double(cc[j+4].x-cc[j].x)*i)/(nz-1);
-				p.y = double(cc[j].y)+(double(cc[j+4].y-cc[j].y)*i)/(nz-1);
-				p.z = double(cc[j].z)+(double(cc[j+4].z-cc[j].z)*i)/(nz-1);
-				inel[nnd++] = addnode(p);
-			}
-		}
+		coord_add(sx,sy,cc);
+		coord_neighbours();
+	}
+	// This is the core routine for creating variable elements.  It sets up
+	// the mask of optional nodes when we are dropping nodes.
+	inline void setup_mask(const fset<coord3d> & c, unsigned * mask) {
+		assert(8 == c.length());
+		assert(nnd == 0);
+		assert(mask != 0);
+		const unsigned nz = unsigned(SZ);
+		coord3d cc[8];
+		
+		memcpy(cc,&c[0],8*sizeof(coord3d));
+		coord_sort(cc);
+		coord_add(linear,linear,cc);
+		
 		// If we have a mask, initialise it.
-		for (unsigned i = 0; mask != 0 && i < 5*nz; i++)
+		for (unsigned i = 0; i < 5*nz; i++)
 			mask[i] = UINT_MAX;
 		// Loop over the nodes, setting the neighbours.
 		for (unsigned i = 0; i < 4*nz; i++) {
@@ -781,107 +792,55 @@ protected:
 				z_p = inel[i+4];
 			if (i >= 4)
 				z_m = inel[i-4];
-			if (mask) {
-				// Check for nodes in the middle, and set the mask.
-				switch (i%4) {
-				case 0:
-					if (n.xp != UINT_MAX && n.xp != x_p) {
-						mask[i+2] = x_p = n.xp;
-					}
-					if (n.yp != UINT_MAX && n.yp != y_p) {
-						mask[i] = y_p = n.yp;
-						// Check the center for the top and bottom.
-						if ((i == 0 || i == 4*(nz-1))) {
-							const node3d & mid = getnode(n.yp);
-							if (mid.xp != UINT_MAX)
-								mask[4*nz+(i/4)] = mid.xp;
-						}
-					}
-					break;
-				case 1:
-					if (n.xp != UINT_MAX && n.xp != x_p)
-						x_p = n.xp;
-					if (n.ym != UINT_MAX && n.ym != y_m)
-						y_m = n.ym;
-					break;
-				case 2:
-					if (n.xm != UINT_MAX && n.xm != x_m)
-						x_m = n.xm;
-					if (n.yp != UINT_MAX && n.yp != y_p)
-						y_p = n.yp;
-					break;
-				case 3:
-					if (n.xm != UINT_MAX && n.xm != x_m) {
-						mask[i-2] = x_m = n.xm;
-					}
-					if (n.ym != UINT_MAX && n.ym != y_m) {
-						mask[i] = y_m = n.ym;
-					}
-					break;
+			// Check for nodes in the middle, and set the mask.
+			switch (i%4) {
+			case 0:
+				if (n.xp != UINT_MAX && n.xp != x_p) {
+					mask[i+2] = x_p = n.xp;
 				}
+				if (n.yp != UINT_MAX && n.yp != y_p) {
+					mask[i] = y_p = n.yp;
+					// Check the center for the top and bottom.
+					if ((i == 0 || i == 4*(nz-1))) {
+						const node3d & mid = getnode(n.yp);
+						if (mid.xp != UINT_MAX)
+							mask[4*nz+(i/4)] = mid.xp;
+					}
+				}
+				break;
+			case 1:
+				if (n.xp != UINT_MAX && n.xp != x_p)
+					x_p = n.xp;
+				if (n.ym != UINT_MAX && n.ym != y_m)
+					y_m = n.ym;
+				break;
+			case 2:
+				if (n.xm != UINT_MAX && n.xm != x_m)
+					x_m = n.xm;
+				if (n.yp != UINT_MAX && n.yp != y_p)
+					y_p = n.yp;
+				break;
+			case 3:
+				if (n.xm != UINT_MAX && n.xm != x_m) {
+					mask[i-2] = x_m = n.xm;
+				}
+				if (n.ym != UINT_MAX && n.ym != y_m) {
+					mask[i] = y_m = n.ym;
+				}
+				break;
 			}
 			n.setneighbours(x_m,x_p,y_m,y_p,z_m,z_p);
 			updatenode(n);
 		}
 		// Add the extra nodes to our list and set the mask from the global
 		// node number to the item number in the list.
-		for (unsigned i = 0; mask && i < 5*nz; i++) {
+		for (unsigned i = 0; i < 5*nz; i++) {
 			if (mask[i] != UINT_MAX) {
 				inel[nnd] = mask[i];
 				mask[i] = nnd++;
 			} else
 				mask[i] = 0;
 		}
-	}
-	// For infinite elements we first have to find the eight corners, based
-	// on the line or plane given.  Then we can set up the rest.
-	//
-	// XXX: need to use mask to make dropping nodes on infinite elements
-	// possible.
-	void setup_infinite(const fset<coord3d> & c, unsigned * mask = 0) {
-		fset<coord3d> cc(8);
-		if (c.length() == 2) {
-			// Corner infinite elements are defined by 2 points in
-			// a line, which must be vertical.
-			assert(c[0].x == c[1].x);
-			assert(c[0].y == c[1].y);
-			for (unsigned i = 0; i < 4; i++) {
-				double x = c[0].x, y = c[0].y;
-				x *= ((x > 0) == (i%4 < 2) ? 1 : 2);
-				y *= ((y > 0) == (i%2 < 1) ? 1 : 2);
-				cc[i  ] = c[0]; cc[i  ].x = x; cc[i  ].y = y;
-				cc[i+4] = c[1]; cc[i+4].x = x; cc[i+4].y = y;
-			}
-			sx = (double(c[0].x) > 0 ? inf_pos : inf_neg);
-			sy = (double(c[0].y) > 0 ? inf_pos : inf_neg);
-		} else {
-			// Side infinite elements are defined by 4 points in a plane.
-			assert(4 == c.length());
-			if (c[0].x == c[3].x) {
-				assert(c[0].x == c[1].x);
-				assert(c[1].x == c[2].x);
-				assert(c[2].x == c[3].x);
-				for (unsigned i = 0; i < 4; i++) {
-					double x = c[0].x;
-					x *= ((x > 0) == (i%4 < 2) ? 1 : 2);
-					cc[i  ] = c[i%2  ]; cc[i  ].x = x;
-					cc[i+4] = c[i%2+2]; cc[i+4].x = x;
-				}
-				sx = (double(c[0].x) > 0 ? inf_pos : inf_neg);
-			} else {
-				assert(c[0].y == c[1].y);
-				assert(c[1].y == c[2].y);
-				assert(c[2].y == c[3].y);
-				for (unsigned i = 0; i < 4; i++) {
-					double y = c[0].y;
-					y *= ((y > 0) == (i%2 < 1) ? 1 : 2);
-					cc[i  ] = c[(i<2?0:1)]; cc[i  ].y = y;
-					cc[i+4] = c[(i<2?2:3)]; cc[i+4].y = y;
-				}
-				sy = (double(c[0].y) > 0 ? inf_pos : inf_neg);
-			}
-		}
-		setup(cc,mask);
 	}
 	// Build a matrix of the nodal coordinates.
 	void buildxe(double (* xe)[NDIM]) const {
@@ -940,62 +899,82 @@ protected:
 		}
 	}
 	// build the shape function vector and derivative matrix.
-	void buildSF(const bool ismap, const double & gx,
+	virtual void buildSF(const bool ismap, const double & gx,
 			const double & gy, const double & gz,
-			double * N, double (* dNdr)[NDIM],
-			const unsigned * mask = 0) const {
-		const unsigned nz = unsigned(SZ);
-		unsigned j;
-		double Nx = 0, Ny = 0, Nz = 0, dNdx = 0, dNdy = 0, dNdz = 0;
+			double * N, double (* dNdr)[NDIM]) const = 0;
+	// build the shape functions for linear and infinite elements
+	// in plan view.
+	void buildSF_block(const bool ismap, const double & gx,
+			const double & gy, const double & gz,
+			double * N, double (* dNdr)[NDIM]) const {
+		const unsigned ny = getn(sy),     my = 1;
+		const unsigned nx = getn(sx),     mx = my*ny;
+		const unsigned nz = unsigned(SZ), mz = mx*nx;
+		assert(nnd == nz*mz);
+		double Nx, Ny, Nz, dNdx, dNdy, dNdz;
 
 		assert(NDIM == 3);
 		// Loop over each level in the element.
 		for (unsigned i = 0; i < nz; i++) {
-			Nz = getN(ismap,SZ,i,gz); dNdz = getdN(ismap,SZ,i,gz);
+			Nz = getN(SZ,i,gz,ismap); dNdz = getdN(SZ,i,gz,ismap);
+			for (unsigned j = 0; j < nx; j++) {
+				Nx = getN(sx,j,gx,ismap); dNdx = getdN(sx,j,gx,ismap);
+				for (unsigned k = 0; k < ny; k++) {
+					Ny = getN(sy,k,gy,ismap); dNdy = getdN(sy,k,gy,ismap);
+					unsigned l = mz*i+mx*j+my*k;
+					N[l] = Nx*Ny*Nz;
+					dNdr[l][0] = dNdx*Ny*Nz;
+					dNdr[l][1] = Nx*dNdy*Nz;
+					dNdr[l][2] = Nx*Ny*dNdz;
+				}
+			}
+		}
+	}
+	// Special shape function builder for variable node elements.
+	void buildSF_variable(const double & gx, const double & gy,
+			const double & gz, double * N, double (* dNdr)[NDIM],
+			const unsigned * mask) const {
+		assert(sx == absolute);
+		assert(sy == absolute);
+		const unsigned nz = unsigned(SZ);
+		unsigned j;
+		double Nx, Ny, Nz, dNdx, dNdy, dNdz;
+
+		assert(NDIM == 3);
+		// Loop over each level in the element.
+		for (unsigned i = 0; i < nz; i++) {
+			Nz = getN(SZ,i,gz); dNdz = getdN(SZ,i,gz);
 			// Start with the corners.
 			for (unsigned l = 0; l < 4; l++) {
-				Nx = getN(ismap,sx,l/2,gx); dNdx = getdN(ismap,sx,l/2,gx);
-				Ny = getN(ismap,sy,l%2,gy); dNdy = getdN(ismap,sy,l%2,gy);
+				Nx = N_2(l/2,gx); dNdx = dN_2(l/2,gx);
+				Ny = N_2(l%2,gy); dNdy = dN_2(l%2,gy);
 				N[i*4+l] = Nx*Ny*Nz;
 				dNdr[i*4+l][0] = dNdx*Ny*Nz;
 				dNdr[i*4+l][1] = Nx*dNdy*Nz;
 				dNdr[i*4+l][2] = Nx*Ny*dNdz;
-			}
-			// If we don't have extra nodes we're done.
-			if (!mask)
-				continue;
-			// Build the extra nodes at the half points.
-			for (unsigned l = 0; l < 4; l++) {
+				// Build the extra nodes at the half points.
 				if ((j = mask[i*4+l]) == 0)
 					continue;
-				switch (l) {
-				case 0: case 3:
-					Nx = N_2(l/2,gx); dNdx = dN_2(l/2,gx);
-					Ny = 1-fabs(gy);  dNdy = -SGN(gy);
-					break;
-				case 1: case 2:
-					Nx = 1-fabs(gx);  dNdx = -SGN(gx);
-					Ny = N_2(l%2,gy); dNdy = dN_2(l%2,gy);
-					break;
+				if (l == 0 || l == 3) {
+					Ny = N_A(1,gy); dNdy = dN_A(1,gy);
+				} else {
+					Nx = N_A(1,gx); dNdx = dN_A(1,gx);
 				}
 				N[j] = Nx*Ny*Nz;
 				dNdr[j][0] = dNdx*Ny*Nz;
 				dNdr[j][1] = Nx*dNdy*Nz;
 				dNdr[j][2] = Nx*Ny*dNdz;
 			}
-			// If we're not the top or bottom we're done.  Else, build
-			// those.
+			// Build the top and bottom.
 			if ((j = mask[4*nz+i]) == 0)
 				continue;
-			Nx = 1-fabs(gx); dNdx = -SGN(gx);
-			Ny = 1-fabs(gy); dNdy = -SGN(gy);
+			Nx = N_A(1,gx); dNdx = dN_A(1,gx);
+			Ny = N_A(1,gy); dNdy = dN_A(1,gy);
 			N[j] = Nx*Ny*Nz;
 			dNdr[j][0] = dNdx*Ny*Nz;
 			dNdr[j][1] = Nx*dNdy*Nz;
 			dNdr[j][2] = Nx*Ny*dNdz;
 		}
-		if (!mask)
-			return;
 		// Correct the shape functions for the corners and sides,
 		// depending on the existance of the extra nodes.
 		for (unsigned l = 0; l < 4*nz; l++) {
@@ -1028,8 +1007,62 @@ protected:
 			}
 		}
 	}
+	// build the shape function vector and derivative matrix.
+	void buildSF_adaptor(const double & gx, const double & gy,
+			const double & gz, double * N, double (* dNdr)[NDIM],
+			const unsigned * mask) const {
+		assert(sx == quadratic);
+		assert(sy == quadratic);
+		const unsigned nz = unsigned(SZ);
+		double Nx, Ny, Nz, dNdx, dNdy, dNdz;
+
+		assert(NDIM == 3);
+		// Loop over each level in the element.
+		for (unsigned i = 0, j; i < nz; i++) {
+			Nz = getN(SZ,i,gz); dNdz = getdN(SZ,i,gz);
+			const int Jx[4] = {+2, 0, 0,-2};
+			const int Jy[4] = { 0,-1,+1, 0};
+			// Start with the corners.
+			for (unsigned l = 0; l < 4; l++) {
+				if (mask[i*4+l+Jx[l]] != 0) {
+					Nx = N_3(2*(l/2),gx); dNdx = dN_3(2*(l/2),gx);
+				} else {
+					Nx = N_2(l/2,gx);     dNdx = dN_2(l/2,gx);
+				}
+				if (mask[i*4+l+Jy[l]] != 0) {
+					Ny = N_3(2*(l%2),gy); dNdy = dN_3(2*(l%2),gy);
+				} else {
+					Ny = N_2(l%2,gy);     dNdy = dN_2(l%2,gy);
+				}
+				N[i*4+l] = Nx*Ny*Nz;
+				dNdr[i*4+l][0] = dNdx*Ny*Nz;
+				dNdr[i*4+l][1] = Nx*dNdy*Nz;
+				dNdr[i*4+l][2] = Nx*Ny*dNdz;
+				// Build the extra nodes at the half points.
+				if ((j = mask[i*4+l]) == 0)
+					continue;
+				if (l == 0 || l == 3) {
+					Ny = N_3(1,gy); dNdy = dN_3(1,gy);
+				} else {
+					Nx = N_3(1,gx); dNdx = dN_3(1,gx);
+				}
+				N[j] = Nx*Ny*Nz;
+				dNdr[j][0] = dNdx*Ny*Nz;
+				dNdr[j][1] = Nx*dNdy*Nz;
+				dNdr[j][2] = Nx*Ny*dNdz;
+			}
+			if ((j = mask[4*nz+i]) == 0)
+				continue;
+			Nx = N_3(1,gx); dNdx = dN_3(1,gx);
+			Ny = N_3(1,gy); dNdy = dN_3(1,gy);
+			N[j] = Nx*Ny*Nz;
+			dNdr[j][0] = dNdx*Ny*Nz;
+			dNdr[j][1] = Nx*dNdy*Nz;
+			dNdr[j][2] = Nx*Ny*dNdz;
+		}
+	}
 	// Build the element stiffness matrix.
-	smatrix_elem * buildKe(const unsigned * mask = 0) const {
+	smatrix_elem * buildKe() const {
 		unsigned i, j, k, l;
 
 		// Build the point stiffness tensor E_abcd
@@ -1067,7 +1100,7 @@ protected:
 		for (unsigned gj = 0; gj < ny; gj++) {
 		for (unsigned gk = 0; gk < nz; gk++) {
 			double gw = gx[gi][1]*gy[gj][1]*gz[gk][1];
-			buildSF(true,gx[gi][0],gy[gj][0],gz[gk][0],N,dNdr,mask);
+			buildSF(true,gx[gi][0],gy[gj][0],gz[gk][0],N,dNdr);
 			for (i = 0; i < NDIM; i++) {
 				for (j = 0; j < NDIM; j++) {
 					J[i][j] = 0.0;
@@ -1077,7 +1110,7 @@ protected:
 			}
 			if (sx == inf_pos || sx == inf_neg
 			 || sy == inf_pos || sy == inf_neg)
-				buildSF(false,gx[gi][0],gy[gj][0],gz[gk][0],N,dNdr,mask);
+				buildSF(false,gx[gi][0],gy[gj][0],gz[gk][0],N,dNdr);
 			double emod = 0.0;
 			for (k = 0; k < nnd; k++)
 				emod += N[k]*Ee[k];
@@ -1095,8 +1128,7 @@ protected:
 		return K;
 	}
 	// Output results to a pavedata structure
-	void builddata(const fset<point3d> & c, fset<pavedata> & data,
-			const unsigned * mask = 0) const {
+	void builddata(const fset<point3d> & c, fset<pavedata> & data) const {
 		unsigned n, i, j, k;
 		double l[NDIM], g[NDIM];
 
@@ -1124,7 +1156,7 @@ protected:
 			pavedata & d = data[n];
 			// Stress and strain tensors.
 			l[0] = c[n].x, l[1] = c[n].y, l[2] = c[n].z;
-			buildSF(true,l[0],l[1],l[2],N,dNdr,mask);
+			buildSF(true,l[0],l[1],l[2],N,dNdr);
 			for (j = 0; j < NDIM; j++) {
 				g[j] = 0.0;
 				for (k = 0; k < nnd; k++)
@@ -1140,7 +1172,7 @@ protected:
 			}
 			if (sx == inf_pos || sx == inf_neg
 			 || sy == inf_pos || sy == inf_neg)
-				buildSF(false,l[0],l[1],l[2],N,dNdr,mask);
+				buildSF(false,l[0],l[1],l[2],N,dNdr);
 			inv_mul_gauss(nnd,J,dNdr);
 			for (j = 0; j < NDOF; j++) {
 				g[j] = 0.0;
@@ -1228,6 +1260,73 @@ private:
 			return;
 		} while(true);
 	}
+	// This adds nodes according to linear shape functions...
+	inline void coord_add(shape_t ssx, shape_t ssy,
+			const coord3d (& cc)[8]) {
+		assert(nnd == 0);
+		const unsigned nx = getn(ssx),    mx = nx-1;
+		const unsigned ny = getn(ssy),    my = ny-1;
+		const unsigned nz = unsigned(SZ), mz = nz-1;
+
+		// Figure out our nodes using linear shape functions...
+		for (unsigned i = 0; i < nz; i++) {
+			for (unsigned j = 0; j < nx; j++) {
+				for (unsigned k = 0; k < ny; k++) {
+					coord3d p;
+					p.x =  (double(cc[0].x)*(mz-i)*(mx-j)*(my-k)
+					      + double(cc[1].x)*(mz-i)*(mx-j)*(   k)
+					      + double(cc[2].x)*(mz-i)*(   j)*(my-k)
+					      + double(cc[3].x)*(mz-i)*(   j)*(   k)
+					      + double(cc[4].x)*(   i)*(mx-j)*(my-k)
+					      + double(cc[5].x)*(   i)*(mx-j)*(   k)
+					      + double(cc[6].x)*(   i)*(   j)*(my-k)
+					      + double(cc[7].x)*(   i)*(   j)*(   k))/(mz*mx*my);
+					p.y =  (double(cc[0].y)*(mz-i)*(mx-j)*(my-k)
+					      + double(cc[1].y)*(mz-i)*(mx-j)*(   k)
+					      + double(cc[2].y)*(mz-i)*(   j)*(my-k)
+					      + double(cc[3].y)*(mz-i)*(   j)*(   k)
+					      + double(cc[4].y)*(   i)*(mx-j)*(my-k)
+					      + double(cc[5].y)*(   i)*(mx-j)*(   k)
+					      + double(cc[6].y)*(   i)*(   j)*(my-k)
+					      + double(cc[7].y)*(   i)*(   j)*(   k))/(mz*mx*my);
+					p.z =  (double(cc[0].z)*(mz-i)*(mx-j)*(my-k)
+					      + double(cc[1].z)*(mz-i)*(mx-j)*(   k)
+					      + double(cc[2].z)*(mz-i)*(   j)*(my-k)
+					      + double(cc[3].z)*(mz-i)*(   j)*(   k)
+					      + double(cc[4].z)*(   i)*(mx-j)*(my-k)
+					      + double(cc[5].z)*(   i)*(mx-j)*(   k)
+					      + double(cc[6].z)*(   i)*(   j)*(my-k)
+					      + double(cc[7].z)*(   i)*(   j)*(   k))/(mz*mx*my);
+					inel[nnd++] = addnode(p);
+				}
+			}
+		}
+	}
+	// Set the neighbours according to a simple pattern (no mask).
+	inline void coord_neighbours() {
+		const unsigned ny = getn(sy),     my = 1;
+		const unsigned nx = getn(sx),     mx = my*ny;
+		const unsigned nz = unsigned(SZ), mz = mx*nx;
+		assert(nnd == nz*mz);
+
+		// Loop over the nodes, setting the neighbours.
+		for (unsigned i = 0; i < nz; i++) {
+			for (unsigned j = 0; j < nx; j++) {
+				for (unsigned k = 0; k < ny; k++) {
+					node3d n = getnode(inel[mz*i+mx*j+my*k]);
+					unsigned x_m, x_p, y_m, y_p, z_m, z_p;
+					x_p = (j < nx-1 ? inel[mz*i+mx*j+my*k+mx] : UINT_MAX);
+					x_m = (j > 0    ? inel[mz*i+mx*j+my*k-mx] : UINT_MAX);
+					y_p = (k < ny-1 ? inel[mz*i+mx*j+my*k+my] : UINT_MAX);
+					y_m = (k > 0    ? inel[mz*i+mx*j+my*k-my] : UINT_MAX);
+					z_p = (i < nz-1 ? inel[mz*i+mx*j+my*k+mz] : UINT_MAX);
+					z_m = (i > 0    ? inel[mz*i+mx*j+my*k-mz] : UINT_MAX);
+					n.setneighbours(x_m,x_p,y_m,y_p,z_m,z_p);
+					updatenode(n);
+				}
+			}
+		}
+	}
 	// This gets the right gauss function based on the shape function.
 	static inline void getgauss(const shape_t t, unsigned & n,
 			const double (*& g)[2]) {
@@ -1251,6 +1350,21 @@ private:
 		switch (n) {
 		case 0: return -0.5;
 		case 1: return  0.5;
+		} assert(false); return 0.0;
+	}
+	// Absolute value shape function.
+	static inline double N_A(const unsigned n, const double r) {
+		switch (n) {
+		case 0: return (r < 0.0 ? -r : 0.0);
+		case 1: return 1-fabs(r);
+		case 2: return (r > 0.0 ?  r : 0.0);
+		} assert(false); return 0.0;
+	}
+	static inline double dN_A(const unsigned n, const double r) {
+		switch (n) {
+		case 0: return (r < 0.0 ? -1.0 : r > 0.0 ?  0.0 : -0.5);
+		case 1: return (r < 0.0 ?  1.0 : r > 0.0 ? -1.0 :  0.0);
+		case 2: return (r < 0.0 ?  0.0 : r > 0.0 ?  1.0 :  0.5);
 		} assert(false); return 0.0;
 	}
 	// Quadratic shape function.
@@ -1324,23 +1438,34 @@ private:
 	static inline double dNni(const unsigned n, const double r) {
 		return dN_3(n+1,r);
 	}
-	// Build the shape/mapping function based on the type of function.
-	static inline double getN(const bool ismap, const shape_t s,
-			const unsigned n, const double r) {
+	// Return the number of nodes in each shape function.
+	static inline unsigned getn(const shape_t s, const bool ismap = true) {
 		switch (s) {
-		case linear:
-		case absolute:  return N_2(n,r);
+		case linear:    return 2;
+		case absolute:  return 3;
+		case quadratic: return 3;
+		case cubic:     return 4;
+		case inf_pos:   return (ismap ? 2 : 2);
+		case inf_neg:   return (ismap ? 2 : 2);
+		} assert(false); return 0;
+	}
+	// Build the shape/mapping function based on the type of function.
+	static inline double getN(const shape_t s, const unsigned n,
+			const double r, const bool ismap = true) {
+		switch (s) {
+		case linear:    return N_2(n,r);
+		case absolute:  return N_A(n,r);
 		case quadratic: return N_3(n,r);
 		case cubic:     return N_4(n,r);
 		case inf_pos:   return (ismap ? Mpi(n,r) : Npi(n,r));
 		case inf_neg:   return (ismap ? Mni(n,r) : Nni(n,r));
 		} assert(false); return 0.0;
 	}
-	static inline double getdN(const bool ismap, const shape_t s,
-			const unsigned n, const double r) {
+	static inline double getdN(const shape_t s, const unsigned n,
+			const double r, const bool ismap = true) {
 		switch (s) {
-		case linear:
-		case absolute:  return dN_2(n,r);
+		case linear:    return dN_2(n,r);
+		case absolute:  return dN_A(n,r);
 		case quadratic: return dN_3(n,r);
 		case cubic:     return dN_4(n,r);
 		case inf_pos:   return (ismap ? dMpi(n,r) : dNpi(n,r));
@@ -1354,18 +1479,52 @@ private:
  */
 template<element::shape_t SZ>
 class element_block : public element_base<SZ,4*int(SZ)> {
+	typedef element_base<SZ,4*int(SZ)> base_t;
 public:
 	element_block(mesh * o, const material & m, const fset<coord3d> & c)
-	  : element_base<SZ,4*int(SZ)>(o,element::linear,element::linear,m) {
-		element_base<SZ,4*int(SZ)>::setup(c);
+	  : base_t(o,element::linear,element::linear,m) {
+		base_t::setup_block(c);
+	}
+	virtual void buildSF(const bool ismap, const double & gx,
+			const double & gy, const double & gz,
+			double * N, double (* dNdr)[NDIM]) const {
+		assert(4*int(SZ) == this->nnd);
+		base_t::buildSF_block(ismap,gx,gy,gz,N,dNdr);
 	}
 	virtual smatrix_elem * stiffness() const {
 		assert(4*int(SZ) == this->nnd);
-		return element_base<SZ,4*int(SZ)>::buildKe();
+		return base_t::buildKe();
 	}
 	virtual void results(const fset<point3d> & c, fset<pavedata> & d) const {
 		assert(4*int(SZ) == this->nnd);
-		element_base<SZ,4*int(SZ)>::builddata(c,d);
+		base_t::builddata(c,d);
+	}
+};
+
+/*
+ * class element_quad - a higher order finite element
+ */
+template<element::shape_t SZ>
+class element_quad : public element_base<SZ,9*int(SZ)> {
+	typedef element_base<SZ,9*int(SZ)> base_t;
+public:
+	element_quad(mesh * o, const material & m, const fset<coord3d> & c)
+	  : base_t(o,element::quadratic,element::quadratic,m) {
+		base_t::setup_block(c);
+	}
+	virtual void buildSF(const bool ismap, const double & gx,
+			const double & gy, const double & gz,
+			double * N, double (* dNdr)[NDIM]) const {
+		assert(9*int(SZ) == this->nnd);
+		base_t::buildSF_block(ismap,gx,gy,gz,N,dNdr);
+	}
+	virtual smatrix_elem * stiffness() const {
+		assert(9*int(SZ) == this->nnd);
+		return base_t::buildKe();
+	}
+	virtual void results(const fset<point3d> & c, fset<pavedata> & d) const {
+		assert(9*int(SZ) == this->nnd);
+		base_t::builddata(c,d);
 	}
 };
 
@@ -1374,16 +1533,52 @@ public:
  */
 template<element::shape_t SZ>
 class element_variable : public element_base<SZ,9*int(SZ)> {
+	typedef element_base<SZ,9*int(SZ)> base_t;
 public:
 	element_variable(mesh * o, const material & m, const fset<coord3d> & c)
-	  : element_base<SZ,9*int(SZ)>(o,element::absolute,element::absolute,m) {
-		element_base<SZ,9*int(SZ)>::setup(c,mask);
+	  : base_t(o,element::absolute,element::absolute,m) {
+		base_t::setup_mask(c,mask);
+	}
+	virtual void buildSF(const bool ismap, const double & gx,
+			const double & gy, const double & gz,
+			double * N, double (* dNdr)[NDIM]) const {
+		assert(ismap == true);
+		base_t::buildSF_variable(gx,gy,gz,N,dNdr,mask);
 	}
 	virtual smatrix_elem * stiffness() const {
-		return element_base<SZ,9*int(SZ)>::buildKe(mask);
+		return base_t::buildKe();
 	}
 	virtual void results(const fset<point3d> & c, fset<pavedata> & d) const {
-		element_base<SZ,9*int(SZ)>::builddata(c,d,mask);
+		base_t::builddata(c,d);
+	}
+
+protected:
+	unsigned mask[5*int(SZ)];
+};
+
+/*
+ * class element_adaptor - an element to adapt from quadratic to linear
+ * elements.
+ */
+template<element::shape_t SZ>
+class element_adaptor : public element_base<SZ,9*int(SZ)> {
+	typedef element_base<SZ,9*int(SZ)> base_t;
+public:
+	element_adaptor(mesh * o, const material & m, const fset<coord3d> & c)
+	  : base_t(o,element::quadratic,element::quadratic,m) {
+		base_t::setup_mask(c,mask);
+	}
+	virtual void buildSF(const bool ismap, const double & gx,
+			const double & gy, const double & gz,
+			double * N, double (* dNdr)[NDIM]) const {
+		assert(ismap == true);
+		base_t::buildSF_adaptor(gx,gy,gz,N,dNdr,mask);
+	}
+	virtual smatrix_elem * stiffness() const {
+		return base_t::buildKe();
+	}
+	virtual void results(const fset<point3d> & c, fset<pavedata> & d) const {
+		base_t::builddata(c,d);
 	}
 
 protected:
@@ -1395,18 +1590,74 @@ protected:
  */
 template<element::shape_t SZ>
 class element_infinite : public element_base<SZ,4*int(SZ)> {
+	typedef element_base<SZ,4*int(SZ)> base_t;
 public:
+	// For infinite elements we first have to find the eight corners, based
+	// on the line or plane given.  Then we can set up the rest.
 	element_infinite(mesh * o, const material & m, const fset<coord3d> & c)
-	  : element_base<SZ,4*int(SZ)>(o,element::linear,element::linear,m) {
-		element_base<SZ,4*int(SZ)>::setup_infinite(c);
+	  : base_t(o,element::linear,element::linear,m) {
+		fset<coord3d> cc(8);
+
+		if (c.length() == 2) {
+			// Corner infinite elements are defined by 2 points in
+			// a line, which must be vertical.
+			assert(c[0].x == c[1].x);
+			assert(c[0].y == c[1].y);
+			for (unsigned i = 0; i < 4; i++) {
+				double x = c[0].x, y = c[0].y;
+				x *= ((x > 0) == (i%4 < 2) ? 1 : 2);
+				y *= ((y > 0) == (i%2 < 1) ? 1 : 2);
+				cc[i  ] = c[0]; cc[i  ].x = x; cc[i  ].y = y;
+				cc[i+4] = c[1]; cc[i+4].x = x; cc[i+4].y = y;
+			}
+			base_t::sx = (double(c[0].x) > 0 ?
+					base_t::inf_pos : base_t::inf_neg);
+			base_t::sy = (double(c[0].y) > 0 ?
+					base_t::inf_pos : base_t::inf_neg);
+		} else {
+			// Side infinite elements are defined by 4 points in a plane.
+			assert(4 == c.length());
+			if (c[0].x == c[3].x) {
+				assert(c[0].x == c[1].x);
+				assert(c[1].x == c[2].x);
+				assert(c[2].x == c[3].x);
+				for (unsigned i = 0; i < 4; i++) {
+					double x = c[0].x;
+					x *= ((x > 0) == (i%4 < 2) ? 1 : 2);
+					cc[i  ] = c[i%2  ]; cc[i  ].x = x;
+					cc[i+4] = c[i%2+2]; cc[i+4].x = x;
+				}
+				base_t::sx = (double(c[0].x) > 0 ?
+					base_t::inf_pos : base_t::inf_neg);
+			} else {
+				assert(c[0].y == c[1].y);
+				assert(c[1].y == c[2].y);
+				assert(c[2].y == c[3].y);
+				for (unsigned i = 0; i < 4; i++) {
+					double y = c[0].y;
+					y *= ((y > 0) == (i%2 < 1) ? 1 : 2);
+					cc[i  ] = c[(i<2?0:1)]; cc[i  ].y = y;
+					cc[i+4] = c[(i<2?2:3)]; cc[i+4].y = y;
+				}
+				base_t::sy = (double(c[0].y) > 0 ?
+					base_t::inf_pos : base_t::inf_neg);
+			}
+		}
+		base_t::setup_block(cc);
+	}
+	virtual void buildSF(const bool ismap, const double & gx,
+			const double & gy, const double & gz,
+			double * N, double (* dNdr)[NDIM]) const {
+		assert(4*int(SZ) == this->nnd);
+		base_t::buildSF_block(ismap,gx,gy,gz,N,dNdr);
 	}
 	virtual smatrix_elem * stiffness() const {
 		assert(4*int(SZ) == this->nnd);
-		return element_base<SZ,4*int(SZ)>::buildKe();
+		return base_t::buildKe();
 	}
 	virtual void results(const fset<point3d> & c, fset<pavedata> & d) const {
 		assert(4*int(SZ) == this->nnd);
-		element_base<SZ,4*int(SZ)>::builddata(c,d);
+		base_t::builddata(c,d);
 	}
 };
 
@@ -1770,6 +2021,15 @@ public:
 		case element::block16:
 			e = new element_block<element::cubic>(this,m,c);
 			break;
+		case element::block18:
+			e = new element_quad<element::linear>(this,m,c);
+			break;
+		case element::block27:
+			e = new element_quad<element::quadratic>(this,m,c);
+			break;
+		case element::block36:
+			e = new element_quad<element::cubic>(this,m,c);
+			break;
 		case element::infinite8:
 			e = new element_infinite<element::linear>(this,m,c);
 			break;
@@ -1795,6 +2055,27 @@ public:
 			break;
 		case element::variable34:
 			e = new element_variable<element::cubic>(this,m,c);
+			if (e != 0 && e->nnd == 16) {
+				delete e;
+				e = new element_block<element::cubic>(this,m,c);
+			}
+			break;
+		case element::adaptor18:
+			e = new element_adaptor<element::linear>(this,m,c);
+			if (e != 0 && e->nnd == 8) {
+				delete e;
+				e = new element_block<element::linear>(this,m,c);
+			}
+			break;
+		case element::adaptor26:
+			e = new element_adaptor<element::quadratic>(this,m,c);
+			if (e != 0 && e->nnd == 12) {
+				delete e;
+				e = new element_block<element::quadratic>(this,m,c);
+			}
+			break;
+		case element::adaptor34:
+			e = new element_adaptor<element::cubic>(this,m,c);
 			if (e != 0 && e->nnd == 16) {
 				delete e;
 				e = new element_block<element::cubic>(this,m,c);
@@ -2988,7 +3269,7 @@ main()
 	material m(1000,0.2);
 
 	const double cube[3][2] = {{-10, 10}, {-10, 10}, {-10, 0}};
-	const unsigned ndiv[3] = {4, 4, 2};
+	const unsigned ndiv[3] = {10, 10, 3};
 	unsigned i, j, k;
 	mesh FEM;
 	cset<const element *> face;
@@ -3006,7 +3287,7 @@ main()
 
 	for (k = 0; k < ndiv[2]; k++) {
 		double z = cube[2][1] - k*dz;
-		int p = (1 << k); // 1; 
+		int p = 1; //(1 << k); // 1; 
 		for (j = 0; j < ndiv[1]; j += p) {
 			double y = cube[1][0] + j*dy;
 			for (i = 0; i < ndiv[0]; i += p) {
@@ -3020,7 +3301,9 @@ main()
 				coord[6] = coord3d(x+p*dx,y     ,z   );
 				coord[7] = coord3d(x+p*dx,y+p*dy,z   );
 				//printf("%4.2f\t%4.2f\t%4.2f\n",x,y,z);
-				const element * e = FEM.add(element::variable18,m,coord);
+				element::element_t s = (k == 0 ? element::block18 :
+					element::adaptor18);
+				const element * e = FEM.add(s,m,coord);
 				if (i == ndiv[0]/2)
 					face.add(e);
 			}
@@ -3033,18 +3316,27 @@ main()
 	FEM.add_bc(coord3d(cube[0][0],cube[1][0],cube[2][0]),mesh::X,0.0);
 	FEM.add_bc(coord3d(cube[0][0],cube[1][0],cube[2][0]),mesh::Y,0.0);
 	FEM.add_bc(coord3d(cube[0][1],cube[1][0],cube[2][0]),mesh::Y,0.0);
-	double F = -0.15*dx*dy;
-	for (i = 0; i < (ndiv[0]+1); i++) {
-		for (j = 0; j < (ndiv[1]+1); j++) {
-			double x = cube[0][0] + i*dx;
-			double y = cube[1][0] + j*dy;
-			double f = F;
-			if (x == cube[0][0] || x == cube[0][1])
-				f /= 2;
-			if (y == cube[1][0] || y == cube[1][1])
-				f /= 2;
-			FEM.add_fext(coord3d(x,y,cube[2][1]),mesh::Z,f);
-		}
+	const double F = -0.15;
+	for (i = 0; i < FEM.getnodes(); i++) {
+		const node3d & n = FEM.getnode(i);
+		if (double(n.z) < cube[2][1])
+			continue;
+		double x = n.x, y = n.y, sx = 1.0, sy = 1.0, s = 3.0;
+		double fxm = 0.0, fxp = 0.0, fym = 0.0, fyp = 0.0;
+		if (rint(2*fmod(x-cube[0][0],dx)) > 0.0)
+			sx = 2.0;
+		if (rint(2*fmod(y-cube[1][0],dy)) > 0.0)
+			sy = 2.0;
+		if (n.xm != UINT_MAX)
+			fxm = sx*(x - double(FEM.getnode(n.xm).x))/s;
+		if (n.xp != UINT_MAX)
+			fxp = sx*(double(FEM.getnode(n.xp).x) - x)/s;
+		if (n.ym != UINT_MAX)
+			fym = sy*(y - double(FEM.getnode(n.ym).y))/s;
+		if (n.yp != UINT_MAX)
+			fyp = sy*(double(FEM.getnode(n.yp).y) - y)/s;
+		double f = F*(fxm+fxp)*(fym+fyp);
+		FEM.add_fext(n,mesh::Z,f);
 	}
 
 	//for (i = 0; i < FEM.getnodes(); i++) {
@@ -3059,7 +3351,7 @@ main()
 
 	timeme("\nOutput...\n");
 
-	/*for (i = 0; i < FEM.getnodes(); i++) {
+	for (i = 0; i < FEM.getnodes(); i++) {
 		const node3d & n = FEM.getorderednode(i);
 		double x = n.x;
 		double y = n.y;
@@ -3071,9 +3363,9 @@ main()
 		double uz = n.uz;
 		j = FEM.hasnode(n);
 		printf("Node %3i: (%6.2f,%6.2f,%6.2f) = (%+f,%+f,%+f)\n",j,double(x),double(y),double(z),ux,uy,uz);
-	}*/
-	const node3d & n = FEM.getnode(FEM.hasnode(coord3d(cube[0][1],cube[1][1],cube[2][1])));
-	printf("(%+f,%+f,%+f)\n",n.ux,n.uy,n.uz);
+	}
+	//const node3d & n = FEM.getnode(FEM.hasnode(coord3d(cube[0][1],cube[1][1],cube[2][1])));
+	//printf("(%+f,%+f,%+f)\n",n.ux,n.uy,n.uz);
 
 	/*fset<point3d> poly(4,4);
 	poly[0] = point3d(-1,-1,-1);
