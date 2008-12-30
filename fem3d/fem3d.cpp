@@ -2897,6 +2897,9 @@ main()
 		region & r = filling[i];
 		printf(" %i: [%f %f] x [%f %f]\n",i,double(r.xm()),double(r.xp()),double(r.ym()),double(r.yp()));
 	}
+	// Make step power of two.
+	while ((step & (step - 1)) != 0)
+		step++;
 	step /= 2; delta *= 2;
 
 	// Find the equivalent layer top and bottom.
@@ -2913,15 +2916,14 @@ main()
 		}
 		layer[i].ebot = double(layer[i].etop) + he;
 	}
-	unsigned zskip = step, zi = 0;
+	unsigned zstep = 1, zi = 0;
 	// add the depth stops.
-	assert(step % zskip == 0);
-	dz = zskip*delta;
+	dz = rmax/zstep;
 	zmax = layer[layer.length()-1].ebot; z = layer[0].etop;
 	stop.add(z); level.add(zi);
 	while (z < zmax) {
-		unsigned zscale = 4; //(zi == 0 ? 4 : zi == 1 ? 6 : 8);
-		for (; z < zscale*step*dz/zskip; z += dz) {
+		unsigned zscale = 4;
+		for (; z < zscale*zstep*dz; z += dz) {
 			stop.add(z+dz); level.add(zi);
 		}
 		dz *= 2; zi++;
