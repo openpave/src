@@ -98,7 +98,7 @@ FEMthermal::FEMthermal(const int nl, const double * lh, const double * ld,
 	memcpy(nd,_nd,n*sizeof(double));
 	memcpy(nt,_nt,n*sizeof(double));
 	for (i = 0; i < nl; i++) {
-		assert((i < nl-1 ? lh[i] >= 0.0 : true));
+		assert(lh[i] > 0.0);
 		lb[i] = (i == 0 ? nd[0] : lb[i-1]) + lh[i];
 	}
 
@@ -112,6 +112,7 @@ FEMthermal::FEMthermal(const int nl, const double * lh, const double * ld,
 	for (j = 0, il = 0; j < n - w; j += w) {
 		while (lb[il] < nd[j])
 			il++;
+		assert(lb[il] - lh[il] <= nd[j] && lb[il] >= nd[j+w]);
 		double d = ld[il]*2/(nd[j+w]-nd[j]);
 		double f = (nd[j+w]-nd[j])/2;
 		switch (w) {
