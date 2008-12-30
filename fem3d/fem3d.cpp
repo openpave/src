@@ -2557,8 +2557,9 @@ node_depth_callback_real(const coord3d & c, const mesh * FEM, const material * m
 		b += L[1][n];
 	} else if (i == 1) {
 		t += L[1][n];
-		b += L[2][n];
 	} else if (i == 2) {
+		b += L[2][n];
+	} else if (i == 3) {
 		t += L[2][n];
 	}
 	return -(t+(b-t)*z/h);
@@ -2575,7 +2576,7 @@ node_emod_callback_real(const coord3d & c, const mesh * FEM, const material * ma
 		n = FEM->getorderofnode(coord3d(c.x,c.y,0.0));
 	else
 		n = FEM->getorderofnode(coord3d(0.0,0.0,0.0));
-	return layer[i].mat.emod + L[i+3][n];
+	return layer[i].mat.emod + L[(i>1?i-1:i)+3][n];
 }
 
 inline double
@@ -2772,7 +2773,8 @@ main()
 
 	LEsystem test;
 	test.addlayer(  90.0,3000e3,0.35);
-	test.addlayer( 410.0, 750e3,0.35);
+	test.addlayer( 205.0, 750e3,0.35);
+	test.addlayer( 205.0, 750e3,0.35);
 	test.addlayer(1500.0, 100e3,0.35);
 
 	layer.empty();
@@ -2787,9 +2789,9 @@ main()
 	unsigned step = 4;
 	mesh FEM;
 	fset<coord3d> coord(8);
-	cset<const element *> face;
-	cset<const element *> road;
-	cset<const element *> base;
+	cset<const element *> along;
+	cset<const element *> trans;
+	cset<const element *> sf, ac, ab, sg;
 	sset<fixed<8> > stop;
 	sset<unsigned> level;
 	region_list filled, filling;
@@ -2995,11 +2997,17 @@ main()
 						coord[7] = coord3d(x2,y2,-z2);
 						const element * e = FEM.add(var,layer[i].mat,coord);
 						if (x1 == 0.0)
-							road.add(e);
+							along.add(e);
 						if (y1 == 0.0)
-							face.add(e);
+							trans.add(e);
+						if (stop[j-1] == layer[0].top)
+							sf.add(e);
 						if (stop[j] == layer[0].bot)
-							base.add(e);
+							ac.add(e);
+						if (stop[j] == layer[1].bot)
+							ab.add(e);
+						if (stop[j-1] == layer[3].top)
+							sg.add(e);
 						if (x1 == -edge) {
 							if (y1 == -edge) {
 								coord.resize(2);
@@ -3127,7 +3135,7 @@ main()
 	unsigned np = 0;
 	while (double(FEM.getorderednode(np).z) == 0.0)
 		np++;
-	for (unsigned l = 0; l < 2*layer.length(); l++) {
+	for (unsigned l = 0; l < 6; l++) {
 		L[l] = new double[np];
 		/*double * C = new double[T_SIZE(np)];
 		if (L[l] == 0 || C == 0) {
@@ -3161,7 +3169,7 @@ main()
 	while (true) {
 		//isvar = !isvar;
 
-		for (unsigned l = 0; isvar && l < 2*layer.length(); l++) {
+		for (unsigned l = 0; isvar && l < 6; l++) {
 			double * A = new double[np];
 			double * C = new double[T_SIZE(np)];
 			if (A == 0 || C == 0) {
@@ -3192,25 +3200,43 @@ main()
 		}
 		FEM.solve(1e-33);
 
-		fset<point3d> poly(4);
-		poly[0] = point3d(-1,-1,-1);
-		poly[1] = point3d(-1,-1, 1);
-		poly[2] = point3d( 1,-1, 1);
-		poly[3] = point3d( 1,-1,-1);
-		results(face,poly,"face");
-		LEresults(face,poly,"face",test);
-		poly[0] = point3d(-1,-1,-1);
-		poly[1] = point3d(-1,-1, 1);
-		poly[2] = point3d(-1, 1, 1);
-		poly[3] = point3d(-1, 1,-1);
-		results(road,poly,"long");
-		LEresults(road,poly,"long",test);
+		fset<point3d> poly(4), face(8);
+		face[0] = point3d(-1,-1,    -1);
+		face[1] = point3d(-1,-1,-1/3.0);
+		face[2] = point3d(-1,-1, 1/3.0);
+		face[3] = point3d(-1,-1,     1);
+		face[4] = point3d( 1,-1,     1);
+		face[5] = point3d( 1,-1, 1/3.0);
+		face[6] = point3d( 1,-1,-1/3.0);
+		face[7] = point3d( 1,-1,    -1);
+		results(trans,face,"face");
+		LEresults(trans,face,"face",test);
+		face[0] = point3d(-1,-1,    -1);
+		face[1] = point3d(-1,-1,-1/3.0);
+		face[2] = point3d(-1,-1, 1/3.0);
+		face[3] = point3d(-1,-1,     1);
+		face[4] = point3d(-1, 1,     1);
+		face[5] = point3d(-1, 1, 1/3.0);
+		face[6] = point3d(-1, 1,-1/3.0);
+		face[7] = point3d(-1, 1,    -1);
+		results(along,face,"long");
+		LEresults(along,face,"long",test);
 		poly[0] = point3d(-1,-1,-1);
 		poly[1] = point3d(-1, 1,-1);
 		poly[2] = point3d( 1, 1,-1);
 		poly[3] = point3d( 1,-1,-1);
-		results(base,poly,"base");
-		LEresults(base,poly,"base",test);
+		results(ac,poly,"ac");
+		LEresults(ac,poly,"ac",test);
+		results(ab,poly,"ab");
+		LEresults(ab,poly,"ab",test);
+		poly[0] = point3d(-1,-1, 1);
+		poly[1] = point3d(-1, 1, 1);
+		poly[2] = point3d( 1, 1, 1);
+		poly[3] = point3d( 1,-1, 1);
+		results(sf,poly,"sf");
+		LEresults(sf,poly,"sf",test);
+		results(sg,poly,"sg");
+		LEresults(sg,poly,"sg",test);
 
 		//if (isvar)
 		//	continue;
