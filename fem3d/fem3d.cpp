@@ -2681,22 +2681,21 @@ struct region_list : sset<region> {
 		return rv;
 	}
 	void merge() {
-		bool didmerge;
-		do {
-			didmerge = false;
-			for (unsigned i = 0; i < length(); i++) {
-				for (unsigned j = i+1; j < length(); j++) {
-					region & r1 = (*this)[i];
-					region & r2 = (*this)[j];
-					if (r1.overlaps(r2)) {
-						r1.xstop.add(r2.xstop); r1.xstop.sort();
-						r1.ystop.add(r2.ystop); r1.ystop.sort();
-						remove(j);
-						didmerge = true;
-					}
+		for (unsigned i = 0; i < length(); i++) {
+			for (unsigned j = i+1; j < length(); j++) {
+				region & r1 = (*this)[i];
+				region & r2 = (*this)[j];
+				if (r1.overlaps(r2)
+				 || ((r1.xp() == r2.xm() || r1.xm() == r2.xp())
+				  && (r1.ym() == r2.ym() && r1.yp() == r2.yp()))
+				 || ((r1.yp() == r2.ym() || r1.ym() == r2.yp())
+				  && (r1.xm() == r2.xm() && r1.xp() == r2.xp()))) {
+					r1.xstop.add(r2.xstop); r1.xstop.sort();
+					r1.ystop.add(r2.ystop); r1.ystop.sort();
+					remove(j--);
 				}
 			}
-		} while (didmerge);
+		}
 	}
 };
 
@@ -3073,7 +3072,6 @@ main()
 				}
 			}
 		}
-		zi++;
 	printf("Just: [%f %f] x [%f %f]\n",filling.xm(),filling.xp(),
 			filling.ym(),filling.yp());
 	for (unsigned i = 0; i < filling.length(); i++) {
@@ -3106,6 +3104,10 @@ main()
 			double ry = double(r.ym() + r.yp())/2;
 			rx = 2*dx*(rx < 0 ? floor(rx/dx/2) : ceil(rx/dx/2));
 			ry = 2*dy*(ry < 0 ? floor(ry/dy/2) : ceil(ry/dy/2));
+			assert(double(r.xm()) == -edge || double(r.xm()) > rx-step*dx);
+			assert(double(r.xp()) ==  edge || double(r.xp()) < rx+step*dx);
+			assert(double(r.ym()) == -edge || double(r.ym()) > ry-step*dy);
+			assert(double(r.yp()) ==  edge || double(r.yp()) < ry+step*dy);
 			for (x = r.xm(); x > MAX(rx-step*dx,-edge); x -= dx)
 				r.xstop.add(MAX(x-dx,-edge));
 			r.xstop.sort();
@@ -3118,8 +3120,6 @@ main()
 			for (y = r.yp(); y < MIN(ry+step*dy, edge); y += dy)
 				r.ystop.add(MIN(y+dy, edge));
 			r.ystop.sort();
-			assert(r.xstop.length()%2 == 1);
-			assert(r.ystop.length()%2 == 1);
 		}
 		filling.merge();
 	printf("Filling: [%f %f] x [%f %f]\n",filling.xm(),filling.xp(),
@@ -3128,6 +3128,7 @@ main()
 		region & r = filling[i];
 		printf(" %i: [%f %f] x [%f %f]\n",i,double(r.xm()),double(r.xp()),double(r.ym()),double(r.yp()));
 	}
+		zi++;
 	}
 	//FEM.add_bc_plane(mesh::X,mesh::at|mesh::below,-edge,
 	//		mesh::X,0.0);
