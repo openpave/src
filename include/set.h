@@ -629,7 +629,6 @@ protected:
 	V * value;                 // Take a guess...
 	struct _V {                // Placement new wrapper
 		V _v;
-		explicit _V() : _v() {}
 		explicit _V(const V & v) : _v(v) {}
 		void * operator new(size_t, void * p) {
 			return p;
@@ -740,7 +739,7 @@ public:
 		deallocate();
 	}
 
-	// Do a key lookup, and return -1 if the key is not found.
+	// Do a key lookup, and return UINT_MAX if the key is not found.
 	inline unsigned haskey(const K & k) const {
 		for (unsigned i = 0; i < size; i++) {
 			if (static_cast<K &>(value[i]) == k)
@@ -772,7 +771,6 @@ protected:
 	V * value;                 // The data.
 	struct _V {                // Placement new wrapper
 		V _v;
-		explicit _V() : _v() {}
 		explicit _V(const V & v) : _v(v) {}
 		void * operator new(size_t, void * p) {
 			return p;
@@ -1105,7 +1103,6 @@ protected:
 	V * value;                 // Take a guess...
 	struct _V {                // Placement new wrapper
 		V _v;
-		explicit _V() : _v() {}
 		explicit _V(const V & v) : _v(v) {}
 		void * operator new(size_t, void * p) {
 			return p;
@@ -1251,7 +1248,6 @@ protected:
 	V * value;                 // Take a guess...
 	struct _K {                // Placement new wrapper
 		K _k;
-		explicit _K() : _k() {}
 		explicit _K(const K & k) : _k(k) {}
 		void * operator new(size_t, void * p) {
 			return p;
