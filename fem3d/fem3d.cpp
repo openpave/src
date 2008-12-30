@@ -2752,10 +2752,8 @@ LEresults(const fset<const element *> & e, const fset<point3d> & c,
 	fclose(f);
 }
 
-#define EDGE (4096)
-
 int
-main_real()
+main()
 {
 	timeme();
 
@@ -2772,6 +2770,7 @@ main_real()
 
 	double x = 0.0, y = 0.0, z = 0.0, zmax = 0.0, rmax = 0.0;
 	double dx, dy, dz, delta = 4;
+	const double edge = 4096;
 	unsigned step = 4;
 	mesh FEM;
 	fset<coord3d> coord(8);
@@ -2949,7 +2948,7 @@ main_real()
 
 	// Now add the elements from below the tire, working outwards.
 	zi = 0;
-	while (zi <= level[level.length()-1] || filled.xp() < EDGE) {
+	while (zi <= level[level.length()-1] || filled.xp() < edge) {
 		for (unsigned i = 0, j = 1; j < stop.length() && level[j] <= zi; j++) {
 			while (i < layer.length() && stop[j] > layer[i].bot)
 				i++;
@@ -2988,13 +2987,13 @@ main_real()
 							face.add(e);
 						if (stop[j] == layer[0].bot)
 							base.add(e);
-						if (x1 == -EDGE) {
-							if (y1 == -EDGE) {
+						if (x1 == -edge) {
+							if (y1 == -edge) {
 								coord.resize(2);
 								coord[0] = coord3d(x1,y1,-z1);
 								coord[1] = coord3d(x1,y1,-z2);
 								FEM.add(inf,layer[i].mat,coord);
-							} if (y2 == EDGE) {
+							} if (y2 == edge) {
 								coord.resize(2);
 								coord[0] = coord3d(x1,y2,-z1);
 								coord[1] = coord3d(x1,y2,-z2);
@@ -3006,13 +3005,13 @@ main_real()
 							coord[2] = coord3d(x1,y1,-z2);
 							coord[3] = coord3d(x1,y2,-z2);
 							FEM.add(inf,layer[i].mat,coord);
-						} else if (x2 == EDGE) {
-							if (y1 == -EDGE) {
+						} else if (x2 == edge) {
+							if (y1 == -edge) {
 								coord.resize(2);
 								coord[0] = coord3d(x2,y1,-z1);
 								coord[1] = coord3d(x2,y1,-z2);
 								FEM.add(inf,layer[i].mat,coord);
-							} if (y2 == EDGE) {
+							} if (y2 == edge) {
 								coord.resize(2);
 								coord[0] = coord3d(x2,y2,-z1);
 								coord[1] = coord3d(x2,y2,-z2);
@@ -3025,14 +3024,14 @@ main_real()
 							coord[3] = coord3d(x2,y2,-z2);
 							FEM.add(inf,layer[i].mat,coord);
 						}
-						if (y1 == -EDGE) {
+						if (y1 == -edge) {
 							coord.resize(4);
 							coord[0] = coord3d(x1,y1,-z1);
 							coord[1] = coord3d(x2,y1,-z1);
 							coord[2] = coord3d(x1,y1,-z2);
 							coord[3] = coord3d(x2,y1,-z2);
 							FEM.add(inf,layer[i].mat,coord);
-						} if (y2 == EDGE) {
+						} if (y2 == edge) {
 							coord.resize(4);
 							coord[0] = coord3d(x1,y2,-z1);
 							coord[1] = coord3d(x2,y2,-z1);
@@ -3051,8 +3050,8 @@ main_real()
 		region & r = filling[i];
 		printf(" %i: [%f %f] x [%f %f]\n",i,double(r.xm()),double(r.xp()),double(r.ym()),double(r.yp()));
 	}
-		if (filling.xm() > -EDGE && filling.xp() < EDGE
-		 && filling.ym() > -EDGE && filling.yp() < EDGE) {
+		if (filling.xm() > -edge && filling.xp() < edge
+		 && filling.ym() > -edge && filling.yp() < edge) {
 			delta *= 2;
 			for (unsigned i = 0; i < filling.length(); i++) {
 				region & r = filling[i];
@@ -3077,17 +3076,17 @@ main_real()
 			double ry = double(r.ym() + r.yp())/2;
 			rx = 2*dx*(rx < 0 ? floor(rx/dx/2) : ceil(rx/dx/2));
 			ry = 2*dy*(ry < 0 ? floor(ry/dy/2) : ceil(ry/dy/2));
-			for (x = r.xm(); x > MAX(rx-step*dx,-EDGE); x -= dx)
-				r.xstop.add(MAX(x-dx,-EDGE));
+			for (x = r.xm(); x > MAX(rx-step*dx,-edge); x -= dx)
+				r.xstop.add(MAX(x-dx,-edge));
 			r.xstop.sort();
-			for (x = r.xp(); x < MIN(rx+step*dx, EDGE); x += dx)
-				r.xstop.add(MIN(x+dx, EDGE));
+			for (x = r.xp(); x < MIN(rx+step*dx, edge); x += dx)
+				r.xstop.add(MIN(x+dx, edge));
 			r.xstop.sort();
-			for (y = r.ym(); y > MAX(ry-step*dy,-EDGE); y -= dy)
-				r.ystop.add(MAX(y-dy,-EDGE));
+			for (y = r.ym(); y > MAX(ry-step*dy,-edge); y -= dy)
+				r.ystop.add(MAX(y-dy,-edge));
 			r.ystop.sort();
-			for (y = r.yp(); y < MIN(ry+step*dy, EDGE); y += dy)
-				r.ystop.add(MIN(y+dy, EDGE));
+			for (y = r.yp(); y < MIN(ry+step*dy, edge); y += dy)
+				r.ystop.add(MIN(y+dy, edge));
 			r.ystop.sort();
 			assert(r.xstop.length()%2 == 1);
 			assert(r.ystop.length()%2 == 1);
@@ -3100,13 +3099,13 @@ main_real()
 		printf(" %i: [%f %f] x [%f %f]\n",i,double(r.xm()),double(r.xp()),double(r.ym()),double(r.yp()));
 	}
 	}
-	//FEM.add_bc_plane(mesh::X,mesh::at|mesh::below,-EDGE,
+	//FEM.add_bc_plane(mesh::X,mesh::at|mesh::below,-edge,
 	//		mesh::X,0.0);
-	//FEM.add_bc_plane(mesh::X,mesh::at|mesh::above, EDGE,
+	//FEM.add_bc_plane(mesh::X,mesh::at|mesh::above, edge,
 	//		mesh::X,0.0);
-	//FEM.add_bc_plane(mesh::Y,mesh::at|mesh::below,-EDGE,
+	//FEM.add_bc_plane(mesh::Y,mesh::at|mesh::below,-edge,
 	//		mesh::Y,0.0);
-	//FEM.add_bc_plane(mesh::Y,mesh::at|mesh::above, EDGE,
+	//FEM.add_bc_plane(mesh::Y,mesh::at|mesh::above, edge,
 	//		mesh::Y,0.0);
 	FEM.add_bc_plane(mesh::Z,mesh::at|mesh::below,-zmax,
 			mesh::X|mesh::Y|mesh::Z,0.0);
@@ -3216,7 +3215,7 @@ main_real()
 			continue;
 		//if (!(x == 0))
 		//	continue;
-		if (x < -EDGE || x > EDGE || y < -EDGE || y > EDGE || z <= -zmax)
+		if (x < -edge || x > edge || y < -edge || y > edge || z <= -zmax)
 			continue;
 		test.addpoint(point3d(x,y,-z));
 	}
@@ -3229,7 +3228,7 @@ main_real()
 			continue;
 		//if (!(x == 0))
 		//	continue;
-		if (x < -EDGE || x > EDGE || y < -EDGE || y > EDGE || z <= -zmax)
+		if (x < -edge || x > edge || y < -edge || y > edge || z <= -zmax)
 			continue;
 		const pavedata & d = test.result(point3d(x,y,-z));
 		double ux = n.ux;
@@ -3261,7 +3260,7 @@ node_emod_callback(const coord3d & c, const mesh * FEM, const material * mat)
 }
 
 int
-main()
+main_test()
 {
 	timeme();
 	printf("Constructing Mesh...");
@@ -3323,9 +3322,9 @@ main()
 			continue;
 		double x = n.x, y = n.y, sx = 1.0, sy = 1.0, s = 3.0;
 		double fxm = 0.0, fxp = 0.0, fym = 0.0, fyp = 0.0;
-		if (rint(2*fmod(x-cube[0][0],dx)) > 0.0)
+		if (ROUND(2*fmod(x-cube[0][0],dx)) > 0)
 			sx = 2.0;
-		if (rint(2*fmod(y-cube[1][0],dy)) > 0.0)
+		if (ROUND(2*fmod(y-cube[1][0],dy)) > 0)
 			sy = 2.0;
 		if (n.xm != UINT_MAX)
 			fxm = sx*(x - double(FEM.getnode(n.xm).x))/s;
