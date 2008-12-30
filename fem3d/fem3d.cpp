@@ -2839,7 +2839,7 @@ main()
 				}
 			}
 		}
-		// Add the tire loads
+		// Add the tire neighbours
 		for (x = lx - (step-2)*dx; x <= lx + (step-2)*dx; x += dx) {
 			for (y = ly - (step-2)*dy; y <= ly + (step-2)*dy; y += dy) {
 				unsigned p = FEM.hasnode(coord3d(x,y,0.0));
@@ -2860,18 +2860,27 @@ main()
 					y_p = FEM.hasnode(coord3d(x,y+2*dy,0.0));
 				n.setneighbours(x_m,x_p,y_m,y_p,UINT_MAX,UINT_MAX);
 				FEM.updatenode(n);
+			}
+		}
+		// Add the tire loads
+		for (x = lx - (step-2)*dx; x <= lx + (step-2)*dx; x += dx) {
+			for (y = ly - (step-2)*dy; y <= ly + (step-2)*dy; y += dy) {
+				unsigned p = FEM.hasnode(coord3d(x,y,0.0));
+				if (p == UINT_MAX)
+					continue;
+				node3d n = FEM.getnode(p);
 				double fxm = 0.0, fxp = 0.0, fym = 0.0, fyp = 0.0;
-				if (x_m != UINT_MAX)
-					fxm = (x - double(FEM.getnode(x_m).x))/2;
-				if (x_p != UINT_MAX)
-					fxp = (double(FEM.getnode(x_p).x) - x)/2;
-				if (y_m != UINT_MAX)
-					fym = (y - double(FEM.getnode(y_m).y))/2;
-				if (y_p != UINT_MAX)
-					fyp = (double(FEM.getnode(y_p).y) - y)/2;
+				if (n.xm != UINT_MAX)
+					fxm = (x - double(FEM.getnode(n.xm).x))/2;
+				if (n.xp != UINT_MAX)
+					fxp = (double(FEM.getnode(n.xp).x) - x)/2;
+				if (n.ym != UINT_MAX)
+					fym = (y - double(FEM.getnode(n.ym).y))/2;
+				if (n.yp != UINT_MAX)
+					fyp = (double(FEM.getnode(n.yp).y) - y)/2;
 				double f = F*blockarea(x-fxm-lx,x+fxp-lx,y-fym-ly,y+fyp-ly,lr);
 				if (fabs(f) > 0.0)
-					FEM.add_fext(coord3d(x,y,0.0),mesh::Z,f);
+					FEM.add_fext(n,mesh::Z,f);
 			}
 		}
 		region r;
