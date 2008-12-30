@@ -1983,6 +1983,9 @@ struct mesh_bc_key {
 	bool operator> (const mesh_bc_key & k) const {
 		return (n > k.n || (n == k.n && i > k.i));
 	}
+	bool operator< (const mesh_bc_key & k) const {
+		return (n < k.n || (n == k.n && i < k.i));
+	}
 };
 struct mesh_bc : public mesh_bc_key {
 	double d;
@@ -2184,15 +2187,27 @@ public:
 	}
 	// Add an external force at a node.
 	bool add_fext(const coord3d & p, const dof f, const double d) {
-		unsigned k = node.haskey(p);
+		unsigned j, k = node.haskey(p);
 		if (k == UINT_MAX)
 			return false;
-		if (f & mesh::X)
-			f_ext.add(mesh_bc(k,0,d));
-		if (f & mesh::Y)
-			f_ext.add(mesh_bc(k,1,d));
-		if (f & mesh::Z)
-			f_ext.add(mesh_bc(k,2,d));
+		if (f & mesh::X) {
+			mesh_bc m(k,0,d);
+			if ((j = f_ext.haskey(m)) != UINT_MAX)
+				m.d += f_ext[j].d;
+			f_ext.add(m);
+		}
+		if (f & mesh::Y) {
+			mesh_bc m(k,1,d);
+			if ((j = f_ext.haskey(m)) != UINT_MAX)
+				m.d += f_ext[j].d;
+			f_ext.add(m);
+		}
+		if (f & mesh::Z) {
+			mesh_bc m(k,2,d);
+			if ((j = f_ext.haskey(m)) != UINT_MAX)
+				m.d += f_ext[j].d;
+			f_ext.add(m);
+		}
 		return true;
 	}
 	// Finally, solve the system.
@@ -2206,7 +2221,6 @@ public:
 		const element * e = first;
 
 		timeme("\nBuilding external forces...");
-		f_ext.sort();
 		for (i = 0; i < f_ext.length(); i++) {
 			const mesh_bc & f = f_ext[i];
 			//F(f.n)(f.i) = f.d;
@@ -2221,7 +2235,6 @@ public:
 		}
 
 		timeme("\nSetting fixed BCs...");
-		disp_bc.sort();
 		for (i = 0; i < disp_bc.length(); i++) {
 			const mesh_bc & u = disp_bc[i];
 			//n = u.n;
@@ -2442,8 +2455,8 @@ private:
 	friend class listelement_o<mesh,element>;
 	
 	node_list node;
-	koset<mesh_bc_key,mesh_bc> disp_bc;
-	koset<mesh_bc_key,mesh_bc> f_ext;
+	kiset<mesh_bc_key,mesh_bc> disp_bc;
+	kiset<mesh_bc_key,mesh_bc> f_ext;
 };
 
 inline mesh::dof
