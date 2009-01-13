@@ -297,7 +297,7 @@ ifdef WIN32
 	@echo $@ ": \\" > $@.d 
 	@sh $(topsrcdir)/build/cygwin-wrapper -quiet \
 		$(CXX) -EP -showIncludes $(OS_CXXFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<) 2>&1 \
-			| grep "including" | sed -e 's/.*ile: //g' -e 's/^[ ]*//g' -e 's^\\^/^g' -e 's/^/\t/g' -e 's/$$/ \\/g' | grep -v " [^\]" >> $@.d 
+			| grep "including" | sed -e 's/.*file: //g' -e 's/^[ ]*//g' -e 's^\\^/^g' -e 's/^/\t/g' -e 's/$$/ \\/g' | grep -v " [^\]" | grep -v ";" >> $@.d 
 	@sh $(topsrcdir)/build/cygwin-wrapper \
 		$(CXX) -Fo$@ -c $(OS_CXXFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<)
 else
