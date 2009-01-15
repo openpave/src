@@ -34,7 +34,7 @@
 #include <stdlib.h>
 #include "rng.h"
 
-#ifdef BUILD
+#ifdef NOBUILD
 int
 main(int argc, char * argv[])
 {

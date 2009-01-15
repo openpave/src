@@ -89,9 +89,9 @@ pavedata::principle(double v, double E)
 		}
 		t1 = data[3][0]*data[3][0] + data[3][1]*data[3][1];
 	}
-	data[3][0] = (data[2][0]-data[2][2])*0.5;
-	data[3][1] = (data[2][0]-data[2][1])*0.5;
-	data[3][2] = (data[2][1]-data[2][2])*0.5;
+	data[3][0] = fabs(data[2][0]-data[2][2])*0.5;
+	data[3][1] = fabs(data[2][0]-data[2][1])*0.5;
+	data[3][2] = fabs(data[2][1]-data[2][2])*0.5;
 	for (i = 0; i < 2; i++) {
 		for (j = i + 1; j < 3; j++) {
 			if (data[2][i] > data[2][j])
@@ -115,6 +115,14 @@ pavedata::principle(double v, double E)
 	data[8][0] = t1*data[3][0];
 	data[8][1] = t1*data[3][1];
 	data[8][2] = t1*data[3][2];
+	for (i = 0; i < 2; i++) {
+		for (j = i + 1; j < 3; j++) {
+			if (data[7][i] > data[7][j])
+				swap(data[7][i],data[7][j]);
+			if (data[8][i] > data[8][j])
+				swap(data[8][i],data[8][j]);
+		}
+	}
 }
 
 bool
@@ -128,13 +136,6 @@ LEsystem::addlayer(double h, double e, const double v, const double s,
 		return false;
 	}
 	return true;
-}
-
-bool
-LEsystem::removelayers()
-{
-	empty();
-	return isempty();
 }
 
 bool
@@ -153,62 +154,26 @@ LEsystem::removelayer(const unsigned l)
 }
 
 bool
-LEsystem::removeloads()
-{
-	return load.empty();
-}
-
-bool
-LEsystem::removeload(const unsigned i)
-{
-	return load.remove(i);
-}
-
-bool
-LEsystem::addpoint(const point3d & p)
-{
-	return data.add(pavedata(p));
-}
-	
-bool
 LEsystem::addgrid(const unsigned nx, const double * xp,
                   const unsigned ny, const double * yp,
                   const unsigned nz, const double * zp)
 {
-	pavedata * pd = new pavedata[nx*ny*nz];
-	if (pd == 0)
-		return false;
-	memset(pd,0,nx*ny*nz*sizeof(pavedata));
+	bool rv = true;
 	for (unsigned ix = 0; ix < nx; ix++) {
 		for (unsigned iy = 0; iy < ny; iy++) {
-			for (unsigned iz = 0; iz < nz; iz++) {
-				pavedata & pde = pd[ix*ny*nz+iy*nz+iz];
-				pde.x = xp[ix], pde.y = yp[iy], pde.z = zp[iz];
-			}
+			for (unsigned iz = 0; iz < nz; iz++)
+				rv = rv && data.add(pavedata(point3d(xp[ix],yp[iy],zp[iz])));
 		}
 	}
-	bool rv = data.add(pd,nx*ny*nz);
-	delete [] pd;
 	return rv;
 }
 
-bool
-LEsystem::removepoints()
-{
-	return data.empty();
-}
-
-bool
-LEsystem::removepoint(const point3d & p)
-{
-	return data.remove(p);
-}
-
 LElayer &
-LEsystem::layer(const unsigned l)
+LEsystem::layer(const unsigned l) const
 {
 	LElayer * pl = first;
 	unsigned i = 0;
+
 	while (i++ < l && pl->next != 0)
 		pl = pl->next;
 	return *pl;
@@ -221,80 +186,100 @@ LEsystem::layer(const unsigned l)
 bool
 LEsystem::check()
 {
-	unsigned il;
+	unsigned il, nl = layers();
 	const LElayer * pl;
+	bool rv = true;
 
-	if (layers() == 0) {
+	if (nl == 0) {
 		event_msg(EVENT_WARN,
 			"Cannot calculate a pavement without any layers!");
-		return false;
+		rv = false;
 	}
 	if (load.length() == 0) {
 		event_msg(EVENT_WARN,
 			"Cannot calculate a pavement without any loads!");
-		return false;
+		rv = false;
 	}
 	if (data.length() == 0) {
 		event_msg(EVENT_WARN,
 			"Cannot calculate a pavement without any evaluation points!");
-		return false;
+		rv = false;
 	}
 	for (il = 1, pl = first; pl != 0; il++, pl = pl->next) {
 		if (pl->emod() <= 0.0) {
 			event_msg(EVENT_WARN,
 				"Error: Elastic modulus of layer %d must be greater"
 				" than zero not %f!", il, pl->emod());
-			return false;
+			rv = false;
 		}
 		if (pl->poissons() <= 0.0 || pl->poissons() > 0.5) {
 			event_msg(EVENT_WARN,
 				"Error: Poisson's ratio of layer %d must be between"
 				" zero and one half not %f!", il, pl->poissons());
-			return false;
+			rv = false;
 		}
 		if (pl->thickness() < 0.0) {
 			event_msg(EVENT_WARN,
 				"Error: Layer %d cannot have negative thickness!", il);
-			return false;
+			rv = false;
 		}
 		if (pl->slip() < 0.0 || pl->slip() > 1.0 ) {
 			event_msg(EVENT_WARN,
 				"Error: Layer %d has an invalid bonding coefficent!", il);
-			return false;
+			rv = false;
 		}
 		if (pl->thickness() == 0.0 && pl->next != 0) {
 			event_msg(EVENT_WARN,
 				"Error: Layer %d cannot have zero thickness!", il);
-			return false;
+			rv = false;
 		}
 		if (pl->thickness() == 0.0 && pl->next == 0 && pl->slip() != 1.0) {
 			event_msg(EVENT_WARN,
 				"Error: Infinite layer %d cannot have imperfect bonding!", il);
-			return false;
-		}
-		if (pl->next != 0 && pl->slip() < 0.0) {
-			event_msg(EVENT_WARN,
-				"Error: Layer %d's bonding coefficent will be clamped to 0.0!", il);
+			rv = false;
 		}
 	}
-	if (last->bottom() > 0.0 && last->poissons() == 0.75) {
+	if (last && last->bottom() > 0.0 && last->poissons() == 0.75) {
  		event_msg(EVENT_WARN,
 			"Error: Last layer cannot have a Poisson's ratio of 0.75!");
-		return false;
+		rv = false;
 	}
+	if (rv == false)
+		return rv;
 	for (unsigned ixy = 0; ixy < data.length(); ixy++) {
-		// Ignore evaluation points above the surface
-		// or below the rigid interface.
-		const pavedata & d = data[ixy];
-		if (d.z < 0.0 || (last->bottom() > 0.0
-		 && last->bottom() <= d.z)) {
+		pavedata & d = data[ixy];
+		// Clear the data.
+		memset(d.data,0,sizeof(d.data));
+		// Set the il variables correctly.
+		double z = first->top(), h = 0.0;
+		if (d.z < z) {
  			event_msg(EVENT_WARN,
-				"Error: evaluation point %d (%f,%f,%f) not within the pavement!",
-				ixy,d.x,d.y,d.z);
-			return false;
+				"Error: evaluation point %d (%f,%f,%f) not within pavement!",
+				ixy+1,d.x,d.y,d.z);
+			rv = false;
+			continue;
+		}
+		for (pl = first, il = 0; pl != 0; pl = pl->next, il++) {
+			h = pl->thickness();
+			if (d.il != UINT_MAX && d.il == il) {
+				break;
+			} else if (d.il == UINT_MAX
+					&& d.z >= z && (h == 0.0 || d.z < (z+h))) {
+				d.il = il;
+				break;
+			}
+			z += h;
+		}
+		assert(pl == 0 || d.il != UINT_MAX);
+		// Points must be within the layer or on the boundary.
+		if (pl == 0 || d.z < z || (h > 0.0 && d.z > (z+h))) {
+ 			event_msg(EVENT_WARN,
+				"Error: evaluation point %d (%f,%f,%f) not within layer %d!",
+				ixy+1,d.x,d.y,d.z,d.il+1);
+			rv = false;
 		}
 	}
-	return true;
+	return rv;
 }
 
 /*
@@ -315,7 +300,142 @@ struct axialdata {
 	double sse2;
 	double rdp2;
 	double vdp2;
+	
+	// This function takes the results from the xxx2 variables, and adds
+	// them to the main varaibles, reseting them, and then deactivating
+	// the point if none changed by more than epsilon.
+	void accumulate(LEsystem::resulttype res, const double & eps) {
+		bool isactive = false;
+		
+		if (!active)
+			return;
+		if (!(res & LEsystem::disp)) {
+			vse += vse2;
+			isactive = isactive || (fabs(vse2) > eps*fabs(vse));
+			rse += rse2;
+			isactive = isactive || (fabs(rse2) > eps*fabs(rse));
+			tse += tse2;
+			isactive = isactive || (fabs(tse2) > eps*fabs(tse));
+			sse += sse2;
+			isactive = isactive || (fabs(sse2) > eps*fabs(sse));
+			rdp += rdp2;
+			isactive = isactive || (fabs(rdp2) > eps*fabs(rdp));
+			vse2 = 0.0; rse2 = 0.0; tse2 = 0.0;
+			sse2 = 0.0; rdp2 = 0.0;
+		}
+		vdp += vdp2;
+		isactive = isactive || (fabs(vdp2) > eps*fabs(vdp));
+		vdp2 = 0.0;
+		if (!isactive && eps > 0.0)
+			active = false;
+	} 
+	// This function does the final step of the axial data calculations,
+	// which is to multiply each result by a constant and fixup the radial
+	// and tangential shear stresses.
+	void finalize(LEsystem::resulttype res, const double & r,
+			const double & a, const double & v, const double & E) {
+		double t1 = a*(v+1)/E, t2;
+ 
+		// Always make sure we accumulate the results.
+		accumulate(res,0.0);
+		vdp *= t1;
+		if (res & LEsystem::disp)
+			return;
+		if (r > 0.0) {
+			t2 = rdp/r; rse -= t2; tse += t2;
+		}
+		rdp *= t1; rse *= a; tse *= a; vse *= a; sse *= a;
+	}
+	// This function takes the data from this axial data point and
+	// adds it to the general data point, accounting for rotation.
+	void addtodata(LEsystem::resulttype res, pavedata * d,
+			const paveload & l, const double & r,
+			unsigned gl = UINT_MAX) const {
+		double p = l.pressure();
+		
+		assert(fabs(r-l.distance(d)) < DBL_MIN);
+		if (gl != UINT_MAX) {
+			d->deflgrad[gl] += p*vdp;
+			return;
+		}
+		d->data[4][2] += p*vdp;
+		if (res & LEsystem::disp)
+			return;
+		d->data[0][2] += p*vse;
+		if (r == 0.0) {
+			d->data[0][0] += p*(rse+tse)/2;
+			d->data[0][1] += p*(rse+tse)/2;
+			d->data[1][1] += p*sse;
+		} else {
+			double sint = (d->y-l.y)/r;
+			double cost = (d->x-l.x)/r;
+			if (cost == 0.0) {
+				d->data[0][0] += p*tse;
+				d->data[0][1] += p*rse;
+				d->data[1][2] += p*SGN(sint)*sse;
+				d->data[4][1] += p*SGN(sint)*rdp;
+			} else if (sint == 0.0) {
+				d->data[0][0] += p*rse;
+				d->data[0][1] += p*tse;
+				d->data[1][1] += p*SGN(cost)*sse;
+				d->data[4][0] += p*SGN(cost)*rdp;
+			} else {
+				d->data[0][0] += p*(cost*cost*rse+sint*sint*tse);
+				d->data[0][1] += p*(cost*cost*tse+sint*sint*rse);
+				d->data[1][0] += p*cost*sint*(rse-tse);
+				d->data[1][1] += p*cost*sse;
+				d->data[1][2] += p*sint*sse;
+				d->data[4][0] += p*cost*rdp;
+				d->data[4][1] += p*sint*rdp;
+			}
+		}
+	}
 };
+
+/*
+ * Store the depth and layer.
+ */
+struct zpoint {
+	double z;
+	unsigned il;
+	
+	zpoint() {
+	}
+	zpoint(double d, unsigned l)
+	  : z(d), il(l) {
+	}
+	int compare(const zpoint & p) const {
+		if (z == p.z && il == p.il)
+			return 0;
+		if (z < p.z)
+			return -1;
+		if (z > p.z)
+			return 1;
+		if (il < p.il)
+			return -1;
+		else
+			return 1;
+	}
+	bool operator == (const zpoint & p) const {
+		return (z == p.z && il == p.il ? true : false);
+	}
+	bool operator != (const zpoint & p) const {
+		return (z != p.z || il != p.il ? true : false);
+	}
+	bool operator > (const zpoint & p) const {
+		return (compare(p) == 1 ? true : false);
+	}
+	bool operator >= (const zpoint & p) const {
+		return (compare(p) != -1 ? true : false);
+	}
+	bool operator < (const zpoint & p) const {
+		return (compare(p) == -1 ? true : false);
+	}
+	bool operator <= (const zpoint & p) const {
+		return (compare(p) != 1 ? true : false);
+	}
+};
+
 #define GRADSTEP 1e-8
 
 #define NBZ		8192						// Number of zeros in bessels.
@@ -337,7 +457,8 @@ static double gf[NGQP+1][NGQP];
  * find the zeros of the various bessel functions...
  */
 static void
-initarrays() {
+initarrays()
+{
 	unsigned ib;
 	static bool done = false;
 
@@ -519,160 +640,6 @@ stoppingpoints(const unsigned nbz, const double a, const double r,
 }
 
 /*
- * This build the ABCD matrix, based on the structure, with slip.  This has
- * to be done by solving the entire system, since the piecewise solution
- * used above is singular.
- */
-static void
-buildabcd_full(const double m, const unsigned nl, const double * h,
-			   const double * v, const double * E,
-			   const double * f, double (* ABCD)[4])
-{
-	unsigned i, j, il = (nl-1);
-
-	memset(ABCD,0,(nl*4)*sizeof(double));
-	if (m <= 0.0)
-		return;
-	// First allocate space for the arrays...
-	double * A = new double[(nl*4)*(nl*4)];
-	double * B = &ABCD[0][0];
-	if (A == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in buildabcd_full()!");
-		goto abort;
-	}
-	memset(A,0,(nl*4)*(nl*4)*sizeof(double));
-	memset(B,0,(nl*4)*sizeof(double));
-	// We start with the last layer...
-	if (h[il] > 0.0) {
-		double h1 = h[il];
-		double v1 = v[il];
-		double s1 = f[il];
-		double t1 = (m*E[il]*(s1-1))/(1+v1);
-		A[(il*4+2-2)*(nl*4)+il*4+0]  = m*t1 + m*s1;
-		A[(il*4+2-2)*(nl*4)+il*4+1]  = (m*h1+2*v1)*t1 + s1*(1+m*h1);
-		A[(il*4+2-2)*(nl*4)+il*4+2]  = m*t1 - m*s1;
-		A[(il*4+2-2)*(nl*4)+il*4+2] *= exp(-2*m*h1);
-		A[(il*4+2-2)*(nl*4)+il*4+3]  = (m*h1-2*v1)*t1 + s1*(1-m*h1);
-		A[(il*4+2-2)*(nl*4)+il*4+3] *= exp(-2*m*h1);
-		A[(il*4+3-2)*(nl*4)+il*4+0]  = m;
-		A[(il*4+3-2)*(nl*4)+il*4+1]  = m*h1+2*(2*v1-1);
-		A[(il*4+3-2)*(nl*4)+il*4+2]  = m;
-		A[(il*4+3-2)*(nl*4)+il*4+2] *= exp(-2*m*h1);
-		A[(il*4+3-2)*(nl*4)+il*4+3]  = m*h1-2*(2*v1-1);
-		A[(il*4+3-2)*(nl*4)+il*4+3] *= exp(-2*m*h1);
-	} else {
-		A[(il*4+2-2)*(nl*4)+il*4+0] = 1.0;
-		A[(il*4+3-2)*(nl*4)+il*4+1] = 1.0;
-	}
-	// Now we work back up, building the two 4x4 matrices...
-	for ( ; il > 0; il--) {
-		double h1 = h[il-1];
-		double s1 = f[il-1];
-		double v1 = v[il-1];
-		double v2 = v[il];
-		double K = (1+v2)/(1+v1)*E[il-1]/E[il];
-		double R = E[il-1]*m*(s1-1)/(1+v1);
-		double t1 = m*h1;
-		A[(il*4-4)*(nl*4)+il*4-4] =  m;
-		A[(il*4-4)*(nl*4)+il*4-3] =  m*h1+2*v1-1;
-		A[(il*4-4)*(nl*4)+il*4-2] = -m;
-		A[(il*4-4)*(nl*4)+il*4-1] = -m*h1+2*v1-1;
-		A[(il*4-4)*(nl*4)+il*4+0] =  m;
-		A[(il*4-4)*(nl*4)+il*4+1] =  m*h1+2*v2-1;
-		A[(il*4-4)*(nl*4)+il*4+2] = -m;
-		A[(il*4-4)*(nl*4)+il*4+3] = -m*h1+2*v2-1;
-		A[(il*4-3)*(nl*4)+il*4-4] =  m;
-		A[(il*4-3)*(nl*4)+il*4-3] =  m*h1+2*v1;
-		A[(il*4-3)*(nl*4)+il*4-2] =  m;
-		A[(il*4-3)*(nl*4)+il*4-1] =  m*h1-2*v1;
-		A[(il*4-3)*(nl*4)+il*4+0] =  m;
-		A[(il*4-3)*(nl*4)+il*4+1] =  m*h1+2*v2;
-		A[(il*4-3)*(nl*4)+il*4+2] =  m;
-		A[(il*4-3)*(nl*4)+il*4+3] =  m*h1-2*v2;
-		A[(il*4-2)*(nl*4)+il*4-4] =  m*(R+s1);
-		A[(il*4-2)*(nl*4)+il*4-3] =  R*(m*h1+2*v1)+s1*(1+m*h1);
-		A[(il*4-2)*(nl*4)+il*4-2] =  m*(R-s1);
-		A[(il*4-2)*(nl*4)+il*4-1] =  R*(m*h1-2*v1)+s1*(1-m*h1);
-		A[(il*4-2)*(nl*4)+il*4+0] =  m*K*s1;
-		A[(il*4-2)*(nl*4)+il*4+1] = (1+m*h1)*K*s1;
-		A[(il*4-2)*(nl*4)+il*4+2] = -m*K*s1;
-		A[(il*4-2)*(nl*4)+il*4+3] = (1-m*h1)*K*s1;
-		A[(il*4-1)*(nl*4)+il*4-4] =  m;
-		A[(il*4-1)*(nl*4)+il*4-3] =  m*h1+4*v1-2;
-		A[(il*4-1)*(nl*4)+il*4-2] =  m;
-		A[(il*4-1)*(nl*4)+il*4-1] =  m*h1-4*v1+2;
-		A[(il*4-1)*(nl*4)+il*4+0] =  m*K;
-		A[(il*4-1)*(nl*4)+il*4+1] = (m*h1+4*v2-2)*K;
-		A[(il*4-1)*(nl*4)+il*4+2] =  m*K;
-		A[(il*4-1)*(nl*4)+il*4+3] = (m*h1-4*v2+2)*K;
-		for (i = 0; i < 2; i++) {
-			for (j = 0; j < 2; j++) {
-				A[(il*4-4+i)*(nl*4)+il*4-2+j] *=  exp(-2*t1);
-				A[(il*4-2+i)*(nl*4)+il*4-4+j] *=  (2*t1<MAX_EXP?exp(2*t1):DBL_MAX);
-				A[(il*4-4+i)*(nl*4)+il*4+0+j] *= -1.0;
-				A[(il*4-4+i)*(nl*4)+il*4+2+j] *= -exp(-2*t1);
-				A[(il*4-2+i)*(nl*4)+il*4+0+j] *= -(2*t1<MAX_EXP?exp(2*t1):DBL_MAX);
-				A[(il*4-2+i)*(nl*4)+il*4+2+j] *= -1.0;
-			}
-		}
-	}
-	// Then we fill in the first final values...
-	A[(nl*4-2)*(nl*4)+0] =  m;
-	A[(nl*4-2)*(nl*4)+1] =  2*v[0];
-	A[(nl*4-2)*(nl*4)+2] =  m;
-	A[(nl*4-2)*(nl*4)+3] = -2*v[0];
-	A[(nl*4-1)*(nl*4)+0] =  m;
-	A[(nl*4-1)*(nl*4)+1] =  2*v[0]-1;
-	A[(nl*4-1)*(nl*4)+2] = -m;
-	A[(nl*4-1)*(nl*4)+3] =  2*v[0]-1;
-	B[(nl*4-1)] = 1/m/m;
-	//for (i = 0; i < nl*4; i++) {
-	//	for (j = 0; j < nl*4; j++) {
-	//		printf("%g",A[i*(nl*4)+j]);
-	//		if (j == nl*4-1)
-	//			printf("\n");
-	//		else
-	//			printf("\t");
-	//	}
-	//}
-	//printf("\n");
-
-	// Solve the system using Gaussian elimination with full pivoting.
-	// this is slow, but stable - even LU decomposition is not stable enough
-	// to ensure good results...
-	for (il = 0; il < nl*4; il++) {
-		double pvt = A[il*(nl*4)+il];
-		if (fabs(pvt) < DBL_EPSILON) {
-			for (i = il+1; i < nl*4; i++) {
-				if (fabs(pvt = A[i*(nl*4)+il]) >= DBL_EPSILON)
-					break;
-			}
-			if (i == nl*4)
-				break; // XXX
-			for (j = 0; j < nl*4; j++)
-				swap(A[i*(nl*4)+j],A[il*(nl*4)+j]);
-			swap(B[i],B[il]);
-		}
-		for (j = nl*4-1; j > il; j--) {
-			double tmp = A[j*(nl*4)+il]/pvt;
-			for (i = nl*4-1; i > il; i--)
-				A[j*(nl*4)+i] -= tmp*A[il*(nl*4)+i];
-			B[j] -= tmp*B[il];
-		}
-	}
-	for (il = nl*4; il > 0; il--) {
-		for (i = nl*4; i > il; i--)
-			B[il-1] -= A[(il-1)*(nl*4)+(i-1)]*B[i-1];
-		B[il-1] /= A[(il-1)*(nl*4)+(il-1)];
-	}
-	for (il = 0; il < nl; il++) {
-		printf("%g\t%g\t%g\t%0.16g\t%0.16g\t%0.16g\t%0.16g\n",m,h[il],E[il],ABCD[il][0],ABCD[il][1],ABCD[il][2],ABCD[il][3]);
-	}
-abort:
-	delete [] A;
-}
-
-/*
  * This build the ABCD matrix, based on the structure.
  */
 static void
@@ -801,6 +768,21 @@ buildabcd(const double m, const unsigned nl, const double * h,
 }
 
 /*
+ * This function builds the common variables for the various integrations.
+ */
+static void
+buildT(const double m, const double z, const double (&ABCD)[4],
+		double (&T)[4])
+{
+	T[1] = exp(-m*z);
+	T[0] = m*(ABCD[2] + ABCD[3]*z)*T[1];
+	T[1] *= ABCD[3];
+	T[3] = (m*z < MAX_EXP ? exp(m*z) : DBL_MAX);
+	T[2] = m*(ABCD[0] + ABCD[1]*z)*T[3];
+	T[3] *= ABCD[1];
+}
+
+/*
  * This is the 'correct' code, according to exactly how the
  * math should be done.  As a result, it is slow...  It is only
  * really here for checking the optimised code below, but it
@@ -831,7 +813,7 @@ LEsystem::calc_accurate()
 	cset<double> bm1(0, 2*NBZ+2);
 	if (R == 0 || ABCD == 0 || h == 0 || f == 0 || v == 0 || E == 0) {
 		event_msg(EVENT_ERROR,"Out of memory in LEsystem::calc_accurate()!");
-		rv =  false;
+		rv = false;
 		goto abort;
 	}
 	for (pl = first, il = 0; pl != 0; pl = pl->next, il++) {
@@ -844,25 +826,15 @@ LEsystem::calc_accurate()
 	// We loop through all of the evaluation points
 	for (ixy = 0; ixy < data.length(); ixy++) {
 		pavedata & d = data[ixy];
-		// Zero the data...
-		memset(d.data,0,sizeof(d.data));
-		// Ignore evaluation points above the surface or below
-		// the rigid interface.
-		if (d.z < 0.0 || (last->bottom() > 0.0 && last->bottom() <= d.z))
-			continue;
-		// Find our layer...
-		for (pl = first, il = 0; pl != 0; pl = pl->next, il++) {
-			if (pl->top() <= d.z && (h[il] == 0.0 || d.z < h[il]))
-				break;
-		}
+		il = d.il;
 		// Now loop through the list of loads...
 		for (ild = 0; ild < load.length(); ild++) {
 			double a = load[ild].radius();
-			double p = load[ild].pressure();
 			double r = load[ild].distance(d);
-			axialdata s;
 			double m0, m1;
+			axialdata s;
 			memset(&s,0,sizeof(axialdata));
+			s.active = true;
 
 			// Now gerenate a list of integration intervals, then sort them.
 			bm0.empty(), bm1.empty();
@@ -889,36 +861,24 @@ LEsystem::calc_accurate()
 			// We loop through all of our roots and gauss points.
 			// In this version we do this in two parts, one for the
 			// J1(ma)*J0(mr) integrals and one for the J1(ma)*J1(mr).
-			// This is so we can use Guass-Lebatto, with exact end
-			// points, which gives us a higher accuracy integral.
-			// XXX: Except that Guass-Lebatto is not accurate...
 			for (ib = bm0.length()-1; ib > 0; ib--) {
-				double vse = 0.0, rse = 0.0, tse = 0.0, vdp = 0.0;
 				for (igp = 0; igp < NGQP; igp++) {
-					//if (ib >= 2 && igp == NLQP-1 && bm0[ib] != m0)
-					//	continue;
 					// Calculate the gauss point and weight.
 					double m = (bm0[ib]+bm0[ib-1])/2
 							 + gu[NGQP][igp]*(bm0[ib]-bm0[ib-1])/2;
 					double w = gf[NGQP][igp]*(bm0[ib]-bm0[ib-1])/2;
 					// First build a new ABCD matrix.
 					buildabcd(m,nl,h,v,E,f,R,ABCD);
-					double t1, t3, t4, t5, t6;
-					t1 = m*j1(m*a)*w*j0(m*r);
-					t3 = m*(ABCD[il][2] + ABCD[il][3]*d.z)*exp(-m*d.z);
-					t4 = ABCD[il][3]*exp(-m*d.z);
-					t5 = m*(ABCD[il][0] + ABCD[il][1]*d.z)*
-									 (m*d.z<MAX_EXP?exp(m*d.z):DBL_MAX);
-					t6 = ABCD[il][1]*(m*d.z<MAX_EXP?exp(m*d.z):DBL_MAX);
-					vse += t1*m*((1-2*v[il])*(t4+t6)+(t3-t5));
-					rse += t1*m*((1+2*v[il])*(t4+t6)-(t3-t5));
-					tse += t1*m*(2*v[il])*(t4+t6);
-					vdp += t1*((2-4*v[il])*(t6-t4)-(t3+t5));
+					double t = m*j1(m*a)*w*j0(m*r), T[4];
+					buildT(m,d.z,ABCD[il],T);
+					s.vse2 += t*m*((1-2*v[il])*(T[1]+T[3])+(T[0]-T[2]));
+					s.rse2 += t*m*((1+2*v[il])*(T[1]+T[3])-(T[0]-T[2]));
+					s.tse2 += t*m*(2*v[il])*(T[1]+T[3]);
+					s.vdp2 += t*((2-4*v[il])*(T[3]-T[1])-(T[0]+T[2]));
 				}
-				s.vse += vse, s.rse += rse, s.tse += tse, s.vdp += vdp;
+				s.accumulate(accurate,0.0);
 			}
 			for (ib = 1; ib < bm1.length(); ib++) {
-				double sse = 0.0, rdp = 0.0; 
 				for (igp = 0; igp < NGQP; igp++) {
 					// Calculate the gauss point and weight.
 					double m = (bm1[ib]+bm1[ib-1])/2
@@ -926,46 +886,16 @@ LEsystem::calc_accurate()
 					double w = gf[NGQP][igp]*(bm1[ib]-bm1[ib-1])/2;
 					// First build a new ABCD matrix.
 					buildabcd(m,nl,h,v,E,f,R,ABCD);
-					double t1, t3, t4, t5, t6;
-					t1 = m*j1(m*a)*j1(m*r)*w;
-					t3 = m*(ABCD[il][2] + ABCD[il][3]*d.z)*exp(-m*d.z);
-					t4 = ABCD[il][3]*exp(-m*d.z);
-					t5 = m*(ABCD[il][0] + ABCD[il][1]*d.z)*
-									 (m*d.z<MAX_EXP?exp(m*d.z):DBL_MAX);
-					t6 = ABCD[il][1]*(m*d.z<MAX_EXP?exp(m*d.z):DBL_MAX);
-					sse += t1*m*((2*v[il])*(t6-t4) + (t3+t5));
-					rdp += t1*((t4+t6)-(t3-t5));
+					double t = m*j1(m*a)*j1(m*r)*w, T[4];
+					buildT(m,d.z,ABCD[il],T);
+					s.sse2 += t*m*((2*v[il])*(T[3]-T[1]) + (T[0]+T[2]));
+					s.rdp2 += t*((T[1]+T[3])-(T[0]-T[2]));
 				}
-				s.sse += sse, s.rdp += rdp;
+				s.accumulate(accurate,0.0);
 			}
-			if (r > 0.0) {
-				s.rse -= s.rdp/r;
-				s.tse += s.rdp/r;
-			}
-			s.rse *= a; s.tse *= a;
-			s.vse *= a; s.sse *= a;
-			s.rdp *= a*(v[il]+1)/E[il];
-			s.vdp *= a*(v[il]+1)/E[il];
+			s.finalize(accurate,r,a,v[il],E[il]);
 			// Now add this load's axial data into the point's data
-			if (r == 0.0) {
-				d.data[0][0] += p*(s.rse+s.tse)/2;
-				d.data[0][1] += p*(s.rse+s.tse)/2;
-				d.data[0][2] += p*s.vse;
-				d.data[1][1] += p*s.sse;
-			} else {
-				double cost, sint;
-				sint = (d.y-load[ild].y)/r;
-				cost = (d.x-load[ild].x)/r;
-				d.data[0][0] += p*(cost*cost*s.rse+sint*sint*s.tse);
-				d.data[0][1] += p*(cost*cost*s.tse+sint*sint*s.rse);
-				d.data[0][2] += p*s.vse;
-				d.data[1][0] += p*cost*sint*(s.rse-s.tse);
-				d.data[1][1] += p*cost*s.sse;
-				d.data[1][2] += p*sint*s.sse;
-				d.data[4][0] += p*cost*s.rdp;
-				d.data[4][1] += p*sint*s.rdp;
-			}
-			d.data[4][2] += p*s.vdp;
+			s.addtodata(accurate,&d,load[ild],r);
 		}
 		// Calculate the derived results (principal stresses and strains).
 		d.principle(v[il],E[il]);
@@ -984,7 +914,7 @@ abort:
  * This used to be ELSYM5M, now it's a NxNxN layered elastic code...
  */
 bool
-LEsystem::calculate(resulttype res, double * Q)
+LEsystem::calculate(resulttype res, const double * Q)
 {
 	unsigned ixy, nr, ir, nz, iz, ild, ia, ib, igp, il;
 	const LElayer * pl;
@@ -1007,6 +937,8 @@ LEsystem::calculate(resulttype res, double * Q)
 		ngqp = MIN(NGQP,12);
 		nbz = MIN(NBZ,256);
 	}
+	const double eps = ((res & mask) == dirty ? 1e-6 : 
+			((res & mask) == fast ? 1e-8 : 0.0));
 
 	// The integration constants, per layer.
 	double (* R)[4][2] = new double[nl][4][2];
@@ -1017,8 +949,8 @@ LEsystem::calculate(resulttype res, double * Q)
 	double * v = new double[nl];
 	double * E = new double[nl];
 	// Some place to store our data...
-	cset<double> z, a, r, bm;
-	sset<unsigned> zl;
+	cset<double> a, r, bm;
+	cset<zpoint> z;
 	fset<double> m0(data.length()), m1(data.length()); 
 	fset<axialdata> ax(data.length()); 
 	if (R == 0 || ABCD == 0 || h == 0 || f == 0 || v == 0 || E == 0)
@@ -1032,26 +964,19 @@ LEsystem::calculate(resulttype res, double * Q)
 
 	// Collect and sort the z positions.
 	for (ixy = 0; ixy < data.length(); ixy++) {
-		// Zero the data...
-		memset(data[ixy].data,0,sizeof(data[ixy].data));
+		pavedata & d = data[ixy];
 		// If we're collecting displacement gradient results
 		// resize the array as needed then zero it.
 		if (res & grad) {
-			data[ixy].deflgrad.resize(nl);
-			memset(&(data[ixy].deflgrad[0]),0,nl*sizeof(double));
+			if (!d.deflgrad.resize(nl))
+				goto abort;
+			memset(&(d.deflgrad[0]),0,nl*sizeof(double));
 		}
-		if (!z.add(data[ixy].z))
+		if (!z.add(zpoint(d.z,d.il)))
 			goto abort;
 	}
 	z.sort();
 	nz = z.length();
-	// Map z values to layers.
-	for (iz = 0; iz < nz; iz++) {
-		for (pl = first, il = 0; pl != 0; pl = pl->next, il++) {
-			if (pl->top() <= z[iz] && (h[il] == 0.0 || z[iz] < h[il]))
-				zl.add(il);
-		}
-	}
 
 	// Gerenate a list of load radii, then sort them and map from loads.
 	for (ild = 0; ild < load.length(); ild++) {
@@ -1075,8 +1000,8 @@ LEsystem::calculate(resulttype res, double * Q)
 		}
 		r.sort();
 		nr = r.length();
-		m0.resize(nr);
-		m1.resize(nr);
+		if (!m0.resize(nr) || !m1.resize(nr))
+			goto abort;
 
 		// Now gerenate a list of integration intervals, then sort them.
 		bm.empty();
@@ -1116,15 +1041,15 @@ LEsystem::calculate(resulttype res, double * Q)
 		// magnitude for exp(-7).  Add 5 intervals, so we drop 15 orders
 		// of magnitude.
 		x1 = 0.0, x2 = 0.0;
-		for (iz = nz; iz > 0 && z[iz-1] > 0.0; iz--) {
+		for (iz = nz; iz > 0 && z[iz-1].z > 0.0; iz--) {
 			for (unsigned i = 1; i <= 5
-					&& i*7*a[ia] < j0r[0]*z[iz-1]; i++) {
-				if ((x1 = i*7*a[ia]/z[iz-1]) < x2)
+					&& i*7*a[ia] < j0r[0]*z[iz-1].z; i++) {
+				if ((x1 = i*7*a[ia]/z[iz-1].z) < x2)
 					continue;
 				for (ib = 1; ib < bm.length() && bm[ib] < x1; ib++)
 					;
 				if (ib == bm.length() ||
-						MIN(x1-bm[ib-1],bm[ib]-x1)*z[iz-1] < 5*a[ia])
+						MIN(x1-bm[ib-1],bm[ib]-x1)*z[iz-1].z < 5*a[ia])
 					continue;
 				if (!bm.add(ib,x2 = x1))
 					goto abort;
@@ -1134,13 +1059,14 @@ LEsystem::calculate(resulttype res, double * Q)
 		
 gradloop:
 		// And finally, somewhere to stick the radial data...
-		ax.resize(nr*nz);
+		if (!ax.resize(nr*nz))
+			goto abort;
 		memset(&ax[0],0,sizeof(axialdata)*nz*nr);
 		// Compute the active set.
 		for (ixy = 0; ixy < data.length(); ixy++) {
 			pavedata & d = data[ixy];
-			iz = z.findvalue(d.z);
-			for (ild = 0; ild < load.length(); ++ild) {
+			iz = z.findvalue(zpoint(d.z,d.il));
+			for (ild = 0; ild < load.length(); ild++) {
 				if (fabs(load[ild].radius()-a[ia]) > DBL_MIN)
 					continue;
 				ir = r.findvalue(load[ild].distance(d));
@@ -1179,150 +1105,65 @@ gradloop:
 				}
 				// Now calculate the integrals.
 				for (iz = 0; iz < nz; iz++) {
-					double t1, t2, t3, t4, t5, t6;
-					const double & tz = z[iz];
-					il = zl[iz];
+					double T[4];
+					il = z[iz].il;
 					const double tv = 2*v[il];
-					t4 = exp(-m*tz);
-					t3 = m*(ABCD[il][2] + ABCD[il][3]*tz)*t4;
-					t4 *= ABCD[il][3];
-					t6 = (m*tz<MAX_EXP?exp(m*tz):DBL_MAX);
-					t5 = m*(ABCD[il][0] + ABCD[il][1]*tz)*t6;
-					t6 *= ABCD[il][1];
+					buildT(m,z[iz].z,ABCD[il],T);
 					for (ir = 0; ir < nr; ir++) {
 						axialdata & s = ax[iz*nr+ir];
 						if (!s.active)
 							continue;
 						alldone = false;
 						if (m < m0[ir]) {
-							t1 = w*j0(m*r[ir]);
+							double t = w*j0(m*r[ir]);
+							s.vdp2 += t*(2*(1-tv)*(T[3]-T[1])-(T[0]+T[2]));
 							if (!(res & disp)) {
-								s.vse2 += t1*m*((1-tv)*(t4+t6)+(t3-t5));
-								s.rse2 += t1*m*((1+tv)*(t4+t6)-(t3-t5));
-								s.tse2 += t1*m*tv*(t4+t6);
+								double t1 = T[1]+T[3], t2 = T[0]-T[2];
+								t *= m;
+								s.vse2 += t*((1-tv)*t1+t2);
+								s.rse2 += t*((1+tv)*t1-t2);
+								s.tse2 += t*tv*t1;
 							}
-							s.vdp2 += t1*(2*(1-tv)*(t6-t4)-(t3+t5));
 						}
 						if (m < m1[ir] && !(res & disp)) {
-							t2 = w*j1(m*r[ir]);
-							s.sse2 += t2*m*(tv*(t6-t4)+(t3+t5));
-							s.rdp2 += t2*((t4+t6)-(t3-t5));
+							double t = w*j1(m*r[ir]);
+							s.sse2 += t*m*(tv*(T[3]-T[1])+(T[0]+T[2]));
+							s.rdp2 += t*((T[1]+T[3])-(T[0]-T[2]));
 						}
 					}
 				}
 			}
 			if (alldone)
 				break;
-			bool fullp = (fabs(j1(bm[ib-1]*a[ia])) <= j1max
-					&& fabs(j1(bm[ib]*a[ia])) <= j1max);
-			double eps = ((res & mask) == dirty ? 1e-6 : 
-					((res & mask) == fast ? 1e-8 : 0.0));
+			// Don't accumulate for non-full J1(m*a) panels.
+			if (fabs(j1(bm[ib]*a[ia])) > j1max)
+				continue;
 			for (iz = 0; iz < nz; iz++) {
-				for (ir = 0; ir < nr; ir++) {
-					axialdata & s = ax[iz*nr+ir];
-					if (!s.active)
-						continue;
-					bool active = false;
-					if (!(res & disp)) {
-						s.vse += s.vse2;
-						active |= (fabs(s.vse2) > eps*fabs(s.vse));
-						s.rse += s.rse2;
-						active |= (fabs(s.rse2) > eps*fabs(s.rse));
-						s.tse += s.tse2;
-						active |= (fabs(s.tse2) > eps*fabs(s.tse));
-						s.sse += s.sse2;
-						active |= (fabs(s.sse2) > eps*fabs(s.sse));
-						s.rdp += s.rdp2;
-						active |= (fabs(s.rdp2) > eps*fabs(s.rdp));
-						s.vse2 = 0.0; s.rse2 = 0.0; s.tse2 = 0.0;
-						s.sse2 = 0.0; s.rdp2 = 0.0;
-					}
-					s.vdp += s.vdp2;
-					active |= (fabs(s.vdp2) > eps*fabs(s.vdp));
-					s.vdp2 = 0.0;
-					if (fullp && !active)
-						s.active = false;
-				}
+				for (ir = 0; ir < nr; ir++)
+					ax[iz*nr+ir].accumulate(res,eps);
 			}
 		}
 
 		// Finalise the calculations, now that we have done the integration.
 		for (iz = 0; iz < nz; iz++) {
-			for (ir = 0; ir < nr; ir++) {
-				axialdata & s = ax[iz*nr+ir];
-				il = zl[iz];
-				if (!(res & disp)) {
-					if (r[ir] > 0.0) {
-						s.rse -= s.rdp/r[ir];
-						s.tse += s.rdp/r[ir];
-					}
-					s.rse *= a[ia];
-					s.tse *= a[ia];
-					s.vse *= a[ia];
-					s.sse *= a[ia];
-					s.rdp *= a[ia]*(v[il]+1)/E[il];
-				}
-				s.vdp *= a[ia]*(v[il]+1)/E[il];
-			}
+			il = z[iz].il;
+			for (ir = 0; ir < nr; ir++)
+				ax[iz*nr+ir].finalize(res,r[ir],a[ia],v[il],E[il]);
 		}
 
 		// After doing everything in radial coords, translate to cartesian.
 		for (ixy = 0; ixy < data.length(); ixy++) {
 			pavedata & d = data[ixy];
-			iz = z.findvalue(d.z);
-			for (ild = 0; ild < load.length(); ++ild) {
+			iz = z.findvalue(zpoint(d.z,d.il));
+			for (ild = 0; ild < load.length(); ild++) {
 				if (fabs(load[ild].radius()-a[ia]) > DBL_MIN)
 					continue;
 				ir = r.findvalue(load[ild].distance(d));
-				axialdata & s = ax[iz*nr+ir];
-				double p = load[ild].pressure();
-				if (r[ir] == 0.0 && !(res & disp)) {
-					d.data[0][0] += p*(s.rse+s.tse)/2;
-					d.data[0][1] += p*(s.rse+s.tse)/2;
-					d.data[0][2] += p*s.vse;
-					d.data[1][1] += p*s.sse;
-				} else if (!(res & disp)) {
-					double sint = (d.y-load[ild].y)/r[ir];
-					double cost = (d.x-load[ild].x)/r[ir];
-					if (cost == 0.0) {
-						d.data[0][0] += p*s.tse;
-						d.data[0][1] += p*s.rse;
-						d.data[0][2] += p*s.vse;
-						if (sint > 0.0) {
-							d.data[1][2] += p*s.sse;
-							d.data[4][1] += p*s.rdp;
-						} else {
-							d.data[1][2] -= p*s.sse;
-							d.data[4][1] -= p*s.rdp;
-						}
-					} else if (sint == 0.0) {
-						d.data[0][0] += p*s.rse;
-						d.data[0][1] += p*s.tse;
-						d.data[0][2] += p*s.vse;
-						if (cost > 0.0) {
-							d.data[1][1] += p*s.sse;
-							d.data[4][0] += p*s.rdp;
-						} else {
-							d.data[1][1] -= p*s.sse;
-							d.data[4][0] -= p*s.rdp;
-						}
-					} else {
-						d.data[0][0] += p*(cost*cost*s.rse+sint*sint*s.tse);
-						d.data[0][1] += p*(cost*cost*s.tse+sint*sint*s.rse);
-						d.data[0][2] += p*s.vse;
-						d.data[1][0] += p*cost*sint*(s.rse-s.tse);
-						d.data[1][1] += p*cost*s.sse;
-						d.data[1][2] += p*sint*s.sse;
-						d.data[4][0] += p*cost*s.rdp;
-						d.data[4][1] += p*sint*s.rdp;
-					}
-				}
-				if (gl != UINT_MAX)
-					d.deflgrad[gl] += p*s.vdp;
-				else
-					d.data[4][2] += p*s.vdp;
+				ax[iz*nr+ir].addtodata(res,&d,load[ild],r[ir],gl);
 			}
 		}
+		
+		// Take care of the deflection gradient calculation.
 		if (res & grad) {
 			res = LEsystem::resulttype(res | disp);
 			gl = (gl == UINT_MAX ? 0 : gl+1);
@@ -1343,23 +1184,20 @@ gradloop:
 	// After everything, loop through the answers, and calculate the
 	// derived results (principal stresses and strains).
 	for (ixy = 0; ixy < data.length(); ixy++) {
-		if (!(res & disp)) {
-			il = zl[z.findvalue(data[ixy].z)];
-			data[ixy].principle(v[il],E[il]);
-		}
+		pavedata & d = data[ixy];
+		if (!(res & disp))
+			d.principle(v[d.il],E[d.il]);
 		if (res & grad) {
 			if (Q == 0) {
 				for (il = 0; il < nl; il++)
-					data[ixy].deflgrad[il] = (data[ixy].deflgrad[il]
-						-data[ixy].data[4][2])/GRADSTEP;
+					d.deflgrad[il] = (d.deflgrad[il]-d.data[4][2])/GRADSTEP;
 			} else {
 				for (il = 0; il < nl; il++)
-					h[il] = (data[ixy].deflgrad[il]-data[ixy].data[4][2])
-								/GRADSTEP;
+					h[il] = (d.deflgrad[il]-d.data[4][2])/GRADSTEP;
 				for (gl = 0; gl < nl; gl++) {
-					data[ixy].deflgrad[gl] = 0.0;
+					d.deflgrad[gl] = 0.0;
 					for (il = 0; il < nl; il++)
-						data[ixy].deflgrad[gl] += h[il]*Q[gl*nl+il];
+						d.deflgrad[gl] += h[il]*Q[gl*nl+il];
 				}
 			}
 		}
@@ -1379,6 +1217,64 @@ abort:
 }
 
 /*
+ * Boussinesq's equations for a point and circular load.
+ */
+static inline double
+boussinesq_vse(double z, double r, double a, double v, double E,
+		double R, double A) {
+	if (r > 0.0)
+		return -3*a*a*pow(z,3)/(2*pow(R,5));
+	else
+		return pow(z,3)/pow(A,3)-1.0;
+}
+
+static inline double
+boussinesq_rse(double z, double r, double a, double v, double E,
+		double R, double A) {
+	if (r > 0.0)
+		return -a*a*(3*z*r*r/pow(R,4)-(1-2*v)/(R+z))/(2*R);
+	else
+		// Note: tse is zero, so we'll divide this by 2 later.
+		return 2*(1+v)*z/A-pow(z,3)/pow(A,3)-1-2*v;
+}
+
+static inline double
+boussinesq_tse(double z, double r, double a, double v, double E,
+		double R) {
+	if (r > 0.0)
+		return -a*a*(1-2*v)*(-z/(R*R) + 1.0/(R+z))/(2*R);
+	else
+		return 0.0;
+}
+
+static inline double
+boussinesq_sse(double z, double r, double a, double v, double E,
+		double R) {
+	if (r > 0.0)
+		return -3*a*a*z*z*r/(2*pow(R,5));
+	else
+		return 0.0;
+}
+
+static inline double
+boussinesq_rdp(double z, double r, double a, double v, double E,
+		double R) {
+	if (r > 0.0)
+		return a*a*((1+v)/(2*R*E))*(z*r/(R*R)-(1-2*v)*r/(R+z));
+	else
+		return 0.0;
+}
+
+static inline double
+boussinesq_vdp(double z, double r, double a, double v, double E,
+		double R, double A) {
+	if (r > 0.0)
+		return a*a*((1+v)/(2*R*E))*(2*(1-v) + z*z/(R*R));
+	else
+		return ((1+v)/E)*(a*a/A+(1-2*v)*(A-z));
+}
+
+/*
  * This is Odemark's method of equivalent thicknesses, with Bosussinesq's
  * solution for a point load on a linear elastic half-space.  This can be
  * used for very fast approximations.
@@ -1386,115 +1282,87 @@ abort:
 bool
 LEsystem::calc_odemark()
 {
-	unsigned ixy, ild;
+	unsigned ixy, ild, il;
 	LElayer * pl;
-	double de = 0.0;
+	bool rv = true;
 
 	if (!check())
 		return false;
+	unsigned nl = layers();
+	double * h = new double[nl];
+	double * v = new double[nl];
+	double * E = new double[nl];
+	if (h == 0 || v == 0 || E == 0) {
+		rv = false;
+		goto abort;
+	}
+	for (pl = first, il = 0; pl != 0; pl = pl->next, il++)
+		h[il] = pl->bottom(), v[il] = pl->poissons(), E[il] = pl->emod();
 
-	for (ixy = 0; ixy < data.length(); ixy++)
-		memset(data[ixy].data,0,sizeof(data[ixy].data));
-	for (pl = first; pl != 0; pl = pl->next) {
-		double v = pl->poissons();
-		double E = pl->emod();
-		double he = pl->thickness();
-		if (pl->next != 0) {
-			double v1 = pl->next->poissons();
-			double E1 = pl->next->emod();
-			he *= pow(E/E1*(1+v1*v1)/(1+v*v),1.0/3.0);
-		}
+	for (ixy = 0; ixy < data.length(); ixy++) {
+		pavedata & d = data[ixy];
 		for (ild = 0; ild < load.length(); ild++) {
-			double p = load[ild].force();
 			double a = load[ild].radius();
-			for (ixy = 0; ixy < data.length(); ixy++) {
-				pavedata & d = data[ixy];
-				double z, r, R;
-				if (pl->bottom() != 0.0 && d.z >= pl->bottom())
+			double r = load[ild].distance(d);
+			double z = 0.0, he = 0.0, hc = 1.0, R, A;
+			axialdata s;
+			memset(&s,0,sizeof(axialdata));
+			for (il = 0; il < nl; il++) {
+				if (il > 0) {
+					z = h[il-1]-(il > 1 ? h[il-2] : 0.0);
+					he = (he+z)*pow(E[il-1]/E[il]*
+						(1+v[il]*v[il])/(1+v[il-1]*v[il-1]),1.0/3.0);
+					if (nl > 2 && il > 1) // Per's fudge factors...
+						hc = 0.8;
+					else if (nl > 2)
+						hc = 1.0;
+					else
+						hc = 0.9;
+				}
+				if (il < d.il)
 					continue;
-				r = load[ild].distance(d);
-				if (pl->top() > d.z) {
+				if (il > d.il) {
 					// We're below, but we still need the vertical
 					// deflection contributions from this layer...
-					z = de;
-					R = hypot(r,z);
-					if (R > 0.0)
-						d.data[4][2] += p*((1+v)/(M_2PI*R*E))*
-													(2*(1-v) + z*z/R/R);
-					else
-						d.data[4][2] += p*2*(1-v*v)/E/M_PI/a;
-					if (pl->bottom() != 0.0) {
-						z = de+pl->thickness();
-						R = hypot(r,z);
-						if (R > 0.0)
-							d.data[4][2] -= p*((1+v)/(M_2PI*R*E))*
-													(2*(1-v) + z*z/R/R);
-						else
-							d.data[4][2] -= p*2*(1-v*v)/E/M_PI/a;
-					}
+					z = hc*he;
+					R = hypot(r,z); A = (r > 0.0 ? 0.0 : hypot(z,a));
+					s.vdp += boussinesq_vdp(z,r,a,v[il],E[il],R,A);
+					if (h[il] == 0.0)
+						continue;
+					z = hc*he+h[il]-h[il-1];
+					R = hypot(r,z); A = (r > 0.0 ? 0.0 : hypot(z,a));
+					s.vdp -= boussinesq_vdp(z,r,a,v[il],E[il],R,A);
 					continue;
 				}
-				z = de+(d.z-pl->top())*(pl->bottom() != 0.0 ?
-											he/pl->thickness() : 1.0);
-				R = hypot(r,z);
-				axialdata s;
-				if (R > 0.0) {
-					s.vse = -3*z*z*z/pow(R,5)/M_2PI;
-					s.rse = -(3*z*r*r/pow(R,5)-(1-2*v)/R/(R+z))/M_2PI;
-					s.tse = -(1-2*v)*(-z/pow(R,3) + 1.0/R/(R+z))/M_2PI;
-					s.sse = -3*z*z*r/pow(R,5)/M_2PI;
-					s.rdp = ((1+v)/(M_2PI*R*E))*(z*r/R/R-(1-2*v)*r/(R+z));
-					s.vdp = ((1+v)/(M_2PI*R*E))*(2*(1-v) + z*z/R/R);
-				} else {
-					s.vse = -1.0/(M_PI*a*a);
-					s.rse = s.tse = -(1+2*v)/2.0;
-					s.sse = s.rdp = 0.0;
-					s.vdp = 2*(1-v*v)/(E*M_PI*a);
-				}
-				if (pl->bottom() != 0.0) {
-					z = de+he;
-					R = hypot(r,z);
-					if (R > 0.0)
-						s.vdp -= ((1+v)/(M_2PI*R*E))*(2*(1-v) + z*z/R/R);
-					else
-						s.vdp -= 2*(1-v*v)/(E*M_PI*a);
-				}
-
-				// After doing everything in radial coords, translate
-				// to cartesian.
-				if (r == 0.0) {
-					d.data[0][0] += p*(s.rse+s.tse)/2;
-					d.data[0][1] += p*(s.rse+s.tse)/2;
-					d.data[1][1] += p*s.sse;
-					d.data[4][0] += p*s.rdp;
-				} else {
-					double sint = (d.y-load[ild].y)/r;
-					double cost = (d.x-load[ild].x)/r;
-					d.data[0][0] += p*(cost*cost*s.rse+sint*sint*s.tse);
-					d.data[0][1] += p*(cost*cost*s.tse+sint*sint*s.rse);
-					d.data[1][0] += p*cost*sint*(s.rse-s.tse);
-					d.data[1][1] += p*cost*s.sse;
-					d.data[1][2] += p*sint*s.sse;
-					d.data[4][0] += p*cost*s.rdp;
-					d.data[4][1] += p*sint*s.rdp;
-				}
-				d.data[0][2] += p*s.vse;
-				d.data[4][2] += p*s.vdp;
+				z = hc*he+d.z-(il > 0 ? h[il-1] : 0.0);
+				R = hypot(r,z); A = (r > 0.0 ? 0.0 : hypot(z,a));
+				double tv = v[d.il];
+				double tE = E[d.il];
+				s.vse = boussinesq_vse(z,r,a,tv,tE,R,A);
+				s.rse = boussinesq_rse(z,r,a,tv,tE,R,A);
+				s.tse = boussinesq_tse(z,r,a,tv,tE,R);
+				s.sse = boussinesq_sse(z,r,a,tv,tE,R);
+				s.rdp = boussinesq_rdp(z,r,a,tv,tE,R);
+				s.vdp = boussinesq_vdp(z,r,a,tv,tE,R,A);
+				if (h[il] == 0.0)
+					continue;
+				z = hc*he+h[il]-(il > 0 ? h[il-1] : 0.0);
+				R = hypot(r,z); A = (r > 0.0 ? 0.0 : hypot(z,a));
+				s.vdp -= boussinesq_vdp(z,r,a,tv,tE,R,A);
 			}
+			// After doing everything in radial coords, translate
+			// to cartesian.
+			s.addtodata(odemark,&d,load[ild],r);
 		}
-		de += he;
+		d.principle(v[d.il],E[d.il]);
 	}
-	// After everything, loop through the answers, and calculate the
-	// derived results (principal stresses and strains).
-	for (ixy = 0; ixy < data.length(); ixy++) {
-		for (pl = first; pl != 0; pl = pl->next) {
-			if (pl->top() <= data[ixy].z
-			  && (pl->bottom() == 0.0 || data[ixy].z < pl->bottom()))
-				break;
-		}
-		data[ixy].principle(pl->poissons(),pl->emod());
-	}
-	return true;
+abort:
+	if (rv == false)
+		event_msg(EVENT_ERROR,"Out of memory in LEsystem::fastnum()!");
+	delete [] h;
+	delete [] v;
+	delete [] E;
+	return rv;
 }
 
 /*
@@ -1659,7 +1527,6 @@ LEsystem::calc_fastnum()
 
 	for (ixy = 0; ixy < data.length(); ixy++) {
 		pavedata & d = data[ixy];
-		d.data[4][2] = 0.0;
 		for (ild = 0; ild < load.length(); ild++) {
 			double a = load[ild].radius();
 			double z, r = load[ild].distance(d);
@@ -1723,7 +1590,7 @@ LEbackcalc::backcalc()
 	double astep, tstep = 0.0, step = 1.0;
 	bool seeded = true, badstep = false;
 	calctype speed = (precision >= 1e-4 ? fast : slow);
-	ksset<point3d,pavedata> orig(data);
+	ksset<pavepoint,pavedata> orig(data);
 
 	if (nl == 0) {
 		event_msg(EVENT_ERROR,"LEbackcalc::backcalc() called without layers!");

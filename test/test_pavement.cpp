@@ -216,13 +216,13 @@ main()
 }
 #endif
 
-#ifdef NOBUILD
+#ifdef BUILD
 int
 main()
 {
 	cset<point3d> p(0,100);
 	LEsystem pave;
-	int i, j;
+	unsigned i, j;
 
 	for (i = 0; i < 9; i++)
 		pave.addlayer(0.1,1.0,0.5);
