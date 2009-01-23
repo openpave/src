@@ -349,6 +349,10 @@ const double gp_A[4][2] = {{-(1+1/sqrt(3.0))/2, 1/2.0},
                            {-(1-1/sqrt(3.0))/2, 1/2.0},
                            {+(1-1/sqrt(3.0))/2, 1/2.0},
                            {+(1+1/sqrt(3.0))/2, 1/2.0}};
+const double gl_4[4][2] = {{        -1.0, 1.0/6},
+                           {-sqrt(5.0)/5, 5.0/6},
+                           {+sqrt(5.0)/5, 5.0/6},
+                           {         1.0, 1.0/6}};
 
 class mesh;                    // Forward declare.
 class node_list;               // Forward declare.
@@ -2533,6 +2537,8 @@ element::getnode(const unsigned i) const
  * to get some work done...
  */
 
+//#define QUAD
+
 int run;
 bool isvar;
 
@@ -2558,7 +2564,7 @@ sset<femlayer> layer;
 double * L[6];
 
 double
-node_depth_callback_real(const coord3d & c, const mesh * FEM, const material * mat)
+node_depth_callback(const coord3d & c, const mesh * FEM, const material * mat)
 {
 	unsigned i = 0, n;
 
@@ -2575,16 +2581,18 @@ node_depth_callback_real(const coord3d & c, const mesh * FEM, const material * m
 		b += L[1][n];
 	} else if (i == 1) {
 		t += L[1][n];
+		b += (L[1][n]+L[2][n])/2;
 	} else if (i == 2) {
+		t += (L[1][n]+L[2][n])/2;
 		b += L[2][n];
 	} else if (i == 3) {
 		t += L[2][n];
 	}
-	return -(t+(b-t)*z/h);
+	return -t+(t-b)*z/h;
 }
 
 double
-node_emod_callback_real(const coord3d & c, const mesh * FEM, const material * mat)
+node_emod_callback(const coord3d & c, const mesh * FEM, const material * mat)
 {
 	unsigned i = 0, n;
 
@@ -2594,7 +2602,7 @@ node_emod_callback_real(const coord3d & c, const mesh * FEM, const material * ma
 		n = FEM->getorderofnode(coord3d(c.x,c.y,0.0));
 	else
 		n = FEM->getorderofnode(coord3d(0.0,0.0,0.0));
-	return layer[i].mat.emod + L[(i>1?i-1:i)+3][n];
+	return L[(i>1?i-1:i)+3][n];
 }
 
 inline double
@@ -2797,10 +2805,10 @@ main()
 	timeme();
 
 	LEsystem test;
-	test.addlayer(  90.0,3000e3,0.35);
-	test.addlayer( 205.0, 750e3,0.35);
-	test.addlayer( 205.0, 750e3,0.35);
-	test.addlayer(1500.0, 100e3,0.35);
+	test.addlayer(  81.0,3000e3,0.35);
+	test.addlayer( 187.0, 750e3,0.35);
+	test.addlayer( 187.0, 750e3,0.35);
+	test.addlayer(1545.0, 175e3,0.35);
 
 	layer.empty();
 	for (unsigned i = 0; i < test.layers(); i++) {
@@ -2809,7 +2817,12 @@ main()
 	}
 
 	double x = 0.0, y = 0.0, z = 0.0, zmax = 0.0, rmax = 0.0;
-	double dx, dy, dz, delta = 4;
+	double dx, dy, dz;
+#ifdef QUAD
+	double delta = 10;
+#else
+	double delta = 4;
+#endif
 	const double edge = 4096;
 	unsigned step = 4;
 	mesh FEM;
@@ -2818,7 +2831,7 @@ main()
 	cset<const element *> trans;
 	cset<const element *> sf, ac, ab, sg;
 	sset<fixed<8> > stop;
-	sset<unsigned> level;
+	sset<int> level;
 	region_list filled, filling;
 
 	//test.addload(point2d(0.0,0.0),0.0,690.0,100.0);
@@ -2836,18 +2849,24 @@ main()
 	x /= test.loads(); y /= test.loads();
 	assert(x == 0.0);
 	assert(y == 0.0);
+#ifdef QUAD
+	while (step*delta <= 1.6*rmax)
+		step += 2;
+#else
 	while ((step-2)*delta < rmax)
 		step *= 2;
+#endif
 
 	// Start with the tire grid.
 	dx = delta; dy = delta;
 	for (unsigned i = 0; i < test.loads(); i++) {
-		double lx = test.getload(i).x;
-		double ly = test.getload(i).y;
+		paveload l = test.getload(0);
+		double lx = l.x, ly = l.y, lr = l.radius(), F = -l.pressure();
 		lx = 2*dx*(lx < 0 ? floor(lx/dx/2) : ceil(lx/dx/2));
 		ly = 2*dy*(ly < 0 ? floor(ly/dy/2) : ceil(ly/dy/2));
-		double lr = test.getload(i).radius();
-		double F = -test.getload(i).pressure();
+		l.x = lx; l.y = ly;
+		test.removeload(0);
+		test.addload(l);
 		for (x = lx - (step-2)*dx; x < lx + (step-2)*dx; x += 2*dx) {
 			for (y = ly -(step-2)*dy; y < ly + (step-2)*dy; y += 2*dy) {
 				double ba = blockarea(x-lx,x+2*dx-lx,y-ly,y+2*dx-ly,lr);
@@ -2887,6 +2906,49 @@ main()
 				FEM.updatenode(n);
 			}
 		}
+#ifdef QUAD
+		// Add the tire loads
+		for (x = lx - (step-2)*dx; x <= lx + (step-2)*dx; x += 2*dx) {
+			for (y = ly - (step-2)*dy; y <= ly + (step-2)*dy; y += 2*dy) {
+				double ba = blockarea(x-lx,x+2*dx-lx,y-ly,y+2*dx-ly,lr);
+				if (ba == 0.0)
+					continue;
+				double cx = x+dx-lx, cy = y+dy-ly;
+				for (unsigned pi = 0; pi < 3; pi++) {
+					for (unsigned pj = 0; pj < 3; pj++) {
+						unsigned p = FEM.hasnode(coord3d(x+pi*dx,y+pj*dy,0.0));
+						if (p == UINT_MAX)
+							continue;
+						node3d n = FEM.getnode(p);
+						double f = 0.0;
+						for (unsigned gi = 0; gi < 4; gi++) {
+							for (unsigned gj = 0; gj < 4; gj++) {
+								double gx = gl_4[gi][0];
+								double gy = gl_4[gj][0];
+								double gr = hypot(cx+gx*dx,cy+gy*dy);
+								switch (pi) {
+								case 0: gx = 0.5*gx*(gx-1); break;
+								case 1: gx = 1-gx*gx;       break;
+								case 2: gx = 0.5*gx*(gx+1); break;
+								}
+								switch (pj) {
+								case 0: gy = 0.5*gy*(gy-1); break;
+								case 1: gy = 1-gy*gy;       break;
+								case 2: gy = 0.5*gy*(gy+1); break;
+								}
+								if (gr <= lr)
+									f += gl_4[gi][1]*gl_4[gj][1]*gx*gy;
+							}
+						}
+						if (f == 0.0)
+							continue;
+						f *= F*dx*dy;
+						FEM.add_fext(n,mesh::Z,f);
+					}
+				}
+			}
+		}
+#else
 		// Add the tire loads
 		for (x = lx - (step-2)*dx; x <= lx + (step-2)*dx; x += dx) {
 			for (y = ly - (step-2)*dy; y <= ly + (step-2)*dy; y += dy) {
@@ -2908,6 +2970,7 @@ main()
 					FEM.add_fext(n,mesh::Z,f);
 			}
 		}
+#endif
 		region r;
 		for (x = lx - step*dx; x <= lx + step*dx; x += 2*dx)
 			r.xstop.add(x);
@@ -2942,17 +3005,22 @@ main()
 		}
 		layer[i].ebot = double(layer[i].etop) + he;
 	}
-	unsigned zstep = 1, zi = 0;
+	unsigned zstep = 1;
+#ifdef QUAD
+	int zi = -2;
+#else
+	int zi = 0;
+#endif
 	// add the depth stops.
 	dz = rmax/zstep;
 	zmax = layer[layer.length()-1].ebot; z = layer[0].etop;
 	stop.add(z); level.add(zi);
 	while (z < zmax) {
-		unsigned zscale = 4;
+		unsigned zscale = 3;
 		for (; z < zscale*zstep*dz; z += dz) {
-			stop.add(z+dz); level.add(zi);
+			stop.add(z+dz); level.add(MAX(zi,0));
 		}
-		dz *= 2; zi++;
+		dz += rmax/zstep; zi++;
 	}
 	for (unsigned j = 0; j < stop.length(); j++)
 		stop[j] = double(stop[j])*zmax/z;
@@ -3006,12 +3074,22 @@ main()
 			assert(i < layer.length());
 			double z1 = stop[j  ];
 			double z2 = stop[j-1];
-			printf("%.0f\t%.0f\t%f\t%i\n",filling.xp(),filled.xp(),z1,i);
+			printf("%.0f\t%.0f\t%f\t%i\t%i\n",filling.xp(),filled.xp(),z1,i,zi);
 			element::element_t var = (i == 0 ?
-					element::variable34 : element::variable26);
+					element::variable26 : element::variable26);
 			element::element_t inf = (var == element::variable34 ?
 					element::infinite16 : var == element::variable26 ?
 					element::infinite12 : element::infinite8);
+#ifdef QUAD
+			if (zi <= 0)
+				var = (var == element::variable34 ?
+					element::block36 : var == element::variable26 ?
+					element::block27 : element::block18);
+			if (zi == 1)
+				var = (var == element::variable34 ?
+					element::adaptor34 : var == element::variable26 ?
+					element::adaptor26 : element::adaptor18);
+#endif
 			for (unsigned k = 0; k < filling.length(); k++) {
 				region & r = filling[k];
 				for (unsigned xi = 1; xi < r.xstop.length(); xi++) {
@@ -3100,14 +3178,19 @@ main()
 				}
 			}
 		}
-	printf("Just: [%f %f] x [%f %f]\n",filling.xm(),filling.xp(),
-			filling.ym(),filling.yp());
-	for (unsigned i = 0; i < filling.length(); i++) {
-		region & r = filling[i];
-		printf(" %i: [%f %f] x [%f %f]\n",i,double(r.xm()),double(r.xp()),double(r.ym()),double(r.yp()));
-	}
+		printf("Just: [%f %f] x [%f %f]\n",filling.xm(),filling.xp(),
+				filling.ym(),filling.yp());
+		for (unsigned i = 0; i < filling.length(); i++) {
+			region & r = filling[i];
+			printf(" %i: [%f %f] x [%f %f]\n",i,double(r.xm()),double(r.xp()),double(r.ym()),double(r.yp()));
+		}
 		if (filling.xm() > -edge && filling.xp() < edge
 		 && filling.ym() > -edge && filling.yp() < edge) {
+#ifdef QUAD
+			if (zi == 0)
+				step *= 2;
+			else {
+#endif
 			delta *= 2;
 			for (unsigned i = 0; i < filling.length(); i++) {
 				region & r = filling[i];
@@ -3118,13 +3201,16 @@ main()
 				for (unsigned yi = 1; yi < r.ystop.length(); yi++)
 					r.ystop.remove(yi);
 			}
+#ifdef QUAD
+			}
+#endif
 		}
-	printf("Filled: [%f %f] x [%f %f]\n",filling.xm(),filling.xp(),
-			filling.ym(),filling.yp());
-	for (unsigned i = 0; i < filling.length(); i++) {
-		region & r = filling[i];
-		printf(" %i: [%f %f] x [%f %f]\n",i,double(r.xm()),double(r.xp()),double(r.ym()),double(r.yp()));
-	}
+		printf("Filled: [%f %f] x [%f %f]\n",filling.xm(),filling.xp(),
+				filling.ym(),filling.yp());
+		for (unsigned i = 0; i < filling.length(); i++) {
+			region & r = filling[i];
+			printf(" %i: [%f %f] x [%f %f]\n",i,double(r.xm()),double(r.xp()),double(r.ym()),double(r.yp()));
+		}
 		filled = filling; dx = delta; dy = delta;
 		for (unsigned i = 0; i < filling.length(); i++) {
 			region & r = filling[i];
@@ -3150,12 +3236,12 @@ main()
 			r.ystop.sort();
 		}
 		filling.merge();
-	printf("Filling: [%f %f] x [%f %f]\n",filling.xm(),filling.xp(),
-			filling.ym(),filling.yp());
-	for (unsigned i = 0; i < filling.length(); i++) {
-		region & r = filling[i];
-		printf(" %i: [%f %f] x [%f %f]\n",i,double(r.xm()),double(r.xp()),double(r.ym()),double(r.yp()));
-	}
+		printf("Filling: [%f %f] x [%f %f]\n",filling.xm(),filling.xp(),
+				filling.ym(),filling.yp());
+		for (unsigned i = 0; i < filling.length(); i++) {
+			region & r = filling[i];
+			printf(" %i: [%f %f] x [%f %f]\n",i,double(r.xm()),double(r.xp()),double(r.ym()),double(r.yp()));
+		}
 		zi++;
 	}
 	//FEM.add_bc_plane(mesh::X,mesh::at|mesh::below,-edge,
@@ -3185,12 +3271,35 @@ main()
 			const node3d & p1 = FEM.getorderednode(i);
 			for (unsigned j = i; j < np; j++) {
 				const node3d & p2 = FEM.getorderednode(j);
-				double r = fabs(hypot(p1.x-p2.x,p1.y-p2.y));
-				C[T_IDX(i,j)] = (r > 6000.0 ? 0.0
-					: 5.0*(1-1.5*r/6000.0+0.5*pow(r/6000.0,3)));
+				x = p1.x-p2.x; y = p1.y-p2.y;
+				double r = fabs(hypot(x,y));
+				switch (l) {
+				case 0:
+					C[T_IDX(i,j)] = exp(-pow(r/4825.446,2));
+					break;
+				case 1:
+					C[T_IDX(i,j)] = exp(-pow(r/3000,2));
+					break;
+				case 2:
+					C[T_IDX(i,j)] = 0.625*exp(-pow(r/5000,2))
+						+ 0.375*cos(x/6000);
+					break;
+				case 3:
+				case 4:
+				case 5:
+					C[T_IDX(i,j)] = (r > 6000.0 ? 0.0 :
+							5.0*(1-1.5*r/6000.0+0.5*pow(r/6000.0,3)));
+					//exp(-pow(r/5000,2));
+					break;
+				default:
+					assert(false);
+				}
+				if (i != j)
+					C[T_IDX(i,j)] -= 0.00001;
 			}
 		}
-		decmp_chol_tri(np,C);
+		if (!decmp_chol_tri(np,C))
+			return 0;
 
 		char fname[128];
 		sprintf(fname,"cor%d.tri",l);
@@ -3198,14 +3307,14 @@ main()
 		fwrite(C,sizeof(double),T_SIZE(np),f);
 		fclose(f);
 
-		delete C;*/
+		delete [] C;*/
 	}
 
 	run = 1;
 	isvar = false;
 	rng RNG;
 	while (true) {
-		//isvar = !isvar;
+		isvar = !isvar;
 
 		for (unsigned l = 0; isvar && l < 6; l++) {
 			double * A = new double[np];
@@ -3221,22 +3330,67 @@ main()
 			fread(C,sizeof(double),T_SIZE(np),f);
 			fclose(f);
 
+ 			double t = (l == 1 ? double(layer[0].bot-layer[0].top)
+ 					: l == 2 ? double(layer[2].bot-layer[1].top) : 0.0);
 			for (unsigned i = 0; i < np; i++) {
 				A[i] = RNG.stdnormal();
 				L[l][i] = C[T_IDX(i,i)]*A[i];
 				for (unsigned j = 0; j < i; j++)
 					L[l][i] += C[T_IDX(j,i)]*A[j];
+				switch (l) {
+				case 0:
+					L[l][i] *= 19.283;
+					break;
+				case 1:
+					L[l][i] = L[l-1][i]
+						+ pow(10,log10(t) + 0.0769*L[l][i]) - t;
+					break;
+				case 2:
+					L[l][i] = L[l-1][i]
+						+ pow(10,log10(t) + 0.0498*L[l][i]) - t;
+					break;
+				case 3:
+					L[l][i] = pow(10,log10(layer[0].mat.emod)
+						+ 0.185*L[l][i]);
+					break;
+				case 4:
+					assert(layer[1].mat.emod == layer[2].mat.emod);
+					L[l][i] = pow(10,log10(layer[1].mat.emod)
+						+ 0.185*L[l][i]);
+					break;
+				case 5:
+					L[l][i] = pow(10,log10(layer[3].mat.emod)
+						+ 0.185*L[l][i]);
+					break;
+				default:
+					assert(false);
+				}
 			}
-			delete A;
-			delete C;
+			delete [] C;
+			delete [] A;
 		}
+
+		//for (unsigned i = 0; i < np; i++) {
+		//	const node3d & p1 = FEM.getorderednode(i);
+		//	printf("%6.1f %6.1f:",double(p1.x),double(p1.y));
+		//	for (unsigned l = 0; l < 6; l++)
+		//		printf(" %8.2f",L[l][i]);
+		//	printf("\n");
+		//}
 
 		for (unsigned i = 0; i < FEM.getnodes(); i++) {
 			node3d n = FEM.getnode(i);
 			n.ux = 0.0; n.uy = 0.0; n.uz = 0.0;
 			FEM.updatenode(n);
 		}
-		FEM.solve(1e-33);
+		if (!FEM.solve(1e-25)) {
+			if (isvar) {
+				isvar = !isvar;
+				continue;
+			} else {
+				return 0; // We don't fail the non-3d case.
+			}
+		}
 
 		fset<point3d> poly(4), face(8);
 		face[0] = point3d(-1,-1,    -1);
@@ -3248,7 +3402,7 @@ main()
 		face[6] = point3d( 1,-1,-1/3.0);
 		face[7] = point3d( 1,-1,    -1);
 		results(trans,face,"face");
-		LEresults(trans,face,"face",test);
+		//LEresults(trans,face,"face",test);
 		face[0] = point3d(-1,-1,    -1);
 		face[1] = point3d(-1,-1,-1/3.0);
 		face[2] = point3d(-1,-1, 1/3.0);
@@ -3258,27 +3412,27 @@ main()
 		face[6] = point3d(-1, 1,-1/3.0);
 		face[7] = point3d(-1, 1,    -1);
 		results(along,face,"long");
-		LEresults(along,face,"long",test);
+		//LEresults(along,face,"long",test);
 		poly[0] = point3d(-1,-1,-1);
 		poly[1] = point3d(-1, 1,-1);
 		poly[2] = point3d( 1, 1,-1);
 		poly[3] = point3d( 1,-1,-1);
 		results(ac,poly,"ac");
-		LEresults(ac,poly,"ac",test);
+		//LEresults(ac,poly,"ac",test);
 		results(ab,poly,"ab");
-		LEresults(ab,poly,"ab",test);
+		//LEresults(ab,poly,"ab",test);
 		poly[0] = point3d(-1,-1, 1);
 		poly[1] = point3d(-1, 1, 1);
 		poly[2] = point3d( 1, 1, 1);
 		poly[3] = point3d( 1,-1, 1);
 		results(sf,poly,"sf");
-		LEresults(sf,poly,"sf",test);
+		//LEresults(sf,poly,"sf",test);
 		results(sg,poly,"sg");
-		LEresults(sg,poly,"sg",test);
+		//LEresults(sg,poly,"sg",test);
 
-		//if (isvar)
-		//	continue;
-		//if (++run > 300)
+		if (isvar)
+			continue;
+		if (++run > 100)
 			break;
 	}
 
@@ -3325,13 +3479,13 @@ main()
 }
 
 double
-node_depth_callback(const coord3d & c, const mesh * FEM, const material * mat)
+node_depth_callback_test(const coord3d & c, const mesh * FEM, const material * mat)
 {
 	return c.z;
 }
 
 double
-node_emod_callback(const coord3d & c, const mesh * FEM, const material * mat)
+node_emod_callback_test(const coord3d & c, const mesh * FEM, const material * mat)
 {
 	return mat->emod;
 }
