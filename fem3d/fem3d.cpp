@@ -26,7 +26,7 @@
 	Design:
 		This is a 3D Finite Element Method (FEM) code, which is designed
 		for pavements problems.  Specifically, it is designed for my
-		thesis work, which requires fast linear elastic 3D FEM analysis. 
+		thesis work, which requires fast linear elastic 3D FEM analysis.
 		The code is fast.  It does most of the maths using expression
 		templates, and to aid that uses small 3x3 matrices to store the
 		DOF level data.  This works because the math for the FEM is really
@@ -34,7 +34,7 @@
 		simplification.  In essence, this code solves it as two nested
 		matrices, to make a forth order tensor.  This also has an
 		advantage in the matrix storage, because we can manage less.
-		
+
 		The code follows the classic structure of finite elements for
 		linear elasticity.  The solution is built of elements, which are
 		connected to a global nodes.  These elements are integrated to
@@ -45,7 +45,7 @@
 		assembled, and the bondary conditions are applied, and then the
 		global stiffness matrix is inverted to find the nodal
 		displacements.  These are then used to get the final results.
-		
+
 		The inversion is not done directly, but via a conjugate gradient
 		itterative solver, with an incomplete Cholesky decompostion as a
 		preconditioner.
@@ -193,7 +193,7 @@ principle(const ematrix & s)
 {
 	double t1, t2;
 
-	assert(NDIM == 3 && NDOF == 3); 
+	assert(NDIM == 3 && NDOF == 3);
 	ematrix p(s);
 
 	t1 = p(0,1)*p(0,1) + p(0,2)*p(0,2) + p(1,2)*p(1,2);
@@ -405,7 +405,7 @@ struct node3d : public coord3d {
 private:
 	friend class node_list;
 	friend class mesh;
-	
+
 	unsigned order;            // Number of nodes on left
 	unsigned left, right;      // Left and right node numbers
 	bool red:1;                // Color of link to parent
@@ -423,9 +423,9 @@ private:
 	// Placement new to support inplace init in the list.
 	void * operator new(size_t, void * p) {
 		return p;
-	} 
+	}
 	void operator delete(void *, void *) {
-	} 
+	}
 };
 
 /*
@@ -714,11 +714,11 @@ public:
 	inline unsigned addnode(const coord3d & c) const;
 	inline void updatenode(const node3d & n) const;
 	inline const node3d & getnode(const unsigned i) const;
-	
+
 	virtual unsigned l2g(const unsigned i) const = 0;
 	virtual smatrix_elem * stiffness() const = 0;
 	virtual void results(const fset<point3d> &, fset<pavedata> &) const = 0;
-	
+
 //protected:
 	friend class mesh;
 
@@ -758,7 +758,7 @@ protected:
 		assert(8 == c.length());
 		assert(nnd == 0);
 		coord3d cc[8];
-		
+
 		memcpy(cc,&c[0],8*sizeof(coord3d));
 		coord_sort(cc);
 		coord_add(sx,sy,cc);
@@ -772,11 +772,11 @@ protected:
 		assert(mask != 0);
 		const unsigned nz = unsigned(SZ);
 		coord3d cc[8];
-		
+
 		memcpy(cc,&c[0],8*sizeof(coord3d));
 		coord_sort(cc);
 		coord_add(linear,linear,cc);
-		
+
 		// If we have a mask, initialise it.
 		for (unsigned i = 0; i < 5*nz; i++)
 			mask[i] = UINT_MAX;
@@ -1134,7 +1134,7 @@ protected:
 
 		assert(NDIM == 3 && NDOF == 3);
 		assert(c.length() == data.length());
-		
+
 		// Element nodal coords
 		double (* xe)[NDIM] = static_cast<double (*)[NDIM]>
 				(alloca(nnd*NDIM*sizeof(double)));
@@ -1710,7 +1710,7 @@ class smatrix_diag {
 		}
 		return true;
 	}
-	
+
 	friend class smatrix;
 	friend class mesh;
 
@@ -1815,7 +1815,7 @@ public:
 	void tidy() {
 		// We need somewhere to store the switched data.
 		smatrix_node temp;
-		
+
 		for (unsigned i = 0; i < nnd; i++) {
 			smatrix_node * nodes = diag[i].nodes;
 			// Insertion sort the column of nodes.
@@ -2340,7 +2340,7 @@ public:
 			r += tmatrix_scalar<double>(~F(i)*F(i));
 		double ri = r, a;
 		printf("with initial residual %g\n",ri);
-		
+
 		// CG solution
 		while (true) {
 			// Compute first approximation on iteration 0.
@@ -2453,7 +2453,7 @@ public:
 
 private:
 	friend class listelement_o<mesh,element>;
-	
+
 	node_list node;
 	kiset<mesh_bc_key,mesh_bc> disp_bc;
 	kiset<mesh_bc_key,mesh_bc> f_ext;
@@ -2514,7 +2514,7 @@ element::getnode(const unsigned i) const
  * full 3D FEM pavement modelling code, but at the moment, I need
  * to get some work done...
  */
- 
+
 int run;
 bool isvar;
 
@@ -2527,7 +2527,7 @@ struct femlayer {
 	fixed<8> etop;
 	fixed<8> ebot;
 	material mat;
-	
+
 	femlayer()
 	  : top(0.0), bot(0.0), etop(0.0), ebot(0.0), mat(0.0,0.0) {
 	}
@@ -2543,7 +2543,7 @@ double
 node_depth_callback_real(const coord3d & c, const mesh * FEM, const material * mat)
 {
 	unsigned i = 0, n;
-	
+
 	while (&(layer[i].mat) != mat)
 		i++;
 	double z = -c.z - layer[i].top;
@@ -2569,7 +2569,7 @@ double
 node_emod_callback_real(const coord3d & c, const mesh * FEM, const material * mat)
 {
 	unsigned i = 0, n;
-	
+
 	while (&(layer[i].mat) != mat)
 		i++;
 	if (isvar)
@@ -2624,7 +2624,7 @@ blockarea(double x1, double x2, double y1, double y2, double r)
 struct region {
 	cset<fixed<8> > xstop;
 	cset<fixed<8> > ystop;
-	
+
 	region() {
 	}
 	fixed<8> xm() {
@@ -2708,7 +2708,7 @@ results(const fset<const element *> & e, const fset<point3d> & c,
 		const char * dname)
 {
 	fset<pavedata> data(c.length(),c.length());
-	
+
 	char fname[128];
 	sprintf(fname,"%s_%s_%05d.bin",dname,(isvar?"3d":"1d"),run);
 	FILE * f = fopen(fname,"wb");
@@ -2718,7 +2718,7 @@ results(const fset<const element *> & e, const fset<point3d> & c,
 			fwrite(&(data[j].x),sizeof(double),3,f);
 			fwrite(&(data[j].data[0][0]),sizeof(double),27,f);
 		}
-		
+
 	}
 	fclose(f);
 }
@@ -2728,7 +2728,7 @@ LEresults(const fset<const element *> & e, const fset<point3d> & c,
 		const char * dname, LEsystem & le)
 {
 	fset<pavedata> data(c.length(),c.length());
-	
+
 	le.removepoints();
 	for (unsigned i = 0; i < e.length(); i++) {
 		e[i]->results(c,data);
@@ -3142,7 +3142,7 @@ main()
 	//		mesh::Y,0.0);
 	FEM.add_bc_plane(mesh::Z,mesh::at|mesh::below,-zmax,
 			mesh::X|mesh::Y|mesh::Z,0.0);
-	
+
 	// Generate our random fields.
 	unsigned np = 0;
 	while (double(FEM.getorderednode(np).z) == 0.0)
@@ -3174,7 +3174,7 @@ main()
 
 		delete C;*/
 	}
-		
+
 	run = 1;
 	isvar = false;
 	rng RNG;
@@ -3188,12 +3188,12 @@ main()
 				event_msg(EVENT_ERROR,"Ooops, out of memory...");
 				return 0;
 			}
-			
+
 			char fname[128];
 			sprintf(fname,"cor%d.tri",l);
 			FILE * f = fopen(fname,"rb");
 			fread(C,sizeof(double),T_SIZE(np),f);
-			fclose(f);		
+			fclose(f);
 
 			for (unsigned i = 0; i < np; i++) {
 				A[i] = RNG.stdnormal();
@@ -3337,7 +3337,7 @@ main_test()
 
 	for (k = 0; k < ndiv[2]; k++) {
 		double z = cube[2][1] - k*dz;
-		int p = 1; //(1 << k); // 1; 
+		int p = 1; //(1 << k); // 1;
 		for (j = 0; j < ndiv[1]; j += p) {
 			double y = cube[1][0] + j*dy;
 			for (i = 0; i < ndiv[0]; i += p) {
@@ -3359,7 +3359,7 @@ main_test()
 			}
 		}
 	}
-	
+
 	timeme("\nSetting BCs and forces...");
 
 	FEM.add_bc_plane(mesh::Z,mesh::at|mesh::below,cube[2][0],mesh::Z,0.0);
@@ -3433,7 +3433,7 @@ int
 main_infinity()
 {
 	timeme();
-	
+
 	material m(100,0.35);
 	mesh FEM;
 
@@ -3535,7 +3535,7 @@ main_infinity()
 	}
 
 	timeme("\n");
-	
+
 	return 0;
 }
 
