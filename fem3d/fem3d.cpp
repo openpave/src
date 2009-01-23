@@ -1179,6 +1179,7 @@ protected:
 		double J[NDIM][NDIM];
 		for (n = 0; n < c.length(); n++) {
 			pavedata & d = data[n];
+			d.deflgrad.resize(1);
 			// Stress and strain tensors.
 			l[0] = c[n].x, l[1] = c[n].y, l[2] = c[n].z;
 			buildSF(true,l[0],l[1],l[2],N,dNdr);
@@ -1207,6 +1208,7 @@ protected:
 			double emod = 0.0;
 			for (k = 0; k < nnd; k++)
 				emod += N[k]*Ee[k];
+			d.deflgrad[0] = mat.emod+emod;
 			ematrix e(0.0);
 			for (i = 0; i < NDIM; i++) {
 				for (j = 0; j < NDOF; j++) {
@@ -2730,11 +2732,16 @@ results(const fset<const element *> & e, const fset<point3d> & c,
 	FILE * f = fopen(fname,"wb");
 	for (unsigned i = 0; i < e.length(); i++) {
 		e[i]->results(c,data);
+		unsigned il = 0;
+		while (&(layer[il].mat) != &(e[i]->mat))
+			il++;
+		double ild = double(il);
 		for (unsigned j = 0; j < data.length(); j++) {
 			fwrite(&(data[j].x),sizeof(double),3,f);
+			fwrite(&ild,sizeof(double),1,f);
+			fwrite(&(data[j].deflgrad[0]),sizeof(double),1,f);
 			fwrite(&(data[j].data[0][0]),sizeof(double),27,f);
 		}
-
 	}
 	fclose(f);
 }
@@ -2766,6 +2773,7 @@ LEresults(const fset<const element *> & e, const fset<point3d> & c,
 		unsigned il = 0;
 		while (&(layer[il].mat) != &(e[i]->mat))
 			il++;
+		double ild = double(il);
 		for (unsigned j = 0; j < data.length(); j++) {
 			data[j].z *= -1;
 			pavedata d(le.result(data[j],il));
@@ -2775,6 +2783,8 @@ LEresults(const fset<const element *> & e, const fset<point3d> & c,
 			d.data[1][1] *= -1; d.data[1][2] *= -1;
 			d.data[6][1] *= -1; d.data[6][2] *= -1;
 			fwrite(&(d.x),sizeof(double),3,f);
+			fwrite(&ild,sizeof(double),1,f);
+			fwrite(&(layer[il].mat.emod),sizeof(double),1,f);
 			fwrite(&(d.data[0][0]),sizeof(double),27,f);
 		}
 	}
