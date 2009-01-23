@@ -1101,6 +1101,47 @@ protected:
 			// This returns det(J);
 			gw *= inv_mul_gauss(nnd,J,dNdr)*(1+emod/mat.emod);
 			assert(gw > 0.0);
+			if (gw <= 0.0) {
+				event_msg(EVENT_ERROR,"Bad determinate in element_base::buildKe()!");
+				printf("J residual:\n");
+				for (i = 0; i < NDIM; i++) {
+					for (j = 0; j < NDIM; j++)
+						printf(" %10.4g",J[i][j]);
+					printf("\n");
+				}
+				printf("xe:\n");
+				for (i = 0; i < nnd; i++) {
+					for (j = 0; j < NDIM; j++)
+						printf(" %10.4g",xe[i][j]);
+					printf("\n");
+				}
+				buildSF(true,gx[gi][0],gy[gj][0],gz[gk][0],N,dNdr);
+				printf("N:\n");
+				for (i = 0; i < nnd; i++) {
+					printf("%10.4g\n",N[i]);
+				}
+				printf("dNdr:\n");
+				for (i = 0; i < nnd; i++) {
+					for (j = 0; j < NDIM; j++)
+						printf(" %10.4g",dNdr[i][j]);
+					printf("\n");
+				}
+				for (i = 0; i < NDIM; i++) {
+					for (j = 0; j < NDIM; j++) {
+						J[i][j] = 0.0;
+						for (k = 0; k < nnd; k++)
+							J[i][j] += dNdr[k][i]*xe[k][j];
+					}
+				}
+				printf("J:\n");
+				for (i = 0; i < NDIM; i++) {
+					for (j = 0; j < NDIM; j++)
+						printf(" %10.4g",J[i][j]);
+					printf("\n");
+				}
+				delete K;
+				return 0;
+			}
 			for (i = 0; i < nnd; i++) {
 				for (j = i; j < nnd; j++) {
 					for (k = 0; k < NDIM; k++)
@@ -1804,7 +1845,7 @@ public:
 	}
 	// Incomplete Cholesky decompostion, by block.  Look at the small
 	// internal version to understand what the whole thing is doing.
-	void chol() {
+	bool chol() {
 		smatrix_diag * d;
 		smatrix_node * p;
 
@@ -1837,7 +1878,7 @@ public:
 				}
 				if (true || wouldadd) {
 					if (!d->expand(1))
-						return; // oops.
+						return false;
 					pj = &(d->nodes[(d->nnz)++]);
 					memset(pj,0,sizeof(smatrix_node));
 					pj->i = r;
@@ -1884,8 +1925,10 @@ public:
 				for (unsigned k = 0; k < i; k++)
 					d->K(i,i) -= d->K(k,i)*d->K(k,i);
 				assert(d->K(i,i) > 0.0);
-				if (d->K(i,i) < DBL_EPSILON)
+				if (d->K(i,i) < DBL_EPSILON) {
 					printf("OOOOPS... (%g) %i/%i %i",d->K(i,i),n,nnd,i);
+					return false;
+				}
 				// NOTE: We store the inverse of the diagonal to avoid
 				// divisions.
 				d->K(i,i) = 1.0/sqrt(d->K(i,i));
@@ -1897,6 +1940,7 @@ public:
 				}
 			}
 		}
+		return true;
 	}
 
 private:
@@ -2271,7 +2315,10 @@ public:
 					unsigned nj = node.getorder(gj);
 					if ((node[gj].fixed & ((1<<NDOF)-1)) == ((1<<NDOF)-1))
 						continue;
-					K.append(ni,nj,(*ke)(i,j));
+					if (!K.append(ni,nj,(*ke)(i,j))) {
+						delete ke;
+						return false;
+					}
 				}
 			}
 			delete ke;
@@ -2298,7 +2345,8 @@ public:
 
 		timeme("\nComputing incomplete Cholesky...");
 
-		M.chol();
+		if (!M.chol())
+			return false;
 
 		timeme("\nBeginning CG...");
 
