@@ -850,22 +850,14 @@ protected:
 			xe[i][0] = c.x; xe[i][1] = c.y;
 			xe[i][2] = node_depth_callback(c,owner,&mat);
 		}
-		if (sx == inf_pos) {
-			xe[2][2] = xe[0][2]; xe[3][2] = xe[1][2];
-			xe[6][2] = xe[4][2]; xe[7][2] = xe[5][2];
-		}
-		if (sx == inf_neg) {
-			xe[0][2] = xe[2][2]; xe[1][2] = xe[3][2];
-			xe[4][2] = xe[6][2]; xe[5][2] = xe[7][2];
-		}
-		if (sy == inf_pos) {
-			xe[1][2] = xe[0][2]; xe[3][2] = xe[2][2];
-			xe[5][2] = xe[4][2]; xe[7][2] = xe[6][2];
-		}
-		if (sy == inf_neg) {
-			xe[0][2] = xe[1][2]; xe[2][2] = xe[3][2];
-			xe[4][2] = xe[5][2]; xe[6][2] = xe[7][2];
-		}
+		for (unsigned i = 0; sx == inf_pos && i < nnd/4; i++)
+			xe[i*4+2][2] = xe[i*4][2], xe[i*4+3][2] = xe[i*4+1][2];
+		for (unsigned i = 0; sx == inf_neg && i < nnd/4; i++)
+			xe[i*4][2] = xe[i*4+2][2], xe[i*4+1][2] = xe[i*4+3][2];
+		for (unsigned i = 0; sy == inf_pos && i < nnd/4; i++)
+			xe[i*4+1][2] = xe[i*4][2], xe[i*4+3][2] = xe[i*4+2][2];
+		for (unsigned i = 0; sy == inf_neg && i < nnd/4; i++)
+			xe[i*4][2] = xe[i*4+1][2], xe[i*4+2][2] = xe[i*4+3][2];
 	}
 	// Build a matrix of the emod delta values.
 	void buildEe(double * Ee) const {
@@ -873,22 +865,14 @@ protected:
 			const coord3d & c = getnode(inel[i]);
 			Ee[i] = node_emod_callback(c,owner,&mat) - mat.emod;
 		}
-		if (sx == inf_pos) {
-			Ee[2] = Ee[0]; Ee[3] = Ee[1];
-			Ee[6] = Ee[4]; Ee[7] = Ee[5];
-		}
-		if (sx == inf_neg) {
-			Ee[0] = Ee[2]; Ee[1] = Ee[3];
-			Ee[4] = Ee[6]; Ee[5] = Ee[7];
-		}
-		if (sy == inf_pos) {
-			Ee[1] = Ee[0]; Ee[3] = Ee[2];
-			Ee[5] = Ee[4]; Ee[7] = Ee[6];
-		}
-		if (sy == inf_neg) {
-			Ee[0] = Ee[1]; Ee[2] = Ee[3];
-			Ee[4] = Ee[5]; Ee[6] = Ee[7];
-		}
+		for (unsigned i = 0; sx == inf_pos && i < nnd/4; i++)
+			Ee[i*4+2] = Ee[i*4], Ee[i*4+3] = Ee[i*4+1];
+		for (unsigned i = 0; sx == inf_neg && i < nnd/4; i++)
+			Ee[i*4] = Ee[i*4+2], Ee[i*4+1] = Ee[i*4+3];
+		for (unsigned i = 0; sy == inf_pos && i < nnd/4; i++)
+			Ee[i*4+1] = Ee[i*4], Ee[i*4+3] = Ee[i*4+2];
+		for (unsigned i = 0; sy == inf_neg && i < nnd/4; i++)
+			Ee[i*4] = Ee[i*4+1], Ee[i*4+2] = Ee[i*4+3];
 	}
 	// Build a matrix of the nodal deflections.
 	void buildue(double (* ue)[NDOF]) const {
@@ -1264,40 +1248,24 @@ private:
 	inline void coord_add(shape_t ssx, shape_t ssy,
 			const coord3d (& cc)[8]) {
 		assert(nnd == 0);
-		const unsigned nx = getn(ssx),    mx = nx-1;
-		const unsigned ny = getn(ssy),    my = ny-1;
-		const unsigned nz = unsigned(SZ), mz = nz-1;
+		const double nx = getn(ssx),    mx = nx-1;
+		const double ny = getn(ssy),    my = ny-1;
+		const double nz = unsigned(SZ), mz = nz-1;
 
 		// Figure out our nodes using linear shape functions...
-		for (unsigned i = 0; i < nz; i++) {
-			for (unsigned j = 0; j < nx; j++) {
-				for (unsigned k = 0; k < ny; k++) {
-					coord3d p;
-					p.x =  (double(cc[0].x)*(mz-i)*(mx-j)*(my-k)
-					      + double(cc[1].x)*(mz-i)*(mx-j)*(   k)
-					      + double(cc[2].x)*(mz-i)*(   j)*(my-k)
-					      + double(cc[3].x)*(mz-i)*(   j)*(   k)
-					      + double(cc[4].x)*(   i)*(mx-j)*(my-k)
-					      + double(cc[5].x)*(   i)*(mx-j)*(   k)
-					      + double(cc[6].x)*(   i)*(   j)*(my-k)
-					      + double(cc[7].x)*(   i)*(   j)*(   k))/(mz*mx*my);
-					p.y =  (double(cc[0].y)*(mz-i)*(mx-j)*(my-k)
-					      + double(cc[1].y)*(mz-i)*(mx-j)*(   k)
-					      + double(cc[2].y)*(mz-i)*(   j)*(my-k)
-					      + double(cc[3].y)*(mz-i)*(   j)*(   k)
-					      + double(cc[4].y)*(   i)*(mx-j)*(my-k)
-					      + double(cc[5].y)*(   i)*(mx-j)*(   k)
-					      + double(cc[6].y)*(   i)*(   j)*(my-k)
-					      + double(cc[7].y)*(   i)*(   j)*(   k))/(mz*mx*my);
-					p.z =  (double(cc[0].z)*(mz-i)*(mx-j)*(my-k)
-					      + double(cc[1].z)*(mz-i)*(mx-j)*(   k)
-					      + double(cc[2].z)*(mz-i)*(   j)*(my-k)
-					      + double(cc[3].z)*(mz-i)*(   j)*(   k)
-					      + double(cc[4].z)*(   i)*(mx-j)*(my-k)
-					      + double(cc[5].z)*(   i)*(mx-j)*(   k)
-					      + double(cc[6].z)*(   i)*(   j)*(my-k)
-					      + double(cc[7].z)*(   i)*(   j)*(   k))/(mz*mx*my);
-					inel[nnd++] = addnode(p);
+		for (double i = 0; i < nz; i++) {
+			for (double j = 0; j < nx; j++) {
+				for (double k = 0; k < ny; k++) {
+					double x = 0.0, y = 0.0, z = 0.0;
+					for (unsigned l = 0; l < 8; l++) {
+						double s = (l   < 4 ? mz-i : i)
+							      *(l%4 < 2 ? mx-j : j)
+							      *(l%2 < 1 ? my-k : k)/(mz*mx*my);
+						x += s*double(cc[l].x);
+						y += s*double(cc[l].y);
+						z += s*double(cc[l].z);
+					}
+					inel[nnd++] = addnode(coord3d(x,y,z));
 				}
 			}
 		}
