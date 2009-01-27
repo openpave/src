@@ -3288,8 +3288,8 @@ main()
 				case 4:
 				case 5:
 					C[T_IDX(i,j)] = (r > 6000.0 ? 0.0 :
-							5.0*(1-1.5*r/6000.0+0.5*pow(r/6000.0,3)));
-					//exp(-pow(r/5000,2));
+							(1-1.5*r/6000.0+0.5*pow(r/6000.0,3)));
+					//C[T_IDX(i,j)] = exp(-pow(r/5000,2));
 					break;
 				default:
 					assert(false);
