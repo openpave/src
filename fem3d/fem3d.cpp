@@ -3310,11 +3310,17 @@ main()
 		delete [] C;*/
 	}
 
-	run = 1;
+	run = 0;
 	isvar = false;
 	rng RNG;
 	while (true) {
 		isvar = !isvar;
+		if (isvar)
+			run++;
+		//if (run <= 30)
+		//	continue;
+		if (run > 500)
+			break;
 
 		for (unsigned l = 0; isvar && l < 6; l++) {
 			double * A = new double[np];
@@ -3429,11 +3435,6 @@ main()
 		//LEresults(sf,poly,"sf",test);
 		results(sg,poly,"sg");
 		//LEresults(sg,poly,"sg",test);
-
-		if (isvar)
-			continue;
-		if (++run > 100)
-			break;
 	}
 
 	/*
