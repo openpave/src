@@ -353,7 +353,7 @@ struct axialdata {
 			unsigned gl = UINT_MAX) const {
 		double p = l.pressure();
 		
-		assert(fabs(r-l.distance(d)) < DBL_MIN);
+		assert(fabs(r-l.distance(*d)) < DBL_MIN);
 		if (gl != UINT_MAX) {
 			d->deflgrad[gl] += p*vdp;
 			return;
@@ -926,8 +926,8 @@ LEsystem::calculate(resulttype res, const double * Q)
 		return false;
 	unsigned ngqp = NGQP, nbz = NBZ, gl = UINT_MAX, nl = layers();
 	if ((res & mask) == dirty) {
-		ngqp = MIN(NGQP,7);
-		nbz = MIN(NBZ,32);
+		ngqp = MIN(NGQP,8);
+		nbz = MIN(NBZ,64);
 		interpolate = true;
 	} else if ((res & mask) == fast) {
 		ngqp = MIN(NGQP,8);
@@ -942,7 +942,8 @@ LEsystem::calculate(resulttype res, const double * Q)
 
 	// The integration constants, per layer.
 	double (* R)[4][2] = new double[nl][4][2];
-	double (* ABCD)[4] = new double[(interpolate ? 3*nl : nl)][4];
+	double (* ABCD)[4] = new double[nl][4];
+	double (* iT)[2][4] = 0; // interpolated T's.
 	// Local variables, so we don't have to walk the list.
 	double * h = new double[nl];
 	double * f = new double[nl];
@@ -977,6 +978,12 @@ LEsystem::calculate(resulttype res, const double * Q)
 	}
 	z.sort();
 	nz = z.length();
+
+	if (interpolate) {
+		iT = new double[nz][2][4];
+		if (iT == 0)
+			goto abort;
+	}
 
 	// Gerenate a list of load radii, then sort them and map from loads.
 	for (ild = 0; ild < load.length(); ild++) {
@@ -1081,34 +1088,37 @@ gradloop:
 			bool firstpanel = (bm[ib]*a[ia] <= j1r[1]);
 			unsigned agqp = (firstpanel && (res & mask) != dirty ? NGQP : ngqp);
 			if (interpolate) {
-				if (!firstpanel)
-					memcpy(&ABCD[2*nl][0],&ABCD[nl][0],nl*4*sizeof(double));
-				buildabcd(bm[ib],nl,h,v,E,f,R,&ABCD[nl]);
+				if (!firstpanel) {
+					for (iz = 0; iz < nz; iz++)
+						memcpy(iT[iz][0],iT[iz][1],4*sizeof(double));
+				}
+				buildabcd(bm[ib],nl,h,v,E,f,R,ABCD);
+				for (iz = 0; iz < nz; iz++)
+					buildT(bm[ib],z[iz].z,ABCD[z[iz].il],iT[iz][1]);
 			}
 			for (igp = 0; igp < agqp; igp++) {
 				// Calculate the gauss point and weight.
-				double m = (bm[ib]+bm[ib-1])/2
-						 + gu[agqp][igp]*(bm[ib]-bm[ib-1])/2;
-				double w = gf[agqp][igp]*(bm[ib]-bm[ib-1])/2;
+				double dm = (bm[ib]-bm[ib-1])/2;
+				double m = (bm[ib]+bm[ib-1])/2 + gu[agqp][igp]*dm;
+				double w = gf[agqp][igp]*dm;
 				w *= m*j1(m*a[ia]);
 
 				// First build a new ABCD matrix.
-				if (!interpolate || firstpanel) {
+				if (!interpolate || firstpanel)
 					buildabcd(m,nl,h,v,E,f,R,ABCD);
-				} else {
-					for (il = 0; il < nl; il++) {
-						for (unsigned i = 0; i < 4; i++)
-							ABCD[il][i] = ABCD[nl+il][i] -
-								(ABCD[nl+il][i]-ABCD[2*nl+il][i])*
-								(bm[ib]-m)/(bm[ib]-bm[ib-1]);
-					}
-				}
 				// Now calculate the integrals.
 				for (iz = 0; iz < nz; iz++) {
 					double T[4];
 					il = z[iz].il;
 					const double tv = 2*v[il];
-					buildT(m,z[iz].z,ABCD[il],T);
+					if (!interpolate || firstpanel) {
+						buildT(m,z[iz].z,ABCD[il],T);
+					} else {
+						for (unsigned i = 0; i < 4; i++)
+							T[i] = iT[iz][1][i] -
+									(iT[iz][1][i]-iT[iz][0][i])
+										*(bm[ib]-m)/(2*dm);
+					}
 					for (ir = 0; ir < nr; ir++) {
 						axialdata & s = ax[iz*nr+ir];
 						if (!s.active)

@@ -146,7 +146,7 @@ main()
  * layer pavement, and compares the three basic solutions for this
  * problem (accurate, normal, numerical).
  */
-#ifdef NOBUILD
+#ifdef BUILD
 int
 main()
 {
@@ -189,12 +189,12 @@ main()
 		Slow.addpoint(p[i]);
 		Fast.addpoint(p[i]);
 	}
-	Best.calc_accurate();
-	//Best.calculate(LEsystem::all);
-	Slow.calculate(LEsystem::all);
-	//Slow.calculate(LEsystem::fast);
-	//Fast.calculate(LEsystem::dirty);
-	Fast.calc_fastnum();
+	//Best.calc_accurate();
+	Best.calculate(LEsystem::all);
+	//Slow.calculate(LEsystem::all);
+	Slow.calculate(LEsystem::fast);
+	Fast.calculate(LEsystem::dirty);
+	//Fast.calc_fastnum();
 
 	for (i = 0; i < p.length(); i++) {
 		const pavedata & b = Best.result(p[i]);
@@ -216,7 +216,7 @@ main()
 }
 #endif
 
-#ifdef BUILD
+#ifdef NOBUILD
 int
 main()
 {
