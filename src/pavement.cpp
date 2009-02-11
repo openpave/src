@@ -1219,6 +1219,7 @@ abort:
 		event_msg(EVENT_ERROR,"Out of memory in LEsystem::calculate()!");
 	delete [] R;
 	delete [] ABCD;
+	delete [] iT;
 	delete [] h;
 	delete [] f;
 	delete [] v;

@@ -48,14 +48,41 @@ DllMain(HANDLE hModule, DWORD fdwReason, LPVOID lpReserved)
 	}
 	return TRUE;
 }
+#else
+#define _EVENT_IMP
 #endif
 
-#define _EVENT_IMP
 #define _PROGRESS_IMP
 #include "event.h"
 #include "pavement.h"
 #include "thermal.h"
 #include "libop.h"
+
+#if defined(XP_PC)
+/*
+ * Windows error event handler.
+ */
+void event_msg(const int level, const char * fmt, ...)
+{
+	va_list args;
+	char * buf;
+	int len;
+
+	va_start(args,fmt);
+	if (level < EVENT_DEBUG && fmt != NULL) {
+		len = _vscprintf_p(fmt,args)+1;
+		buf = (char *)malloc(len*sizeof(char));
+		if (buf == NULL) {
+			::MessageBox(0,"Out of Memory!","LIBOP.DLL Error",MB_OK|MB_ICONERROR);
+		} else {
+			_vsprintf_p(buf,len,fmt,args);
+			::MessageBox(0,buf,"LIBOP.DLL Error",MB_OK|MB_ICONERROR);
+			free(buf);
+		}
+	}
+	va_end(args);
+}
+#endif
 
 int OP_EXPORT
 OP_LE_Calc(const unsigned flags,
@@ -64,7 +91,7 @@ OP_LE_Calc(const unsigned flags,
            const unsigned na, const double * ax, const double * ay,
              const double * al, const double * ap, const double * ar,
            const unsigned np, const double * px, const double * py,
-             const double * pz, double (* res)[27])
+             const double * pz, const unsigned * pl, double (* res)[27])
 {
 	LEsystem pave;
 	unsigned i;
@@ -77,7 +104,10 @@ OP_LE_Calc(const unsigned flags,
 		pave.addload(point2d(ax[i],ay[i]),al[i],ap[i],ar[i]);
 	}
 	for (i = 0; i < np; i++) {
-		pave.addpoint(point3d(px[i],py[i],pz[i]));
+		if (pl[i] == 0)
+			pave.addpoint(point3d(px[i],py[i],pz[i]));
+		else
+			pave.addpoint(point3d(px[i],py[i],pz[i]),pl[i]-1);
 	}
 	switch (flags & 0xFF) {
 	case 0x00:
@@ -105,7 +135,8 @@ OP_LE_Calc(const unsigned flags,
 	}
 	for (i = 0; i < np; i++) {
 		point3d p(px[i],py[i],pz[i]);
-		const pavedata & d = pave.result(p);
+		unsigned l = (pl[i] == 0 ? UINT_MAX : pl[i]-1);
+		const pavedata & d = pave.result(p,l);
 		res[i][ 0] = d.result(pavedata::stress,pavedata::xx);
 		res[i][ 1] = d.result(pavedata::stress,pavedata::yy);
 		res[i][ 2] = d.result(pavedata::stress,pavedata::zz);
@@ -133,6 +164,67 @@ OP_LE_Calc(const unsigned flags,
 		res[i][24] = d.result(pavedata::strain,pavedata::s1);
 		res[i][25] = d.result(pavedata::strain,pavedata::s2);
 		res[i][26] = d.result(pavedata::strain,pavedata::s3);
+	}
+#if defined(_MSC_VER) || defined(__MINGW32__)
+	_clearfp();
+#endif
+	return rv;
+}
+
+int OP_EXPORT
+OP_LE_Calc_CalME(const unsigned flags,
+           const unsigned nl, const double * h, const double * E,
+             const double * v, const double * f,
+           const unsigned na, const double * ax, const double * ay,
+             const double * ap, const double * ar,
+           const unsigned np, const double * px, const double * py,
+             const double * pz, const unsigned * pl, double * res)
+{
+	LEsystem pave;
+	unsigned i;
+	bool rv = false;
+
+	for (i = 0; i < nl; i++)
+		pave.addlayer(h[i],E[i]*1000,v[i],f[i]);
+	for (i = 0; i < na; i++)
+		pave.addload(point2d(ax[i],ay[i]),0.0,ap[i]*1000,ar[i]);
+	for (i = 0; i < np; i++)
+		pave.addpoint(point3d(px[i],py[i],pz[i]),pl[i]-1);
+	switch (flags & 0xFF) {
+	case 0x00:
+	default:
+		rv = !pave.calculate(flags > 0xFF
+				? LEsystem::disp : LEsystem::all);
+		break;
+	case 0x01:
+		rv = !pave.calculate(flags > 0xFF
+				? LEsystem::fastdisp : LEsystem::fast);
+		break;
+	case 0x02:
+		rv = !pave.calculate(flags > 0xFF
+				? LEsystem::dirtydisp : LEsystem::dirty);
+		break;
+	case 0x03:
+		rv = !pave.calc_odemark();
+		break;
+	case 0x04:
+		rv = !pave.calc_fastnum();
+		break;
+	case 0xFF:
+		rv = !pave.calc_accurate();
+		break;
+	}
+	for (i = 0; i < np; i++) {
+		const pavedata & d = pave.result(point3d(px[i],py[i],pz[i]),pl[i]-1);
+		res[ 1*150+i] = -d.result(pavedata::stress,pavedata::yy)/1000;
+		res[ 2*150+i] = -d.result(pavedata::stress,pavedata::zz)/1000;
+		res[ 4*150+i] = -d.result(pavedata::stress,pavedata::xz)/1000;
+		res[15*150+i] = -d.result(pavedata::strain,pavedata::xx);
+		res[16*150+i] = -d.result(pavedata::strain,pavedata::yy);
+		res[17*150+i] = -d.result(pavedata::strain,pavedata::zz);
+		res[ 9*150+i] = -d.result(pavedata::strain,pavedata::p1);
+		res[10*150+i] = -d.result(pavedata::strain,pavedata::p2);
+		res[11*150+i] = -d.result(pavedata::strain,pavedata::p3);
 	}
 #if defined(_MSC_VER) || defined(__MINGW32__)
 	_clearfp();

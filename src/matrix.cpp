@@ -659,7 +659,7 @@ inv_chol(unsigned n, double * A)
  * LDL^T (Square root free Cholesky) Decomposition of postive definite
  * nxn matrix A.
  *
- * Returns L in the upper triangle of A (all diagonal elements are 1),
+ * Returns L in the lower triangle of A (all diagonal elements are 1),
  * with D in the diagonal.
  */
 bool

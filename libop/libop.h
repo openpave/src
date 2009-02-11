@@ -54,7 +54,7 @@ Declare Function OP_LE_Calc Lib "libop.dll" Alias "_OP_LE_Calc@68" ( _
     ByVal flags as Long,
     ByVal nl As Long, h As Double, E As Double, v As Double, f As Double_
     ByVal na As Long, Ax As Double, Ay As Double, Al As Double, Ap As Double, Ar as Double_
-    ByVal np As Long, Px As Double, Py As Double, Pz As Double, Res As Double) _
+    ByVal np As Long, Px As Double, Py As Double, Pz As Double, Pl As Long, Res As Double) _
   As Long
  *
  * Note: VB uses Fortan array storage (cols first) so the results are Res(1,i).
@@ -76,7 +76,27 @@ int OP_EXPORT OP_LE_Calc(
 	const double * px,              // Point X
 	const double * py,              // Point Y
 	const double * pz,              // Point Z
+	const unsigned * pl,            // Point layer (0 for auto)
 	double (* res)[27]);            // Results
+
+int OP_EXPORT OP_LE_Calc_CalME(
+	const unsigned flags,           // Flags to choose method
+	const unsigned nl,              // Number of layers
+	const double * h,               // Layer thickness (0 for semi-inf)
+	const double * E,               // Elastic modulus
+	const double * v,               // Poisson's ratio
+	const double * f,               // Friction (0.0 to 1.0)
+	const unsigned na,              // Number of loads
+	const double * ax,              // Center X location
+	const double * ay,              // Center Y location
+	const double * ap,              // Pressure
+	const double * ar,              // Radius
+	const unsigned np,              // Number of evaluation points
+	const double * px,              // Point X
+	const double * py,              // Point Y
+	const double * pz,              // Point Z
+	const unsigned * pl,            // Point layer (0 for auto)
+	double * res);                  // Results
 
 int OP_EXPORT
 OP_HT_Init(const int nl, const double * h, const double * D,

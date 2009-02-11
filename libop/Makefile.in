@@ -33,4 +33,8 @@ EXPORTS = \
 	libop.h                \
 	$(NULL)
 
+ifdef WIN32
+DSO_LDFLAGS += user32.lib
+endif
+
 include $(topsrcdir)/build/rules.mk
