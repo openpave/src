@@ -146,7 +146,7 @@ main()
  * layer pavement, and compares the three basic solutions for this
  * problem (accurate, normal, numerical).
  */
-#ifdef BUILD
+#ifdef NOBUILD
 int
 main()
 {
