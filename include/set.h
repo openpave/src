@@ -300,7 +300,7 @@ public:
 				this->init(i,0);
 			this->size = p+s;
 		} else {
-			if (!allocate(this->size+s))
+			if (!this->allocate(this->size+s))
 				return false;
 			memmove(&this->value[p+s],&this->value[p],
 					(this->size-p)*sizeof(V));
@@ -325,7 +325,7 @@ public:
 			memmove(&this->value[p],&this->value[p+s],
 				(this->size-p-s)*sizeof(V));
 		this->size -= s;
-		return allocate(this->size);
+		return this->allocate(this->size);
 	}
 	inline bool empty() {
 		this->deallocate();
@@ -484,7 +484,7 @@ protected:
 			}
 		}
 		this->size = j+1;
-		allocate(this->size);
+		this->allocate(this->size);
 	}
 };
 
@@ -863,25 +863,25 @@ public:
 	bool add(const V * v, const unsigned s = 1) {
 		if (s == 0 || v == 0)
 			return false;
-		if (!allocate(this->size+s))
+		if (!this->allocate(this->size+s))
 			return false;
-		copy(s,v,true);
-		return allocate(this->size);
+		this->copy(s,v,true);
+		return this->allocate(this->size);
 	}
 	// Remove based on key.
 	bool remove(const K & k) {
-		unsigned p = haskey(k);
+		unsigned p = this->haskey(k);
 		if (p == UINT_MAX)
 			return false;
 		this->value[p].~V();
 		if (p < --this->size)
 			memmove(&this->value[p],&this->value[p+1],
 				(this->size-p)*sizeof(V));
-		return allocate(this->size);
+		return this->allocate(this->size);
 	}
 	// Replace key/value with another.
 	inline bool replace(const V & v) {
-		unsigned p = haskey(v);
+		unsigned p = this->haskey(v);
 		if (p == UINT_MAX)
 			return false;
 		this->value[p] = v;
@@ -1366,14 +1366,14 @@ public:
 			const unsigned s = 1) {
 		if (s == 0 || k == 0)
 			return false;
-		if (!allocate(this->size+s))
+		if (!this->allocate(this->size+s))
 			return false;
-		copy(s,k,v,true);
-		return allocate(this->size);
+		this->copy(s,k,v,true);
+		return this->allocate(this->size);
 	}
 	// Now start removing them...
 	bool remove(const K & k) {
-		unsigned p = haskey(k) + 1;
+		unsigned p = this->haskey(k) + 1;
 		if (p == 0)
 			return false;
 		this->key[p].~K();
@@ -1384,11 +1384,11 @@ public:
 			memmove(&this->value[p],&this->value[p+1],
 					(this->size-p)*sizeof(V));
 		}
-		return allocate(this->size);
+		return this->allocate(this->size);
 	}
 	// Or replacing them...
 	inline bool replace(const K & k, const V & v) {
-		unsigned p = haskey(k);
+		unsigned p = this->haskey(k);
 		if (p == UINT_MAX)
 			return false;
 		this->value[p] = v;
