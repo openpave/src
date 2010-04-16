@@ -47,6 +47,7 @@
 #define __TMATRIX_H
 
 #include <stdio.h>
+#include <string.h>
 
 #if !defined(NO_METAPROGS)
 /*
