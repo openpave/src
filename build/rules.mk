@@ -222,6 +222,8 @@ ifdef WIN32
 		$(CC) $(OBJS) -Fe$@ -link $(OS_LDFLAGS) \
 		$(patsubst -l%,lib%.$(LIB_SUFFIX),$(subst -L,/LIBPATH:,$(_LIBS))) \
 		$(OS_LIBS)
+	@sh $(topsrcdir)/build/cygwin-wrapper \
+		$(RANLIB) -MANIFEST $@.manifest -OUTPUTRESOURCE:"$@;1"
 else
 ifdef CXXSRCS
 	$(CXX) $(OS_LDFLAGS) $(OBJS) $(_LIBS) $(OS_LIBS) -o $@
