@@ -867,7 +867,7 @@ protected:
 	void buildEe(double * Ee) const {
 		for (unsigned i = 0; i < nnd; i++) {
 			const coord3d & c = getnode(inel[i]);
-			Ee[i] = node_emod_callback(c,owner,&mat) - mat.emod;
+			Ee[i] = node_emod_callback(c,owner,&mat);
 		}
 		for (unsigned i = 0; sx == inf_pos && i < nnd/4; i++)
 			Ee[i*4+2] = Ee[i*4], Ee[i*4+3] = Ee[i*4+1];
@@ -1101,9 +1101,9 @@ protected:
 				buildSF(false,gx[gi][0],gy[gj][0],gz[gk][0],N,dNdr);
 			double emod = 0.0;
 			for (k = 0; k < nnd; k++)
-				emod += N[k]*Ee[k];
+				emod += N[k]*(log10(Ee[k])-log10(mat.emod));
 			// This returns det(J);
-			gw *= inv_mul_gauss(nnd,J,dNdr)*(1+emod/mat.emod);
+			gw *= inv_mul_gauss(nnd,J,dNdr)*pow(10,emod);
 			assert(gw > 0.0);
 			if (gw <= 0.0) {
 				event_msg(EVENT_ERROR,"Bad determinate in element_base::buildKe()!");
@@ -1211,8 +1211,8 @@ protected:
 			}
 			double emod = 0.0;
 			for (k = 0; k < nnd; k++)
-				emod += N[k]*Ee[k];
-			d.deflgrad[0] = mat.emod+emod;
+				emod += N[k]*(log10(Ee[k])-log10(mat.emod));
+			d.deflgrad[0] = pow(10,log10(mat.emod)+emod);
 			ematrix e(0.0);
 			for (i = 0; i < NDIM; i++) {
 				for (j = 0; j < NDOF; j++) {
@@ -1221,7 +1221,7 @@ protected:
 				}
 			}
 			e = (e + ~e)*0.5;
-			ematrix s(mat.pointstress(e)*(1+emod/mat.emod));
+			ematrix s(mat.pointstress(e)*pow(10,emod));
 			ematrix pe(principle(e));
 			ematrix ps(principle(s));
 			d.data[4][0] = g[0];
