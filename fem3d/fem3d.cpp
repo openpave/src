@@ -368,13 +368,13 @@ double node_emod_callback(const coord3d &, const mesh *, const material *);
 struct node3d : public coord3d {
 	// Neighbour in (x,y,z) plus/minus directions.
 	// UINT_MAX if not there...
-	struct {
+	//struct {
 		unsigned xm, xp, ym, yp, zm, zp;
-	};
+	//};
 	// Final results.
-	struct {
+	//struct {
 		double ux, uy, uz;
-	};
+	//};
 	// Set new neighbours.  If this conflicts with what we know, we
 	// complain (if we're debugging).
 	void setneighbours(const unsigned x_m, const unsigned x_p,
