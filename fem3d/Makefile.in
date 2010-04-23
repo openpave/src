@@ -10,7 +10,7 @@ VPATH		= @srcdir@
 
 include $(MOD_DEPTH)/build/autoconf.mk
 
-PROGRAM_NAME	= fem3d-mbroad-fwd
+PROGRAM_NAME	= fem3d
 
 DIRS =                                 \
 	$(NULL)
