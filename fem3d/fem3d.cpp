@@ -1741,12 +1741,16 @@ class smatrix_diag {
 class smatrix {
 public:
 	// Create the matrix empty.
-	inline explicit smatrix(const unsigned n)
+	inline explicit smatrix(const unsigned n, double d = 0.0)
 	  : nnd(n), diag(0) {
 		diag = static_cast<smatrix_diag *>
 				(calloc(nnd,sizeof(smatrix_diag)));
 		if (diag == 0)
 			event_msg(EVENT_ERROR,"Out of memory in smatrix::smatrix()!");
+		for (unsigned i = 0; d != 0.0 && i < nnd; i++) {
+			for (unsigned j = 0; j < NDOF; j++)
+				diag[i].K(j,j) = d;
+		}
 	}
 	// Copy a matrix.
 	inline explicit smatrix(const smatrix & A)
@@ -1849,9 +1853,14 @@ public:
 				nodes[j].col_next = (j == diag[i].nnz-1 ? 0 : &nodes[j+1]);
 		}
 	}
-	// Incomplete Cholesky decompostion, by block.  Look at the small
-	// internal version to understand what the whole thing is doing.
-	bool chol() {
+	// Do a level 1 fill in on the sparse matrix for incomplete Cholesky
+	// decompostion.  We need to insert nodes, which is costly, so we rely
+	// on some tricks here...  We don't use nnz, only col_next, while tidy
+	// will only use nnz not col_next.  So we add nodes ourself without
+	// using append, and memset() them to zero, and set their row numbers. 
+	// Then we call tidy(), which will sort by row numbers and fix the
+	// col_next pointers.
+	bool fillin() {
 		smatrix_diag * d;
 		smatrix_node * p;
 
@@ -1860,39 +1869,171 @@ public:
 		// col_next, while tidy with only use nnz not col_next.  So we add
 		// nodes ourself without using append.  We also know that we're
 		// adding zeros, so we memset().
-		/*for (unsigned n = 0; n < nnd; n++) {
-			d = &(diag[n]);
+		/*sset<unsigned> idx(0,nnd);
+		for (unsigned n = nnd; n > 0; ) {
+			d = &(diag[--n]);
 			p = d->col_head;
+			idx.empty();
 			for (unsigned r = (p ? p->i : n); r < n; r++) {
-				p = d->col_head;
 				while (p && p->i < r)
 					p = p->col_next;
 				if (p && p->i == r)
 					continue;
 				smatrix_node * pi = diag[r].col_head;
 				smatrix_node * pj = d->col_head;
-				bool wouldadd = false;
 				while (pi != 0 && pj != 0) {
 					if (pi->i > pj->i)
 						pj = pj->col_next;
 					else if (pi->i < pj->i)
 						pi = pi->col_next;
 					else {
-						wouldadd = true;
+						idx.add(r);
 						break;
 					}
 				}
-				if (true || wouldadd) {
-					if (!d->expand(1))
-						return false;
-					pj = &(d->nodes[(d->nnz)++]);
-					memset(pj,0,sizeof(smatrix_node));
-					pj->i = r;
+			}
+			if (!d->expand(idx.length()))
+				return false;
+			memset(&(d->nodes[d->nnz]),0,idx.length()*sizeof(smatrix_node));
+			for (unsigned r = 0; r < idx.length(); r++)
+				d->nodes[(d->nnz)++].i = idx[r];
+		}
+		// Now call tidy to magically add these nodes.
+		timeme(" ");
+		tidy();
+
+		return true;*/
+
+		// We work backwards to improve the overlap, since we can delete the
+		// row helper once we are done with this column.  rows[n] contains a
+		// bool map for filled rows in this column.
+		/*fset<char *> rows(nnd,nnd);
+		fset<unsigned> cols(nnd,nnd);
+		for (unsigned n = 0; n < nnd; n++) {
+			if ((p = diag[n].col_head) == 0) {
+				cols[n] = n;
+				continue; // Skip diag only
+			}
+			cols[n] = p->i;
+			if ((rows[n] = new char[n-p->i]) == 0)
+				goto bail;
+			memset(rows[n],0,(n-p->i)*sizeof(char));
+			while (p) {
+				rows[n][n-p->i-1] = 1;
+				p = p->col_next;
+			}
+		}
+		timeme(" ");
+		for (unsigned n = nnd; n > 0; ) {
+			unsigned add = 0, c = cols[--n]; // The max row for this column
+			if (c == n)
+				continue; // Skip diag only
+			for (unsigned i = 0; i < n-c; i++) {
+				unsigned r = n-1-i; // The 'other' column. 
+				// Skip if other is diag only or if we are already
+				// filled in.
+				if (cols[r] == r || rows[n][i]) {
+					rows[n][i] = 0;
+					continue;
+				}
+				for (unsigned j = r; j > MAX(c,cols[r]); j--) {
+					if (rows[n][n-j] && rows[r][r-j]) {
+						add++;
+						rows[n][i] = 1;
+						break;
+					}
 				}
 			}
-		}*/
+			d = &(diag[n]);
+			if (!d->expand(add))
+				goto bail;
+			memset(&(d->nodes[d->nnz]),0,add*sizeof(smatrix_node));
+			for (unsigned i = 0, j = add; i < n-c; i++) {
+				if (rows[n][i] == 1)
+					d->nodes[--j+d->nnz].i = n-1-i;
+			}
+			d->nnz += add;
+			delete [] rows[n];
+		}
+		timeme(" ");
 		// Now call tidy to magically add these nodes.
 		tidy();
+		
+		return true;
+	bail:
+		for (unsigned n = 0; n < nnd; n++)
+			delete [] rows[n];
+		return false;*/
+		
+		// Try three...
+		struct row_ptr {
+			int col;
+			row_ptr *prev;
+		};
+		unsigned nnz = 0;
+		bool rv = true;
+		for (unsigned n = 0; n < nnd; n++)
+			nnz += diag[n].nnz;
+		row_ptr * rows = new row_ptr[nnd+nnz];
+		if (rows == 0)
+			return false;
+		memset(rows,0,(nnd+nnz)*sizeof(row_ptr));
+		nnz = 0;
+		for (unsigned n = 0; n < nnd; n++) {
+			p = diag[n].col_head;
+			while (p) {
+				rows[nnd+nnz].col = n;
+				rows[nnd+nnz].prev = rows[p->i].prev;
+				rows[p->i].prev = &rows[nnd+nnz];
+				p = p->col_next;
+				nnz++;
+			}
+		}
+		for (unsigned n = nnd; n > 0; ) {
+			d = &(diag[--n]);
+			p = d->col_head;
+			if (p == 0)
+				continue; // Skip diag only
+			unsigned add = 0, c = p->i; // The max row for this column
+			while (p) {
+				rows[n-p->i-1].col = 1;
+				row_ptr * r = rows[p->i].prev->prev;
+				rows[p->i].prev = r;
+				while (r) {
+					rows[n-r->col-1].col = -1;
+					r = r->prev;
+				}
+				p = p->col_next;
+			}
+			for (unsigned i = 0; i < n-c; i++) {
+				if (rows[i].col == -1)
+					add++;
+			}
+			if (!d->expand(add)) {
+				rv = false;
+				goto bail;
+			}
+			memset(&(d->nodes[d->nnz]),0,add*sizeof(smatrix_node));
+			for (unsigned i = 0, j = add; i < n-c; i++) {
+				if (rows[i].col == -1)
+					d->nodes[--j+d->nnz].i = n-1-i;
+				rows[i].col = 0; // cleanup
+			}
+			d->nnz += add;
+		}
+		timeme(" ");
+		// Now call tidy to magically add these nodes.
+		tidy();
+
+	bail:
+		delete [] rows;
+		return rv;
+	}
+	// Incomplete Cholesky decompostion, by block.  Look at the small
+	// internal version to understand what the whole thing is doing.
+	bool incchol() {
+		smatrix_diag * d;
+		smatrix_node * p;
 
 		// Do the decomposition.
 		for (unsigned n = 0; n < nnd; n++) {
@@ -1932,7 +2073,7 @@ public:
 					d->K(i,i) -= d->K(k,i)*d->K(k,i);
 				assert(d->K(i,i) > 0.0);
 				if (d->K(i,i) < DBL_EPSILON) {
-					printf("OOOOPS... (%g) %i/%i %i",d->K(i,i),n,nnd,i);
+					printf("OOOOPS... (%g) %i/%i %i\n",d->K(i,i),n,nnd,i);
 					return false;
 				}
 				// NOTE: We store the inverse of the diagonal to avoid
@@ -1947,6 +2088,33 @@ public:
 			}
 		}
 		return true;
+	}
+	// Do a complete Cholesky decompostion, by filling in all the blocks and
+	// then doing an 'incomplete' Cholesky...
+	bool chol() {
+		smatrix_diag * d;
+		smatrix_node * p;
+
+		for (unsigned n = 0; n < nnd; n++) {
+			d = &(diag[n]);
+			if (!(p = d->col_head))
+				continue; // Diagional only is OK.
+			unsigned r = p->i, a = r - n - d->nnz;
+			if (!d->expand(a))
+				return false;
+			memset(&(d->nodes[d->nnz]),0,a*sizeof(smatrix_node));
+			p = d->col_head; // The array's probably been realloced.
+			for (; r < n; r++) {
+				while (p && p->i < r)
+					p = p->col_next;
+				if (p && p->i == r)
+					continue;
+				d->nodes[(d->nnz)++].i = r;
+			}
+		}
+		// Now call tidy to magically add these nodes.
+		tidy();
+		return incchol();
 	}
 
 private:
@@ -2348,10 +2516,18 @@ public:
 		timeme("\nCopying...");
 
 		smatrix M(K);
+		//smatrix M(nnd,1.0);
+
+		timeme("\nComputing fill in...");
+
+		if (!M.fillin())
+			return false;
+		//if (!M.fillin())
+		//	return false;
 
 		timeme("\nComputing incomplete Cholesky...");
 
-		if (!M.chol())
+		if (!M.incchol())
 			return false;
 
 		timeme("\nBeginning CG...");
@@ -2379,7 +2555,7 @@ public:
 			for (i = 0, r = 0.0; i < nnd; i++)
 				r += tmatrix_scalar<double>(~R(i)*R(i));
 			printf("CG step %i with residual %g",it,r);
-			if (r < tol*ri || it >= nnd) {
+			if (r < tol*ri || it >= nnd*NDOF) {
 				timeme("\n");
 				break;
 			}
