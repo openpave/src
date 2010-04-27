@@ -356,8 +356,6 @@ const double gl_4[4][2] = {{        -1.0, 1.0/6},
 
 class mesh;                    // Forward declare.
 class node_list;               // Forward declare.
-double node_depth_callback(const coord3d &, const mesh *, const material *);
-double node_emod_callback(const coord3d &, const mesh *, const material *);
 
 /*
  * struct node3d
@@ -851,32 +849,16 @@ protected:
 		assert(NDIM == 3);
 		for (unsigned i = 0; i < nnd; i++) {
 			const coord3d & c = getnode(inel[i]);
-			xe[i][0] = c.x; xe[i][1] = c.y;
-			xe[i][2] = node_depth_callback(c,owner,&mat);
+			xe[i][0] = c.x;
+			xe[i][1] = c.y;
+			xe[i][2] = c.z;
 		}
-		for (unsigned i = 0; sx == inf_pos && i < nnd/4; i++)
-			xe[i*4+2][2] = xe[i*4][2], xe[i*4+3][2] = xe[i*4+1][2];
-		for (unsigned i = 0; sx == inf_neg && i < nnd/4; i++)
-			xe[i*4][2] = xe[i*4+2][2], xe[i*4+1][2] = xe[i*4+3][2];
-		for (unsigned i = 0; sy == inf_pos && i < nnd/4; i++)
-			xe[i*4+1][2] = xe[i*4][2], xe[i*4+3][2] = xe[i*4+2][2];
-		for (unsigned i = 0; sy == inf_neg && i < nnd/4; i++)
-			xe[i*4][2] = xe[i*4+1][2], xe[i*4+2][2] = xe[i*4+3][2];
 	}
 	// Build a matrix of the emod delta values.
 	void buildEe(double * Ee) const {
 		for (unsigned i = 0; i < nnd; i++) {
-			const coord3d & c = getnode(inel[i]);
-			Ee[i] = node_emod_callback(c,owner,&mat);
+			Ee[i] = mat.emod;
 		}
-		for (unsigned i = 0; sx == inf_pos && i < nnd/4; i++)
-			Ee[i*4+2] = Ee[i*4], Ee[i*4+3] = Ee[i*4+1];
-		for (unsigned i = 0; sx == inf_neg && i < nnd/4; i++)
-			Ee[i*4] = Ee[i*4+2], Ee[i*4+1] = Ee[i*4+3];
-		for (unsigned i = 0; sy == inf_pos && i < nnd/4; i++)
-			Ee[i*4+1] = Ee[i*4], Ee[i*4+3] = Ee[i*4+2];
-		for (unsigned i = 0; sy == inf_neg && i < nnd/4; i++)
-			Ee[i*4] = Ee[i*4+1], Ee[i*4+2] = Ee[i*4+3];
 	}
 	// Build a matrix of the nodal deflections.
 	void buildue(double (* ue)[NDOF]) const {
@@ -1099,11 +1081,8 @@ protected:
 			if (sx == inf_pos || sx == inf_neg
 			 || sy == inf_pos || sy == inf_neg)
 				buildSF(false,gx[gi][0],gy[gj][0],gz[gk][0],N,dNdr);
-			double emod = 0.0;
-			for (k = 0; k < nnd; k++)
-				emod += N[k]*(log10(Ee[k])-log10(mat.emod));
 			// This returns det(J);
-			gw *= inv_mul_gauss(nnd,J,dNdr)*pow(10,emod);
+			gw *= inv_mul_gauss(nnd,J,dNdr);
 			assert(gw > 0.0);
 			if (gw <= 0.0) {
 				event_msg(EVENT_ERROR,"Bad determinate in element_base::buildKe()!");
@@ -1209,10 +1188,6 @@ protected:
 				for (k = 0; k < nnd; k++)
 					g[j] += N[k]*ue[k][j];
 			}
-			double emod = 0.0;
-			for (k = 0; k < nnd; k++)
-				emod += N[k]*(log10(Ee[k])-log10(mat.emod));
-			d.deflgrad[0] = pow(10,log10(mat.emod)+emod);
 			ematrix e(0.0);
 			for (i = 0; i < NDIM; i++) {
 				for (j = 0; j < NDOF; j++) {
@@ -1221,7 +1196,7 @@ protected:
 				}
 			}
 			e = (e + ~e)*0.5;
-			ematrix s(mat.pointstress(e)*pow(10,emod));
+			ematrix s(mat.pointstress(e));
 			ematrix pe(principle(e));
 			ematrix ps(principle(s));
 			d.data[4][0] = g[0];
@@ -2641,48 +2616,6 @@ struct femlayer {
 sset<femlayer> layer;
 double * L[6];
 
-double
-node_depth_callback(const coord3d & c, const mesh * FEM, const material * mat)
-{
-	unsigned i = 0, n;
-
-	while (&(layer[i].mat) != mat)
-		i++;
-	double z = -c.z - layer[i].top;
-	double t = layer[i].top, b = layer[i].bot, h = b-t;
-	if (isvar)
-		n = FEM->getorderofnode(coord3d(c.x,c.y,0.0));
-	else
-		n = FEM->getorderofnode(coord3d(0.0,0.0,0.0));
-	if (i == 0) {
-		t += L[0][n];
-		b += L[1][n];
-	} else if (i == 1) {
-		t += L[1][n];
-		b += (L[1][n]+L[2][n])/2;
-	} else if (i == 2) {
-		t += (L[1][n]+L[2][n])/2;
-		b += L[2][n];
-	} else if (i == 3) {
-		t += L[2][n];
-	}
-	return -t+(t-b)*z/h;
-}
-
-double
-node_emod_callback(const coord3d & c, const mesh * FEM, const material * mat)
-{
-	unsigned i = 0, n;
-
-	while (&(layer[i].mat) != mat)
-		i++;
-	if (isvar)
-		n = FEM->getorderofnode(coord3d(c.x,c.y,0.0));
-	else
-		n = FEM->getorderofnode(coord3d(0.0,0.0,0.0));
-	return L[(i>1?i-1:i)+3][n];
-}
-
 inline double
 circlearea(double x, double y, double r)
 {
@@ -3725,18 +3658,6 @@ main(int argc, char *argv[])
 
 	timeme("\n");
 	return 0;
-}
-
-double
-node_depth_callback_test(const coord3d & c, const mesh * FEM, const material * mat)
-{
-	return c.z;
-}
-
-double
-node_emod_callback_test(const coord3d & c, const mesh * FEM, const material * mat)
-{
-	return mat->emod;
 }
 
 int
