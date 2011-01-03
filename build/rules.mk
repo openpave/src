@@ -298,8 +298,10 @@ endif
 ifdef WIN32
 	@echo $@ ": \\" > $@.d 
 	@sh $(topsrcdir)/build/cygwin-wrapper -quiet \
-		$(CXX) -EP -showIncludes $(OS_CXXFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<) 2>&1 >/dev/null \
-			| grep "including" | sed -e 's/.*file: //g' -e 's/^[ ]*//g' -e 's^\\^/^g' -e 's/^/\t/g' -e 's/$$/ \\/g' | grep -v " [^\]" | grep -v ";" >> $@.d 
+		$(CXX) -EP -showIncludes $(OS_CXXFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<) 2>&1 \
+			| grep "including" | grep -v ";" \
+			| sed -e's/^.*file:[ ]*//g' -e's/^/\"/g' -e's/$$/\"/g' -e's#^[.][.]#$(PWD)/#g' \
+			| xargs cygpath -a -s -m | xargs cygpath -u | sed -e 's/^/\t/g' -e 's/$$/ \\/g' >> $@.d
 	@sh $(topsrcdir)/build/cygwin-wrapper \
 		$(CXX) -Fo$@ -c $(OS_CXXFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<)
 else
@@ -308,11 +310,14 @@ endif
 
 %.$(OBJ_SUFFIX): %.c
 ifdef WIN32
-	@echo $< ": \\" > $@.d 
+	@echo $@ ": \\" > $@.d 
 	@sh $(topsrcdir)/build/cygwin-wrapper -quiet \
-		$(CC) -EP -showIncludes $(OS_CFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<) 2>&1 \
-			| grep "including" | sed -e 's/.*ile: //g' -e 's/^[ ]*//g' -e 's^\\^/^g' -e 's/^/\t/g' -e 's/$$/ \\/g' | grep -v " " >> $@.d 
-	| grep "including" | sed -e 's/.*ile: //g' -e 's/ //g' > $($(call abspath,$@):.$(OBJ_SUFFIX)=.d)
+		$(CC) -EP -showIncludes $(OS_CFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<) 2>&1  \
+			| grep "including" | grep -v ";" \
+			| sed -e's/^.*file:[ ]*//g' -e's/^/\"/g' -e's/$$/\"/g' -e's#^[.][.]#$(PWD)/#g' \
+			| xargs cygpath -a -s -m | xargs cygpath -u | sed -e 's/^/\t/g' -e 's/$$/ \\/g' >> $@.d
+	@sh $(topsrcdir)/build/cygwin-wrapper \
+		$(CC) -Fo$@ -c $(OS_CFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<)
 else
 	$(CC) -c -MMD -MP $(OS_CFLAGS) $(DEFINES) $(INCLUDES) $< -o $@ 
 endif

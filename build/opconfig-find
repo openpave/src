@@ -48,6 +48,11 @@
 #
 topsrcdir=$1
 
+if test $OSTYPE = "cygwin"; then
+	OPCONFIG=`cygpath -u "$OPCONFIG"`
+	HOME=`cygpath -u "$HOME"`
+fi
+
 for _config in "$OPCONFIG" \
                "$topsrcdir/opconfig" \
                "$topsrcdir/../opconfig" \
