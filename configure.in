@@ -707,17 +707,11 @@ include/Makefile
 src/Makefile
 "
 
-if test -n "$OP_PROJECT_test"; then
-    MAKEFILES="$MAKEFILES test/Makefile"
-fi
-
-if test -n "$OP_PROJECT_libop"; then
-    MAKEFILES="$MAKEFILES libop/Makefile"
-fi
-
-if test -n "$OP_PROJECT_fem3d"; then
-    MAKEFILES="$MAKEFILES fem3d/Makefile"
-fi
+for p in $OP_PROJECTS; do
+	if test ${p} != "core"; then
+	    MAKEFILES="$MAKEFILES ${p}/Makefile"
+	fi
+done;
 
 AC_MSG_CHECKING([if config.h needs rebuilding])
 AC_OUTPUT_COMMANDS([

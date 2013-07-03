@@ -2318,20 +2318,14 @@ include/Makefile
 src/Makefile
 "
 
-if test -n "$OP_PROJECT_test"; then
-    MAKEFILES="$MAKEFILES test/Makefile"
-fi
-
-if test -n "$OP_PROJECT_libop"; then
-    MAKEFILES="$MAKEFILES libop/Makefile"
-fi
-
-if test -n "$OP_PROJECT_fem3d"; then
-    MAKEFILES="$MAKEFILES fem3d/Makefile"
-fi
+for p in $OP_PROJECTS; do
+	if test ${p} != "core"; then
+	    MAKEFILES="$MAKEFILES ${p}/Makefile"
+	fi
+done;
 
 echo $ac_n "checking if config.h needs rebuilding""... $ac_c" 1>&6
-echo "configure:2335: checking if config.h needs rebuilding" >&5
+echo "configure:2329: checking if config.h needs rebuilding" >&5
 
 echo "$ac_t""done" 1>&6
 
