@@ -51,22 +51,22 @@ typedef struct {
 
 template<unsigned A, unsigned B, unsigned N = 34, unsigned M = 2>
 struct SIN {
-	static inline double series() {
+	static inline double series() throw () {
 		return 1-(A*M_PI/B)*(A*M_PI/B)/M/(M+1)
 				*SIN<A,B,N,M+2>::series();
 	}
-	static inline double sin() {
+	static inline double sin() throw () {
 		return (A*M_PI/B)*SIN<A,B>::series();
 	}
 };
 template<unsigned A, unsigned B, unsigned N>
 struct SIN<A,B,N,N> {
-	static inline double series() { return 1.0f; }
+	static inline double series() throw () { return 1.0f; }
 };
 
 inline void
 TRANSFORM(complex & a0, complex & a1, complex & a2, complex & a3,
-		const double & wr,const double & wi)
+		const double & wr,const double & wi) throw ()
 {
 	double t1, t2, t3, t4, t5, t6, t7, t8;
 	t1 = a0.re - a2.re;
@@ -89,7 +89,7 @@ TRANSFORM(complex & a0, complex & a1, complex & a2, complex & a3,
 
 template<unsigned N>
 inline void
-fftc(complex * a)
+fftc(complex * a) throw ()
 {
 	const unsigned n = N/8;
 	TRANSFORM(a[0],a[2*n],a[4*n],a[6*n],1.0,0.0);
@@ -107,7 +107,7 @@ fftc(complex * a)
 }
 template<>
 inline void
-fftc<2>(complex * a)
+fftc<2>(complex * a) throw ()
 {
 	double t0 = a[0].re - a[1].re, t1 = a[0].im - a[1].im;
 	a[0].re += a[1].re; a[0].im += a[1].im;
@@ -115,7 +115,7 @@ fftc<2>(complex * a)
 }
 template<>
 inline void
-fftc<4>(complex * a)
+fftc<4>(complex * a) throw ()
 {
 	TRANSFORM(a[0],a[1],a[2],a[3],1.0,0.0);
 	fftc<2>(a);
@@ -123,7 +123,7 @@ fftc<4>(complex * a)
 
 inline void
 R(double & a0, double & a1, double & b0, double & b1,
-		const double & wr, const double & wi)
+		const double & wr, const double & wi) throw ()
 {
 	double t1, t2, t3, t4;
 	t1 = a0 - a1;
@@ -138,7 +138,7 @@ R(double & a0, double & a1, double & b0, double & b1,
 
 template<unsigned N>
 inline void
-fftr(double * a)
+fftr(double * a) throw ()
 {
 	const unsigned n = N/8;
 	R(a[  0],a[    1],a[4*n],a[4*n+1],1.0,0.0);
@@ -155,14 +155,14 @@ fftr(double * a)
 }
 template<>
 inline void
-fftr<2>(double * a)
+fftr<2>(double * a) throw ()
 {
 	double t1 = a[0] + a[1], t2 = a[0] - a[1];
 	a[0] = t1; a[1] = t2;
 }
 template<>
 inline void
-fftr<4>(double * a)
+fftr<4>(double * a) throw ()
 {
 	R(a[0],a[1],a[2],a[3],1.0,0.0);
 	fftr<2>(a);
@@ -170,7 +170,7 @@ fftr<4>(double * a)
 
 inline void
 UNTRANSFORM(complex & a0, complex & a1, complex & a2, complex & a3,
-		const double & wr, const double & wi)
+		const double & wr, const double & wi) throw ()
 {
 	double t1, t2, t3, t4, t5, t6, t7, t8;
 	t5 = a2.re * wr + a2.im * wi;
@@ -193,7 +193,7 @@ UNTRANSFORM(complex & a0, complex & a1, complex & a2, complex & a3,
 
 template<unsigned N>
 inline void
-fftc_un(complex * a)
+fftc_un(complex * a) throw ()
 {
 	fftc_un<N/2>(a);
 	fftc_un<N/4>(a+  N/2);
@@ -211,7 +211,7 @@ fftc_un(complex * a)
 }
 template<>
 inline void
-fftc_un<2>(complex * a)
+fftc_un<2>(complex * a) throw ()
 {
 	double t0 = a[0].re - a[1].re, t1 = a[0].im - a[1].im;
 	a[0].re += a[1].re; a[0].im += a[1].im;
@@ -219,7 +219,7 @@ fftc_un<2>(complex * a)
 }
 template<>
 inline void
-fftc_un<4>(complex *a)
+fftc_un<4>(complex *a) throw ()
 {
 	fftc_un<2>(a);
 	UNTRANSFORM(a[0],a[1],a[2],a[3],1.0,0.0);
@@ -227,7 +227,7 @@ fftc_un<4>(complex *a)
 
 inline void
 V(double & a0, double & a1, double & b0, double & b1,
-		const double & wr, const double & wi)
+		const double & wr, const double & wi) throw ()
 {
 	double t1, t2, t3, t4, t5, t6;
 	t5 = b0 * wr + b1 * wi;
@@ -244,7 +244,7 @@ V(double & a0, double & a1, double & b0, double & b1,
 
 template<unsigned N>
 inline void
-fftr_un(double * a)
+fftr_un(double * a) throw ()
 {
 	fftc_un<N/4>(reinterpret_cast<complex *>(a + N/2));
 	fftr_un<N/2>(a);
@@ -261,14 +261,14 @@ fftr_un(double * a)
 }
 template<>
 inline void
-fftr_un<2>(double * a)
+fftr_un<2>(double * a) throw ()
 {
 	double t1 = a[0] + a[1], t2 = a[0] - a[1];
 	a[0] = t1; a[1] = t2;
 }
 template<>
 inline void
-fftr_un<4>(double * a)
+fftr_un<4>(double * a) throw ()
 {
 	fftr_un<2>(a);
 	V(a[0],a[1],a[2],a[3],1.0,0.0);
@@ -276,7 +276,7 @@ fftr_un<4>(double * a)
 
 template<unsigned N>
 inline void
-fftc_scale(complex * a)
+fftc_scale(complex * a) throw ()
 {
 	const double n = 1.0/N;
 	for (unsigned i = 0; i < N; i++)
@@ -286,7 +286,7 @@ fftc_scale(complex * a)
 /* n even, n >= 2 */
 template<unsigned N>
 inline void
-fftr_scale(double * a)
+fftr_scale(double * a) throw ()
 {
 	a[0] /= N; a[1] /= N;
 	const double n = 2.0/N;
@@ -296,7 +296,7 @@ fftr_scale(double * a)
 
 template<unsigned N>
 inline void
-fftc_mul(complex * a, complex * b)
+fftc_mul(complex * a, complex * b) throw ()
 {
 	for (unsigned i = 0; i < N; i++) {
 		double t1 = a[i].re, t2 = a[i].im;
@@ -307,7 +307,7 @@ fftc_mul(complex * a, complex * b)
 
 template<unsigned N>
 inline void
-fftr_mul(double * a, double * b)
+fftr_mul(double * a, double * b) throw ()
 {
 	double t0 = a[0]*b[0], t1 = a[1]*b[1];
 	fftc_mul<N/2>(reinterpret_cast<complex *>(a),
@@ -316,7 +316,7 @@ fftr_mul(double * a, double * b)
 }
 template<>
 inline void
-fftr_mul<2>(double * a, double * b)
+fftr_mul<2>(double * a, double * b) throw ()
 {
 	a[0] *= b[0];
 	a[1] *= b[1];

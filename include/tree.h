@@ -46,13 +46,13 @@
 template<class K, class V>
 struct BST
 {
-	BST()
+	BST() throw ()
 	  : root(0) {
 	}
-	~BST() {
+	~BST() throw () {
 		delete root;
 	}
-	V * get(const K & k) {
+	V * get(const K & k) throw () {
 		node * x = root;
 		while (x != 0) {
 			if (k == x->key)
@@ -64,19 +64,19 @@ struct BST
 		}
 		return 0;
 	}
-	void insert(const K & k, const V & v) {
+	void insert(const K & k, const V & v) throw () {
 		bool add = false;
 		root = insert(root,k,v,&add);
 		root->red = false;
 	}
-	void remove(const K & k) {
+	void remove(const K & k) throw () {
 		if (root == 0)
 			return;
 		root = remove(root,k);
 		if (root != 0)
 			root->red = false;
 	}
-	void print() {
+	void print() throw () {
 		printf("Dumping:\n");
 		if (root == 0)
 			printf("Empty!\n");
@@ -92,16 +92,16 @@ private:
 		unsigned order;
 		node * left, * right;
 		bool red;
-		node(const K & k, const V & v)
+		node(const K & k, const V & v) throw ()
 		  : key(k), value(v), order(0), left(0), right(0), red(true) {
 		}
-		~node() {
+		~node() throw () {
 			delete left;
 			delete right;
 		}
 	} * root;
 
-	node * insert(node * h, const K & k, const V & v, bool * o) {
+	node * insert(node * h, const K & k, const V & v, bool * o) throw () {
 		// If we're zero that means we need to make a new node...
 		if (h == 0) {
 			*o = true;
@@ -130,33 +130,33 @@ private:
 			h = leanLeft(h);
 		return h;
 	}
-	node * rotL(node * h) {
+	node * rotL(node * h) throw () {
 		node * x = h->right;
 		h->right = x->left;
 		x->left = h;
 		x->order += h->order + 1;
 		return x;
 	}
-	node * rotR(node * h) {
+	node * rotR(node * h) throw () {
 		node * x = h->left;
 		h->left = x->right;
 		x->right = h;
 		h->order -= x->order + 1;
 		return x;
 	}
-	node * leanLeft(node * h) {
+	node * leanLeft(node * h) throw () {
 		h = rotL(h);
 		h->red = h->left->red;
 		h->left->red = true;
 		return h;
 	}
-	node * leanRight(node * h) {
+	node * leanRight(node * h) throw () {
 		h = rotR(h);
 		h->red = h->right->red;
 		h->right->red = true;
 		return h;
 	}
-	node * remove(node * h, const K & k) {
+	node * remove(node * h, const K & k) throw () {
 		if (k < h->key) {
 			// If K is missing do nothing.
 			if (h->left == 0)
@@ -214,7 +214,7 @@ private:
 			h = leanLeft(h);
 		return h;
 	}	
-	void print(int level, unsigned order, node * h) {
+	void print(int level, unsigned order, node * h) throw () {
 		if (h->right != 0)
 			print(level+1,order+h->order+1,h->right);
 		printf("(%d %d %d) ",order,h->order,order+h->order);

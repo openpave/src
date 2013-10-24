@@ -56,12 +56,12 @@
 #define EVENT_PROGRESS_UPDATE	1	/* Update progress */
 #define EVENT_PROGRESS_STOP		2	/* Finish a progress bar */
 
-extern void event_msg(const int level, const char *fmt,...) OP_PRINTF(2,3);
+extern void event_msg(const int level, const char *fmt,...) throw () OP_PRINTF(2,3);
 extern void event_progress_bar(const int level, const double p,
-							   const char *fmt,...) OP_PRINTF(3,4);
+							   const char *fmt,...) throw () OP_PRINTF(3,4);
 extern void event_progress(const int type, const int marker,
-						   const char *fmt,...) OP_PRINTF(3,4);
-extern void timeme(const char * msg = 0);
+						   const char *fmt,...) throw () OP_PRINTF(3,4);
+extern void timeme(const char * msg = 0) throw ();
 
 #ifdef _EVENT_IMP
 
@@ -72,7 +72,7 @@ extern void timeme(const char * msg = 0);
 /*
  * Default error event handler.
  */
-void event_msg(const int level, const char * fmt, ...)
+void event_msg(const int level, const char * fmt, ...) throw ()
 {
 	va_list args;
 
@@ -90,7 +90,7 @@ void event_msg(const int level, const char * fmt, ...)
 #include <time.h>
 #endif
 
-void timeme(const char * msg)
+void timeme(const char * msg) throw ()
 {
 #if !defined(_MSC_VER) && !defined(DARWIN)
 #if defined(linux)
@@ -142,7 +142,7 @@ void timeme(const char * msg)
  * Default progress bar handler.
  */
 void event_progress_bar(const int level, const double p,
-						const char * fmt, ...)
+						const char * fmt, ...) throw ()
 {
 	va_list args;
 	static char buf[7] = "";
@@ -164,7 +164,7 @@ void event_progress_bar(const int level, const double p,
  * Default error event handler.
  */
 void event_progress(const int type, const int marker,
-					const char * fmt, ...)
+					const char * fmt, ...) throw ()
 {
 	va_list args;
 	static int level = -1;

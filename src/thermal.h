@@ -52,8 +52,8 @@ class FEMthermal
 public:
 	FEMthermal(const int nl, const double * lh, const double * ld,
 			const int _n, const double * _nd, const double * _nt,
-			const double _dt = 1, const int _w = 1);
-	~FEMthermal() {
+			const double _dt = 1, const int _w = 1) throw ();
+	~FEMthermal() throw () {
 		delete [] nd;
 		delete [] nt;
 		delete [] ng;
@@ -65,9 +65,9 @@ public:
 	// Perform the FEM analysis for a single timestep, based in the top and
 	// bottom temperature at the desired time.  This function can be called
 	// repeatedly to obtain temperatures at sucessive time steps.
-	void step(double tt, double tb);
+	void step(double tt, double tb) throw ();
 	// Interpolate temperatures at abitrary depths. pd must be sorted.
-	void interpolate(const int np, const double * pd, double * pt);
+	void interpolate(const int np, const double * pd, double * pt) throw ();
 
 private:
 	const int n;				// Number of nodes

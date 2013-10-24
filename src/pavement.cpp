@@ -39,7 +39,7 @@
  * Calculate the principle stresses, and the strains.
  */
 void
-pavedata::principle(double v, double E)
+pavedata::principle(double v, double E) throw ()
 {
 	unsigned i, j;
 	double t1, t2;
@@ -127,7 +127,7 @@ pavedata::principle(double v, double E)
 
 bool
 LEsystem::addlayer(double h, double e, const double v, const double s,
-		const unsigned p)
+		const unsigned p) throw ()
 {
 	LElayer * pl = new LElayer(this,
 			(p == UINT_MAX ? last : &layer(p)),h,e,v,s);
@@ -139,7 +139,7 @@ LEsystem::addlayer(double h, double e, const double v, const double s,
 }
 
 bool
-LEsystem::removelayer(const unsigned l)
+LEsystem::removelayer(const unsigned l) throw ()
 {
 	LElayer * pl = first;
 	unsigned i = 0;
@@ -156,7 +156,7 @@ LEsystem::removelayer(const unsigned l)
 bool
 LEsystem::addgrid(const unsigned nx, const double * xp,
                   const unsigned ny, const double * yp,
-                  const unsigned nz, const double * zp)
+                  const unsigned nz, const double * zp) throw ()
 {
 	bool rv = true;
 	for (unsigned ix = 0; ix < nx; ix++) {
@@ -169,7 +169,7 @@ LEsystem::addgrid(const unsigned nx, const double * xp,
 }
 
 LElayer &
-LEsystem::layer(const unsigned l) const
+LEsystem::layer(const unsigned l) const throw ()
 {
 	LElayer * pl = first;
 	unsigned i = 0;
@@ -184,7 +184,7 @@ LEsystem::layer(const unsigned l) const
  * good...
  */
 bool
-LEsystem::check()
+LEsystem::check() throw ()
 {
 	unsigned il, nl = layers();
 	const LElayer * pl;
@@ -304,7 +304,7 @@ struct axialdata {
 	// This function takes the results from the xxx2 variables, and adds
 	// them to the main varaibles, reseting them, and then deactivating
 	// the point if none changed by more than epsilon.
-	void accumulate(LEsystem::resulttype res, const double & eps) {
+	void accumulate(LEsystem::resulttype res, const double & eps) throw () {
 		bool isactive = false;
 		
 		if (!active)
@@ -333,7 +333,7 @@ struct axialdata {
 	// which is to multiply each result by a constant and fixup the radial
 	// and tangential shear stresses.
 	void finalize(LEsystem::resulttype res, const double & r,
-			const double & a, const double & v, const double & E) {
+			const double & a, const double & v, const double & E) throw () {
 		double t1 = a*(v+1)/E, t2;
  
 		// Always make sure we accumulate the results.
@@ -350,7 +350,7 @@ struct axialdata {
 	// adds it to the general data point, accounting for rotation.
 	void addtodata(LEsystem::resulttype res, pavedata * d,
 			const paveload & l, const double & r,
-			unsigned gl = UINT_MAX) const {
+			unsigned gl = UINT_MAX) const throw () {
 		double p = l.pressure();
 		
 		assert(fabs(r-l.distance(*d)) < DBL_MIN);
@@ -399,12 +399,12 @@ struct zpoint {
 	double z;
 	unsigned il;
 	
-	zpoint() {
+	zpoint() throw () {
 	}
-	zpoint(double d, unsigned l)
+	zpoint(double d, unsigned l) throw ()
 	  : z(d), il(l) {
 	}
-	int compare(const zpoint & p) const {
+	int compare(const zpoint & p) const throw () {
 		if (z == p.z && il == p.il)
 			return 0;
 		if (z < p.z)
@@ -416,22 +416,22 @@ struct zpoint {
 		else
 			return 1;
 	}
-	bool operator == (const zpoint & p) const {
+	bool operator == (const zpoint & p) const throw () {
 		return (z == p.z && il == p.il ? true : false);
 	}
-	bool operator != (const zpoint & p) const {
+	bool operator != (const zpoint & p) const throw () {
 		return (z != p.z || il != p.il ? true : false);
 	}
-	bool operator > (const zpoint & p) const {
+	bool operator > (const zpoint & p) const throw () {
 		return (compare(p) == 1 ? true : false);
 	}
-	bool operator >= (const zpoint & p) const {
+	bool operator >= (const zpoint & p) const throw () {
 		return (compare(p) != -1 ? true : false);
 	}
-	bool operator < (const zpoint & p) const {
+	bool operator < (const zpoint & p) const throw () {
 		return (compare(p) == -1 ? true : false);
 	}
-	bool operator <= (const zpoint & p) const {
+	bool operator <= (const zpoint & p) const throw () {
 		return (compare(p) != 1 ? true : false);
 	}
 };
@@ -457,7 +457,7 @@ static double gf[NGQP+1][NGQP];
  * find the zeros of the various bessel functions...
  */
 static void
-initarrays()
+initarrays() throw ()
 {
 	unsigned ib;
 	static bool done = false;
@@ -550,7 +550,7 @@ initarrays()
 #define j1j1(m,a,r) (sin((a-r)*m)/(a-r)+cos((a+r)*m)/(a+r))
 
 static double
-refine_m0(double ma, double mb, double a, double r)
+refine_m0(double ma, double mb, double a, double r) throw ()
 {
 	double m0, ya = j1j0(ma,a,r), yb = j1j0(mb,a,r), y0;
 	do {
@@ -563,7 +563,7 @@ refine_m0(double ma, double mb, double a, double r)
 }
 
 static double
-refine_m1(double ma, double mb, double a, double r)
+refine_m1(double ma, double mb, double a, double r) throw ()
 {
 	double m1, ya = j1j1(ma,a,r), yb = j1j1(mb,a,r), y1;
 	do {
@@ -582,7 +582,7 @@ refine_m1(double ma, double mb, double a, double r)
  */
 static void
 stoppingpoints(const unsigned nbz, const double a, const double r,
-               double * m0, double * m1)
+               double * m0, double * m1) throw ()
 {
 	unsigned ib;
 	double ra = r/a, r1 = fabs(ra-1.0);
@@ -646,7 +646,7 @@ static void
 buildabcd(const double m, const unsigned nl, const double * h,
           const double * v, const double * E,
           const double * f, double (* __restrict R)[4][2],
-          double (* __restrict ABCD)[4])
+          double (* __restrict ABCD)[4]) throw ()
 {
 	unsigned i, j, il;
 	double B1[2][4], X[4][4], F[4][4], D[4][4];
@@ -772,7 +772,7 @@ buildabcd(const double m, const unsigned nl, const double * h,
  */
 static void
 buildT(const double m, const double z, const double (&ABCD)[4],
-		double (&T)[4])
+		double (&T)[4]) throw ()
 {
 	T[1] = exp(-m*z);
 	T[0] = m*(ABCD[2] + ABCD[3]*z)*T[1];
@@ -789,7 +789,7 @@ buildT(const double m, const double z, const double (&ABCD)[4],
  * is exposed so that people can use it if they really want.
  */
 bool
-LEsystem::calc_accurate()
+LEsystem::calc_accurate() throw ()
 {
 	unsigned ixy, ild, ib, igp, il;
 	const LElayer * pl;
@@ -914,7 +914,7 @@ abort:
  * This used to be ELSYM5M, now it's a NxNxN layered elastic code...
  */
 bool
-LEsystem::calculate(resulttype res, const double * Q)
+LEsystem::calculate(resulttype res, const double * Q) throw ()
 {
 	unsigned ixy, nr, ir, nz, iz, ild, ia, ib, igp, il;
 	const LElayer * pl;
@@ -1232,7 +1232,8 @@ abort:
  */
 static inline double
 boussinesq_vse(double z, double r, double a, double v, double E,
-		double R, double A) {
+		double R, double A) throw ()
+{
 	if (r > 0.0)
 		return -3*a*a*pow(z,3)/(2*pow(R,5));
 	else
@@ -1241,7 +1242,8 @@ boussinesq_vse(double z, double r, double a, double v, double E,
 
 static inline double
 boussinesq_rse(double z, double r, double a, double v, double E,
-		double R, double A) {
+		double R, double A) throw ()
+{
 	if (r > 0.0)
 		return -a*a*(3*z*r*r/pow(R,4)-(1-2*v)/(R+z))/(2*R);
 	else
@@ -1251,7 +1253,8 @@ boussinesq_rse(double z, double r, double a, double v, double E,
 
 static inline double
 boussinesq_tse(double z, double r, double a, double v, double E,
-		double R) {
+		double R) throw ()
+{
 	if (r > 0.0)
 		return -a*a*(1-2*v)*(-z/(R*R) + 1.0/(R+z))/(2*R);
 	else
@@ -1260,7 +1263,8 @@ boussinesq_tse(double z, double r, double a, double v, double E,
 
 static inline double
 boussinesq_sse(double z, double r, double a, double v, double E,
-		double R) {
+		double R) throw ()
+{
 	if (r > 0.0)
 		return -3*a*a*z*z*r/(2*pow(R,5));
 	else
@@ -1269,7 +1273,8 @@ boussinesq_sse(double z, double r, double a, double v, double E,
 
 static inline double
 boussinesq_rdp(double z, double r, double a, double v, double E,
-		double R) {
+		double R) throw ()
+{
 	if (r > 0.0)
 		return a*a*((1+v)/(2*R*E))*(z*r/(R*R)-(1-2*v)*r/(R+z));
 	else
@@ -1278,7 +1283,8 @@ boussinesq_rdp(double z, double r, double a, double v, double E,
 
 static inline double
 boussinesq_vdp(double z, double r, double a, double v, double E,
-		double R, double A) {
+		double R, double A) throw ()
+{
 	if (r > 0.0)
 		return a*a*((1+v)/(2*R*E))*(2*(1-v) + z*z/(R*R));
 	else
@@ -1291,7 +1297,7 @@ boussinesq_vdp(double z, double r, double a, double v, double E,
  * used for very fast approximations.
  */
 bool
-LEsystem::calc_odemark()
+LEsystem::calc_odemark() throw ()
 {
 	unsigned ixy, ild, il;
 	LElayer * pl;
@@ -1389,7 +1395,7 @@ abort:
 
 static double
 quad8_vdp(double r, double z, double a, double v, double A = 0.0,
-          double B = M_PI, double Q = 10.0)
+          double B = M_PI, double Q = 10.0) throw ()
 {
 	// The magic Newton-Cotes weights
 	const double w[9] = {3956, 23552, -3712, 41984, -18160, 41984,
@@ -1456,7 +1462,7 @@ quad8_vdp(double r, double z, double a, double v, double A = 0.0,
 
 static double
 quad8_vse(double r, double z, double a, double A = 0.0,
-          double B = M_PI, double Q = 10.0)
+          double B = M_PI, double Q = 10.0) throw ()
 {
 	// The magic Newton-Cotes weights
 	const double w[9] = {3956, 23552, -3712, 41984, -18160, 41984,
@@ -1517,7 +1523,7 @@ quad8_vse(double r, double z, double a, double A = 0.0,
  * done to derive more integration functions above.  But these are long...
  */
 bool
-LEsystem::calc_fastnum()
+LEsystem::calc_fastnum() throw ()
 {
 	unsigned ixy, ild, il;
 	LElayer * pl;
@@ -1593,7 +1599,7 @@ abort:
  * The overall backcalculation routine.
  */
 bool
-LEbackcalc::backcalc()
+LEbackcalc::backcalc() throw ()
 {
 	unsigned i, j, nl = layers();
 	unsigned steps = 0;
@@ -1763,7 +1769,7 @@ abort:
  * E mod seeding algorithm.
  */
 bool
-LEbackcalc::seed(unsigned nl, double * P)
+LEbackcalc::seed(unsigned nl, double * P) throw ()
 {
 	double E = 0.0, v = layer(nl-1).poissons();
 	unsigned i, j;
@@ -1807,7 +1813,7 @@ LEbackcalc::seed(unsigned nl, double * P)
  */
 double
 LEbackcalc::deflgrad(unsigned nl, double * P, double * Q,
-                     calctype cl)
+                     calctype cl) throw ()
 {
 	double step = 0.0, dgg = 0.0, gg = 0.0, dd = 0.0;
 	unsigned i, j, k, dl = defl.length();
@@ -1910,7 +1916,7 @@ abort:
  * Gauss-Newton approach.
  */
 double
-LEbackcalc::gaussnewton(unsigned nl, double * P, calctype cl)
+LEbackcalc::gaussnewton(unsigned nl, double * P, calctype cl) throw ()
 {
 	unsigned i, j, k, dl = defl.length();
 	double step = 0.0;
@@ -1965,7 +1971,9 @@ abort:
  * Rongzong Wu <wurong@berkeley.edu>.  Filter implementation based
  * on Wikipedia article.
  */
-double LEbackcalc::kalman(unsigned nl, double * P) {
+double
+LEbackcalc::kalman(unsigned nl, double * P) throw ()
+{
 	unsigned i, j, k, dl = defl.length();
 	double step = 0.0;
 
@@ -2030,7 +2038,7 @@ abort:
  */
 double
 LEbackcalc::bowlerror(unsigned nl, const double * P, const double s,
-                      const double * D)
+                      const double * D) throw ()
 {
 	unsigned i;
 	double err;
@@ -2061,7 +2069,7 @@ LEbackcalc::bowlerror(unsigned nl, const double * P, const double s,
  * Once we have bracketed the minimum we close in on the final minimum.
  */
 double
-LEbackcalc::brent(unsigned nl, double * P, double * D)
+LEbackcalc::brent(unsigned nl, double * P, double * D) throw ()
 {
 	const double GC = (3.0-sqrt(5.0))/2.0;
 	const double GR = 1/(1-GC);
@@ -2158,7 +2166,9 @@ LEbackcalc::brent(unsigned nl, double * P, double * D)
  * completely.  The routine is entirely self contained, since it works
  * better if it can keep track of its last direction.  It is slow.
  */
-double LEbackcalc::conjgrad(unsigned nl, double * P) {
+double
+LEbackcalc::conjgrad(unsigned nl, double * P) throw ()
+{
 	double step = 1.0, dgg = 0.0, gg = 0.0;
 	double derr = DBL_MAX, oerr = 0.0;
 	unsigned i, j, k, dl = defl.length();
@@ -2209,7 +2219,7 @@ abort:
  * This is a new particle swarm optimisation based solver...
  */
 #define PARTICLES 100
-double LEbackcalc::swarm(unsigned nl, double * P) {
+double LEbackcalc::swarm(unsigned nl, double * P) throw () {
 	double gg = 0.0, dgg = 0.0, derr = DBL_MAX, werr = -DBL_MAX;
 	double r1 = 0.0, r2 = 0.0;
 	double sderr = sqrt(noise*noise + (precision*precision)/3.0);

@@ -54,56 +54,56 @@ template <unsigned int P>
 class fixed {
   public:
 	// Some constructors for common cases...
-	inline fixed() {
+	inline fixed() throw () {
 	}
-	inline fixed(const fixed & f) {
+	inline fixed(const fixed & f) throw () {
 		value = f.value;
 	}
-	inline fixed(const int i) {
+	inline fixed(const int i) throw () {
 		value = i << P;
 	}
-	inline fixed(const unsigned i) {
+	inline fixed(const unsigned i) throw () {
 		value = i << P;
 	}
-	inline fixed(const float f) {
+	inline fixed(const float f) throw () {
 		value = (f >= 0 ? int(f*(1 << P) + 0.5)
 			 : -int(0.5 - f*(1 << P)) );
 	}
-	inline fixed(const double d) {
+	inline fixed(const double d) throw () {
 		value = (d >= 0 ? int(d*(1 << P) + 0.5)
 			 : -int(0.5 - d*(1 << P)) );
 	}
-	inline ~fixed() {
+	inline ~fixed() throw () {
 	}
 	
 	// Some assignment operators...
-	inline fixed & operator = (const fixed & f) {
+	inline fixed & operator = (const fixed & f) throw () {
 		value = f.value;
 		return *this;
 	}
-	inline fixed & operator += (const fixed & f) {
+	inline fixed & operator += (const fixed & f) throw () {
 		value += f.value;
 		return *this;
 	}
-	inline fixed & operator -= (const fixed & f) {
+	inline fixed & operator -= (const fixed & f) throw () {
 		value -= f.value;
 		return *this;
 	}
-	inline fixed & operator *= (const fixed & f) {
+	inline fixed & operator *= (const fixed & f) throw () {
 		*this = double(*this) * double(f);
 		return *this;
 	}
-	inline fixed & operator /= (const fixed & f) {
+	inline fixed & operator /= (const fixed & f) throw () {
 		*this = double(*this) / double(f);
 		return *this;
 	}
 	
 	// Some conversion operators...
-	inline fixed<P> & operator = (const int i) {
+	inline fixed<P> & operator = (const int i) throw () {
 		value = i << P;
 		return *this;
 	}
-	inline fixed<P> & operator = (const double d) {
+	inline fixed<P> & operator = (const double d) throw () {
 		value = (d >= 0 ? int(d*(1 << P) + 0.5)
 			 : -int(0.5 - d*(1 << P)) );
 		return *this;
@@ -164,20 +164,20 @@ class fixed {
 	}
 
 	// The prefix and postfix operators, for convienience.
-	inline fixed & operator ++ () {
+	inline fixed & operator ++ () throw () {
 		value += (1 << P);
 		return *this;
 	}
-	inline fixed & operator -- () {
+	inline fixed & operator -- () throw () {
 		value -= (1 << P);
 		return *this;
 	}
-	inline fixed operator ++ (int) {
+	inline fixed operator ++ (int) throw () {
 		fixed t(*this);
 		value += (1 << P);
 		return t;
 	}
-	inline fixed operator -- (int) {
+	inline fixed operator -- (int) throw () {
 		fixed t(*this);
 		value -= (1 << P);
 		return t;
@@ -185,12 +185,12 @@ class fixed {
 
   private:
 	template <unsigned int P1>
-	friend fixed<P1> fabs(const fixed<P1> & f);
+	friend fixed<P1> fabs(const fixed<P1> & f) throw ();
 	int value;
 };
 
 template<unsigned int P>
-inline fixed<P> fabs(const fixed<P> & f) {
+inline fixed<P> fabs(const fixed<P> & f) throw () {
 	fixed<P> t;
 	t.value = abs(f.value);
 	return t;

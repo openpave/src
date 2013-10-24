@@ -81,13 +81,13 @@ public:
 	virtual double x() = 0;				// Current value.
 	virtual double mean() = 0;			// Mean value.
 	virtual double stddev() = 0;		// Standard Deviation.
-	double z() {						// Std correllated value.
+	double z() throw () {				// Std correllated value.
 		return stdnormal;
 	}
-	double u() {						// Std uncorrellated value.
+	double u() throw () {				// Std uncorrellated value.
 		return ustdnormal;
 	}
-	double param(int i) {			 	// Get distribution parmater i. 
+	double param(int i) throw () {	 	// Get distribution parmater i. 
 		return (i < 0 || i > (RV_DIST_PARAM-1) ? 0.0 : d[i]);
 	}
 
@@ -95,7 +95,7 @@ protected:
 	// The reliability class does most of the work for us...
 	friend class reliability;
 
-	double param(int i, double dp) { 	// Set distribution parmater i. 
+	double param(int i, double dp) throw () { // Set distribution parmater i. 
 		return (i < 0 || i >  (RV_DIST_PARAM-1) ? 0.0 : d[i] = dp);
 	}
 	
