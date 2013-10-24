@@ -117,8 +117,12 @@ template <class V>
 class fset : public set {
 public:
 	// Nice simple constructor...
-	inline explicit fset(const unsigned s, const unsigned b = DFLT_BLK,
-			const V * v = 0)
+	inline explicit fset(const unsigned s, const unsigned b)
+	  : set(b), value(0) {
+		allocate(s);
+	}
+	inline explicit fset(const unsigned s, const V * v = 0,
+			const unsigned b = DFLT_BLK)
 	  : set(b), value(0) {
 		if (!allocate(s))
 			return;
@@ -255,10 +259,13 @@ public:
 	inline explicit sset()
 	  : fset<V>() {
 	}
+	inline explicit sset(const unsigned s, const unsigned b)
+	  : fset<V>(s,b) {
+	}
 	// Simple constructor.
-	inline explicit sset(const unsigned s, const unsigned b = DFLT_BLK,
-			const V * v = 0)
-	  : fset<V>(s,b,v) {
+	inline explicit sset(const unsigned s, const V * v = 0,
+			const unsigned b = DFLT_BLK)
+	  : fset<V>(s,v,b) {
 	}
 	// Copy constructor.
 	inline explicit sset(const fset<V> & v)
@@ -350,10 +357,13 @@ public:
 	inline explicit oset()
 	  : sset<V>() {
 	}
+	inline explicit oset(const unsigned s, const unsigned b)
+	  : sset<V>(s,b) {
+	}
 	// Simple constructor.
-	inline explicit oset(const unsigned s, const unsigned b = DFLT_BLK,
-			const V * v = 0)
-	  : sset<V>(s,b,v) {
+	inline explicit oset(const unsigned s, const V * v = 0,
+			const unsigned b = DFLT_BLK)
+	  : sset<V>(s,v,b) {
 		if (v)
 			sort();
 	}
@@ -442,9 +452,12 @@ public:
 	inline explicit cset()
 	  : oset<V>() {
 	}
-	inline explicit cset(const unsigned s, const unsigned b = DFLT_BLK,
-			const V * v = 0)
-	  : oset<V>(s,b,v) {
+	inline explicit cset(const unsigned s, const unsigned b)
+	  : oset<V>(s,b) {
+	}
+	inline explicit cset(const unsigned s, const V * v = 0,
+			const unsigned b = DFLT_BLK)
+	  : oset<V>(s,v,b) {
 		if (v)
 			compact();
 	}
@@ -503,9 +516,13 @@ public:
 	  : set(), idx(0), value(0) {
 		allocate(size);
 	}
+	inline explicit iset(const unsigned s, const unsigned b)
+	  : set(b), idx(0), value(0) {
+		allocate(s);
+	}
 	// Basic constructor
-	inline explicit iset(const unsigned s, const unsigned b = DFLT_BLK,
-			const V * v = 0)
+	inline explicit iset(const unsigned s, const V * v = 0,
+			const unsigned b = DFLT_BLK)
 	  : set(b), idx(0), value(0) {
 		if (!allocate(s))
 			return;
@@ -719,8 +736,12 @@ template <class K, class V>
 class kfset : public set {
 public:
 	// Simple constructor.
-	inline explicit kfset(const unsigned s, const unsigned b = DFLT_BLK,
-			const V * v = 0)
+	inline explicit kfset(const unsigned s, const unsigned b)
+	  : set(b), value(0) {
+		allocate(s);
+	}
+	inline explicit kfset(const unsigned s, const V * v = 0,
+			const unsigned b = DFLT_BLK)
 	  : set(b), value(0) {
 		if (!allocate(s))
 			return;
@@ -840,9 +861,12 @@ public:
 	inline explicit ksset()
 	  : kfset<K,V>() {
 	}
-	inline explicit ksset(const unsigned s, const unsigned b = DFLT_BLK,
-			const V * v = 0)
-	  : kfset<K,V>(s,b,v) {
+	inline explicit ksset(const unsigned s, const unsigned b)
+	  : kfset<K,V>(s,b) {
+	}
+	inline explicit ksset(const unsigned s, const V * v = 0,
+			const unsigned b = DFLT_BLK)
+	  : kfset<K,V>(s,v,b) {
 	}
 	inline explicit ksset(const kfset<K,V> & v)
 	  : kfset<K,V>(v) {
@@ -904,9 +928,12 @@ public:
 	inline explicit koset()
 	  : ksset<K,V>() {
 	}
-	inline explicit koset(const unsigned s, const unsigned b = DFLT_BLK,
-			const V * v = 0)
-	  : ksset<K,V>(s,b,v) {
+	inline explicit koset(const unsigned s, const unsigned b)
+	  : ksset<K,V>(s,b) {
+	}
+	inline explicit koset(const unsigned s, const V * v = 0,
+			const unsigned b = DFLT_BLK)
+	  : ksset<K,V>(s,v,b) {
 		if (v)
 			sort();
 	}
@@ -974,9 +1001,14 @@ public:
 	  : set(), idx(0), value(0) {
 		allocate(size);
 	}
+	inline explicit kiset(const unsigned s, const unsigned b)
+	  : set(b), idx(0), value(0) {
+		if (!allocate(s))
+			return;
+	}
 	// Basic constructor
-	inline explicit kiset(const unsigned s, const unsigned b = DFLT_BLK,
-			const V * v = 0)
+	inline explicit kiset(const unsigned s, const V * v = 0,
+			const unsigned b = DFLT_BLK)
 	  : set(b), idx(0), value(0) {
 		if (!allocate(s))
 			return;
@@ -1191,8 +1223,13 @@ template <class K, class V>
 class afset : public set {
 public:
 	// Make one...
-	inline explicit afset(const unsigned s, const unsigned b = DFLT_BLK,
-			const K * k = 0, const V * v = 0)
+	inline explicit afset(const unsigned s, const unsigned b)
+	  : set(b), key(0), value(0) {
+		if (!allocate(s))
+			return;
+	}
+	inline explicit afset(const unsigned s,	const K * k = 0,
+			const V * v = 0, const unsigned b = DFLT_BLK)
 	  : set(b), key(0), value(0) {
 		if (!allocate(s))
 			return;
@@ -1340,10 +1377,13 @@ public:
 	inline explicit asset()
 	  : afset<K,V>() {
 	}
+	inline explicit asset(const unsigned s, const unsigned b)
+	  : afset<K,V>(s,b) {
+	}
 	// Simple constructor.
-	inline explicit asset(const unsigned s, const unsigned b = DFLT_BLK,
-			const K * k = 0, const V * v = 0)
-	  : afset<K,V>(s,b,k,v) {
+	inline explicit asset(const unsigned s, const K * k = 0,
+			const V * v = 0, const unsigned b = DFLT_BLK)
+	  : afset<K,V>(s,k,v,b) {
 	}
 	// Copy constructor.
 	inline explicit asset(const afset<K,V> & v)
@@ -1411,9 +1451,12 @@ public:
 	inline explicit aoset()
 	  : asset<K,V>() {
 	}
-	inline explicit aoset(const unsigned s, const unsigned b = DFLT_BLK,
-			const K * k = 0, const V * v = 0)
-	  : asset<K,V>(s,b,k,v) {
+	inline explicit aoset(const unsigned s, const unsigned b)
+	  : asset<K,V>(s,b) {
+	}
+	inline explicit aoset(const unsigned s, const K * k = 0,
+			const V * v = 0, const unsigned b = DFLT_BLK)
+	  : asset<K,V>(s,k,v,b) {
 		if (k)
 			sort();
 	}
@@ -1483,9 +1526,12 @@ public:
 	inline explicit avoset()
 	  : asset<K,V>() {
 	}
-	inline explicit avoset(const unsigned s, const unsigned b = DFLT_BLK,
-			const K * k = 0, const V * v = 0)
-	  : asset<K,V>(s,b,k,v) {
+	inline explicit avoset(const unsigned s, const unsigned b)
+	  : asset<K,V>(s,b) {
+	}
+	inline explicit avoset(const unsigned s, const K * k = 0,
+			const V * v = 0, const unsigned b = DFLT_BLK)
+	  : asset<K,V>(s,k,v,b) {
 		if (k)
 			sort();
 	}

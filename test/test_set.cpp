@@ -69,7 +69,7 @@ test_set1a()
 {
 	const int d1[14] = {1,2,2,3,4,4,5,6,7,8,9,10,11,12};
 	const int d2[4] = {1,1,1,1};
-	cset<int> t(14,10,d1);
+	cset<int> t(14,d1,10);
 	fset_print(t);
 	t.empty();
 	t.resize(10);
