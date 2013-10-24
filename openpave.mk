@@ -63,6 +63,7 @@ AVAILABLE_PROJECTS = \
   test  \
   libop \
   fem3d \
+  fcgi  \
   $(NULL)
 
 BOOTSTRAP_core :=                                \
@@ -101,6 +102,14 @@ REQUIRES_fem3d :=                                \
 
 MODULES_fem3d :=                                 \
   openpave/fem3d                                 \
+  $(NULL)
+
+REQUIRES_fcgi :=                                 \
+  core                                           \
+  $(NULL)
+
+MODULES_fcgi :=                                  \
+  openpave/fcgi                                  \
   $(NULL)
 
 #######################################################################

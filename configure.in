@@ -576,6 +576,9 @@ case "$host" in
 *)
     AC_SEARCH_LIBS(sqrt,m)
     AC_SEARCH_LIBS(clock_gettime,rt)
+    if test -n "$OP_PROJECT_fcgi"; then
+        AC_CHECK_HEADERS(fcgiapp.h,AC_CHECK_LIB(fcgi,FCGX_Init,LIB_FCGI="-lfcgi",),)
+    fi
     ;;
 esac
 
