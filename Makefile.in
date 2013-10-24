@@ -8,22 +8,11 @@ srcdir		= @srcdir@
 VPATH		= @srcdir@
 
 OP_PROJECTS	= @OP_PROJECTS@
+OP_MODULES	= @OP_MODULES@
 
 include $(MOD_DEPTH)/build/autoconf.mk
 
-DIRS = include src
-
-ifneq (,$(findstring test,$(OP_PROJECTS)))
-DIRS += test
-endif
-
-ifneq (,$(findstring libop,$(OP_PROJECTS)))
-DIRS += libop
-endif
-
-ifneq (,$(findstring fem3d,$(OP_PROJECTS)))
-DIRS += fem3d
-endif
+DIRS = $(OP_MODULES)
 
 DIST_GARBAGE = config.cache config.log config.status
 
