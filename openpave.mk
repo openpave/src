@@ -207,19 +207,20 @@ endif
 ifneq (,$(filter-out $(AVAILABLE_PROJECTS),$(OP_PROJECT_LIST)))
 $(error OP_PROJECTS contains an unrecognized project.  Options are $(strip $(AVAILABLE_PROJECTS)))
 endif
-OP_PROJECT_LIST += $(foreach project,$(OP_PROJECT_LIST),$(REQUIRES_$(project)))
-OP_PROJECT_LIST := $(sort $(OP_PROJECT_LIST))
+OP_PROJECT_TMP := $(OP_PROJECT_LIST)
+OP_PROJECT_LIST := $(empty)
+define requires =
+	OP_PROJECT_LIST += $(foreach r,$(REQUIRES_$(1)),$(eval $(call requires,$(r)))) $(filter-out $(OP_PROJECT_LIST),$(1))
+endef
+$(foreach project,$(OP_PROJECT_TMP),$(eval $(call requires,$(project))))
+OP_PROJECT_LIST := $(strip $(OP_PROJECT_LIST))
 
-OP_MODULE_LIST := $(foreach project,$(OP_PROJECT_LIST),$(MODULES_$(project)))
-OP_BOOTSTRAP_LIST := $(foreach project,$(OP_PROJECT_LIST),$(BOOTSTRAP_$(project)))
+OP_MODULE_LIST := $(strip $(foreach project,$(OP_PROJECT_LIST),$(MODULES_$(project))))
+OP_BOOTSTRAP_LIST := $(strip $(foreach project,$(OP_PROJECT_LIST),$(BOOTSTRAP_$(project))))
 
 ifndef OP_AUTOCONF
 OP_BOOTSTRAP_LIST += openpave/configure
 endif
-
-# Using $(sort) here because it also removes duplicate entries.
-OP_MODULE_LIST := $(sort $(OP_MODULE_LIST))
-OP_BOOTSTRAP_LIST := $(sort $(OP_BOOTSTRAP_LIST))
 
 ifdef OP_OBJDIR
   OBJDIR = $(OP_OBJDIR)
@@ -259,7 +260,7 @@ checkout::
 	echo "*** CVS checkout started: "`date` | tee $(CVSCO_LOGFILE); \
 	echo '*** Checking out bootstrap files...'; \
 	    cd $(ROOTDIR) && \
-	        $(CVSCO) openpave/openpave.mk $(OP_BOOTSTRAP_LIST); \
+	        $(CVSCO) openpave/openpave.mk $(sort $(OP_BOOTSTRAP_LIST)); \
 	cd $(ROOTDIR) && \
 	    $(MAKE) $(OP_MAKE_ARGS) -f openpave/openpave.mk real_checkout
 
@@ -276,7 +277,7 @@ real_checkout:
 else
 real_checkout:
 	@echo '*** Checking out project files...'; \
-	    $(CVSCO) $(OP_MODULE_LIST) 2>&1 | tee -a $(CVSCO_LOGFILE); \
+	    $(CVSCO) $(sort $(OP_MODULE_LIST)) 2>&1 | tee -a $(CVSCO_LOGFILE); \
 	echo "*** CVS checkout finished: "`date` | tee -a $(CVSCO_LOGFILE); \
 	conflicts=`egrep "^C " $(CVSCO_LOGFILE)`; \
 	if test "$$conflicts"; then \
@@ -343,7 +344,7 @@ ifdef OP_CONFIGURE_ENV
 else
   CONFIGURE_ENV := $(NULL)
 endif
-CONFIGURE_ENV   += OP_PROJECTS="$(OP_PROJECT_LIST)"
+CONFIGURE_ENV   += OP_PROJECTS="$(OP_PROJECT_LIST)" OP_MODULES="$(subst openpave/,,$(OP_MODULE_LIST))"
 ifdef OP_CVS_USER
   CONFIGURE_ENV += OP_CVS_USER="$(OP_CVS_USER)"
 endif
