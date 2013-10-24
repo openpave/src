@@ -73,10 +73,10 @@ void event_msg(const int level, const char * fmt, ...)
 		len = _vscprintf_p(fmt,args)+1;
 		buf = (char *)malloc(len*sizeof(char));
 		if (buf == NULL) {
-			::MessageBox(0,"Out of Memory!","LIBOP.DLL Error",MB_OK|MB_ICONERROR);
+			::MessageBoxA(0,"Out of Memory!","LIBOP.DLL Error",MB_OK|MB_ICONERROR);
 		} else {
 			_vsprintf_p(buf,len,fmt,args);
-			::MessageBox(0,buf,"LIBOP.DLL Error",MB_OK|MB_ICONERROR);
+			::MessageBoxA(0,buf,"LIBOP.DLL Error",MB_OK|MB_ICONERROR);
 			free(buf);
 		}
 	}
@@ -232,7 +232,7 @@ OP_LE_Calc_CalME(const unsigned flags,
 	return rv;
 }
 
-int OP_EXPORT
+long OP_EXPORT
 OP_HT_Init(const int nl, const double * h, const double * D,
            const int nn, const double * nd, const double * nt,
            const int nw, const double dt)
@@ -259,11 +259,11 @@ OP_HT_Init(const int nl, const double * h, const double * D,
 #if defined(_MSC_VER) || defined(__MINGW32__)
 	_clearfp();
 #endif
-	return reinterpret_cast<int>(rv);
+	return reinterpret_cast<long>(rv);
 }
 
 void OP_EXPORT
-OP_HT_Step(const int token, const int nt, const double * tt, const double tb)
+OP_HT_Step(const long token, const int nt, const double * tt, const double tb)
 {
 	FEMthermal * system = reinterpret_cast<FEMthermal *>(token);
 	
@@ -275,7 +275,7 @@ OP_HT_Step(const int token, const int nt, const double * tt, const double tb)
 }
 
 void OP_EXPORT
-OP_HT_Interpolate(const int token, const int np, const double * pd,
+OP_HT_Interpolate(const long token, const int np, const double * pd,
                   double * pt)
 {
 	FEMthermal * system = reinterpret_cast<FEMthermal *>(token);
@@ -287,7 +287,7 @@ OP_HT_Interpolate(const int token, const int np, const double * pd,
 }
 
 void OP_EXPORT
-OP_HT_Reset(const int token)
+OP_HT_Reset(const long token)
 {
 	FEMthermal * system = reinterpret_cast<FEMthermal *>(token);
 	delete system;

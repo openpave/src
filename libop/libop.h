@@ -40,7 +40,7 @@
 BEGIN_C_DECLS
 
 /*
- * OL_LE_Calc - Layered elastic calculation with circular loads.
+ * OP_LE_Calc - Layered elastic calculation with circular loads.
  *
  * Res will hold 27 values on return
  *   1- 6: sxx, syy, szz, sxy, sxz, syz
@@ -98,20 +98,20 @@ int OP_EXPORT OP_LE_Calc_CalME(
 	const unsigned * pl,            // Point layer (0 for auto)
 	double * res);                  // Results
 
-int OP_EXPORT
+long OP_EXPORT
 OP_HT_Init(const int nl, const double * h, const double * D,
            const int nn, const double * nd, const double * nt,
            const int nw, const double dt);
 
 void OP_EXPORT
-OP_HT_Step(const int token, const int nt, const double * tt, const double tb);
+OP_HT_Step(const long token, const int nt, const double * tt, const double tb);
 
 void OP_EXPORT
-OP_HT_Interpolate(const int token, const int np, const double * pd,
+OP_HT_Interpolate(const long token, const int np, const double * pd,
                     double * pt);
 
 void OP_EXPORT
-OP_HT_Reset(const int token);
+OP_HT_Reset(const long token);
 
 END_C_DECLS
 
