@@ -61,7 +61,7 @@ dnl check compiler flags
 AC_DEFUN([CC_TRY_FLAG], [
   AC_MSG_CHECKING([whether $CC supports $1])
   _SAVE_CFLAGS=$CFLAGS
-  CFLAGS="$CFLAGS $1"
+  CFLAGS="$CFLAGS $1 -Werror"
   AC_LANG_SAVE
   AC_LANG_C
   AC_TRY_COMPILE( [ #include <stdio.h> ],
@@ -83,7 +83,7 @@ dnl check compiler flags
 AC_DEFUN([CXX_TRY_FLAG], [
   AC_MSG_CHECKING([whether $CXX supports $1])
   _SAVE_CXXFLAGS=$CXXFLAGS
-  CXXFLAGS="$CXXFLAGS $1"
+  CXXFLAGS="$CXXFLAGS $1 -Werror"
   AC_LANG_SAVE
   AC_LANG_CPLUSPLUS
   AC_TRY_COMPILE( [ #include <stdio.h> ],
@@ -115,6 +115,10 @@ VISIBILITY=
 WIN32=
 USING_CC=
 CC_VER=
+
+for p in $OP_PROJECTS; do
+    eval "OP_PROJECT_${p}=1";
+done;
 
 CFLAGS="${CFLAGS=}"
 CXXFLAGS="${CXXFLAGS=}"
@@ -236,7 +240,9 @@ AC_PATH_PROGS(AS, as, $CC)
 AC_PATH_PROGS(AR, ar, :)
 AC_PATH_PROGS(STRIP, strip, :)
 
-if test "`echo | $CC -v 2>&1 | grep -ic gcc`" != "0"; then
+if test "`echo | $CC -v 2>&1 | grep -ic clang`" != "0"; then
+    USING_CC=clang
+elif test "`echo | $CC -v 2>&1 | grep -ic gcc`" != "0"; then
     USING_CC=gnu
 fi
 rm -f a.out
@@ -244,8 +250,8 @@ rm -f a.out
 dnl ========================================================
 dnl Check for gcc -pipe support
 dnl ========================================================
-AC_MSG_CHECKING([for gcc -pipe support])
-if test "$USING_CC" = "gnu"; then
+if test "$USING_CC" = "gnu" -o "$USING_CC" = "clang"; then
+    AC_MSG_CHECKING([for -pipe support])
     echo '#include <stdio.h>' > dummy-hello.c
     echo 'int main() { printf("Hello World\n"); return 0; }' >> dummy-hello.c
     ${CC} -S dummy-hello.c -o dummy-hello.s 2>&5
@@ -273,15 +279,11 @@ if test "$USING_CC" = "gnu"; then
     fi
     rm -f dummy-hello.c dummy-hello.s dummy-hello.S dummy-hello a.out
     AC_MSG_RESULT([$_res])
-else
-    AC_MSG_RESULT([no])
-fi
 
 dnl ===============================================================
 dnl Check for .hidden assembler directive and visibility attribute.
 dnl Borrowed from glibc configure.in
 dnl ===============================================================
-if test "$USING_CC" = "gnu"; then
     AC_CACHE_CHECK(for visibility(hidden) attribute,
         ac_cv_visibility_hidden,
         [cat > conftest.c <<EOF
@@ -385,7 +387,7 @@ AC_CACHE_CHECK([for supported warning flags], ac_cv_warn_cxxflags, [
 WARN_CFLAGS="$ac_cv_warn_cflags"
 WARN_CXXFLAGS="$ac_cv_warn_cxxflags"
 
-fi # USING_CC = gnu
+fi # USING_CC = gnu || USING_CC = clang
 
 fi # !USING_CC
 
@@ -427,7 +429,7 @@ case "$target" in
 *-freebsd*)
     DEFINES="$DEFINES XP_UNIX"
     CPPFLAGS="$CPPFLAGS -ansi"
-    CXXFLAGS="$CXXFLAGS -fno-exceptions -fno-rtti"
+    CXXFLAGS="$CXXFLAGS -fexceptions"
     DSO_CFLAGS=-fPIC
     DSO_LDFLAGS='-shared -Wl,-soname -Wl,$(notdir $@)'
     _OPTIMIZE_FLAGS=-O2
@@ -687,11 +689,8 @@ AC_SUBST(LIB_SUFFIX)
 AC_SUBST(DLL_SUFFIX)
 AC_SUBST(EXE_SUFFIX)
 
-for p in $OP_PROJECTS; do
-    eval "OP_PROJECT_${p}=1";
-done;
-
 AC_SUBST(OP_PROJECTS)
+AC_SUBST(OP_MODULES)
 
 dnl ========================================================
 dnl Generate output files.
@@ -703,14 +702,10 @@ fi
 MAKEFILES="
 build/autoconf.mk
 Makefile
-include/Makefile
-src/Makefile
 "
 
-for p in $OP_PROJECTS; do
-	if test ${p} != "core"; then
-	    MAKEFILES="$MAKEFILES ${p}/Makefile"
-	fi
+for m in $OP_MODULES; do
+    MAKEFILES="$MAKEFILES ${m}/Makefile"
 done;
 
 AC_MSG_CHECKING([if config.h needs rebuilding])
