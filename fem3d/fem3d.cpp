@@ -286,7 +286,6 @@ public:
  * A mesh point in 3D space.  This is not a point3d for two reasons:
  * 1. It sorts differently.
  * 2. We use a fixed point type to make sure the nodes line up.
- * 3. It has two z coordinates.  A real one and a relative one.
  */
 struct coord3d {
 	fixed<8> x, y, z;
@@ -2583,17 +2582,7 @@ element::getnode(const unsigned i) const
 	return owner->getnode(i);
 }
 
-/*
- * This program is a custom 3D finite element code, intended for
- * work on my PhD.  It will hopefully form the basis for a later
- * full 3D FEM pavement modelling code, but at the moment, I need
- * to get some work done...
- */
-
 //#define QUAD
-
-int run = 0;
-bool isvar = false;
 
 /*
  * The basics of a layer used for the FEM.
@@ -2614,7 +2603,6 @@ struct femlayer {
 };
 
 sset<femlayer> layer;
-double * L[6];
 
 inline double
 circlearea(double x, double y, double r)
@@ -2651,62 +2639,6 @@ blockarea(double x1, double x2, double y1, double y2, double r)
 	y1 = fabs(y1); y2 = fabs(y2); if (y2 < y1) swap(y1,y2);
 	return circlearea(x1,y1,r) - circlearea(x1,y2,r)
 			- circlearea(x2,y1,r) + circlearea(x2,y2,r);
-}
-
-/*
- * bessi1 from numerical recipes
- */
-static double bessi1(double x)
-{
-	double ax;
-	double y;
-
-	if ((ax = fabs(x)) < 3.75) {
-		y = x/3.75;
-		y *= y;
-		y = ax*(0.5+y*(0.87890594+y*(0.51498869+y*(0.15084934
-			+y*(0.2658733e-1+y*(0.301532e-2+y*0.32411e-3))))));
-	} else {
-		y = 3.75/ax;
-		y = 0.39894228+y*(-0.3988024e-1+y*(-0.362018e-2
-			+y*(0.163801e-2+y*(-0.1031555e-1+y*(0.2282967e-1
-			+y*(-0.2895312e-1+y*(0.1787654e-1-y*0.420059e-2)))))));
-		y *= (exp(ax)/sqrt(ax));
-	}
-	return (x < 0.0 ? -y : y);
-}
-
-/*
- * bessk1 from numerical recipes
- */
-static double bessk1(double x)
-{
-	double y;
-
-	if (x <= 2.0) {
-		y = x*x/4.0;
-		y = (log(x/2.0)*bessi1(x))+(1.0/x)*(1.0+y*(0.15443144
-			+y*(-0.67278579+y*(-0.18156897+y*(-0.1919402e-1
-			+y*(-0.110404e-2+y*(-0.4686e-4)))))));
-	} else {
-		y = 2.0/x;
-		y = (exp(-x)/sqrt(x))*(1.25331414+y*(0.23498619
-			+y*(-0.3655620e-1+y*(0.1504268e-1+y*(-0.780353e-2
-			+y*(0.325614e-2+y*(-0.68245e-3)))))));
-	}
-	return y;
-}
-
-double fn_bessel(double h, double r)
-{
-	double hr;
-
-    if (h == 0.0)
-		return 1.0;
-	if (h > 600*r)
-		return 0.0;
-	hr = h/r;
-	return (hr*bessk1(hr));
 }
 
 /*
@@ -2829,7 +2761,7 @@ results(const fset<const element *> & e, const fset<point3d> & c,
 	fset<pavedata> data(c.length(),c.length());
 
 	char fname[128];
-	sprintf(fname,"%s_%s_%05d.bin",dname,(isvar?"3d":"1d"),run);
+	sprintf(fname,"%s.bin",dname);
 	FILE * f = fopen(fname,"wb");
 	for (unsigned i = 0; i < e.length(); i++) {
 		e[i]->results(c,data);
@@ -2842,51 +2774,6 @@ results(const fset<const element *> & e, const fset<point3d> & c,
 			fwrite(&ild,sizeof(double),1,f);
 			fwrite(&(data[j].deflgrad[0]),sizeof(double),1,f);
 			fwrite(&(data[j].data[0][0]),sizeof(double),27,f);
-		}
-	}
-	fclose(f);
-}
-
-void
-LEresults(const fset<const element *> & e, const fset<point3d> & c,
-		const char * dname, LEsystem & le)
-{
-	fset<pavedata> data(c.length(),c.length());
-
-	le.removepoints();
-	for (unsigned i = 0; i < e.length(); i++) {
-		e[i]->results(c,data);
-		unsigned il = 0;
-		while (&(layer[il].mat) != &(e[i]->mat))
-			il++;
-		for (unsigned j = 0; j < data.length(); j++) {
-			data[j].z *= -1;
-			le.addpoint(data[j],il);
-		}
-	}
-	le.calculate(LEsystem::all);
-
-	char fname[128];
-	sprintf(fname,"%s_%s_%05d.bin",dname,"3d",run);
-	FILE * f = fopen(fname,"wb");
-	for (unsigned i = 0; i < e.length(); i++) {
-		e[i]->results(c,data);
-		unsigned il = 0;
-		while (&(layer[il].mat) != &(e[i]->mat))
-			il++;
-		double ild = double(il);
-		for (unsigned j = 0; j < data.length(); j++) {
-			data[j].z *= -1;
-			pavedata d(le.result(data[j],il));
-			d.z *= -1; d.data[4][2] *= -1;
-			swap(d.data[3][0],d.data[3][2]);
-			swap(d.data[8][0],d.data[8][2]);
-			d.data[1][1] *= -1; d.data[1][2] *= -1;
-			d.data[6][1] *= -1; d.data[6][2] *= -1;
-			fwrite(&(d.x),sizeof(double),3,f);
-			fwrite(&ild,sizeof(double),1,f);
-			fwrite(&(layer[il].mat.emod),sizeof(double),1,f);
-			fwrite(&(d.data[0][0]),sizeof(double),27,f);
 		}
 	}
 	fclose(f);
@@ -3383,412 +3270,18 @@ main(int argc, char *argv[])
 	FEM.add_bc_plane(mesh::Z,mesh::at|mesh::below,-zmax,
 			mesh::X|mesh::Y|mesh::Z,0.0);
 
-	// Generate our random fields.
-	unsigned np = 0;
-	while (double(FEM.getorderednode(np).z) == 0.0)
-		np++;
-	printf("np: %i\n",np);
-	for (unsigned l = 0; l < 6; l++) {
-		L[l] = new double[np];
-
-		char fname[128];
-		sprintf(fname,"cor%d.tri",l);
-		FILE * f = fopen(fname,"rb");
-		if (f != NULL) {
-			fclose(f);
-			continue;
-		}
-		f = fopen(fname,"wb");
-
-		double * C = new double[T_SIZE(np)];
-		if (L[l] == 0 || C == 0) {
-			event_msg(EVENT_ERROR,"Ooops, out of memory...");
-			return 0;
-		}
-
-		for (unsigned i = 0; i < np; i++) {
-			const node3d & p1 = FEM.getorderednode(i);
-			for (unsigned j = i; j < np; j++) {
-				const node3d & p2 = FEM.getorderednode(j);
-				x = p1.x-p2.x; y = p1.y-p2.y;
-				double R, r = fabs(hypot(x,y));
-				switch (l) {
-				case 0:
-					C[T_IDX(i,j)] = 0.5705546*exp(-pow(r/4000,2))
-						+ 0.4294454*cos(r/35000);
-					break;
-				case 1:
-					C[T_IDX(i,j)] = fn_bessel(r,1005.846);
-					break;
-				case 2:
-					C[T_IDX(i,j)] = fn_bessel(r,2198.115);
-					break;
-				case 3:
-					//C[T_IDX(i,j)] = fn_bessel(r,300);
-					R = 2117.536;
-					C[T_IDX(i,j)] = (i==j?0.3657366:0.0)+
-						0.6342634*(r >= R ? 0.0 :
-							1-2/M_PI*(r/R*sqrt(1-pow(r/R,2))+asin(r/R)));
-					break;
-				case 4:
-					//C[T_IDX(i,j)] = fn_bessel(r,300);
-					R = 4430.551;
-					C[T_IDX(i,j)] = (r >= R ? 0.0 :
-							1-2/M_PI*(r/R*sqrt(1-pow(r/R,2))+asin(r/R)));
-					break;
-				case 5:
-					//C[T_IDX(i,j)] = fn_bessel(r,300);
-					R = 9040.673;
-					C[T_IDX(i,j)] = (i==j?0.1026163:0.0)+
-						0.8973837*(r >= R ? 0.0 :
-							1-2/M_PI*(r/R*sqrt(1-pow(r/R,2))+asin(r/R)));
-					//C[T_IDX(i,j)] = (r > 6000.0 ? 0.0 :
-					//		(1-1.5*r/6000.0+0.5*pow(r/6000.0,3)));
-					//C[T_IDX(i,j)] = exp(-pow(r/5000,2));
-					break;
-				default:
-					assert(false);
-				}
-				if (i != j)
-					C[T_IDX(i,j)] *= .999;
-			}
-		}
-		if (!decmp_chol_tri(np,C))
-			return 0;
-		fwrite(C,sizeof(double),T_SIZE(np),f);
-		fclose(f);
-		delete [] C;
-	}
-
-	unsigned startrun = (argv[1] ? (unsigned)atoi(argv[1]) : 0);
-	run = startrun;
-	isvar = false;
-	rng RNG(run+clock());
-	while (true) {
-		isvar = !isvar;
-		if (isvar)
-			run++;
-		//if (run <= 55)
-		//	continue;
-		//if (run > 1)
-		if (run > startrun+250)
-			break;
-
-		for (unsigned l = 0; isvar && l < 6; l++) {
-			double * A = new double[np];
-			double * C = new double[T_SIZE(np)];
-			if (A == 0 || C == 0) {
-				event_msg(EVENT_ERROR,"Ooops, out of memory...");
-				return 0;
-			}
-
-			char fname[128];
-			sprintf(fname,"cor%d.tri",l);
-			FILE * f = fopen(fname,"rb");
-			fread(C,sizeof(double),T_SIZE(np),f);
-			fclose(f);
-
- 			double t = (l == 1 ? double(layer[0].bot-layer[0].top)
- 					: l == 2 ? double(layer[2].bot-layer[1].top) : 0.0);
-			for (unsigned i = 0; i < np; i++) {
-				A[i] = RNG.stdnormal();
-				L[l][i] = C[T_IDX(i,i)]*A[i];
-				for (unsigned j = 0; j < i; j++)
-					L[l][i] += C[T_IDX(j,i)]*A[j];
-				switch (l) {
-				case 0:
-					L[l][i] *= sqrt(109.87228+82.69873);
-					break;
-				case 1:
-					L[l][i] = L[l-1][i]
-						+ pow(10,log10(t) + sqrt(0.002318357)*L[l][i]) - t;
-					break;
-				case 2:
-					L[l][i] = L[l-1][i]
-						+ pow(10,log10(t) + sqrt(0.001345169)*L[l][i]) - t;
-					break;
-				case 3:
-					//L[l][i] = pow(10,log10(layer[0].mat.emod)
-					//	+ 0.17021514*L[l][i]);
-					L[l][i] = pow(10,log10(layer[0].mat.emod)
-						+ 0.2683667*L[l][i]);
-					break;
-				case 4:
-					assert(layer[1].mat.emod == layer[2].mat.emod);
-					L[l][i] = pow(10,log10(layer[1].mat.emod)
-						+ 0.1824633*L[l][i]);
-					break;
-				case 5:
-					//L[l][i] = pow(10,log10(layer[3].mat.emod)
-					//	+ 0.05854531*L[l][i]);
-					L[l][i] = pow(10,log10(layer[3].mat.emod)
-						+ 0.06524*L[l][i]);
-						
-					break;
-				default:
-					assert(false);
-				}
-			}
-			delete [] C;
-			delete [] A;
-		}
-
-		//for (unsigned i = 0; i < np; i++) {
-		//	const node3d & p1 = FEM.getorderednode(i);
-		//	printf("%6.1f %6.1f:",double(p1.x),double(p1.y));
-		//	for (unsigned l = 0; l < 6; l++)
-		//		printf(" %8.2f",L[l][i]);
-		//	printf("\n");
-		//}
-
-		for (unsigned i = 0; i < FEM.getnodes(); i++) {
-			node3d n = FEM.getnode(i);
-			n.ux = 0.0; n.uy = 0.0; n.uz = 0.0;
-			FEM.updatenode(n);
-		}
-		if (!FEM.solve(1e-25)) {
-			//if (isvar) {
-				isvar = false;
-				run--;
-				continue;
-			//} else {
-			//	return 0; // We don't fail the non-3d case.
-			//}
-		}
-
-		fset<point3d> poly(4), face(8);
-		//face[0] = point3d(-1,-1,-1);
-		//face[1] = point3d(-1,-1, 1);
-		//face[2] = point3d(-1, 1,-1);
-		//face[3] = point3d(-1, 1, 1);
-		//face[4] = point3d( 1,-1,-1);
-		//face[5] = point3d( 1,-1, 1);
-		//face[6] = point3d( 1, 1,-1);
-		//face[7] = point3d( 1, 1, 1);
-		//result_mesh(mesh,face);
-		face[0] = point3d(-1,-1,    -1);
-		face[1] = point3d(-1,-1,-1/3.0);
-		face[2] = point3d(-1,-1, 1/3.0);
-		face[3] = point3d(-1,-1,     1);
-		face[4] = point3d( 1,-1,     1);
-		face[5] = point3d( 1,-1, 1/3.0);
-		face[6] = point3d( 1,-1,-1/3.0);
-		face[7] = point3d( 1,-1,    -1);
-		results(trans,face,"face");
-		//LEresults(trans,face,"face",test);
-		face[0] = point3d(-1, 1,    -1);
-		face[1] = point3d(-1, 1,-1/3.0);
-		face[2] = point3d(-1, 1, 1/3.0);
-		face[3] = point3d(-1, 1,     1);
-		face[4] = point3d( 1, 1,     1);
-		face[5] = point3d( 1, 1, 1/3.0);
-		face[6] = point3d( 1, 1,-1/3.0);
-		face[7] = point3d( 1, 1,    -1);
-		results(rtrans,face,"rface");
-		face[0] = point3d(-1,-1,    -1);
-		face[1] = point3d(-1,-1,-1/3.0);
-		face[2] = point3d(-1,-1, 1/3.0);
-		face[3] = point3d(-1,-1,     1);
-		face[4] = point3d(-1, 1,     1);
-		face[5] = point3d(-1, 1, 1/3.0);
-		face[6] = point3d(-1, 1,-1/3.0);
-		face[7] = point3d(-1, 1,    -1);
-		results(along,face,"long");
-		//LEresults(along,face,"long",test);
-		poly[0] = point3d(-1,-1,-1);
-		poly[1] = point3d(-1, 1,-1);
-		poly[2] = point3d( 1, 1,-1);
-		poly[3] = point3d( 1,-1,-1);
-		results(ac,poly,"ac");
-		//LEresults(ac,poly,"ac",test);
-		results(ab,poly,"ab");
-		//LEresults(ab,poly,"ab",test);
-		poly[0] = point3d(-1,-1, 1);
-		poly[1] = point3d(-1, 1, 1);
-		poly[2] = point3d( 1, 1, 1);
-		poly[3] = point3d( 1,-1, 1);
-		results(sf,poly,"sf");
-		//LEresults(sf,poly,"sf",test);
-		results(sg,poly,"sg");
-		//LEresults(sg,poly,"sg",test);
-	}
-
-	/*
-	unsigned i, nnd = FEM.getnodes();
-	test.removepoints();
-	for (i = 0; i < nnd; i++) {
-		const node3d & n = FEM.getorderednode(i);
-		x = n.x; y = n.y; z = n.z; // XXX
-		//if (!(x == 0 || y == 0 || z == 0))
-		//	continue;
-		//if (!(x == 0))
-		//	continue;
-		if (fabs(x) > edge/4 || fabs(y) > edge/4 || fabs(z) > 800.0)
-			continue;
-		if (x < -edge || x > edge || y < -edge || y > edge || z <= -zmax)
-			continue;
-		test.addpoint(point3d(x,y,-z));
-	}
-	test.calculate(LEsystem::all);
-
-	for (i = 0; i < nnd; i++) {
-		const node3d & n = FEM.getorderednode(i);
-		x = n.x; y = n.y; z = n.z; // XXX
-		//if (!(x == 0 || y == 0 || z == 0))
-		//	continue;
-		//if (!(x == 0))
-		//	continue;
-		if (fabs(x) > edge/4 || fabs(y) > edge/4 || fabs(z) > 800.0)
-			continue;
-		if (x < -edge || x > edge || y < -edge || y > edge || z <= -zmax)
-			continue;
-		const pavedata & d = test.result(point3d(x,y,-z));
-		double ux = n.ux;
-		double uy = n.uy;
-		double uz = n.uz;
-		double vx =  d.result(pavedata::deflct,pavedata::xx);
-		double vy =  d.result(pavedata::deflct,pavedata::yy);
-		double vz = -d.result(pavedata::deflct,pavedata::zz);
-		unsigned j = FEM.hasnode(n);
-		double h = hypot(hypot(vx-ux,vy-uy),vz-uz);
-		double v = hypot(hypot(vx,vy),vz);
-		printf("Node %6i: (%+6i,%+6i,%+6i) =\t(%8.2g,%8.2g,%8.2g)\t(%8.2g,%8.2g,%8.2g)\t%8.2g\t(%8.2g)\n",j,int(x),int(y),int(z),vx,vy,vz,ux,uy,uz,h,(v == 0.0 ? 0.0 : h/v));
-	}
-	*/
-
-	timeme("\n");
-	return 0;
-}
-
-int
-main_fempa()
-{
-	timeme();
-
-	LEsystem test;
-	test.addlayer( 260.0,5000e3,0.35);
-	test.addlayer( 240.0, 200e3,0.40);
-	test.addlayer( 260.0, 200e3,0.40);
-	test.addlayer(5240.0,  50e3,0.45);
-	test.addload(point2d(0.0,0.0),50.0e6,700.0,0.0);
-
-	layer.empty();
-	for (unsigned i = 0; i < test.layers(); i++) {
-		const LElayer & l = test.layer(i);
-		layer.add(femlayer(l.top(),l.bottom(),l.emod(),l.poissons()));
-	}
-
-	double x[] = {0, 5, 50, 100, 150.8, 200, 250, 300, 400, 500, 750, 1000, 2000, 4000 };
-	double y[] = {0, 5, 50, 118.4, 150, 300, 500, 1000, 2000, 4000 };
-	double z[] = {0,-5,-50,-100,-200,-255,-260,-265,-300,-400,-500,-600,-700,-755,-760,-765,-800,-900,-1000,-2000,-3000,-4000,-5000,-6000 };
-	unsigned nx = sizeof(x)/sizeof(double);
-	unsigned ny = sizeof(y)/sizeof(double);
-	unsigned nz = sizeof(z)/sizeof(double);
-
-	mesh FEM;
-	fset<coord3d> coord(8);
-	cset<const element *> along;
-	cset<const element *> trans;
-	cset<const element *> sf, ac, ab, sg;
-
-	for (unsigned xi = 0; xi < nx; xi++)
-		x[xi] = double(fixed<8>(-x[xi]));
-	for (unsigned yi = 0; yi < ny; yi++)
-		y[yi] = double(fixed<8>(-y[yi]));
-	for (unsigned zi = 0; zi < nz; zi++)
-		z[zi] = double(fixed<8>(z[zi]));
-		
-	for (unsigned zi = 1, i = 0; zi < nz; zi++) {
-		while (i < layer.length() && -double(z[zi]) > double(layer[i].bot))
-			i++;
-		double z1 = z[zi];
-		double z2 = z[zi-1];
-		for (unsigned xi = 1; xi < nx; xi++) {
-			for (unsigned yi = 1; yi < ny; yi++) {
-				double x1 = x[xi-1], x2 = x[xi];
-				double y1 = y[yi-1], y2 = y[yi];
-				coord[0] = coord3d(x1,y1,z1);
-				coord[1] = coord3d(x1,y2,z1);
-				coord[2] = coord3d(x2,y1,z1);
-				coord[3] = coord3d(x2,y2,z1);
-				coord[4] = coord3d(x1,y1,z2);
-				coord[5] = coord3d(x1,y2,z2);
-				coord[6] = coord3d(x2,y1,z2);
-				coord[7] = coord3d(x2,y2,z2);
-				const element * e = FEM.add(element::block27,
-						layer[i].mat,coord);
-				if (x1 == 0.0)
-					along.add(e);
-				if (y1 == 0.0)
-					trans.add(e);
-				if (-double(z2) == double(layer[0].top))
-					sf.add(e);
-				if (-double(z1) == double(layer[0].bot))
-					ac.add(e);
-				if (-double(z1) == double(layer[1].bot))
-					ab.add(e);
-				if (-double(z2) == double(layer[3].top))
-					sg.add(e);
-			}
-		}
-	}
-	FEM.add_bc_plane(mesh::X,mesh::at|mesh::above,x[0],
-			mesh::X,0.0);
-	FEM.add_bc_plane(mesh::X,mesh::at|mesh::below,x[nx-1],
-			mesh::X,0.0);
-	FEM.add_bc_plane(mesh::Y,mesh::at|mesh::above,y[0],
-			mesh::Y,0.0);
-	FEM.add_bc_plane(mesh::Y,mesh::at|mesh::below,y[ny-1],
-			mesh::Y,0.0);
-	FEM.add_bc_plane(mesh::Z,mesh::at|mesh::below,z[nz-1],
-			mesh::X|mesh::Y|mesh::Z,0.0);
-
-	// Add the tire loads
-	for (unsigned xi = 1; x[xi]+150.8 > -0.1; xi++) {
-		for (unsigned yi = 1; y[yi]+118.4 > -0.1; yi++) {
-			double x1 = x[xi-1], y1 = y[yi-1];
-			double dx = double(x[xi]-x[xi-1])/2.0, dy = double(y[yi]-y[yi-1])/2.0;
-			for (unsigned pi = 0; pi < 3; pi++) {
-				for (unsigned pj = 0; pj < 3; pj++) {
-					unsigned p = FEM.hasnode(coord3d(x1+pi*dx,y1+pj*dy,0.0));
-					assert(p != UINT_MAX);
-					node3d n = FEM.getnode(p);
-					double f = 0.0;
-					for (unsigned gi = 0; gi < 4; gi++) {
-						for (unsigned gj = 0; gj < 4; gj++) {
-							double gx = gl_4[gi][0];
-							double gy = gl_4[gj][0];
-							switch (pi) {
-							case 0: gx = 0.5*gx*(gx-1); break;
-							case 1: gx = 1-gx*gx;       break;
-							case 2: gx = 0.5*gx*(gx+1); break;
-							}
-							switch (pj) {
-							case 0: gy = 0.5*gy*(gy-1); break;
-							case 1: gy = 1-gy*gy;       break;
-							case 2: gy = 0.5*gy*(gy+1); break;
-							}
-							f += gl_4[gi][1]*gl_4[gj][1]*gx*gy;
-						}
-					}
-					if (f == 0.0)
-						continue;
-					f *= -700*dx*dy;
-					FEM.add_fext(n,mesh::Z,f);
-				}
-			}
-		}
-	}
-
-	for (unsigned i = 0; i < FEM.getnodes(); i++) {
-		node3d n = FEM.getnode(i);
-		n.ux = 0.0; n.uy = 0.0; n.uz = 0.0;
-		FEM.updatenode(n);
-	}
-	if (!FEM.solve(1e-25))
-		return 0;
+	FEM.solve(1e-25);
 
 	fset<point3d> poly(4), face(8);
+	face[0] = point3d(-1,-1,    -1);
+	face[1] = point3d(-1,-1,-1/3.0);
+	face[2] = point3d(-1,-1, 1/3.0);
+	face[3] = point3d(-1,-1,     1);
+	face[4] = point3d( 1,-1,     1);
+	face[5] = point3d( 1,-1, 1/3.0);
+	face[6] = point3d( 1,-1,-1/3.0);
+	face[7] = point3d( 1,-1,    -1);
+	results(trans,face,"face");
 	face[0] = point3d(-1, 1,    -1);
 	face[1] = point3d(-1, 1,-1/3.0);
 	face[2] = point3d(-1, 1, 1/3.0);
@@ -3797,34 +3290,28 @@ main_fempa()
 	face[5] = point3d( 1, 1, 1/3.0);
 	face[6] = point3d( 1, 1,-1/3.0);
 	face[7] = point3d( 1, 1,    -1);
-	results(trans,face,"face");
-	LEresults(trans,face,"face",test);
-	face[0] = point3d( 1,-1,    -1);
-	face[1] = point3d( 1,-1,-1/3.0);
-	face[2] = point3d( 1,-1, 1/3.0);
-	face[3] = point3d( 1,-1,     1);
-	face[4] = point3d( 1, 1,     1);
-	face[5] = point3d( 1, 1, 1/3.0);
-	face[6] = point3d( 1, 1,-1/3.0);
-	face[7] = point3d( 1, 1,    -1);
+	results(rtrans,face,"rface");
+	face[0] = point3d(-1,-1,    -1);
+	face[1] = point3d(-1,-1,-1/3.0);
+	face[2] = point3d(-1,-1, 1/3.0);
+	face[3] = point3d(-1,-1,     1);
+	face[4] = point3d(-1, 1,     1);
+	face[5] = point3d(-1, 1, 1/3.0);
+	face[6] = point3d(-1, 1,-1/3.0);
+	face[7] = point3d(-1, 1,    -1);
 	results(along,face,"long");
-	LEresults(along,face,"long",test);
 	poly[0] = point3d(-1,-1,-1);
 	poly[1] = point3d(-1, 1,-1);
 	poly[2] = point3d( 1, 1,-1);
 	poly[3] = point3d( 1,-1,-1);
 	results(ac,poly,"ac");
-	LEresults(ac,poly,"ac",test);
 	results(ab,poly,"ab");
-	LEresults(ab,poly,"ab",test);
 	poly[0] = point3d(-1,-1, 1);
 	poly[1] = point3d(-1, 1, 1);
 	poly[2] = point3d( 1, 1, 1);
 	poly[3] = point3d( 1,-1, 1);
 	results(sf,poly,"sf");
-	LEresults(sf,poly,"sf",test);
 	results(sg,poly,"sg");
-	LEresults(sg,poly,"sg",test);
 
 	timeme("\n");
 	return 0;
@@ -3857,7 +3344,7 @@ main_test()
 
 	for (k = 0; k < ndiv[2]; k++) {
 		double z = cube[2][1] - k*dz;
-		int p = 1; //(1 << k); // 1;
+		unsigned p = 1; //(1 << k); // 1;
 		for (j = 0; j < ndiv[1]; j += p) {
 			double y = cube[1][0] + j*dy;
 			for (i = 0; i < ndiv[0]; i += p) {
@@ -3945,135 +3432,6 @@ main_test()
 	results(face,poly,"test");*/
 
 	timeme(" Done.\n");
-
-	return 0;
-}
-
-int
-main_infinity()
-{
-	timeme();
-
-	material m(100,0.35);
-	mesh FEM;
-
-	sset<coord3d> coord(0,8);
-
-	coord.empty();
-	coord.add(coord3d(-10,-10,-10));
-	coord.add(coord3d(-10,  0,-10));
-	coord.add(coord3d(  0,-10,-10));
-	coord.add(coord3d(  0,  0,-10));
-	coord.add(coord3d(-10,-10,  0));
-	coord.add(coord3d(-10,  0,  0));
-	coord.add(coord3d(  0,-10,  0));
-	coord.add(coord3d(  0,  0,  0));
-	FEM.add(element::block8,m,coord);
-	for (int i = 0; i < 8; i++)
-		coord[i].x *= -1;
-	FEM.add(element::block8,m,coord);
-	for (int i = 0; i < 8; i++)
-		coord[i].y *= -1;
-	FEM.add(element::block8,m,coord);
-	for (int i = 0; i < 8; i++)
-		coord[i].x *= -1;
-	FEM.add(element::block8,m,coord);
-
-	coord.empty();
-	coord.add(coord3d(-10,-10,-10));
-	coord.add(coord3d(-10,-10,  0));
-	FEM.add(element::infinite8,m,coord);
-	for (int i = 0; i < 2; i++)
-		coord[i].x *= -1;
-	FEM.add(element::infinite8,m,coord);
-	for (int i = 0; i < 2; i++)
-		coord[i].y *= -1;
-	FEM.add(element::infinite8,m,coord);
-	for (int i = 0; i < 2; i++)
-		coord[i].x *= -1;
-	FEM.add(element::infinite8,m,coord);
-
-	coord.empty();
-	coord.add(coord3d( 10,  0,-10));
-	coord.add(coord3d( 10, 10,-10));
-	coord.add(coord3d( 10,  0,  0));
-	coord.add(coord3d( 10, 10,  0));
-	FEM.add(element::infinite8,m,coord);
-	for (int i = 0; i < 4; i++)
-		coord[i].x *= -1;
-	FEM.add(element::infinite8,m,coord);
-	for (int i = 0; i < 4; i++)
-		coord[i].y *= -1;
-	FEM.add(element::infinite8,m,coord);
-	for (int i = 0; i < 4; i++)
-		coord[i].x *= -1;
-	FEM.add(element::infinite8,m,coord);
-
-	coord.empty();
-	coord.add(coord3d(  0, 10,-10));
-	coord.add(coord3d( 10, 10,-10));
-	coord.add(coord3d(  0, 10,  0));
-	coord.add(coord3d( 10, 10,  0));
-	FEM.add(element::infinite8,m,coord);
-	for (int i = 0; i < 4; i++)
-		coord[i].x *= -1;
-	FEM.add(element::infinite8,m,coord);
-	for (int i = 0; i < 4; i++)
-		coord[i].y *= -1;
-	FEM.add(element::infinite8,m,coord);
-	for (int i = 0; i < 4; i++)
-		coord[i].x *= -1;
-	FEM.add(element::infinite8,m,coord);
-
-	FEM.add_fext(coord3d(-10,-10,  0),mesh::Z, -2.5);
-	FEM.add_fext(coord3d(-10,  0,  0),mesh::Z, -5.0);
-	FEM.add_fext(coord3d(-10, 10,  0),mesh::Z, -2.5);
-	FEM.add_fext(coord3d(  0,-10,  0),mesh::Z, -5.0);
-	FEM.add_fext(coord3d(  0,  0,  0),mesh::Z,-10.0);
-	FEM.add_fext(coord3d(  0, 10,  0),mesh::Z, -5.0);
-	FEM.add_fext(coord3d( 10,-10,  0),mesh::Z, -2.5);
-	FEM.add_fext(coord3d( 10,  0,  0),mesh::Z, -5.0);
-	FEM.add_fext(coord3d( 10, 10,  0),mesh::Z, -2.5);
-
-	FEM.add_bc_plane(mesh::Z,mesh::at|mesh::below,-10,
-			mesh::X|mesh::Y|mesh::Z,0.0);
-
-	FEM.solve(1e-25);
-	int nnd = FEM.getnodes();
-	for (int i = 0; i < nnd; i++) {
-		const node3d & n = FEM.getorderednode(i);
-		double x = n.x;
-		double y = n.y;
-		double z = n.z;
-		//if (y != 0.0 || x != 0.0)
-		//	continue;
-		double ux = n.ux;
-		double uy = n.uy;
-		double uz = n.uz;
-		int j = FEM.hasnode(n);
-		printf("Node %i: (%i,%i,%i) =\t(%f,%f,%f)\n",j,int(x),int(y),int(z),ux,uy,uz);
-	}
-
-	timeme("\n");
-
-	return 0;
-}
-
-int
-main_junk()
-{
-	double x, y, a = 0.0, b;
-	double dx, dy, delta = 4.0;
-
-	// Start with the tire grid.
-	dx = delta; dy = delta;
-	for (x = -30*dx; x < 30*dx; x += dx) {
-		for (y = -30*dx; y < 30*dy; y += dy) {
-			a += b = blockarea(x,x+dx,y,y+dx,100);
-			printf("%+f %+f %f\n",x,y,b);
-		}
-	}
-	printf("%f %f",a,M_PI*100*100);
 
 	return 0;
 }
