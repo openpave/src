@@ -102,7 +102,7 @@ typedef unsigned __int64 uint64_t;
 class rng {
 public:
 	// Construct and seed the RNG.
-	inline rng(uint32_t seed = 12345) throw ()
+	inline rng(uint32_t seed = 12345)
 	  : ni(1) {
 		uint64_t inner;
 
@@ -124,7 +124,7 @@ public:
 			status[DSFMT_N].u[1] ^= 1;
 		idx = DSFMT_N*2;
 	}
-	inline double c1o2() throw () {
+	inline double c1o2() {
 		double *psfmt = &(status[0].d[0]);
 		if (idx >= DSFMT_N*2) {
 			regen();
@@ -132,13 +132,13 @@ public:
 		}
 		return psfmt[idx++];
 	}
-	inline double c0o1() throw () {
+	inline double c0o1() {
 		return c1o2()-1.0;
 	}
-	inline double o0c1() throw () {
+	inline double o0c1() {
 		return 2.0-c1o2();
 	}
-	inline double o0o1() throw () {
+	inline double o0o1() {
 		union {
 			double   d;
 			uint64_t u;
@@ -147,7 +147,7 @@ public:
 		r.u |= 1;
 		return r.d-1.0;
 	}
-	inline double stdnormal() throw () {
+	inline double stdnormal() {
 		double r[2];
 
 		if (ni == 1) {
@@ -171,7 +171,7 @@ private:
 	} status[DSFMT_N+1];
 	double n[2];
 
-	inline void regen() throw () {
+	inline void regen() {
 		for (unsigned i = 0; i < DSFMT_N; i++) {
 			uint64_t t0 = status[i].u[0];
 			uint64_t t1 = status[i].u[1];

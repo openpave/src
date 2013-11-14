@@ -151,7 +151,7 @@
 #endif
 
 #if defined(NEED_FMA)
-inline double fma(const double a, const double b, const double c) throw () {
+inline double fma(const double a, const double b, const double c) {
 	return (a*b)+c;
 }
 #endif
@@ -161,7 +161,7 @@ inline double fma(const double a, const double b, const double c) throw () {
  * someone will make these part of the language...
  */
 template <class T>
-void inline swap(T & a, T & b) throw () {
+void inline swap(T & a, T & b) {
 	T temp = b;
 	b = a;
 	a = temp;
@@ -170,7 +170,7 @@ void inline swap(T & a, T & b) throw () {
 /*
  * Computes n choose k
  */
-inline int choose(const int n, const int k) throw () {
+inline int choose(const int n, const int k) {
 	int i, j = n-k+1, c = j;
 	if (k < 0 || k > n)
 		return 0;

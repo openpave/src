@@ -70,7 +70,7 @@ protected:
 
 	// Create a new list element, with an optional previous element.
 	// We force the consumer to use 0 so that they have to think.
-	listelement_d(T * p) throw ()
+	listelement_d(T * p)
 	  : next(0), prev(p) {
 		if (prev != 0) {
 			if (prev->next != 0) {
@@ -106,7 +106,7 @@ protected:
 	O * owner;					// Our owner.
 
 	// Create an element.
-	listelement_o(O * o, T * p = 0) throw ()
+	listelement_o(O * o, T * p = 0)
 	  : listelement_d<T>(p), owner(o) {
 		if (owner != 0) {
 			if (this->prev == 0) {
@@ -147,7 +147,7 @@ protected:
 	T * last;					// The tail of the list.
 
 	// All lists start empty...
-	list_double() throw ()
+	list_double()
 	  : first(0), last(0) {
 	}
 	virtual ~list_double() {
@@ -169,7 +169,7 @@ protected:
 		return s;
 	}
 	// Sometimes you just need to start a new list.
-	void empty() throw () {
+	void empty() {
 		if (first != 0) {
 			while (first->next != 0)
 				delete first->next;
@@ -188,7 +188,7 @@ protected:
 template <class O, class T>
 class list_owned : public list_double<T> {
 protected:
-	list_owned() throw ()
+	list_owned()
 	  : list_double<T>() {
 	}
 	virtual ~list_owned() {

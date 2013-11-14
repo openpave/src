@@ -37,7 +37,7 @@
  * Orthonormalize the nxn matrix Q, using the Gramm-Schmidt algorithm.
  */
 void
-orth_gs(const unsigned n, double * Q) throw ()
+orth_gs(const unsigned n, double * Q)
 {
 	double r;
 	unsigned i, j, k;
@@ -65,7 +65,7 @@ orth_gs(const unsigned n, double * Q) throw ()
  */
 bool
 equ_gauss(const unsigned n, const double * A, const double * b,
-          double * x) throw (std::bad_alloc)
+          double * x)
 {
 	bool rv = true;
 	unsigned i, j, k;
@@ -117,7 +117,7 @@ equ_gauss(const unsigned n, const double * A, const double * b,
  */
 double
 inv_mul_gauss(const unsigned n, const unsigned m, double * A,
-              double * B) throw ()
+              double * B)
 {
 	double det = 1.0;
 	unsigned i, j, k;
@@ -170,7 +170,7 @@ abort:
  */
 bool
 decmp_lu(const unsigned n, double * A, unsigned * idx,
-         int & d) throw (std::bad_alloc)
+         int & d)
 {
 	bool rv = true;
 	unsigned i, j, k;
@@ -236,7 +236,7 @@ abort:
  */
 void
 bksub_lu(const unsigned n, const double * A, const unsigned * idx,
-         double * b, const unsigned m, const unsigned c) throw ()
+         double * b, const unsigned m, const unsigned c)
 {
 	unsigned i, j, k;
 
@@ -266,7 +266,7 @@ bksub_lu(const unsigned n, const double * A, const unsigned * idx,
  */
 bool
 equ_lu(const unsigned n, const double * A, const double * b,
-       double * x, const double tol) throw (std::bad_alloc)
+       double * x, const double tol)
 {
 	bool rv = true;
 	unsigned i, j;
@@ -307,7 +307,7 @@ equ_lu(const unsigned n, const double * A, const double * b,
  */
 double
 inv_mul_lu(const unsigned n, const unsigned m, double * A,
-           double * B) throw (std::bad_alloc)
+           double * B)
 {
 	double det = 0.0;
 	unsigned i;
@@ -333,7 +333,7 @@ abort:
  * Matrix inverse of the real nxn matrix A using LU decomposition.  
  */
 bool
-inv_lu(const unsigned n, double * A) throw (std::bad_alloc)
+inv_lu(const unsigned n, double * A)
 {
 	bool rv = true;
 	unsigned i;
@@ -365,7 +365,7 @@ abort:
  * Returns L in the lower triangle of A.
  */
 bool
-decmp_chol(const unsigned n, double * A) throw ()
+decmp_chol(const unsigned n, double * A)
 {
 	unsigned i, j, k;
 	double sum;
@@ -394,7 +394,7 @@ decmp_chol(const unsigned n, double * A) throw ()
  * Returns U in the trianglar matrix.
  */
 bool
-decmp_chol_tri(const unsigned n, double * A) throw ()
+decmp_chol_tri(const unsigned n, double * A)
 {
 	unsigned i, j, k;
 	double sum;
@@ -424,7 +424,7 @@ decmp_chol_tri(const unsigned n, double * A) throw ()
  * Returns U in the upper triangle of A.
  */
 bool
-decmp_chol(const unsigned n, const unsigned w, double * A) throw ()
+decmp_chol(const unsigned n, const unsigned w, double * A)
 {
 	unsigned i, j, k;
 	
@@ -454,7 +454,7 @@ decmp_chol(const unsigned n, const unsigned w, double * A) throw ()
  */
 void
 bksub_chol(const unsigned n, const double * A,
-           double * b, const unsigned m, const unsigned c) throw ()
+           double * b, const unsigned m, const unsigned c)
 {
 	unsigned i, k;
 
@@ -476,7 +476,7 @@ bksub_chol(const unsigned n, const double * A,
  */
 void
 bksub_chol(const unsigned n, const unsigned w, const double * A,
-           double * b, const unsigned m, const unsigned c) throw ()
+           double * b, const unsigned m, const unsigned c)
 {
 	unsigned i, k;
 	
@@ -498,7 +498,7 @@ bksub_chol(const unsigned n, const unsigned w, const double * A,
  */
 bool
 equ_chol(const unsigned n, const double * A, const double * b,
-         double * x, const double tol) throw (std::bad_alloc)
+         double * x, const double tol)
 {
 	bool rv = true;
 	//unsigned i, j;
@@ -542,7 +542,7 @@ abort:
 bool
 equ_chol(const unsigned n, const unsigned w, const double * A,
          const double * b, double * x, const double tol)
-         throw (std::bad_alloc)
+        
 {
 	bool rv = true;
 	unsigned i, j, iter = 0;
@@ -593,7 +593,7 @@ abort:
  * Cholesky decomposition.  
  */
 bool
-inv_chol(unsigned n, double * A) throw ()
+inv_chol(unsigned n, double * A)
 {
 	unsigned i, j, k;
 	double sum;
@@ -629,7 +629,7 @@ inv_chol(unsigned n, double * A) throw ()
  * with D in the diagonal.
  */
 bool
-decmp_ldl(const unsigned n, double * A) throw ()
+decmp_ldl(const unsigned n, double * A)
 {
 	unsigned i, j, k;
 	double sum;
@@ -660,7 +660,7 @@ decmp_ldl(const unsigned n, double * A) throw ()
  */
 void
 bksub_ldl(const unsigned n, const double * A,
-          double * b, const unsigned m, const unsigned c) throw ()
+          double * b, const unsigned m, const unsigned c)
 {
 	unsigned i, k;
 	double sum;
@@ -686,7 +686,7 @@ bksub_ldl(const unsigned n, const double * A,
  */
 bool
 equ_ldl(const unsigned n, const double * A,
-        const double * b, double * x, const double tol) throw (std::bad_alloc)
+        const double * b, double * x, const double tol)
 {
 	bool rv = true;
 	unsigned i, j;
@@ -725,7 +725,7 @@ equ_ldl(const unsigned n, const double * A,
  */
 bool
 decmp_svd(const unsigned m, const unsigned n, double * A,
-          double * W, double * V) throw (std::bad_alloc)
+          double * W, double * V)
 {
 	double F, G = 0.0, H;
 	double C, S, X, Y;
@@ -898,7 +898,7 @@ decmp_svd(const unsigned m, const unsigned n, double * A,
 bool
 bksub_svd(const unsigned m, const unsigned n, const double * U,
           const double * W, const double * V,
-          double * b, const unsigned p, const unsigned c) throw (std::bad_alloc)
+          double * b, const unsigned p, const unsigned c)
 {
 	unsigned i, j;
 
@@ -930,7 +930,7 @@ bksub_svd(const unsigned m, const unsigned n, const double * U,
  */
 bool
 equ_svd(const unsigned n, const double * A, const double * b,
-        double * x, const double tol) throw (std::bad_alloc)
+        double * x, const double tol)
 {
 	bool rv = true;
 	double max;
@@ -981,7 +981,7 @@ abort:
  * Matrix inverse of the real nxn matrix A using SVD decomposition.
  */
 bool
-inv_svd(const unsigned n, double * A) throw (std::bad_alloc)
+inv_svd(const unsigned n, double * A)
 {
 	bool rv = true;
 	double max;
@@ -1022,7 +1022,7 @@ abort:
  * Orthonormalize the nxn matrix Q, using the SVD decomposition.
  */
 bool
-orth_svd(const unsigned n, double * Q) throw (std::bad_alloc)
+orth_svd(const unsigned n, double * Q)
 {
 	bool rv = true;
 	
@@ -1044,7 +1044,7 @@ orth_svd(const unsigned n, double * Q) throw (std::bad_alloc)
  */
 bool
 decmp_qr(const unsigned n, double * A, double * s,
-         double * d) throw ()
+         double * d)
 {
 	bool rv = true;
 	unsigned i, j, k;
@@ -1091,7 +1091,7 @@ decmp_qr(const unsigned n, double * A, double * s,
 void
 bksub_qr(const unsigned n, const double * A,
          const double * s, const double * d, 
-         double * b, const unsigned m, const unsigned c) throw ()
+         double * b, const unsigned m, const unsigned c)
 {
 	unsigned i, j;
 	double sum;
@@ -1115,7 +1115,7 @@ bksub_qr(const unsigned n, const double * A,
  */
 void
 tridiag_hh(const unsigned n, double * A, double * d,
-           double * e) throw ()
+           double * e)
 {
 	unsigned i, j, k;
 	double scale, f;
@@ -1176,7 +1176,7 @@ tridiag_hh(const unsigned n, double * A, double * d,
  */
 void
 eig_tri_ql(const unsigned n, double * d, double * e,
-           double * A) throw ()
+           double * A)
 {
 	unsigned i, j, k, m;
 	double b,c,f,g,p,r,s;
@@ -1225,7 +1225,7 @@ eig_tri_ql(const unsigned n, double * d, double * e,
  * QL transform.
  */
 bool
-eig_ql(const unsigned n, double * A, double * d, bool sorted) throw (std::bad_alloc)
+eig_ql(const unsigned n, double * A, double * d, bool sorted)
 {
 	double t;
 	unsigned i, j, k;
@@ -1257,7 +1257,7 @@ eig_ql(const unsigned n, double * A, double * d, bool sorted) throw (std::bad_al
 
 bool
 bksub_eig(const unsigned n, const double * Q, const double * d,
-          double * b, const unsigned p, const unsigned c) throw (std::bad_alloc)
+          double * b, const unsigned p, const unsigned c)
 {
 	unsigned i, j;
 
@@ -1288,7 +1288,7 @@ bksub_eig(const unsigned n, const double * Q, const double * d,
  */
 bool
 equ_eig(const unsigned n, const double * A, const double * b,
-        double * x, const double tol) throw (std::bad_alloc)
+        double * x, const double tol)
 {
 	bool rv = true;
 	double max;
@@ -1331,7 +1331,7 @@ equ_eig(const unsigned n, const double * A, const double * b,
  * Matrix inverse of the real symmetric nxn matrix A using eigenvalue decomposition.
  */
 bool
-inv_eig(const unsigned n, double * A) throw (std::bad_alloc)
+inv_eig(const unsigned n, double * A)
 {
 	bool rv = true;
 	double max;

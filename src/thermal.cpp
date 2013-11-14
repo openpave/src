@@ -74,7 +74,7 @@ const double Fe4[5][5] = {
 
 FEMthermal::FEMthermal(const int nl, const double * lh, const double * ld,
 		const int _n, const double * _nd, const double * _nt,
-		const double _dt, const int _w) throw ()
+		const double _dt, const int _w)
   : n(_n), w(_w), dt(_dt), nd(0), nt(0), ng(0),
 		KK(0), FF(0), Kt(0), Kb(0)
 {
@@ -166,7 +166,7 @@ abort:
 }
 
 void
-FEMthermal::step(double tt, double tb) throw ()
+FEMthermal::step(double tt, double tb)
 {
 	int i, j;
 	
@@ -194,7 +194,7 @@ FEMthermal::step(double tt, double tb) throw ()
 }
 
 void
-FEMthermal::interpolate(const int np, const double * pd, double * pt) throw ()
+FEMthermal::interpolate(const int np, const double * pd, double * pt)
 {
 	int i, j;
 	

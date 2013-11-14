@@ -73,11 +73,11 @@
 class set {
 public:
 	// The length. Nice for lots of things...
-	inline unsigned length() const throw () {
+	inline unsigned length() const {
 		return size;
 	}
 	// Check if an index is within the set...
-	inline bool inbounds(const unsigned p) const throw () {
+	inline bool inbounds(const unsigned p) const {
 		return (p < size ? true : false);
 	}
 
@@ -86,16 +86,16 @@ protected:
 	unsigned buffer;           // The allocated buffer size...
 
 	// Simple constructor...
-	inline explicit set(const unsigned b = DFLT_BLK) throw ()
+	inline explicit set(const unsigned b = DFLT_BLK)
 	  : size(0), buffer(0), block(b > 1 ? b : 1) {
 	}
-	inline explicit set(const set & s) throw ()
+	inline explicit set(const set & s)
 	  : size(0), buffer(0), block(s.block) {
 	}
-	inline ~set() throw () {
+	inline ~set() {
 	}
 	// Calculate the buffer size.
-	inline unsigned bufsize(unsigned s) throw () {
+	inline unsigned bufsize(unsigned s) {
 		while (s > 8*block)
 			block *= 8;
 		//while (64*s < block)
@@ -117,42 +117,42 @@ template <class V>
 class fset : public set {
 public:
 	// Nice simple constructor...
-	inline explicit fset(const unsigned s, const unsigned b) throw (std::bad_alloc)
+	inline explicit fset(const unsigned s, const unsigned b)
 	  : set(b), value(0) {
 		allocate(s);
 	}
 	inline explicit fset(const unsigned s, const V * v = 0,
-			const unsigned b = DFLT_BLK) throw (std::bad_alloc)
+			const unsigned b = DFLT_BLK)
 	  : set(b), value(0) {
 		allocate(s);
 		copy(s,v);
 	}
 	// Copy constructor.
-	inline explicit fset(const fset<V> & v) throw (std::bad_alloc)
+	inline explicit fset(const fset<V> & v)
 	  : set(v), value(0) {
 		allocate(v.size);
 		copy(v.size,v.value);
 	}
 	// Wow, a destructor...
-	inline ~fset() throw () {
+	inline ~fset() {
 		deallocate();
 	}
 
 	// Assignment operator.
-	inline fset<V> & operator= (const fset<V> & v) throw (std::bad_alloc) {
+	inline fset<V> & operator= (const fset<V> & v) {
 		deallocate();
 		allocate(v.size);
 		copy(v.size,v.value);
 		return *this;
 	}
 	// Allow the size to be changed, even for 'fixed' sets.
-	void resize(const unsigned s) throw (std::bad_alloc) {
+	void resize(const unsigned s) {
 		deallocate();
 		allocate(s);
 		copy(s,0);
 	}
 	// Behave like an array. Zero indexed.
-	V & operator[] (const unsigned p) const throw () {
+	V & operator[] (const unsigned p) const {
 		assert(inbounds(p));
 		return value[p];
 	}
@@ -161,17 +161,17 @@ protected:
 	V * value;                 // The buffer.
 	struct _V {                // Placement new wrapper
 		V _v;
-		explicit _V() throw () : _v() {}
-		explicit _V(const V & v) throw () : _v(v) {}
-		void * operator new(size_t, void * p) throw () {
+		explicit _V() : _v() {}
+		explicit _V(const V & v) : _v(v) {}
+		void * operator new(size_t, void * p) {
 			return p;
 		} 
-		void operator delete(void * , void *) throw () {
+		void operator delete(void * , void *) {
 		} 
 	};
 
 	// Since this is a fixed size set, hide the allocator...
-	void allocate(const unsigned s) throw (std::bad_alloc) {
+	void allocate(const unsigned s) {
 		unsigned b = bufsize(s);
 		if (b == buffer)
 			return;
@@ -187,7 +187,7 @@ protected:
 		value = temp;
 		buffer = b;
 	}
-	void deallocate() throw () {
+	void deallocate() {
 		if (value) {
 			for (unsigned i = 0; i < size; i++)
 				value[i].~V();
@@ -197,18 +197,18 @@ protected:
 		size = 0;
 		buffer = 0;
 	}
-	void init(const unsigned i, const V * v) throw () {
+	void init(const unsigned i, const V * v) {
 		if (v != 0)
 			new(&value[i]) _V(*v);
 		else
 			new(&value[i]) _V();
 	}
-	void copy(const unsigned s, const V * v) throw () {
+	void copy(const unsigned s, const V * v) {
 		for (unsigned i = 0; i < s; i++)
 			init(size++,(v ? &v[i] : 0));
 	}
 	// Also hide the null constructor.
-	inline explicit fset() throw (std::bad_alloc)
+	inline explicit fset()
 	  : set(), value(0) {
 		allocate(size);
 	}
@@ -218,22 +218,22 @@ protected:
  * Special case these to avoid constructors
  */
 template<>
-inline void fset<int>::init(const unsigned i, const int * v) throw () {
+inline void fset<int>::init(const unsigned i, const int * v) {
 	if (v)
 		value[i] = *v;
 }
 template<>
-inline void fset<unsigned>::init(const unsigned i, const unsigned * v) throw () {
+inline void fset<unsigned>::init(const unsigned i, const unsigned * v) {
 	if (v)
 		value[i] = *v;
 }
 template<>
-inline void fset<float>::init(const unsigned i, const float * v) throw () {
+inline void fset<float>::init(const unsigned i, const float * v) {
 	if (v)
 		value[i] = *v;
 }
 template<>
-inline void fset<double>::init(const unsigned i, const double * v) throw () {
+inline void fset<double>::init(const unsigned i, const double * v) {
 	if (v)
 		value[i] = *v;
 }
@@ -248,47 +248,47 @@ template <class V>
 class sset : public fset<V> {
 public:
 	// Provide a null constuctor for empty sets.
-	inline explicit sset() throw (std::bad_alloc)
+	inline explicit sset()
 	  : fset<V>() {
 	}
-	inline explicit sset(const unsigned s, const unsigned b) throw (std::bad_alloc)
+	inline explicit sset(const unsigned s, const unsigned b)
 	  : fset<V>(s,b) {
 	}
 	// Simple constructor.
 	inline explicit sset(const unsigned s, const V * v = 0,
-			const unsigned b = DFLT_BLK) throw (std::bad_alloc)
+			const unsigned b = DFLT_BLK)
 	  : fset<V>(s,v,b) {
 	}
 	// Copy constructor.
-	inline explicit sset(const fset<V> & v) throw (std::bad_alloc)
+	inline explicit sset(const fset<V> & v)
 	  : fset<V>(v) {
 	}
 	// We let someone else clean up...
-	inline ~sset() throw () {
+	inline ~sset() {
 	}
 
 	// Add one element, at the end.
-	inline bool add(const V & v) throw (std::bad_alloc) {
+	inline bool add(const V & v) {
 		return add(this->size,&v,1);
 	}
 	// Add a whole set, at the end.
-	inline bool add(const fset<V> & v) throw (std::bad_alloc) {
+	inline bool add(const fset<V> & v) {
 		return add(this->size,&(v[0]),v.length());
 	}
 	// Add an array, at the end.
-	inline bool add(const V * v, const unsigned s = 1) throw (std::bad_alloc) {
+	inline bool add(const V * v, const unsigned s = 1) {
 		return add(this->size,v,s);
 	}
 	// Insert one element at position p.
-	inline bool add(const unsigned p, const V & v) throw (std::bad_alloc) {
+	inline bool add(const unsigned p, const V & v) {
 		return add(p,&v,1);
 	}
 	// Insert a set at position p.
-	inline bool add(const unsigned p, const fset<V> & v) throw (std::bad_alloc) {
+	inline bool add(const unsigned p, const fset<V> & v) {
 		return add(p,&(v[0]),v.length());
 	}
 	// Add an array at position p. (Actually do the work too).
-	bool add(unsigned p, const V * v, const unsigned s = 1) throw (std::bad_alloc) {
+	bool add(unsigned p, const V * v, const unsigned s = 1) {
 		unsigned i;
 		if (s == 0 || v == 0)
 			return false;
@@ -308,11 +308,11 @@ public:
 		return true;
 	}
 	// Remove the last element.
-	inline bool remove() throw () {
+	inline bool remove() {
 		return remove(this->size-1,1);
 	}
 	// Remove s elements, starting at position p.
-	bool remove(unsigned p, unsigned s = 1) throw (std::bad_alloc) {
+	bool remove(unsigned p, unsigned s = 1) {
 		if (!this->inbounds(p) || s == 0)
 			return false;
 		s = (p+s > this->size ? this->size-p : s);
@@ -325,7 +325,7 @@ public:
 		this->allocate(this->size);
 		return true;
 	}
-	inline void empty() throw (std::bad_alloc) {
+	inline void empty() {
 		this->deallocate();
 		this->allocate(0);
 	}
@@ -345,35 +345,35 @@ template <class V>
 class oset : public sset<V> {
 public:
 	// Null constructor.
-	inline explicit oset() throw (std::bad_alloc)
+	inline explicit oset()
 	  : sset<V>() {
 	}
-	inline explicit oset(const unsigned s, const unsigned b) throw (std::bad_alloc)
+	inline explicit oset(const unsigned s, const unsigned b)
 	  : sset<V>(s,b) {
 	}
 	// Simple constructor.
 	inline explicit oset(const unsigned s, const V * v = 0,
-			const unsigned b = DFLT_BLK) throw (std::bad_alloc)
+			const unsigned b = DFLT_BLK)
 	  : sset<V>(s,v,b) {
 		if (v)
 			sort();
 	}
 	// Copy constructor.
-	inline explicit oset(const fset<V> & v) throw (std::bad_alloc)
+	inline explicit oset(const fset<V> & v)
 	  : sset<V>(v) {
 		sort();
 	}
 	// Destructor.
-	inline ~oset() throw () {
+	inline ~oset() {
 	}
 
 	// Guess what?
-	inline void sort() throw () {
+	inline void sort() {
 		qsort(0,this->size);
 	}
 	// Do a lookup, and return -1 if the value is not found.
 	// You must sort the set first!
-	inline unsigned findvalue(const V & v) const throw () {
+	inline unsigned findvalue(const V & v) const {
 		unsigned l = 0, r = this->size;
 		while (l < r) {
 			unsigned i = l + (r-l)/2;
@@ -390,7 +390,7 @@ public:
 
 protected:
 	// A highly optimised quick sort. Don't touch...
-	void qsort(const unsigned l, const unsigned r) throw () {
+	void qsort(const unsigned l, const unsigned r) {
 		if (r <= l)
 			return;
 		unsigned i, j, k, p = l+(r-1-l)/2;
@@ -419,7 +419,7 @@ protected:
 		}	
 	}
 	// Insertion sort for if the set looks sorted already.
-	void isort(const unsigned l, const unsigned r) throw () {
+	void isort(const unsigned l, const unsigned r) {
 		for (unsigned i = l; l < r && i < r-1; i++) {
 			for (unsigned j = i+1; j > l
 					&& this->value[j-1] > this->value[j]; j--)
@@ -440,33 +440,33 @@ template <class V>
 class cset : public oset<V> {
 public:
 	// Getting the hang of this yet?
-	inline explicit cset() throw (std::bad_alloc)
+	inline explicit cset()
 	  : oset<V>() {
 	}
-	inline explicit cset(const unsigned s, const unsigned b) throw (std::bad_alloc)
+	inline explicit cset(const unsigned s, const unsigned b)
 	  : oset<V>(s,b) {
 	}
 	inline explicit cset(const unsigned s, const V * v = 0,
-			const unsigned b = DFLT_BLK) throw (std::bad_alloc)
+			const unsigned b = DFLT_BLK)
 	  : oset<V>(s,v,b) {
 		if (v)
 			compact();
 	}
-	inline explicit cset(const fset<V> & v) throw (std::bad_alloc)
+	inline explicit cset(const fset<V> & v)
 	  : oset<V>(v) {
 		compact();
 	}
-	inline ~cset() throw () {
+	inline ~cset() {
 	}
 
 	// Sort then compact the set.
-	inline void sort() throw (std::bad_alloc) {
+	inline void sort() {
 		this->qsort(0,this->size);
 		compact();
 	}
 
 protected:
-	void compact() throw (std::bad_alloc) {
+	void compact() {
 		unsigned i, j, s;
 		for (i = 1, j = 0; this->size > 1 && i < this->size; i++) {
 			if (this->value[j] != this->value[i])
@@ -503,42 +503,42 @@ template <class V>
 class iset : public set {
 public:
 	// Make one...
-	inline explicit iset() throw ()
+	inline explicit iset()
 	  : set(), idx(0), value(0) {
 		allocate(size);
 	}
-	inline explicit iset(const unsigned s, const unsigned b) throw ()
+	inline explicit iset(const unsigned s, const unsigned b)
 	  : set(b), idx(0), value(0) {
 		allocate(s);
 	}
 	// Basic constructor
 	inline explicit iset(const unsigned s, const V * v = 0,
-			const unsigned b = DFLT_BLK) throw ()
+			const unsigned b = DFLT_BLK)
 	  : set(b), idx(0), value(0) {
 		allocate(s);
 		copy(s,v,true);
 		allocate(size);
 	}
 	// Copy constuctor.
-	inline explicit iset(const iset<V> & v) throw ()
+	inline explicit iset(const iset<V> & v)
 	  : set(v), idx(0), value(0) {
 		allocate(v.size);
 		copy(v.size,v.value,false);
 	}
 	// Copy from an fset.
-	inline explicit iset(const fset<V> & v) throw ()
+	inline explicit iset(const fset<V> & v)
 	  : set(v), idx(0), value(0) {
 		allocate(v.size);
 		copy(v.size,v.value,true);
 		allocate(size);
 	}
 	// Clean up.
-	inline ~iset() throw () {
+	inline ~iset() {
 		deallocate();
 	}
 
 	// Do a lookup, and return -1 if the value is not found.
-	inline unsigned hasvalue(const V & v) const throw () {
+	inline unsigned hasvalue(const V & v) const {
 		unsigned p = findvalue(v);
 		if (p < size && value[idx[p]] == v)
 			return idx[p];
@@ -546,13 +546,13 @@ public:
 			return UINT_MAX;
 	}
 	// Assignment operator.
-	inline iset<V> & operator= (const iset<V> & v) throw () {
+	inline iset<V> & operator= (const iset<V> & v) {
 		deallocate();
 		allocate(v.size);
 		copy(v.size,v.value,false);
 		return *this;
 	}
-	inline iset<V> & operator= (const fset<V> & v) throw () {
+	inline iset<V> & operator= (const fset<V> & v) {
 		deallocate();
 		allocate(v.size);
 		copy(v.size,v.value,true);
@@ -560,35 +560,35 @@ public:
 		return *this;
 	}
 	// Only integer keys make sense.
-	inline const V & operator[] (const unsigned p) const throw () {
+	inline const V & operator[] (const unsigned p) const {
 		assert(inbounds(p));
 		return value[p];
 	}
 	// Allow sorted acess.
-	inline const V & getindex(const unsigned i) const throw () {
+	inline const V & getindex(const unsigned i) const {
 		assert(inbounds(i));
 		return value[idx[i]];
 	}
 	// Get the position of an element in the sort.
-	inline unsigned getorder(const unsigned i) const throw () {
+	inline unsigned getorder(const unsigned i) const {
 		assert(inbounds(i));
 		return findvalue(value[i]);
 	}
 
 	// Add one value at the end.
-	inline bool add(const V & v) throw () {
+	inline bool add(const V & v) {
 		return add(&v,1);
 	}
 	// Add a whole set, at the end.
-	inline bool add(const iset<V> & v) throw () {
+	inline bool add(const iset<V> & v) {
 		return add(v.value,v.size);
 	}
-	inline bool add(const fset<V> & v) throw () {
+	inline bool add(const fset<V> & v) {
 		return add(v.value,v.size);
 	}
 	// Add an array of values... There is no point in
 	// a position based addition. 
-	bool add(const V * v, const unsigned s = 1) throw () {
+	bool add(const V * v, const unsigned s = 1) {
 		if (s == 0 || v == 0)
 			return false;
 		allocate(size+s);
@@ -597,7 +597,7 @@ public:
 		return true;
 	}
 	// Now start removing them...
-	bool remove(const V & v) throw () {
+	bool remove(const V & v) {
 		unsigned p = hasvalue(v), q = UINT_MAX;
 		if (p == UINT_MAX)
 			return false;
@@ -616,14 +616,14 @@ public:
 		return true;
 	}
 	// Replace key/value with another.
-	inline bool replace(const V & v) throw () {
+	inline bool replace(const V & v) {
 		unsigned p = hasvalue(v);
 		if (p == UINT_MAX)
 			return false;
 		value[p] = v;
 		return true;
 	}
-	inline void empty() throw () {
+	inline void empty() {
 		deallocate();
 		allocate(0);
 	}
@@ -633,16 +633,16 @@ protected:
 	V * value;                 // Take a guess...
 	struct _V {                // Placement new wrapper
 		V _v;
-		explicit _V(const V & v) throw () : _v(v) {}
-		void * operator new(size_t, void * p) throw () {
+		explicit _V(const V & v) : _v(v) {}
+		void * operator new(size_t, void * p) {
 			return p;
 		} 
-		void operator delete(void * , void *) throw () {
+		void operator delete(void * , void *) {
 		} 
 	};
 
 	// Make some space...
-	void allocate(const unsigned s) throw (std::bad_alloc) {
+	void allocate(const unsigned s) {
 		unsigned b = bufsize(s);
 		if (b == buffer)
 			return;
@@ -663,7 +663,7 @@ protected:
 		value = vtemp;
 		buffer = b;
 	}
-	void deallocate() throw () {
+	void deallocate() {
 		if (idx) {
 			free(idx);
 			idx = 0;
@@ -678,7 +678,7 @@ protected:
 		buffer = 0;
 	}
 	// Find the position which is either equal or greater...
-	inline unsigned findvalue(const V & v) const throw () {
+	inline unsigned findvalue(const V & v) const {
 		unsigned l = 0, r = size;
 		while (l < r) {
 			unsigned i = l + (r-l)/2;
@@ -689,7 +689,7 @@ protected:
 		}
 		return l;
 	}
-	void init(const V * v) throw () {
+	void init(const V * v) {
 		assert(v != 0);
 		new(&value[size]) _V(*v);
 		unsigned p = findvalue(*v);
@@ -697,7 +697,7 @@ protected:
 			memmove(&idx[p+1],&idx[p],(size-p)*sizeof(unsigned));
 		idx[p] = size++;
 	}
-	void copy(const unsigned s, const V * v, bool checkdups) throw () {
+	void copy(const unsigned s, const V * v, bool checkdups) {
 		for (unsigned i = 0, p; v && i < s; i++) {
 			if (checkdups && (p = hasvalue(v[i])) != UINT_MAX)
 				value[p] = v[i];
@@ -720,30 +720,30 @@ template <class K, class V>
 class kfset : public set {
 public:
 	// Simple constructor.
-	inline explicit kfset(const unsigned s, const unsigned b) throw ()
+	inline explicit kfset(const unsigned s, const unsigned b)
 	  : set(b), value(0) {
 		allocate(s);
 	}
 	inline explicit kfset(const unsigned s, const V * v = 0,
-			const unsigned b = DFLT_BLK) throw ()
+			const unsigned b = DFLT_BLK)
 	  : set(b), value(0) {
 		allocate(s);
 		copy(s,v,true);
 		allocate(size);
 	}
 	// Copy constuctor.
-	inline explicit kfset(const kfset<K,V> & v) throw ()
+	inline explicit kfset(const kfset<K,V> & v)
 	  : set(v), value(0) {
 		allocate(v.size);
 		copy(v.size,v.value,false);
 	}
 	// Clean up.
-	inline ~kfset() throw () {
+	inline ~kfset() {
 		deallocate();
 	}
 
 	// Do a key lookup, and return UINT_MAX if the key is not found.
-	inline unsigned haskey(const K & k) const throw () {
+	inline unsigned haskey(const K & k) const {
 		for (unsigned i = 0; i < size; i++) {
 			if (static_cast<K &>(value[i]) == k)
 				return i;
@@ -751,20 +751,20 @@ public:
 		return UINT_MAX;
 	}
 	// Assignment operator.
-	inline kfset<K,V> & operator= (const kfset<K,V> & v) throw () {
+	inline kfset<K,V> & operator= (const kfset<K,V> & v) {
 		deallocate();
 		allocate(v.size);
 		copy(v.size,v.value,false);
 		return *this;
 	}
 	// Return data based on a key lookup.
-	inline V & operator[] (const K & k) const throw () {
+	inline V & operator[] (const K & k) const {
 		unsigned p = haskey(k);
 		assert(inbounds(p));
 		return value[p];
 	}
 	// Allow integer keys.
-	inline V & operator[] (const unsigned p) const throw () {
+	inline V & operator[] (const unsigned p) const {
 		assert(inbounds(p));
 		return value[p];
 	}
@@ -773,16 +773,16 @@ protected:
 	V * value;                 // The data.
 	struct _V {                // Placement new wrapper
 		V _v;
-		explicit _V(const V & v) throw () : _v(v) {}
-		void * operator new(size_t, void * p) throw () {
+		explicit _V(const V & v) : _v(v) {}
+		void * operator new(size_t, void * p) {
 			return p;
 		} 
-		void operator delete(void * , void *) throw () {
+		void operator delete(void * , void *) {
 		} 
 	};
 
 	// Hide the allocation function.
-	void allocate(const unsigned s) throw (std::bad_alloc) {
+	void allocate(const unsigned s) {
 		unsigned b = bufsize(s);
 		if (b == buffer)
 			return;
@@ -798,7 +798,7 @@ protected:
 		value = temp;
 		buffer = b;
 	}
-	void deallocate() throw () {
+	void deallocate() {
 		if (value) {
 			for (unsigned i = 0; i < size; i++)
 				value[i].~V();
@@ -808,11 +808,11 @@ protected:
 		size = 0;
 		buffer = 0;
 	}
-	void init(const V * v) throw () {
+	void init(const V * v) {
 		assert(v != 0);
 		new(&value[size++]) _V(*v);
 	}
-	void copy(const unsigned s, const V * v, bool checkdups) throw () {
+	void copy(const unsigned s, const V * v, bool checkdups) {
 		for (unsigned i = 0, p; v && i < s; i++) {
 			if (checkdups && (p = haskey(v[i])) != UINT_MAX)
 				value[p] = v[i];
@@ -821,7 +821,7 @@ protected:
 		}
 	}
 	// And the null constructor.
-	inline explicit kfset() throw ()
+	inline explicit kfset()
 	  : set(), value(0) {
 		allocate(size);
 	}
@@ -836,33 +836,33 @@ template <class K, class V>
 class ksset : public kfset<K,V> {
 public:
 	// C++ sucks...
-	inline explicit ksset() throw ()
+	inline explicit ksset()
 	  : kfset<K,V>() {
 	}
-	inline explicit ksset(const unsigned s, const unsigned b) throw ()
+	inline explicit ksset(const unsigned s, const unsigned b)
 	  : kfset<K,V>(s,b) {
 	}
 	inline explicit ksset(const unsigned s, const V * v = 0,
-			const unsigned b = DFLT_BLK) throw ()
+			const unsigned b = DFLT_BLK)
 	  : kfset<K,V>(s,v,b) {
 	}
-	inline explicit ksset(const kfset<K,V> & v) throw ()
+	inline explicit ksset(const kfset<K,V> & v)
 	  : kfset<K,V>(v) {
 	}
-	inline ~ksset() throw () {
+	inline ~ksset() {
 	}
 
 	// Add one value at the end.
-	inline bool add(const V & v) throw () {
+	inline bool add(const V & v) {
 		return add(&v,1);
 	}
 	// Add a whole set, at the end.
-	inline bool add(const kfset<K,V> & v) throw () {
+	inline bool add(const kfset<K,V> & v) {
 		return add(v.value,v.size);
 	}
 	// Add an array of values... There is no point in
 	// a position based addition. 
-	bool add(const V * v, const unsigned s = 1) throw () {
+	bool add(const V * v, const unsigned s = 1) {
 		if (s == 0 || v == 0)
 			return false;
 		this->allocate(this->size+s);
@@ -871,7 +871,7 @@ public:
 		return true;
 	}
 	// Remove based on key.
-	bool remove(const K & k) throw () {
+	bool remove(const K & k) {
 		unsigned p = this->haskey(k);
 		if (p == UINT_MAX)
 			return false;
@@ -883,14 +883,14 @@ public:
 		return true;
 	}
 	// Replace key/value with another.
-	inline bool replace(const V & v) throw () {
+	inline bool replace(const V & v) {
 		unsigned p = this->haskey(v);
 		if (p == UINT_MAX)
 			return false;
 		this->value[p] = v;
 		return true;
 	}
-	inline void empty() throw () {
+	inline void empty() {
 		this->deallocate();
 		this->allocate(0);
 	}
@@ -904,30 +904,30 @@ public:
 template <class K, class V>
 class koset : public ksset<K,V> {
 public:
-	inline explicit koset() throw ()
+	inline explicit koset()
 	  : ksset<K,V>() {
 	}
-	inline explicit koset(const unsigned s, const unsigned b) throw ()
+	inline explicit koset(const unsigned s, const unsigned b)
 	  : ksset<K,V>(s,b) {
 	}
 	inline explicit koset(const unsigned s, const V * v = 0,
-			const unsigned b = DFLT_BLK) throw ()
+			const unsigned b = DFLT_BLK)
 	  : ksset<K,V>(s,v,b) {
 		if (v)
 			sort();
 	}
-	inline explicit koset(const kfset<K,V> & v) throw ()
+	inline explicit koset(const kfset<K,V> & v)
 	  : ksset<K,V>(v) {
 		sort();
 	}
-	inline ~koset() throw () {
+	inline ~koset() {
 	}
 
-	inline void sort() throw () {
+	inline void sort() {
 		qsort(0,this->size);
 	}
 protected:
-	void qsort(const unsigned l, const unsigned r) throw () {
+	void qsort(const unsigned l, const unsigned r) {
 		if (r <= l)
 			return;
 		unsigned i, j, k, p = l+(r-1-l)/2;
@@ -955,7 +955,7 @@ protected:
 			qsort(p+1,r);
 		}
 	}
-	void isort(const unsigned l, const unsigned r) throw () {
+	void isort(const unsigned l, const unsigned r) {
 		for (unsigned i = l; l < r && i < r-1; i++) {
 			for (unsigned j = i+1; j > l
 					 && this->value[j-1] > this->value[j]; j--) {
@@ -976,42 +976,42 @@ template <class K, class V>
 class kiset : public set {
 public:
 	// Make one...
-	inline explicit kiset() throw ()
+	inline explicit kiset()
 	  : set(), idx(0), value(0) {
 		allocate(size);
 	}
-	inline explicit kiset(const unsigned s, const unsigned b) throw ()
+	inline explicit kiset(const unsigned s, const unsigned b)
 	  : set(b), idx(0), value(0) {
 		allocate(s);
 	}
 	// Basic constructor
 	inline explicit kiset(const unsigned s, const V * v = 0,
-			const unsigned b = DFLT_BLK) throw ()
+			const unsigned b = DFLT_BLK)
 	  : set(b), idx(0), value(0) {
 		allocate(s);
 		copy(s,v,true);
 		allocate(size);
 	}
 	// Copy constuctor.
-	inline explicit kiset(const kiset<K,V> & v) throw ()
+	inline explicit kiset(const kiset<K,V> & v)
 	  : set(v), idx(0), value(0) {
 		allocate(v.size);
 		copy(v.size,v.value,false);
 	}
 	// Copy from a kfset.
-	inline explicit kiset(const kfset<K,V> & v) throw ()
+	inline explicit kiset(const kfset<K,V> & v)
 	  : set(v), idx(0), value(0) {
 		allocate(v.size);
 		copy(v.size,v.value,true);
 		allocate(size);
 	}
 	// Clean up.
-	inline ~kiset() throw () {
+	inline ~kiset() {
 		deallocate();
 	}
 
 	// Do a key lookup, and return -1 if the key is not found.
-	inline unsigned haskey(const K & k) const throw () {
+	inline unsigned haskey(const K & k) const {
 		unsigned p = findkey(k);
 		if (p < size && static_cast<K &>(value[idx[p]]) == k)
 			return idx[p];
@@ -1019,13 +1019,13 @@ public:
 			return UINT_MAX;
 	}
 	// Assignment operator.
-	inline kiset<K,V> & operator= (const kiset<K,V> & v) throw () {
+	inline kiset<K,V> & operator= (const kiset<K,V> & v) {
 		deallocate();
 		allocate(v.size);
 		copy(v.size,v.value,false);
 		return *this;
 	}
-	inline kiset<K,V> & operator= (const kfset<K,V> & v) throw () {
+	inline kiset<K,V> & operator= (const kfset<K,V> & v) {
 		deallocate();
 		allocate(v.size);
 		copy(v.size,v.value,true);
@@ -1033,38 +1033,38 @@ public:
 		return *this;
 	}
 	// Return data based on a key lookup.
-	inline const V & operator[] (const K & k) const throw () {
+	inline const V & operator[] (const K & k) const {
 		unsigned p = haskey(k);
 		assert(inbounds(p));
 		return value[p];
 	}
 	// Allow integer keys.
-	inline const V & operator[] (const unsigned p) const throw () {
+	inline const V & operator[] (const unsigned p) const {
 		assert(inbounds(p));
 		return value[p];
 	}
 	// Allow sorted acess.
-	inline const V & getindex(const unsigned i) const throw () {
+	inline const V & getindex(const unsigned i) const {
 		assert(inbounds(i));
 		return value[idx[i]];
 	}
 	// Get the position of an element in the sort.
-	inline unsigned getorder(const unsigned i) const throw () {
+	inline unsigned getorder(const unsigned i) const {
 		assert(inbounds(i));
 		return findkey(value[i]);
 	}
 
 	// Add one value at the end.
-	inline bool add(const V & v) throw () {
+	inline bool add(const V & v) {
 		return add(&v,1);
 	}
 	// Add a whole set, at the end.
-	inline bool add(const kfset<K,V> & v) throw () {
+	inline bool add(const kfset<K,V> & v) {
 		return add(v.value,v.size);
 	}
 	// Add an array of values... There is no point in
 	// a position based addition. 
-	bool add(const V * v, const unsigned s = 1) throw () {
+	bool add(const V * v, const unsigned s = 1) {
 		if (s == 0 || v == 0)
 			return false;
 		allocate(size+s);
@@ -1073,7 +1073,7 @@ public:
 		return true;
 	}
 	// Now start removing them...
-	bool remove(const K & k) throw () {
+	bool remove(const K & k) {
 		unsigned p = haskey(k), q = UINT_MAX;
 		if (p == UINT_MAX)
 			return false;
@@ -1092,14 +1092,14 @@ public:
 		return true;
 	}
 	// Replace key/value with another.
-	inline bool replace(const V & v) throw () {
+	inline bool replace(const V & v) {
 		unsigned p = haskey(v);
 		if (p == UINT_MAX)
 			return false;
 		value[p] = v;
 		return true;
 	}
-	inline void empty() throw () {
+	inline void empty() {
 		deallocate();
 		allocate(0);
 	}
@@ -1109,16 +1109,16 @@ protected:
 	V * value;                 // Take a guess...
 	struct _V {                // Placement new wrapper
 		V _v;
-		explicit _V(const V & v) throw () : _v(v) {}
-		void * operator new(size_t, void * p) throw () {
+		explicit _V(const V & v) : _v(v) {}
+		void * operator new(size_t, void * p) {
 			return p;
 		} 
-		void operator delete(void * , void *) throw () {
+		void operator delete(void * , void *) {
 		} 
 	};
 
 	// Make some space...
-	void allocate(const unsigned s) throw (std::bad_alloc) {
+	void allocate(const unsigned s) {
 		unsigned b = bufsize(s);
 		if (b == buffer)
 			return;
@@ -1139,7 +1139,7 @@ protected:
 		value = vtemp;
 		buffer = b;
 	}
-	void deallocate() throw () {
+	void deallocate() {
 		if (idx) {
 			free(idx);
 			idx = 0;
@@ -1154,7 +1154,7 @@ protected:
 		buffer = 0;
 	}
 	// Find the position which is either equal or greater...
-	inline unsigned findkey(const K & k) const throw () {
+	inline unsigned findkey(const K & k) const {
 		unsigned l = 0, r = size;
 		while (l < r) {
 			unsigned i = l + (r-l)/2;
@@ -1165,7 +1165,7 @@ protected:
 		}
 		return l;
 	}
-	void init(const V * v) throw () {
+	void init(const V * v) {
 		assert(v != 0);
 		new(&value[size]) _V(*v);
 		unsigned p = findkey(static_cast<const K &>(*v));
@@ -1173,7 +1173,7 @@ protected:
 			memmove(&idx[p+1],&idx[p],(size-p)*sizeof(unsigned));
 		idx[p] = size++;
 	}
-	void copy(const unsigned s, const V * v, bool checkdups) throw () {
+	void copy(const unsigned s, const V * v, bool checkdups) {
 		for (unsigned i = 0, p; v && i < s; i++) {
 			if (checkdups && (p = haskey(v[i])) != UINT_MAX)
 				value[p] = v[i];
@@ -1194,30 +1194,30 @@ template <class K, class V>
 class afset : public set {
 public:
 	// Make one...
-	inline explicit afset(const unsigned s, const unsigned b) throw ()
+	inline explicit afset(const unsigned s, const unsigned b)
 	  : set(b), key(0), value(0) {
 		allocate(s);
 	}
 	inline explicit afset(const unsigned s,	const K * k = 0,
-			const V * v = 0, const unsigned b = DFLT_BLK) throw ()
+			const V * v = 0, const unsigned b = DFLT_BLK)
 	  : set(b), key(0), value(0) {
 		allocate(s);
 		copy(s,k,v,true);
 		allocate(size);
 	}
 	// Copy one...
-	inline explicit afset(const afset<K,V> & v) throw ()
+	inline explicit afset(const afset<K,V> & v)
 	  : set(v), key(0), value(0) {
 		allocate(v.size);
 		copy(v.size,v.key,v.value,false);
 	}
 	// Kill one...
-	inline ~afset() throw () {
+	inline ~afset() {
 		deallocate();
 	}
 
 	// Return an index for a key.
-	inline unsigned haskey(const K & k) const throw () {
+	inline unsigned haskey(const K & k) const {
 		for (unsigned i = 0; i < size; i++) {
 			if (key[i] == k)
 				return i;
@@ -1225,25 +1225,25 @@ public:
 		return UINT_MAX;
 	}
 	// Assignement operator.
-	inline afset<K,V> & operator= (const afset<K,V> & v) throw () {
+	inline afset<K,V> & operator= (const afset<K,V> & v) {
 		deallocate();
 		allocate(v.size);
 		copy(v.size,v.key,v.value,false);
 		return *this;
 	}
 	// Behave like an indexed array...
-	inline V & operator[] (const K & k) const throw () {
+	inline V & operator[] (const K & k) const {
 		unsigned p = haskey(k);
 		assert(inbounds(p));
 		return value[p];
 	}
 	// Linear access.
-	inline K & getkey(const unsigned p) const throw () {
+	inline K & getkey(const unsigned p) const {
 		assert(inbounds(p));
 		return key[p];
 	}
 	// More linear access.
-	inline V & getvalue(const unsigned p) const throw () {
+	inline V & getvalue(const unsigned p) const {
 		assert(inbounds(p));
 		return value[p];
 	}
@@ -1252,26 +1252,26 @@ protected:
 	V * value;                 // Take a guess...
 	struct _K {                // Placement new wrapper
 		K _k;
-		explicit _K(const K & k) throw () : _k(k) {}
-		void * operator new(size_t, void * p) throw () {
+		explicit _K(const K & k) : _k(k) {}
+		void * operator new(size_t, void * p) {
 			return p;
 		} 
-		void operator delete(void * , void *) throw () {
+		void operator delete(void * , void *) {
 		} 
 	};
 	struct _V {                // Placement new wrapper
 		V _v;
-		explicit _V() throw () : _v() {}
-		explicit _V(const V & v) throw () : _v(v) {}
-		void * operator new(size_t, void * p) throw () {
+		explicit _V() : _v() {}
+		explicit _V(const V & v) : _v(v) {}
+		void * operator new(size_t, void * p) {
 			return p;
 		} 
-		void operator delete(void * , void *) throw () {
+		void operator delete(void * , void *) {
 		} 
 	};
 
 	// Make some space...
-	void allocate(const unsigned s) throw (std::bad_alloc) {
+	void allocate(const unsigned s) {
 		unsigned b = bufsize(s);
 		if (b == buffer)
 			return;
@@ -1291,7 +1291,7 @@ protected:
 		value = vtemp;
 		buffer = b;
 	}
-	void deallocate() throw () {
+	void deallocate() {
 		if (key) {
 			for (unsigned i = 0; i < size; i++)
 				key[i].~K();
@@ -1307,7 +1307,7 @@ protected:
 		size = 0;
 		buffer = 0;
 	}
-	void init(const K * k, const V * v) throw () {
+	void init(const K * k, const V * v) {
 		assert(k != 0);
 		if (v)
 			new(&value[size]) _V(*v);
@@ -1315,7 +1315,7 @@ protected:
 			new(&value[size]) _V();
 		new(&key[size++]) _K(*k);
 	}
-	void copy(const unsigned s, const K * k, const V * v, bool checkdups) throw () {
+	void copy(const unsigned s, const K * k, const V * v, bool checkdups) {
 		for (unsigned i = 0, p; k && i < s; i++) {
 			if (checkdups && (p = haskey(k[i])) != UINT_MAX)
 				value[p] = (v ? v[i] : V());
@@ -1324,7 +1324,7 @@ protected:
 		}
 	}
 	// Don't allow yobos to make empty sets...
-	inline explicit afset() throw ()
+	inline explicit afset()
 	  : set(), key(0), value(0) {
 		allocate(size);
 	}
@@ -1337,36 +1337,36 @@ template <class K, class V>
 class asset : public afset<K,V> {
 public:
 	// Empty sizeable sets are OK.
-	inline explicit asset() throw ()
+	inline explicit asset()
 	  : afset<K,V>() {
 	}
-	inline explicit asset(const unsigned s, const unsigned b) throw ()
+	inline explicit asset(const unsigned s, const unsigned b)
 	  : afset<K,V>(s,b) {
 	}
 	// Simple constructor.
 	inline explicit asset(const unsigned s, const K * k = 0,
-			const V * v = 0, const unsigned b = DFLT_BLK) throw ()
+			const V * v = 0, const unsigned b = DFLT_BLK)
 	  : afset<K,V>(s,k,v,b) {
 	}
 	// Copy constructor.
-	inline explicit asset(const afset<K,V> & v) throw ()
+	inline explicit asset(const afset<K,V> & v)
 	  : afset<K,V>(v) {
 	}
 	// Destructor.
-	inline ~asset() throw () {
+	inline ~asset() {
 	}
 
 	// Add one...
-	inline bool add(const K & k,const V & v) throw () {
+	inline bool add(const K & k,const V & v) {
 		return add(&k,&v,1);
 	}
 	// Add a whole set, at the end.
-	inline bool add(const afset<K,V> & v) throw () {
+	inline bool add(const afset<K,V> & v) {
 		return add(v.key,v.value,v.size);
 	}
 	// Add a whole bunch...
 	bool add(const K * k, const V * v = 0,
-			const unsigned s = 1) throw () {
+			const unsigned s = 1) {
 		if (s == 0 || k == 0)
 			return false;
 		this->allocate(this->size+s);
@@ -1375,7 +1375,7 @@ public:
 		return true;
 	}
 	// Now start removing them...
-	bool remove(const K & k) throw () {
+	bool remove(const K & k) {
 		unsigned p = this->haskey(k) + 1;
 		if (p == 0)
 			return false;
@@ -1391,14 +1391,14 @@ public:
 		return true;
 	}
 	// Or replacing them...
-	inline bool replace(const K & k, const V & v) throw () {
+	inline bool replace(const K & k, const V & v) {
 		unsigned p = this->haskey(k);
 		if (p == UINT_MAX)
 			return false;
 		this->value[p] = v;
 		return true;
 	}
-	inline void empty() throw () {
+	inline void empty() {
 		this->deallocate();
 		this->allocate(0);
 	}
@@ -1412,30 +1412,30 @@ public:
 template <class K, class V>
 class aoset : public asset<K,V> {
 public:
-	inline explicit aoset() throw ()
+	inline explicit aoset()
 	  : asset<K,V>() {
 	}
-	inline explicit aoset(const unsigned s, const unsigned b) throw ()
+	inline explicit aoset(const unsigned s, const unsigned b)
 	  : asset<K,V>(s,b) {
 	}
 	inline explicit aoset(const unsigned s, const K * k = 0,
-			const V * v = 0, const unsigned b = DFLT_BLK) throw ()
+			const V * v = 0, const unsigned b = DFLT_BLK)
 	  : asset<K,V>(s,k,v,b) {
 		if (k)
 			sort();
 	}
-	inline explicit aoset(const afset<K,V> & v) throw ()
+	inline explicit aoset(const afset<K,V> & v)
 	  : asset<K,V>(v) {
 		sort();
 	}
-	inline ~aoset() throw () {
+	inline ~aoset() {
 	}
 
-	inline void sort() throw () {
+	inline void sort() {
 		qsort(0,this->size);
 	}
 protected:
-	void qsort(const unsigned l, const unsigned r) throw () {
+	void qsort(const unsigned l, const unsigned r) {
 		if (r <= l)
 			return;
 		unsigned i, j, k, p = l+(r-1-l)/2;
@@ -1470,7 +1470,7 @@ protected:
 			qsort(p+1,r);
 		}
 	}
-	void isort(const unsigned l, const unsigned r) throw () {
+	void isort(const unsigned l, const unsigned r) {
 		for (unsigned i = l; l < r && i < r-1; i++) {
 			for (unsigned j = i+1; j > l
 					&& this->key[j-1] > this->key[j]; j--) {
@@ -1487,30 +1487,30 @@ protected:
 template <class K, class V>
 class avoset : public asset<K,V> {
 public:
-	inline explicit avoset() throw ()
+	inline explicit avoset()
 	  : asset<K,V>() {
 	}
-	inline explicit avoset(const unsigned s, const unsigned b) throw ()
+	inline explicit avoset(const unsigned s, const unsigned b)
 	  : asset<K,V>(s,b) {
 	}
 	inline explicit avoset(const unsigned s, const K * k = 0,
-			const V * v = 0, const unsigned b = DFLT_BLK) throw ()
+			const V * v = 0, const unsigned b = DFLT_BLK)
 	  : asset<K,V>(s,k,v,b) {
 		if (k)
 			sort();
 	}
-	inline explicit avoset(const afset<K,V> & v) throw ()
+	inline explicit avoset(const afset<K,V> & v)
 	  : asset<K,V>(v) {
 		sort();
 	}
-	inline ~avoset() throw () {
+	inline ~avoset() {
 	}
 
-	inline void sort() throw () {
+	inline void sort() {
 		qsort(0,this->size);
 	}
 protected:
-	void qsort(const unsigned l, const unsigned r) throw () {
+	void qsort(const unsigned l, const unsigned r) {
 		if (r <= l)
 			return;
 		unsigned i, j, k, p = l+(r-1-l)/2;
@@ -1545,7 +1545,7 @@ protected:
 			qsort(p+1,r);
 		}
 	}
-	void isort(const unsigned l, const unsigned r) throw () {
+	void isort(const unsigned l, const unsigned r) {
 		for (unsigned i = l; l < r && i < r-1; i++) {
 			for (unsigned j = i+1; j > l
 					&& this->value[j-1] > this->value[j]; j--) {
