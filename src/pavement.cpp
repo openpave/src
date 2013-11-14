@@ -125,17 +125,11 @@ pavedata::principle(double v, double E) throw ()
 	}
 }
 
-bool
+void
 LEsystem::addlayer(double h, double e, const double v, const double s,
-		const unsigned p) throw ()
+		const unsigned p) throw (std::bad_alloc)
 {
-	LElayer * pl = new LElayer(this,
-			(p == UINT_MAX ? last : &layer(p)),h,e,v,s);
-	if (pl == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in LEsystem::addlayer()!");
-		return false;
-	}
-	return true;
+	new LElayer(this,(p == UINT_MAX ? last : &layer(p)),h,e,v,s);
 }
 
 bool
@@ -789,11 +783,10 @@ buildT(const double m, const double z, const double (&ABCD)[4],
  * is exposed so that people can use it if they really want.
  */
 bool
-LEsystem::calc_accurate() throw ()
+LEsystem::calc_accurate() throw (std::bad_alloc)
 {
 	unsigned ixy, ild, ib, igp, il;
 	const LElayer * pl;
-	bool rv = true;
 	
 	initarrays();
 	if (!check())
@@ -811,11 +804,6 @@ LEsystem::calc_accurate() throw ()
 	// so we never have to worry about the add()'s failing.
 	cset<double> bm0(0, 2*NBZ+2);
 	cset<double> bm1(0, 2*NBZ+2);
-	if (R == 0 || ABCD == 0 || h == 0 || f == 0 || v == 0 || E == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in LEsystem::calc_accurate()!");
-		rv = false;
-		goto abort;
-	}
 	for (pl = first, il = 0; pl != 0; pl = pl->next, il++) {
 		h[il] = pl->bottom();
 		f[il] = MAX(0.0,pl->slip());
@@ -900,26 +888,25 @@ LEsystem::calc_accurate() throw ()
 		// Calculate the derived results (principal stresses and strains).
 		d.principle(v[il],E[il]);
 	}
-abort:
 	delete [] R;
 	delete [] ABCD;
 	delete [] h;
 	delete [] f;
 	delete [] v;
 	delete [] E;
-	return rv;
+	return true;
 }
 
 /*
  * This used to be ELSYM5M, now it's a NxNxN layered elastic code...
  */
 bool
-LEsystem::calculate(resulttype res, const double * Q) throw ()
+LEsystem::calculate(resulttype res, const double * Q) throw (std::bad_alloc)
 {
 	unsigned ixy, nr, ir, nz, iz, ild, ia, ib, igp, il;
 	const LElayer * pl;
 	double x1, x2;
-	bool rv = false, interpolate = false;
+	bool interpolate = false;
 	
 	initarrays();
 	if (!check())
@@ -954,8 +941,6 @@ LEsystem::calculate(resulttype res, const double * Q) throw ()
 	cset<zpoint> z;
 	fset<double> m0(data.length()), m1(data.length()); 
 	fset<axialdata> ax(data.length()); 
-	if (R == 0 || ABCD == 0 || h == 0 || f == 0 || v == 0 || E == 0)
-		goto abort;
 	for (pl = first, il = 0; pl != 0; pl = pl->next, il++) {
 		h[il] = pl->bottom();
 		f[il] = MAX(0.0,pl->slip());
@@ -969,8 +954,7 @@ LEsystem::calculate(resulttype res, const double * Q) throw ()
 		// If we're collecting displacement gradient results
 		// resize the array as needed then zero it.
 		if (res & grad) {
-			if (!d.deflgrad.resize(nl))
-				goto abort;
+			d.deflgrad.resize(nl);
 			memset(&(d.deflgrad[0]),0,nl*sizeof(double));
 		}
 		if (!z.add(zpoint(d.z,d.il)))
@@ -979,11 +963,8 @@ LEsystem::calculate(resulttype res, const double * Q) throw ()
 	z.sort();
 	nz = z.length();
 
-	if (interpolate) {
+	if (interpolate)
 		iT = new double[nz][2][4];
-		if (iT == 0)
-			goto abort;
-	}
 
 	// Gerenate a list of load radii, then sort them and map from loads.
 	for (ild = 0; ild < load.length(); ild++) {
@@ -1007,8 +988,8 @@ LEsystem::calculate(resulttype res, const double * Q) throw ()
 		}
 		r.sort();
 		nr = r.length();
-		if (!m0.resize(nr) || !m1.resize(nr))
-			goto abort;
+		m0.resize(nr);
+		m1.resize(nr);
 
 		// Now gerenate a list of integration intervals, then sort them.
 		bm.empty();
@@ -1066,8 +1047,7 @@ LEsystem::calculate(resulttype res, const double * Q) throw ()
 		
 gradloop:
 		// And finally, somewhere to stick the radial data...
-		if (!ax.resize(nr*nz))
-			goto abort;
+		ax.resize(nr*nz);
 		memset(&ax[0],0,sizeof(axialdata)*nz*nr);
 		// Compute the active set.
 		for (ixy = 0; ixy < data.length(); ixy++) {
@@ -1212,11 +1192,7 @@ gradloop:
 			}
 		}
 	}
-	rv = true;
-
 abort:
-	if (rv == false)
-		event_msg(EVENT_ERROR,"Out of memory in LEsystem::calculate()!");
 	delete [] R;
 	delete [] ABCD;
 	delete [] iT;
@@ -1224,7 +1200,7 @@ abort:
 	delete [] f;
 	delete [] v;
 	delete [] E;
-	return rv;
+	return true;
 }
 
 /*
@@ -1297,11 +1273,10 @@ boussinesq_vdp(double z, double r, double a, double v, double E,
  * used for very fast approximations.
  */
 bool
-LEsystem::calc_odemark() throw ()
+LEsystem::calc_odemark() throw (std::bad_alloc)
 {
 	unsigned ixy, ild, il;
 	LElayer * pl;
-	bool rv = true;
 
 	if (!check())
 		return false;
@@ -1309,10 +1284,6 @@ LEsystem::calc_odemark() throw ()
 	double * h = new double[nl];
 	double * v = new double[nl];
 	double * E = new double[nl];
-	if (h == 0 || v == 0 || E == 0) {
-		rv = false;
-		goto abort;
-	}
 	for (pl = first, il = 0; pl != 0; pl = pl->next, il++)
 		h[il] = pl->bottom(), v[il] = pl->poissons(), E[il] = pl->emod();
 
@@ -1373,13 +1344,10 @@ LEsystem::calc_odemark() throw ()
 		}
 		d.principle(v[d.il],E[d.il]);
 	}
-abort:
-	if (rv == false)
-		event_msg(EVENT_ERROR,"Out of memory in LEsystem::fastnum()!");
 	delete [] h;
 	delete [] v;
 	delete [] E;
-	return rv;
+	return true;
 }
 
 /*
@@ -1523,11 +1491,10 @@ quad8_vse(double r, double z, double a, double A = 0.0,
  * done to derive more integration functions above.  But these are long...
  */
 bool
-LEsystem::calc_fastnum() throw ()
+LEsystem::calc_fastnum() throw (std::bad_alloc)
 {
 	unsigned ixy, ild, il;
 	LElayer * pl;
-	bool rv = true;
 
 	if (!check())
 		return false;
@@ -1535,10 +1502,6 @@ LEsystem::calc_fastnum() throw ()
 	double * h = new double[nl];
 	double * v = new double[nl];
 	double * E = new double[nl];
-	if (h == 0 || v == 0 || E == 0) {
-		rv = false;
-		goto abort;
-	}
 	for (pl = first, il = 0; pl != 0; pl = pl->next, il++)
 		h[il] = pl->bottom(), v[il] = pl->poissons(), E[il] = pl->emod();
 
@@ -1586,26 +1549,24 @@ LEsystem::calc_fastnum() throw ()
 			d.data[4][2] += load[ild].pressure()*vdp;
 		}
 	}
-abort:
-	if (rv == false)
-		event_msg(EVENT_ERROR,"Out of memory in LEsystem::fastnum()!");
 	delete [] h;
 	delete [] v;
 	delete [] E;
-	return rv;
+	return true;
 }
 
 /*
  * The overall backcalculation routine.
  */
 bool
-LEbackcalc::backcalc() throw ()
+LEbackcalc::backcalc() throw (std::bad_alloc)
 {
 	unsigned i, j, nl = layers();
 	unsigned steps = 0;
-	double derr = DBL_MAX, oerr = 0.0;
+	//double derr = DBL_MAX, oerr = 0.0;
 	double astep, tstep = 0.0, step = 1.0;
-	bool seeded = true, badstep = false;
+	bool seeded = true;
+	//bool badstep = false;
 	calctype speed = (precision >= 1e-4 ? fast : slow);
 	ksset<pavepoint,pavedata> orig(data);
 
@@ -1621,10 +1582,6 @@ LEbackcalc::backcalc() throw ()
 	double * T = new double[nl];
 	double * O = new double[nl];
 	double * Q = new double[nl*nl];
-	if (P == 0 || T == 0 || O == 0 || Q == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in LEbackcalc::backcalc()!");
-		goto abort;
-	}
 
 	// Remove all existing evaluation points, after saving...
 	removepoints();
@@ -1654,7 +1611,8 @@ LEbackcalc::backcalc() throw ()
 			return true;
 	}
 	if (!seeded || step > 0.5) {
-		badstep = seed(nl,P);
+		//badstep =
+		seed(nl,P);
 		memcpy(T,P,sizeof(double)*nl);
 		memcpy(O,P,sizeof(double)*nl);
 	}
@@ -1726,8 +1684,9 @@ LEbackcalc::backcalc() throw ()
 		for (i = 0; i < nl; i++)
 			layer(i).emod(pow(10,P[i]));
 		calculate((speed == fast ? LEsystem::fastgrad : LEsystem::dispgrad));
-		oerr = derr, derr = (precision > 0.0
-			? ROUND(bowlerror()/precision)*precision : bowlerror());
+		//oerr = derr;
+		//derr = (precision > 0.0
+		//	? ROUND(bowlerror()/precision)*precision : bowlerror());
 		//printf("K%s ",speed == fast ? "*" : speed == slow ? "!" : "@");
 		//printf("err = %g ",derr);
 		//if (oerr + FLT_EPSILON < derr && ++ns > 2) { // Ooops, our error increased...
@@ -1757,7 +1716,6 @@ LEbackcalc::backcalc() throw ()
 	}
 	// Restore original evaluation points...
 	data = orig;
-abort:
 	delete [] Q;
 	delete [] O;
 	delete [] T;
@@ -1813,7 +1771,7 @@ LEbackcalc::seed(unsigned nl, double * P) throw ()
  */
 double
 LEbackcalc::deflgrad(unsigned nl, double * P, double * Q,
-                     calctype cl) throw ()
+                     calctype cl) throw (std::bad_alloc)
 {
 	double step = 0.0, dgg = 0.0, gg = 0.0, dd = 0.0;
 	unsigned i, j, k, dl = defl.length();
@@ -1826,11 +1784,6 @@ LEbackcalc::deflgrad(unsigned nl, double * P, double * Q,
 	double * D = new double[nl];
 	double * G = new double[nl];
 	double * W = new double[nl];
-	if (PG == 0 || MD == 0 || CD == 0 || DG == 0
-	  || D == 0 || G == 0 || W == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in LEbackcalc::deflgrad()!");
-		goto abort;
-	}
 	memset(W,0,sizeof(double)*nl);
 	for (i = 0; i < nl; i++)
 		layer(i).emod(pow(10,P[i]));
@@ -1901,7 +1854,6 @@ LEbackcalc::deflgrad(unsigned nl, double * P, double * Q,
 	// Orthonormalize Q.
 	if (Q != 0)
 		orth_gs(nl,Q);
-abort:
 	delete [] W;
 	delete [] G;
 	delete [] D;
@@ -1916,7 +1868,7 @@ abort:
  * Gauss-Newton approach.
  */
 double
-LEbackcalc::gaussnewton(unsigned nl, double * P, calctype cl) throw ()
+LEbackcalc::gaussnewton(unsigned nl, double * P, calctype cl) throw (std::bad_alloc)
 {
 	unsigned i, j, k, dl = defl.length();
 	double step = 0.0;
@@ -1926,10 +1878,6 @@ LEbackcalc::gaussnewton(unsigned nl, double * P, calctype cl) throw ()
 	double * S = new double[nl*nl];
 	double * W = new double[nl];
 	double * Y = new double[nl];
-	if (H == 0 || S == 0 || W == 0 || Y == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in LEbackcalc::gaussnewton()!");
-		goto abort;
-	}
 	memset(Y,0,sizeof(double)*nl);
 	for (i = 0; i < nl; i++)
 		layer(i).emod(pow(10,P[i]));
@@ -1953,11 +1901,10 @@ LEbackcalc::gaussnewton(unsigned nl, double * P, calctype cl) throw ()
 				S[i*nl+j] += H[k*nl+i]*H[k*nl+j];
 		}
 	}
-	equ_eig(nl,S,Y,W);
+	equ_eig(nl,S,Y,W); // try
 	for (i = 0, step = 0.0; i < nl; i++)
 		step += W[i]*W[i], P[i] += W[i];
 	step = sqrt(step);
-abort:
 	delete [] Y;
 	delete [] W;
 	delete [] S;
@@ -1972,7 +1919,7 @@ abort:
  * on Wikipedia article.
  */
 double
-LEbackcalc::kalman(unsigned nl, double * P) throw ()
+LEbackcalc::kalman(unsigned nl, double * P) throw (std::bad_alloc)
 {
 	unsigned i, j, k, dl = defl.length();
 	double step = 0.0;
@@ -1983,10 +1930,6 @@ LEbackcalc::kalman(unsigned nl, double * P) throw ()
 	double * K = new double[nl*dl];
 	double * Y = new double[dl];
 	double * W = new double[nl];
-	if (H == 0 || S == 0 || K == 0 || Y == 0 || W == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in LEbackcalc::kalman()!");
-		goto abort;
-	}
 	for (j = 0; j < dl; j++) {
 		defldata & d = defl[j];
 		d.calculated = result(d).result(pavedata::deflct, pavedata::zz);
@@ -2002,7 +1945,7 @@ LEbackcalc::kalman(unsigned nl, double * P) throw ()
 	}
 	for (i = 0; i < dl; i++)
 		S[i*dl+i] += noise*noise + (precision*precision)/3.0;
-	inv_eig(dl,S);
+	inv_eig(dl,S); // try
 	for (i = 0; i < nl; i++) {
 		for (j = 0; j < dl; j++) {
 			for (k = 0, K[i*dl+j] = 0.0; k < dl; k++)
@@ -2021,7 +1964,6 @@ LEbackcalc::kalman(unsigned nl, double * P) throw ()
 		for (i = 0; i < nl; i++)
 			P[i] = MIN(MAX(1,P[i]+W[i]),9);
 	//}
-abort:
 	delete [] W;
 	delete [] Y;
 	delete [] K;
@@ -2167,7 +2109,7 @@ LEbackcalc::brent(unsigned nl, double * P, double * D) throw ()
  * better if it can keep track of its last direction.  It is slow.
  */
 double
-LEbackcalc::conjgrad(unsigned nl, double * P) throw ()
+LEbackcalc::conjgrad(unsigned nl, double * P) throw (std::bad_alloc)
 {
 	double step = 1.0, dgg = 0.0, gg = 0.0;
 	double derr = DBL_MAX, oerr = 0.0;
@@ -2177,10 +2119,6 @@ LEbackcalc::conjgrad(unsigned nl, double * P) throw ()
 	double * D = new double[nl];
 	double * G = new double[nl];
 	double * W = new double[nl];
-	if (D == 0 || G == 0 || W == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in LEbackcalc::conjgrad()!");
-		goto abort;
-	}
 	memcpy(W,P,sizeof(double)*nl);
 	memset(D,0,sizeof(double)*nl);
 	for (k = 0; k <= maxsteps*nl; k++) {
@@ -2208,7 +2146,6 @@ LEbackcalc::conjgrad(unsigned nl, double * P) throw ()
 	}
 	for (i = 0, gg = 0.0; i < nl; i++)
 		gg += (P[i]-W[i])*(P[i]-W[i]), P[i] = MIN(MAX(1,W[i]),9);
-abort:
 	delete [] W;
 	delete [] G;
 	delete [] D;
@@ -2219,15 +2156,18 @@ abort:
  * This is a new particle swarm optimisation based solver...
  */
 #define PARTICLES 100
-double LEbackcalc::swarm(unsigned nl, double * P) throw () {
+double
+LEbackcalc::swarm(unsigned nl, double * P) throw (std::bad_alloc)
+{
 	double gg = 0.0, dgg = 0.0, derr = DBL_MAX, werr = -DBL_MAX;
-	double r1 = 0.0, r2 = 0.0;
+	//double r1 = 0.0;
+	double r2 = 0.0;
 	double sderr = sqrt(noise*noise + (precision*precision)/3.0);
 	const double w = 0.0;
-	const double c1 = 0.2;
-	const double c2 = 0.3;
+	//const double c1 = 0.2;
+	//const double c2 = 0.3;
 	const double G = 0.1;
-	unsigned p, i, j, iter = 0;
+	unsigned p, i, iter = 0;
 	unsigned best = 0;
 
 	double * X = new double[PARTICLES*nl];
@@ -2236,10 +2176,6 @@ double LEbackcalc::swarm(unsigned nl, double * P) throw () {
 	double * E = new double[2*PARTICLES];
 	double * R1 = new double[nl*nl];
 	double * R2 = new double[nl*nl];
-	if (X == 0 || V == 0 || B == 0 || E == 0 || R1 == 0 || R2 == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in LEbackcalc::swarm()!");
-		goto abort;
-	}
 	for (p = 0; p < PARTICLES; p++) {
 		for (i = 0; i < nl; i++) {
 			X[p*nl+i] = RAND(MAX(2,P[i]-6.0),MIN(P[i]+4.0,8));
@@ -2348,8 +2284,6 @@ double LEbackcalc::swarm(unsigned nl, double * P) throw () {
 		gg += pow(P[i]-B[best*nl+i],2);
 		P[i] = MIN(MAX(1,B[best*nl+i]),9);
 	}
-	
-abort:
 	delete [] X;
 	delete [] V;
 	delete [] B;

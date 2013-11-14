@@ -509,8 +509,7 @@ public:
 	}
 	// Add node.
 	inline bool add(const coord3d & v) {
-		if (!allocate(size+1))
-			return false;
+		allocate(size+1);
 		if (!append(root,v))
 			return false;
 		value[root].red = false;
@@ -525,21 +524,18 @@ protected:
 	node3d * value;            // Take a guess...
 
 	// Make some space...
-	bool allocate(const unsigned s) {
+	void allocate(const unsigned s) {
 		while (s > 8*block)
 			block *= 8;
 		unsigned b = block*(s/block+(s%block?1:0));
 		if (b == buffer)
-			return true;
+			return;
 		node3d * temp = static_cast<node3d *>(realloc(value,
 				b*sizeof(node3d)));
-		if (temp == 0) {
-			event_msg(EVENT_ERROR,"Out of memory in node_list::allocate()!");
-			return false;
-		}
+		if (temp == 0)
+			throw std::bad_alloc();
 		value = temp;
 		buffer = b;
-		return true;
 	}
 	bool append(unsigned & r, const coord3d & c) {
 		// If we're UINT_MAX that means we need to make a new node...
@@ -602,7 +598,7 @@ public:
 		K = static_cast<smatrix_dof *>
 				(calloc(size(),sizeof(smatrix_dof)));
 		if (K == 0)
-			event_msg(EVENT_ERROR,"Out of memory in smatrix_elem::smatrix_elem()!");
+			throw std::bad_alloc();
 	}
 	inline ~smatrix_elem() {
 		if (K != 0)
@@ -1054,11 +1050,6 @@ protected:
 		getgauss(SZ,nz,gz);
 
 		smatrix_elem * K = new smatrix_elem(nnd);
-		if (K == 0) {
-			event_msg(EVENT_ERROR,"Out of memory in element::stiffness()!");
-			return 0;
-		}
-
 		double * N = static_cast<double *>(alloca(nnd*sizeof(double)));
 		// This matrix is transposed.
 		double (* dNdr)[NDIM] = static_cast<double (*)[NDIM]>
@@ -1679,10 +1670,8 @@ class smatrix_diag {
 			smatrix_node * temp =
 					static_cast<smatrix_node *>
 					(realloc(nodes,nnd*sizeof(smatrix_node)));
-			if (temp == 0) {
-				event_msg(EVENT_ERROR,"Out of memory in smatrix_diag::insert()!");
-				return false;
-			}
+			if (temp == 0)
+				throw std::bad_alloc();
 			// If realloc moved us we need to fix up everyone's pointers.
 			// This is finds the offset into the old array, and then adds
 			// that to the new array.
@@ -1720,7 +1709,7 @@ public:
 		diag = static_cast<smatrix_diag *>
 				(calloc(nnd,sizeof(smatrix_diag)));
 		if (diag == 0)
-			event_msg(EVENT_ERROR,"Out of memory in smatrix::smatrix()!");
+			throw std::bad_alloc();
 		for (unsigned i = 0; d != 0.0 && i < nnd; i++) {
 			for (unsigned j = 0; j < NDOF; j++)
 				diag[i].K(j,j) = d;
@@ -1731,10 +1720,8 @@ public:
 	  : nnd(A.nnd), diag(0) {
 		diag = static_cast<smatrix_diag *>
 				(calloc(nnd,sizeof(smatrix_diag)));
-		if (diag == 0) {
-			event_msg(EVENT_ERROR,"Out of memory in smatrix::smatrix()!");
-			return;
-		}
+		if (diag == 0)
+			throw std::bad_alloc();
 		for (unsigned i = 0; i < nnd; i++) {
 			smatrix_diag * d = &(A.diag[i]);
 			// Pre-allocate the space.
@@ -2012,7 +1999,7 @@ public:
 		V = static_cast<svector_dof *>
 				(calloc(nnd,sizeof(svector_dof)));
 		if (V == 0)
-			event_msg(EVENT_ERROR,"Out of memory in svector::svector()!");
+			throw std::bad_alloc();
 	}
 	inline ~svector() {
 		if (V)
@@ -2150,8 +2137,6 @@ public:
 			}
 			break;
 		}
-		if (e == 0)
-			event_msg(EVENT_ERROR,"Out of memory in mesh::add()!");
 		return e;
 	}
 	inline unsigned addnode(const coord3d & c) {

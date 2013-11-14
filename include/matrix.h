@@ -301,8 +301,6 @@ protected:
 			delete [] data;
 		M = m, N = n;
 		data = new double[M*N];
-		if (data == 0)
-			event_msg(EVENT_ERROR,"Out of memory for struct matrix!");
 	}
 };
 
@@ -608,10 +606,7 @@ public:
 	inline matrix(const unsigned m, const unsigned n)
 		: data(0) {
 		matrix_storage * d = new matrix_zero(m,n);
-		if (d == 0)
-			event_msg(EVENT_ERROR,"Out of memory for class matrix!");
-		else
-			data = matrix_storage_ptr(d);
+		data = matrix_storage_ptr(d);
 	}
 	inline matrix(const matrix & m)
 		: data(m.data) {
@@ -678,10 +673,6 @@ private:
 inline matrix
 operator! (matrix & b) {
 	matrix_storage * d = new matrix_operator(matrix_operator::unref,b.data);
-	if (d == 0) {
-		event_msg(EVENT_ERROR,"Out of memory for class matrix!");
-		return matrix();
-	}
 	b.data.release();
 	return matrix(d);
 }
@@ -690,22 +681,14 @@ operator! (matrix & b) {
 inline matrix
 operator~ (const matrix & b) {
 	matrix_storage * d = new matrix_operator(matrix_operator::trans,b.data);
-	if (d == 0) {
-		event_msg(EVENT_ERROR,"Out of memory for class matrix!");
-		return matrix();
-	} else
-		return matrix(d);
+	return matrix(d);
 }
 
 // Some math operators...
 inline matrix
 operator- (const matrix & b) {
 	matrix_storage * d = new matrix_operator(matrix_operator::neg,b.data);
-	if (d == 0) {
-		event_msg(EVENT_ERROR,"Out of memory for class matrix!");
-		return matrix();
-	} else
-		return matrix(d);
+	return matrix(d);
 }
 
 /*
@@ -743,15 +726,18 @@ operator- (const matrix & b) {
                                    ((j)+1)*(w)+(i)-(w)*((w)+1)/2)
 
 void orth_gs(const unsigned n, double * Q) throw ();
-bool equ_gauss(const unsigned n, const double * A, const double * b, double * x) throw ();
+bool equ_gauss(const unsigned n, const double * A, const double * b,
+	double * x) throw (std::bad_alloc);
 double inv_mul_gauss(const unsigned n, const unsigned m, double * A, double * B) throw ();
-bool decmp_lu(const unsigned n, double * A, unsigned * idx, int & d) throw ();
-void bksub_lu(const unsigned n, const double * A, const unsigned * idx, double * b,
-	const unsigned m = 1, const unsigned c = 0) throw ();
+bool decmp_lu(const unsigned n, double * A, unsigned * idx, int & d)
+	throw (std::bad_alloc);
+void bksub_lu(const unsigned n, const double * A, const unsigned * idx,
+	double * b, const unsigned m = 1, const unsigned c = 0) throw ();
 bool equ_lu(const unsigned n, const double * A, const double * b, double * x,
-	const double tol = ERR_TOL) throw ();
-double inv_mul_lu(const unsigned n, const unsigned m, double * A, double * B) throw ();
-bool inv_lu(const unsigned n, double * A) throw ();
+	const double tol = ERR_TOL) throw (std::bad_alloc);
+double inv_mul_lu(const unsigned n, const unsigned m, double * A,
+	double * B) throw (std::bad_alloc);
+bool inv_lu(const unsigned n, double * A) throw (std::bad_alloc);
 bool decmp_chol(const unsigned n, double * A) throw ();
 bool decmp_chol_tri(const unsigned n, double * A) throw ();
 bool decmp_chol(const unsigned n, const unsigned w, double * A) throw ();
@@ -760,32 +746,32 @@ void bksub_chol(const unsigned n, const double * A, double * b,
 void bksub_chol(const unsigned n, const unsigned w, const double * A, double * b,
 	const unsigned m = 1, const unsigned c = 0) throw ();
 bool equ_chol(const unsigned n, const double * A, const double * b, double * x,
-	const double tol = ERR_TOL) throw ();
+	const double tol = ERR_TOL) throw (std::bad_alloc);
 bool equ_chol(const unsigned n, const unsigned w, const double * A, const double * b,
-	double * x, const double tol = ERR_TOL) throw ();
+	double * x, const double tol = ERR_TOL) throw (std::bad_alloc);
 bool inv_chol(const unsigned n, double * A) throw ();
 bool decmp_ldl(const unsigned n, double * A) throw ();
 void bksub_ldl(const unsigned n, const double * A, double * b,
 	const unsigned m = 1, const unsigned c = 0) throw ();
 bool equ_ldl(const unsigned n, const double * A, const double * b, double * x,
-	const double tol = ERR_TOL) throw ();
-bool decmp_svd(const unsigned m, const unsigned n, double * A, double * W, double * V) throw ();
+	const double tol = ERR_TOL) throw (std::bad_alloc);
+bool decmp_svd(const unsigned m, const unsigned n, double * A, double * W, double * V) throw (std::bad_alloc);
 bool bksub_svd(const unsigned m, const unsigned n, const double * U, const double * W,
-	const double * V, double * b, const unsigned p = 1, const unsigned c = 0) throw ();
+	const double * V, double * b, const unsigned p = 1, const unsigned c = 0) throw (std::bad_alloc);
 bool equ_svd(const unsigned n, const double * A,	const double * b, double * x,
-	const double tol = ERR_TOL) throw ();
-bool inv_svd(const unsigned n, double * A) throw ();
-bool orth_svd(const unsigned n, double * Q) throw ();
+	const double tol = ERR_TOL) throw (std::bad_alloc);
+bool inv_svd(const unsigned n, double * A) throw (std::bad_alloc);
+bool orth_svd(const unsigned n, double * Q) throw (std::bad_alloc);
 bool decmp_qr(const unsigned n, double * A, double * s, double * d) throw ();
 void bksub_qr(const unsigned n, const double * A, const double * s,
 	const double * d, double * b, const unsigned m = 1, const unsigned c = 0) throw ();
 void tridiag_hh(const unsigned n, double * A, double * d, double * e) throw ();
 void eig_tri_ql(const unsigned n, double * d, double * e, double * A) throw ();
-bool eig_ql(const unsigned n, double * A, double * d, bool sorted = true) throw ();
+bool eig_ql(const unsigned n, double * A, double * d, bool sorted = true) throw (std::bad_alloc);
 bool bksub_eig(const unsigned n, const double * Q, const double * d, double * b,
-	const unsigned p = 1, const unsigned c = 0) throw ();
+	const unsigned p = 1, const unsigned c = 0) throw (std::bad_alloc);
 bool equ_eig(const unsigned n, const double * A, const double * b, double * x,
-	const double tol = ERR_TOL) throw ();
-bool inv_eig(const unsigned n, double * A) throw ();
+	const double tol = ERR_TOL) throw (std::bad_alloc);
+bool inv_eig(const unsigned n, double * A) throw (std::bad_alloc);
 
 #endif // MATRIX_H

@@ -364,11 +364,11 @@ bool WIMsurvey::ProcessRSADir(const char * dir, const char * bname)
 		return false;
 	} else {
 		do {
-			if ((fname = strdup(found_file.name)) == NULL
-			 || !RSAfiles.add(fname,WIMday::GetRSADate(fname))) {
-				event_msg(EVENT_FATAL,"Out of memeory in WIMsurvey::ProcessRSADir()!");
+			fname = strdup(found_file.name);
+			if (fname == NULL)
+				throw std::bad_alloc();
+			if !RSAfiles.add(fname,WIMday::GetRSADate(fname))
 				return false;
-			}
 		} while (_findnext(fn,&found_file) == 0);
 		_findclose(fn);
 	}
@@ -380,11 +380,11 @@ bool WIMsurvey::ProcessRSADir(const char * dir, const char * bname)
 	} else {
 		fn = *(g.gl_pathv);
 		do {
-			if ((fname = strdup(fn)) == NULL
-			 || !RSAfiles.add(fname,WIMday::GetRSADate(fname))) {
-				event_msg(EVENT_FATAL,"Out of memeory in WIMsurvey::ProcessRSADir()!");
+			fname = strdup(fn);
+			if (fname == NULL)
+				throw std::bad_alloc();
+			if !RSAfiles.add(fname,WIMday::GetRSADate(fname))
 				return false;
-			}
 		} while (++fn != 0);
 	}
 	globfree(&g);

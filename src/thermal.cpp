@@ -90,11 +90,6 @@ FEMthermal::FEMthermal(const int nl, const double * lh, const double * ld,
 	FF = new double[B_SIZE(n,w)];
 	Kt = new double[n];
 	Kb = new double[n];
-	if (lb == 0 || nd == 0 || nt == 0 || ng == 0
-	 || KK == 0 || FF == 0 || Kt == 0 || Kb == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in FEMthermal::FEMthermal()!");
-		goto abort;
-	}
 	memcpy(nd,_nd,n*sizeof(double));
 	memcpy(nt,_nt,n*sizeof(double));
 	for (i = 0; i < nl; i++) {
@@ -161,11 +156,8 @@ FEMthermal::FEMthermal(const int nl, const double * lh, const double * ld,
 		KK[B_IDX(n,w,i,n-1)] = (i == n-1 ? 1.0 : 0.0);
 	}
 	// Perform cholesky decompostion
-	if (!decmp_chol(n,w,KK)) {
-		event_msg(EVENT_ERROR,
-			"Error setting up temperature calculations!");
+	if (!decmp_chol(n,w,KK))
 		goto abort;
-	}
 	// Setup the initial gradient vector
 	for (i = 0; i < n; i++)
 		ng[i] = 2*nt[i]/dt;

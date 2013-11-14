@@ -117,22 +117,20 @@ template <class V>
 class fset : public set {
 public:
 	// Nice simple constructor...
-	inline explicit fset(const unsigned s, const unsigned b) throw ()
+	inline explicit fset(const unsigned s, const unsigned b) throw (std::bad_alloc)
 	  : set(b), value(0) {
 		allocate(s);
 	}
 	inline explicit fset(const unsigned s, const V * v = 0,
-			const unsigned b = DFLT_BLK) throw ()
+			const unsigned b = DFLT_BLK) throw (std::bad_alloc)
 	  : set(b), value(0) {
-		if (!allocate(s))
-			return;
+		allocate(s);
 		copy(s,v);
 	}
 	// Copy constructor.
-	inline explicit fset(const fset<V> & v) throw ()
+	inline explicit fset(const fset<V> & v) throw (std::bad_alloc)
 	  : set(v), value(0) {
-		if (!allocate(v.size))
-			return;
+		allocate(v.size);
 		copy(v.size,v.value);
 	}
 	// Wow, a destructor...
@@ -141,20 +139,17 @@ public:
 	}
 
 	// Assignment operator.
-	inline fset<V> & operator= (const fset<V> & v) throw () {
+	inline fset<V> & operator= (const fset<V> & v) throw (std::bad_alloc) {
 		deallocate();
-		if (!allocate(v.size))
-			return *this;
+		allocate(v.size);
 		copy(v.size,v.value);
 		return *this;
 	}
 	// Allow the size to be changed, even for 'fixed' sets.
-	bool resize(const unsigned s) throw () {
+	void resize(const unsigned s) throw (std::bad_alloc) {
 		deallocate();
-		if (!allocate(s))
-			return false;
+		allocate(s);
 		copy(s,0);
-		return true;
 	}
 	// Behave like an array. Zero indexed.
 	V & operator[] (const unsigned p) const throw () {
@@ -176,24 +171,21 @@ protected:
 	};
 
 	// Since this is a fixed size set, hide the allocator...
-	bool allocate(const unsigned s) throw () {
+	void allocate(const unsigned s) throw (std::bad_alloc) {
 		unsigned b = bufsize(s);
 		if (b == buffer)
-			return true;
+			return;
 		if (b == 0) {
 			free(value);
 			value = 0;
 			buffer = 0;
-			return true;
+			return;
 		}
 		V * temp = static_cast<V *>(realloc(value,b*sizeof(V)));
-		if (temp == 0) {
-			event_msg(EVENT_ERROR,"Out of memory in fset::allocate()!");
-			return false;
-		}
+		if (temp == 0)
+			throw std::bad_alloc();
 		value = temp;
 		buffer = b;
-		return true;
 	}
 	void deallocate() throw () {
 		if (value) {
@@ -216,7 +208,7 @@ protected:
 			init(size++,(v ? &v[i] : 0));
 	}
 	// Also hide the null constructor.
-	inline explicit fset() throw ()
+	inline explicit fset() throw (std::bad_alloc)
 	  : set(), value(0) {
 		allocate(size);
 	}
@@ -256,19 +248,19 @@ template <class V>
 class sset : public fset<V> {
 public:
 	// Provide a null constuctor for empty sets.
-	inline explicit sset() throw ()
+	inline explicit sset() throw (std::bad_alloc)
 	  : fset<V>() {
 	}
-	inline explicit sset(const unsigned s, const unsigned b) throw ()
+	inline explicit sset(const unsigned s, const unsigned b) throw (std::bad_alloc)
 	  : fset<V>(s,b) {
 	}
 	// Simple constructor.
 	inline explicit sset(const unsigned s, const V * v = 0,
-			const unsigned b = DFLT_BLK) throw ()
+			const unsigned b = DFLT_BLK) throw (std::bad_alloc)
 	  : fset<V>(s,v,b) {
 	}
 	// Copy constructor.
-	inline explicit sset(const fset<V> & v) throw ()
+	inline explicit sset(const fset<V> & v) throw (std::bad_alloc)
 	  : fset<V>(v) {
 	}
 	// We let someone else clean up...
@@ -276,39 +268,37 @@ public:
 	}
 
 	// Add one element, at the end.
-	inline bool add(const V & v) throw () {
+	inline bool add(const V & v) throw (std::bad_alloc) {
 		return add(this->size,&v,1);
 	}
 	// Add a whole set, at the end.
-	inline bool add(const fset<V> & v) throw () {
+	inline bool add(const fset<V> & v) throw (std::bad_alloc) {
 		return add(this->size,&(v[0]),v.length());
 	}
 	// Add an array, at the end.
-	inline bool add(const V * v, const unsigned s = 1) throw () {
+	inline bool add(const V * v, const unsigned s = 1) throw (std::bad_alloc) {
 		return add(this->size,v,s);
 	}
 	// Insert one element at position p.
-	inline bool add(const unsigned p, const V & v) throw () {
+	inline bool add(const unsigned p, const V & v) throw (std::bad_alloc) {
 		return add(p,&v,1);
 	}
 	// Insert a set at position p.
-	inline bool add(const unsigned p, const fset<V> & v) throw () {
+	inline bool add(const unsigned p, const fset<V> & v) throw (std::bad_alloc) {
 		return add(p,&(v[0]),v.length());
 	}
 	// Add an array at position p. (Actually do the work too).
-	bool add(unsigned p, const V * v, const unsigned s = 1) throw () {
+	bool add(unsigned p, const V * v, const unsigned s = 1) throw (std::bad_alloc) {
 		unsigned i;
 		if (s == 0 || v == 0)
 			return false;
 		if (p >= this->size) {
-			if (!this->allocate(p+s))
-				return false;
+			this->allocate(p+s);
 			for (i = this->size; p > 0 && i < p-1; i++)
 				this->init(i,0);
 			this->size = p+s;
 		} else {
-			if (!this->allocate(this->size+s))
-				return false;
+			this->allocate(this->size+s);
 			memmove(&this->value[p+s],&this->value[p],
 					(this->size-p)*sizeof(V));
 			this->size += s;
@@ -322,7 +312,7 @@ public:
 		return remove(this->size-1,1);
 	}
 	// Remove s elements, starting at position p.
-	bool remove(unsigned p, unsigned s = 1) throw () {
+	bool remove(unsigned p, unsigned s = 1) throw (std::bad_alloc) {
 		if (!this->inbounds(p) || s == 0)
 			return false;
 		s = (p+s > this->size ? this->size-p : s);
@@ -332,11 +322,12 @@ public:
 			memmove(&this->value[p],&this->value[p+s],
 				(this->size-p-s)*sizeof(V));
 		this->size -= s;
-		return this->allocate(this->size);
+		this->allocate(this->size);
+		return true;
 	}
-	inline bool empty() throw () {
+	inline void empty() throw (std::bad_alloc) {
 		this->deallocate();
-		return this->allocate(0);
+		this->allocate(0);
 	}
 };
 
@@ -354,21 +345,21 @@ template <class V>
 class oset : public sset<V> {
 public:
 	// Null constructor.
-	inline explicit oset() throw ()
+	inline explicit oset() throw (std::bad_alloc)
 	  : sset<V>() {
 	}
-	inline explicit oset(const unsigned s, const unsigned b) throw ()
+	inline explicit oset(const unsigned s, const unsigned b) throw (std::bad_alloc)
 	  : sset<V>(s,b) {
 	}
 	// Simple constructor.
 	inline explicit oset(const unsigned s, const V * v = 0,
-			const unsigned b = DFLT_BLK) throw ()
+			const unsigned b = DFLT_BLK) throw (std::bad_alloc)
 	  : sset<V>(s,v,b) {
 		if (v)
 			sort();
 	}
 	// Copy constructor.
-	inline explicit oset(const fset<V> & v) throw ()
+	inline explicit oset(const fset<V> & v) throw (std::bad_alloc)
 	  : sset<V>(v) {
 		sort();
 	}
@@ -449,19 +440,19 @@ template <class V>
 class cset : public oset<V> {
 public:
 	// Getting the hang of this yet?
-	inline explicit cset() throw ()
+	inline explicit cset() throw (std::bad_alloc)
 	  : oset<V>() {
 	}
-	inline explicit cset(const unsigned s, const unsigned b) throw ()
+	inline explicit cset(const unsigned s, const unsigned b) throw (std::bad_alloc)
 	  : oset<V>(s,b) {
 	}
 	inline explicit cset(const unsigned s, const V * v = 0,
-			const unsigned b = DFLT_BLK) throw ()
+			const unsigned b = DFLT_BLK) throw (std::bad_alloc)
 	  : oset<V>(s,v,b) {
 		if (v)
 			compact();
 	}
-	inline explicit cset(const fset<V> & v) throw ()
+	inline explicit cset(const fset<V> & v) throw (std::bad_alloc)
 	  : oset<V>(v) {
 		compact();
 	}
@@ -469,13 +460,13 @@ public:
 	}
 
 	// Sort then compact the set.
-	inline void sort() throw () {
+	inline void sort() throw (std::bad_alloc) {
 		this->qsort(0,this->size);
 		compact();
 	}
 
 protected:
-	void compact() throw () {
+	void compact() throw (std::bad_alloc) {
 		unsigned i, j, s;
 		for (i = 1, j = 0; this->size > 1 && i < this->size; i++) {
 			if (this->value[j] != this->value[i])
@@ -524,23 +515,20 @@ public:
 	inline explicit iset(const unsigned s, const V * v = 0,
 			const unsigned b = DFLT_BLK) throw ()
 	  : set(b), idx(0), value(0) {
-		if (!allocate(s))
-			return;
+		allocate(s);
 		copy(s,v,true);
 		allocate(size);
 	}
 	// Copy constuctor.
 	inline explicit iset(const iset<V> & v) throw ()
 	  : set(v), idx(0), value(0) {
-		if (!allocate(v.size))
-			return;
+		allocate(v.size);
 		copy(v.size,v.value,false);
 	}
 	// Copy from an fset.
 	inline explicit iset(const fset<V> & v) throw ()
 	  : set(v), idx(0), value(0) {
-		if (!allocate(v.size))
-			return;
+		allocate(v.size);
 		copy(v.size,v.value,true);
 		allocate(size);
 	}
@@ -560,15 +548,13 @@ public:
 	// Assignment operator.
 	inline iset<V> & operator= (const iset<V> & v) throw () {
 		deallocate();
-		if (!allocate(v.size))
-			return *this;
+		allocate(v.size);
 		copy(v.size,v.value,false);
 		return *this;
 	}
 	inline iset<V> & operator= (const fset<V> & v) throw () {
 		deallocate();
-		if (!allocate(v.size))
-			return *this;
+		allocate(v.size);
 		copy(v.size,v.value,true);
 		allocate(size);
 		return *this;
@@ -605,10 +591,10 @@ public:
 	bool add(const V * v, const unsigned s = 1) throw () {
 		if (s == 0 || v == 0)
 			return false;
-		if (!allocate(size+s))
-			return false;
+		allocate(size+s);
 		copy(s,v,true);
-		return allocate(size);
+		allocate(size);
+		return true;
 	}
 	// Now start removing them...
 	bool remove(const V & v) throw () {
@@ -626,7 +612,8 @@ public:
 		}
 		if (q < size)
 			memmove(&idx[q],&idx[q+1],(size-q)*sizeof(unsigned));
-		return allocate(size);
+		allocate(size);
+		return true;
 	}
 	// Replace key/value with another.
 	inline bool replace(const V & v) throw () {
@@ -636,9 +623,9 @@ public:
 		value[p] = v;
 		return true;
 	}
-	inline bool empty() throw () {
+	inline void empty() throw () {
 		deallocate();
-		return allocate(0);
+		allocate(0);
 	}
 
 protected:
@@ -655,29 +642,26 @@ protected:
 	};
 
 	// Make some space...
-	bool allocate(const unsigned s) throw () {
+	void allocate(const unsigned s) throw (std::bad_alloc) {
 		unsigned b = bufsize(s);
 		if (b == buffer)
-			return true;
+			return;
 		if (b == 0) {
 			free(idx);
 			idx = 0;
 			free(value);
 			value = 0;
 			buffer = 0;
-			return true;
+			return;
 		}
 		unsigned * itemp = static_cast<unsigned *>(
 				realloc(idx,b*sizeof(unsigned)));
 		V * vtemp = static_cast<V *>(realloc(value,b*sizeof(V)));
-		if (itemp == 0 || vtemp == 0) {
-			event_msg(EVENT_ERROR,"Out of memory in iset::allocate()!");
-			return false;
-		}
+		if (itemp == 0 || vtemp == 0)
+			throw std::bad_alloc();
 		idx = itemp;
 		value = vtemp;
 		buffer = b;
-		return true;
 	}
 	void deallocate() throw () {
 		if (idx) {
@@ -743,16 +727,14 @@ public:
 	inline explicit kfset(const unsigned s, const V * v = 0,
 			const unsigned b = DFLT_BLK) throw ()
 	  : set(b), value(0) {
-		if (!allocate(s))
-			return;
+		allocate(s);
 		copy(s,v,true);
 		allocate(size);
 	}
 	// Copy constuctor.
 	inline explicit kfset(const kfset<K,V> & v) throw ()
 	  : set(v), value(0) {
-		if (!allocate(v.size))
-			return;
+		allocate(v.size);
 		copy(v.size,v.value,false);
 	}
 	// Clean up.
@@ -771,8 +753,7 @@ public:
 	// Assignment operator.
 	inline kfset<K,V> & operator= (const kfset<K,V> & v) throw () {
 		deallocate();
-		if (!allocate(v.size))
-			return *this;
+		allocate(v.size);
 		copy(v.size,v.value,false);
 		return *this;
 	}
@@ -801,24 +782,21 @@ protected:
 	};
 
 	// Hide the allocation function.
-	bool allocate(const unsigned s) throw () {
+	void allocate(const unsigned s) throw (std::bad_alloc) {
 		unsigned b = bufsize(s);
 		if (b == buffer)
-			return true;
+			return;
 		if (b == 0) {
 			free(value);
 			value = 0;
 			buffer = 0;
-			return true;
+			return;
 		}
 		V * temp = static_cast<V *>(realloc(value,b*sizeof(V)));
-		if (temp == 0) {
-			event_msg(EVENT_ERROR,"Out of memory in kfset::allocate()!");
-			return false;
-		}
+		if (temp == 0)
+			throw std::bad_alloc();
 		value = temp;
 		buffer = b;
-		return true;
 	}
 	void deallocate() throw () {
 		if (value) {
@@ -887,10 +865,10 @@ public:
 	bool add(const V * v, const unsigned s = 1) throw () {
 		if (s == 0 || v == 0)
 			return false;
-		if (!this->allocate(this->size+s))
-			return false;
+		this->allocate(this->size+s);
 		this->copy(s,v,true);
-		return this->allocate(this->size);
+		this->allocate(this->size);
+		return true;
 	}
 	// Remove based on key.
 	bool remove(const K & k) throw () {
@@ -901,7 +879,8 @@ public:
 		if (p < --this->size)
 			memmove(&this->value[p],&this->value[p+1],
 				(this->size-p)*sizeof(V));
-		return this->allocate(this->size);
+		this->allocate(this->size);
+		return true;
 	}
 	// Replace key/value with another.
 	inline bool replace(const V & v) throw () {
@@ -911,9 +890,9 @@ public:
 		this->value[p] = v;
 		return true;
 	}
-	inline bool empty() throw () {
+	inline void empty() throw () {
 		this->deallocate();
-		return this->allocate(0);
+		this->allocate(0);
 	}
 };
 
@@ -1003,30 +982,26 @@ public:
 	}
 	inline explicit kiset(const unsigned s, const unsigned b) throw ()
 	  : set(b), idx(0), value(0) {
-		if (!allocate(s))
-			return;
+		allocate(s);
 	}
 	// Basic constructor
 	inline explicit kiset(const unsigned s, const V * v = 0,
 			const unsigned b = DFLT_BLK) throw ()
 	  : set(b), idx(0), value(0) {
-		if (!allocate(s))
-			return;
+		allocate(s);
 		copy(s,v,true);
 		allocate(size);
 	}
 	// Copy constuctor.
 	inline explicit kiset(const kiset<K,V> & v) throw ()
 	  : set(v), idx(0), value(0) {
-		if (!allocate(v.size))
-			return;
+		allocate(v.size);
 		copy(v.size,v.value,false);
 	}
 	// Copy from a kfset.
 	inline explicit kiset(const kfset<K,V> & v) throw ()
 	  : set(v), idx(0), value(0) {
-		if (!allocate(v.size))
-			return;
+		allocate(v.size);
 		copy(v.size,v.value,true);
 		allocate(size);
 	}
@@ -1046,15 +1021,13 @@ public:
 	// Assignment operator.
 	inline kiset<K,V> & operator= (const kiset<K,V> & v) throw () {
 		deallocate();
-		if (!allocate(v.size))
-			return *this;
+		allocate(v.size);
 		copy(v.size,v.value,false);
 		return *this;
 	}
 	inline kiset<K,V> & operator= (const kfset<K,V> & v) throw () {
 		deallocate();
-		if (!allocate(v.size))
-			return *this;
+		allocate(v.size);
 		copy(v.size,v.value,true);
 		allocate(size);
 		return *this;
@@ -1094,10 +1067,10 @@ public:
 	bool add(const V * v, const unsigned s = 1) throw () {
 		if (s == 0 || v == 0)
 			return false;
-		if (!allocate(size+s))
-			return false;
+		allocate(size+s);
 		copy(s,v,true);
-		return allocate(size);
+		allocate(size);
+		return true;
 	}
 	// Now start removing them...
 	bool remove(const K & k) throw () {
@@ -1115,7 +1088,8 @@ public:
 		}
 		if (q < size)
 			memmove(&idx[q],&idx[q+1],(size-q)*sizeof(unsigned));
-		return allocate(size);
+		allocate(size);
+		return true;
 	}
 	// Replace key/value with another.
 	inline bool replace(const V & v) throw () {
@@ -1125,9 +1099,9 @@ public:
 		value[p] = v;
 		return true;
 	}
-	inline bool empty() throw () {
+	inline void empty() throw () {
 		deallocate();
-		return allocate(0);
+		allocate(0);
 	}
 
 protected:
@@ -1144,29 +1118,26 @@ protected:
 	};
 
 	// Make some space...
-	bool allocate(const unsigned s) throw () {
+	void allocate(const unsigned s) throw (std::bad_alloc) {
 		unsigned b = bufsize(s);
 		if (b == buffer)
-			return true;
+			return;
 		if (b == 0) {
 			free(idx);
 			idx = 0;
 			free(value);
 			value = 0;
 			buffer = 0;
-			return true;
+			return;
 		}
 		unsigned * itemp = static_cast<unsigned *>(
 				realloc(idx,b*sizeof(unsigned)));
 		V * vtemp = static_cast<V *>(realloc(value,b*sizeof(V)));
-		if (itemp == 0 || vtemp == 0) {
-			event_msg(EVENT_ERROR,"Out of memory in kiset::allocate()!");
-			return false;
-		}
+		if (itemp == 0 || vtemp == 0)
+			throw std::bad_alloc();
 		idx = itemp;
 		value = vtemp;
 		buffer = b;
-		return true;
 	}
 	void deallocate() throw () {
 		if (idx) {
@@ -1225,22 +1196,19 @@ public:
 	// Make one...
 	inline explicit afset(const unsigned s, const unsigned b) throw ()
 	  : set(b), key(0), value(0) {
-		if (!allocate(s))
-			return;
+		allocate(s);
 	}
 	inline explicit afset(const unsigned s,	const K * k = 0,
 			const V * v = 0, const unsigned b = DFLT_BLK) throw ()
 	  : set(b), key(0), value(0) {
-		if (!allocate(s))
-			return;
+		allocate(s);
 		copy(s,k,v,true);
 		allocate(size);
 	}
 	// Copy one...
 	inline explicit afset(const afset<K,V> & v) throw ()
 	  : set(v), key(0), value(0) {
-		if (!allocate(v.size))
-			return;
+		allocate(v.size);
 		copy(v.size,v.key,v.value,false);
 	}
 	// Kill one...
@@ -1259,8 +1227,7 @@ public:
 	// Assignement operator.
 	inline afset<K,V> & operator= (const afset<K,V> & v) throw () {
 		deallocate();
-		if (!allocate(v.size))
-			return *this;
+		allocate(v.size);
 		copy(v.size,v.key,v.value,false);
 		return *this;
 	}
@@ -1304,29 +1271,25 @@ protected:
 	};
 
 	// Make some space...
-	bool allocate(const unsigned s) throw () {
+	void allocate(const unsigned s) throw (std::bad_alloc) {
 		unsigned b = bufsize(s);
 		if (b == buffer)
-			return true;
+			return;
 		if (b == 0) {
 			free(key);
 			key = 0;
 			free(value);
 			value = 0;
 			buffer = 0;
-			return true;
+			return;
 		}
 		K * ktemp = static_cast<K *>(realloc(key,b*sizeof(K)));
 		V * vtemp = static_cast<V *>(realloc(value,b*sizeof(V)));
-		if (ktemp == 0 || vtemp == 0) {
-			event_msg(EVENT_ERROR,"Out of memory in afset::allocate()!");
-			return false;
-		}
+		if (ktemp == 0 || vtemp == 0)
+			throw std::bad_alloc();
 		key = ktemp;
 		value = vtemp;
 		buffer = b;
-		return true;
-
 	}
 	void deallocate() throw () {
 		if (key) {
@@ -1406,10 +1369,10 @@ public:
 			const unsigned s = 1) throw () {
 		if (s == 0 || k == 0)
 			return false;
-		if (!this->allocate(this->size+s))
-			return false;
+		this->allocate(this->size+s);
 		this->copy(s,k,v,true);
-		return this->allocate(this->size);
+		this->allocate(this->size);
+		return true;
 	}
 	// Now start removing them...
 	bool remove(const K & k) throw () {
@@ -1424,7 +1387,8 @@ public:
 			memmove(&this->value[p],&this->value[p+1],
 					(this->size-p)*sizeof(V));
 		}
-		return this->allocate(this->size);
+		this->allocate(this->size);
+		return true;
 	}
 	// Or replacing them...
 	inline bool replace(const K & k, const V & v) throw () {
@@ -1434,9 +1398,9 @@ public:
 		this->value[p] = v;
 		return true;
 	}
-	inline bool empty() throw () {
+	inline void empty() throw () {
 		this->deallocate();
-		return this->allocate(0);
+		this->allocate(0);
 	}
 };
 

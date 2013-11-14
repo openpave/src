@@ -122,10 +122,6 @@ test_matrix1()
 	double * B = new double[N*N];
 	double * b = new double[N];
 	double * x = new double[N];
-	if (A == 0 || B == 0 || b == 0 || x == 0) {
-		event_msg(EVENT_ERROR,"Out of memory!");
-		goto abort;
-	}
 	while (iter-- > 0) {
 		init_matrix_u(N,W,A);
 		init_matrix_pd(N,A,B);
@@ -155,7 +151,6 @@ test_matrix1()
 		
 		printf("\n");
 	}
-abort:
 	delete [] x;
 	delete [] b;
 	delete [] B;
@@ -168,10 +163,6 @@ test_matrix2()
 	unsigned iter = 30;
 	double * A = new double[N*N];
 	double * B = new double[N*N];
-	if (A == 0 || B == 0) {
-		event_msg(EVENT_ERROR,"Out of memory!");
-		goto abort;
-	}
 	while (iter-- > 0) {
 		init_matrix_u(N,N-1,A);
 		init_matrix_pd(N,A,B);
@@ -192,7 +183,6 @@ test_matrix2()
 
 		printf("\n");
 	}
-abort:
 	delete [] A;
 	delete [] B;
 }
@@ -204,10 +194,6 @@ test_matrix3()
 	double * A = new double[N*N];
 	double * B = new double[N*N];
 	double * I = new double[N*N];
-	if (A == 0 || B == 0 || I == 0) {
-		event_msg(EVENT_ERROR,"Out of memory!");
-		goto abort;
-	}
 	while (iter-- > 0) {
 		init_matrix_u(N,N-1,A);
 		init_matrix_pd(N,A,B);
@@ -228,7 +214,6 @@ test_matrix3()
 
 		printf("\n");
 	}
-abort:
 	delete [] A;
 	delete [] B;
 	delete [] I;
@@ -240,10 +225,6 @@ test_matrix4()
 	int i;
 
 	double * A = new double[N*N];
-	if (A == 0) {
-		event_msg(EVENT_ERROR,"Out of memory!");
-		exit(1);
-	}
 	for (i = 0; i < N*N; i++)
 		A[i] = RAND(0.0,1.0);
 

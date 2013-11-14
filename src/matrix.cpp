@@ -65,7 +65,7 @@ orth_gs(const unsigned n, double * Q) throw ()
  */
 bool
 equ_gauss(const unsigned n, const double * A, const double * b,
-          double * x) throw ()
+          double * x) throw (std::bad_alloc)
 {
 	bool rv = true;
 	unsigned i, j, k;
@@ -73,11 +73,6 @@ equ_gauss(const unsigned n, const double * A, const double * b,
 	if (n == 0)
 		return true;
 	double * a = new double[n*n];
-	if (a == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in equ_gauss()!");
-		rv = false;
-		goto abort;
-	}
 	// avoid destroying A, B by copying them to a, x resp.
 	memcpy(a,A,sizeof(double)*n*n);
 	memcpy(x,b,sizeof(double)*n);
@@ -175,7 +170,7 @@ abort:
  */
 bool
 decmp_lu(const unsigned n, double * A, unsigned * idx,
-         int & d) throw ()
+         int & d) throw (std::bad_alloc)
 {
 	bool rv = true;
 	unsigned i, j, k;
@@ -183,12 +178,6 @@ decmp_lu(const unsigned n, double * A, unsigned * idx,
 	if (n == 0)
 		return true;
 	double * work = new double[n];
-	if (work == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in decmp_lu()!");
-		rv = false;
-		goto abort;
-	}
-
 	d = 1;
 	// compute the LU decomposition of a row permutation of matrix a;
 	// the permutation itself is saved in idx[]
@@ -277,7 +266,7 @@ bksub_lu(const unsigned n, const double * A, const unsigned * idx,
  */
 bool
 equ_lu(const unsigned n, const double * A, const double * b,
-       double * x, const double tol) throw ()
+       double * x, const double tol) throw (std::bad_alloc)
 {
 	bool rv = true;
 	unsigned i, j;
@@ -288,11 +277,6 @@ equ_lu(const unsigned n, const double * A, const double * b,
 	unsigned * idx = new unsigned[n];
 	double * a = new double[n*n];
 	double * r = new double[n];
-	if (idx == 0 || a == 0 || r == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in equ_lu()!");
-		rv = false;
-		goto abort;
-	}
 	// avoid destroying A, B by copying them to a, x resp.
 	memcpy(a,A,sizeof(double)*n*n);
 	memcpy(x,b,sizeof(double)*n);
@@ -323,7 +307,7 @@ equ_lu(const unsigned n, const double * A, const double * b,
  */
 double
 inv_mul_lu(const unsigned n, const unsigned m, double * A,
-           double * B) throw ()
+           double * B) throw (std::bad_alloc)
 {
 	double det = 0.0;
 	unsigned i;
@@ -332,10 +316,6 @@ inv_mul_lu(const unsigned n, const unsigned m, double * A,
 	if (n == 0)
 		return 0.0;
 	unsigned * idx = new unsigned[n];
-	if (idx == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in inv_mul_lu()!");
-		goto abort;
-	}
 	if (!decmp_lu(n,A,idx,d)) {
 		memset(B,0,sizeof(double)*n*m);
 		goto abort;
@@ -353,7 +333,7 @@ abort:
  * Matrix inverse of the real nxn matrix A using LU decomposition.  
  */
 bool
-inv_lu(const unsigned n, double * A) throw ()
+inv_lu(const unsigned n, double * A) throw (std::bad_alloc)
 {
 	bool rv = true;
 	unsigned i;
@@ -363,11 +343,6 @@ inv_lu(const unsigned n, double * A) throw ()
 		return true;
 	unsigned * idx = new unsigned[n];
 	double * a = new double[n*n];
-	if (idx == 0 || a == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in inv_lu()!");
-		rv = false;
-		goto abort;
-	}
 	memcpy(a,A,sizeof(double)*n*n);
 	memset(A,0,sizeof(double)*n*n);
 	for (i = 0; i < n; i++)
@@ -522,8 +497,8 @@ bksub_chol(const unsigned n, const unsigned w, const double * A,
  * substitution.
  */
 bool
-equ_chol(const unsigned n, const double * A,
-         const double * b, double * x, const double tol) throw ()
+equ_chol(const unsigned n, const double * A, const double * b,
+         double * x, const double tol) throw (std::bad_alloc)
 {
 	bool rv = true;
 	//unsigned i, j;
@@ -532,11 +507,6 @@ equ_chol(const unsigned n, const double * A,
 		return true;
 	double * a = new double[n*n];
 	//double * r = new double[n];
-	if (a == 0) { // || r == 0
-		event_msg(EVENT_ERROR,"Out of memory in equ_chol()!");
-		rv = false;
-		goto abort;
-	}
 	// avoid destroying A and B by copying them to a and x resp.
 	memcpy(a,A,sizeof(double)*n*n);
 	memcpy(x,b,sizeof(double)*n);
@@ -571,7 +541,8 @@ abort:
  */
 bool
 equ_chol(const unsigned n, const unsigned w, const double * A,
-         const double * b, double * x, const double tol) throw ()
+         const double * b, double * x, const double tol)
+         throw (std::bad_alloc)
 {
 	bool rv = true;
 	unsigned i, j, iter = 0;
@@ -581,11 +552,6 @@ equ_chol(const unsigned n, const unsigned w, const double * A,
 		return true;
 	double * a = new double[B_SIZE(n,w)];
 	double * r = new double[n];
-	if (a == 0 || r == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in equ_chol()!");
-		rv = false;
-		goto abort;
-	}
 	// avoid destroying A and B by copying them to a and x resp.
 	memcpy(a,A,sizeof(double)*B_SIZE(n,w));
 	memcpy(x,b,sizeof(double)*n);
@@ -720,7 +686,7 @@ bksub_ldl(const unsigned n, const double * A,
  */
 bool
 equ_ldl(const unsigned n, const double * A,
-        const double * b, double * x, const double tol) throw ()
+        const double * b, double * x, const double tol) throw (std::bad_alloc)
 {
 	bool rv = true;
 	unsigned i, j;
@@ -729,11 +695,6 @@ equ_ldl(const unsigned n, const double * A,
 		return true;
 	double * a = new double[n*n];
 	double * r = new double[n];
-	if (a == 0 || r == 0) { 
-		event_msg(EVENT_ERROR,"Out of memory in equ_ldl()!");
-		rv = false;
-		goto abort;
-	}
 	// avoid destroying A and B by copying them to a and x resp.
 	memcpy(a,A,sizeof(double)*n*n);
 	memcpy(x,b,sizeof(double)*n);
@@ -764,7 +725,7 @@ equ_ldl(const unsigned n, const double * A,
  */
 bool
 decmp_svd(const unsigned m, const unsigned n, double * A,
-          double * W, double * V) throw ()
+          double * W, double * V) throw (std::bad_alloc)
 {
 	double F, G = 0.0, H;
 	double C, S, X, Y;
@@ -775,10 +736,6 @@ decmp_svd(const unsigned m, const unsigned n, double * A,
 	if (m == 0 || n == 0)
 		return true;
 	double * rv1 = new double[n];
-	if (rv1 == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in decmp_svd()!");
-		return false;
-	}
 	// Householder reduction to bidiagonal form.
 	for (i = 0; i < n; i++) {
 		rv1[i] = scale*G;
@@ -941,17 +898,13 @@ decmp_svd(const unsigned m, const unsigned n, double * A,
 bool
 bksub_svd(const unsigned m, const unsigned n, const double * U,
           const double * W, const double * V,
-          double * b, const unsigned p, const unsigned c) throw ()
+          double * b, const unsigned p, const unsigned c) throw (std::bad_alloc)
 {
 	unsigned i, j;
 
 	if (m == 0 || n == 0)
 		return true;
 	double * tmp = new double[n];
-	if (tmp == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in bksub_svd()!");
-		return false;
-	}
 	for (j = 0; j < n; j++) {
 		tmp[j] = 0.0;
 		if (W[j] != 0.0) {
@@ -977,7 +930,7 @@ bksub_svd(const unsigned m, const unsigned n, const double * U,
  */
 bool
 equ_svd(const unsigned n, const double * A, const double * b,
-        double * x, const double tol) throw ()
+        double * x, const double tol) throw (std::bad_alloc)
 {
 	bool rv = true;
 	double max;
@@ -989,11 +942,6 @@ equ_svd(const unsigned n, const double * A, const double * b,
 	double * W = new double[n];
 	double * V = new double[n*n];
 	double * r = new double[n];
-	if (U == 0 || W == 0 || V == 0 || r == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in equ_svd()!");
-		rv = false;
-		goto abort;
-	}
 	// avoid destroying A, B by copying them to U, x resp.
 	memcpy(U,A,sizeof(double)*n*n);
 	memcpy(x,b,sizeof(double)*n);
@@ -1033,7 +981,7 @@ abort:
  * Matrix inverse of the real nxn matrix A using SVD decomposition.
  */
 bool
-inv_svd(const unsigned n, double * A) throw ()
+inv_svd(const unsigned n, double * A) throw (std::bad_alloc)
 {
 	bool rv = true;
 	double max;
@@ -1044,11 +992,6 @@ inv_svd(const unsigned n, double * A) throw ()
 	double * U = new double[n*n];
 	double * W = new double[n];
 	double * V = new double[n*n];
-	if (U == 0 || W == 0 || V == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in inv_svd()!");
-		rv = false;
-		goto abort;
-	}
 	memcpy(U,A,sizeof(double)*n*n);
 	if (!decmp_svd(n,n,U,W,V)) {
 		rv = false;
@@ -1079,7 +1022,7 @@ abort:
  * Orthonormalize the nxn matrix Q, using the SVD decomposition.
  */
 bool
-orth_svd(const unsigned n, double * Q) throw ()
+orth_svd(const unsigned n, double * Q) throw (std::bad_alloc)
 {
 	bool rv = true;
 	
@@ -1087,14 +1030,8 @@ orth_svd(const unsigned n, double * Q) throw ()
 		return true;
 	double * W = new double[n];
 	double * V = new double[n*n];
-	if (W == 0 || V == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in orth_svd()!");
-		rv = false;
-		goto abort;
-	}
 	if (!decmp_svd(n,n,Q,W,V))
 		rv = false;
-abort:
 	delete [] W;
 	delete [] V;
 	return rv;
@@ -1288,7 +1225,7 @@ eig_tri_ql(const unsigned n, double * d, double * e,
  * QL transform.
  */
 bool
-eig_ql(const unsigned n, double * A, double * d, bool sorted) throw ()
+eig_ql(const unsigned n, double * A, double * d, bool sorted) throw (std::bad_alloc)
 {
 	double t;
 	unsigned i, j, k;
@@ -1296,10 +1233,6 @@ eig_ql(const unsigned n, double * A, double * d, bool sorted) throw ()
 	if (n == 0)
 		return true;
 	double * e = new double[n];
-	if (e == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in eig_ql()!");
-		return false;
-	}
 	tridiag_hh(n,A,d,e);
 	eig_tri_ql(n,d,e,A);
 	// Sort the eigenvalues into descending order
@@ -1324,17 +1257,13 @@ eig_ql(const unsigned n, double * A, double * d, bool sorted) throw ()
 
 bool
 bksub_eig(const unsigned n, const double * Q, const double * d,
-          double * b, const unsigned p, const unsigned c) throw ()
+          double * b, const unsigned p, const unsigned c) throw (std::bad_alloc)
 {
 	unsigned i, j;
 
 	if (n == 0)
 		return true;
 	double * tmp = new double[n];
-	if (tmp == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in bksub_eig()!");
-		return false;
-	}
 	memset(tmp,0,sizeof(double)*n);
 	for (j = 0; j < n; j++) {
 		if (d[j] != 0.0) {
@@ -1359,7 +1288,7 @@ bksub_eig(const unsigned n, const double * Q, const double * d,
  */
 bool
 equ_eig(const unsigned n, const double * A, const double * b,
-        double * x, const double tol) throw ()
+        double * x, const double tol) throw (std::bad_alloc)
 {
 	bool rv = true;
 	double max;
@@ -1371,11 +1300,6 @@ equ_eig(const unsigned n, const double * A, const double * b,
 	double * d = new double[n];
 	double * e = new double[n];
 	double * r = new double[n];
-	if (Q == 0 || d == 0 || e == 0 || r == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in equ_eig()!");
-		rv = false;
-		goto abort;
-	}
 	memcpy(Q,A,sizeof(double)*n*n);
 	memcpy(x,b,sizeof(double)*n);
 	tridiag_hh(n,Q,d,e);
@@ -1396,7 +1320,6 @@ equ_eig(const unsigned n, const double * A, const double * b,
 	bksub_eig(n,Q,d,r);
 	for (i = 0; i < n; i++)
 		x[i] -= r[i];
-abort:
 	delete [] r;
 	delete [] e;
 	delete [] d;
@@ -1408,7 +1331,7 @@ abort:
  * Matrix inverse of the real symmetric nxn matrix A using eigenvalue decomposition.
  */
 bool
-inv_eig(const unsigned n, double * A) throw ()
+inv_eig(const unsigned n, double * A) throw (std::bad_alloc)
 {
 	bool rv = true;
 	double max;
@@ -1419,11 +1342,6 @@ inv_eig(const unsigned n, double * A) throw ()
 	double * Q = new double[n*n];
 	double * d = new double[n];
 	double * e = new double[n];
-	if (Q == 0 || d == 0 || e == 0) {
-		event_msg(EVENT_ERROR,"Out of memory in inv_eig()!");
-		rv = false;
-		goto abort;
-	}
 	memcpy(Q,A,sizeof(double)*n*n);
 	tridiag_hh(n,Q,d,e);
 	eig_tri_ql(n,d,e,Q);
@@ -1443,7 +1361,6 @@ inv_eig(const unsigned n, double * A) throw ()
 			}
 		}
 	}
-abort:
 	delete [] e;
 	delete [] d;
 	delete [] Q;

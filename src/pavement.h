@@ -393,8 +393,8 @@ public:
 	}
 	~LEsystem() throw () {
 	}
-	bool addlayer(const double h, const double e, const double v,
-	              const double s = 1.0, const unsigned p = UINT_MAX) throw ();
+	void addlayer(const double h, const double e, const double v,
+	              const double s = 1.0, const unsigned p = UINT_MAX) throw (std::bad_alloc);
 	bool removelayer(const unsigned l) throw ();
 	bool removelayers() throw () {
 		empty();
@@ -414,8 +414,8 @@ public:
 	bool removeload(const unsigned i) throw () {
 		return load.remove(i);
 	}
-	bool removeloads() throw () {
-		return load.empty();
+	void removeloads() throw () {
+		load.empty();
 	}
 	inline unsigned loads() const throw () {
 		return load.length();
@@ -433,8 +433,8 @@ public:
 	bool removepoint(const point3d & p, unsigned l = UINT_MAX) throw () {
 		return data.remove(pavepoint(p,l));
 	}
-	bool removepoints() throw () {
-		return data.empty();
+	void removepoints() throw () {
+		data.empty();
 	}
 	inline unsigned results() const throw () {
 		return data.length();
@@ -462,10 +462,10 @@ public:
 		dirtydisp = 0x0102,
 		fastgrad  = 0x0301,
 	};
-	bool calc_accurate() throw ();
-	bool calculate(resulttype result = all, const double * Q = 0) throw ();
-	bool calc_odemark() throw ();
-	bool calc_fastnum() throw ();
+	bool calc_accurate() throw (std::bad_alloc);
+	bool calculate(resulttype result = all, const double * Q = 0) throw (std::bad_alloc);
+	bool calc_odemark() throw (std::bad_alloc);
+	bool calc_fastnum() throw (std::bad_alloc);
 
 private:
 	ksset<pavepoint,pavedata> data;
@@ -515,8 +515,8 @@ public:
 	const defldata & getdefl(const unsigned i) throw () {
 		return defl[i];
 	}
-	bool removedeflections() throw () {
-		return defl.empty();
+	void removedeflections() throw () {
+		defl.empty();
 	}
 	void setup(double p, double n, double t, int m) throw () {
 		precision = MAX(0.0,p);
@@ -524,7 +524,7 @@ public:
 		tolerance = MAX(1e-6,t);
 		maxsteps = MAX(3,m);
 	}
-	bool backcalc() throw ();
+	bool backcalc() throw (std::bad_alloc);
 
 	LEbackcalc() throw () {
 		setup(0.0,0.0,1e-6,5);
@@ -545,14 +545,14 @@ private:
 	enum calctype {slow, fast, reuse};
 	bool seed(unsigned nl, double * P) throw ();
 	double deflgrad(unsigned nl, double * P, double * Q,
-			calctype cl = slow) throw ();
-	double gaussnewton(unsigned nl, double * P, calctype cl = slow) throw ();
-	double kalman(unsigned nl, double * P) throw ();
+			calctype cl = slow) throw (std::bad_alloc);
+	double gaussnewton(unsigned nl, double * P, calctype cl = slow) throw (std::bad_alloc);
+	double kalman(unsigned nl, double * P) throw (std::bad_alloc);
 	double bowlerror(unsigned nl = 0, const double * P = 0,
 			const double s = 0.0, const double * D = 0) throw ();
 	double brent(unsigned nl, double * P, double * D) throw ();
-	double conjgrad(unsigned nl, double * P) throw ();
-	double swarm(unsigned nl, double * P) throw ();
+	double conjgrad(unsigned nl, double * P) throw (std::bad_alloc);
+	double swarm(unsigned nl, double * P) throw (std::bad_alloc);
 };
 
 #endif // PAVEMENT_H
