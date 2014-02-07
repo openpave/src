@@ -109,8 +109,8 @@ public:
 		uint32_t * psfmt32 = &(status[0].u32[0]);
 		psfmt32[0] = seed;
 		for (unsigned i = 1; i < (DSFMT_N+1)*4; i++) {
-			psfmt32[i] = 1812433253UL 
-			    * (psfmt32[i-1] ^ (psfmt32[i-1] >> 30)) + i;
+			psfmt32[i] = static_cast<uint32_t>(1812433253UL 
+			    * (psfmt32[i-1] ^ (psfmt32[i-1] >> 30)) + i);
 		}
 		uint64_t * psfmt64 = &(status[0].u[0]);
 		for (unsigned i = 0; i < DSFMT_N*2; i++)
