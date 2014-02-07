@@ -24,7 +24,7 @@
 	Contributor(s): Jeremy Lea <reg@openpave.org>.
 
 	Purpose:
-		This header implements a templated C++ classes for left leaning
+		This header implements a templated C++ class for left leaning
 		red-black trees, which are a special variant of binary search
 		trees.
 
