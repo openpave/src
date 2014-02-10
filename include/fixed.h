@@ -52,7 +52,7 @@
  */
 template <unsigned int P>
 class fixed {
-  public:
+public:
 	// Some constructors for common cases...
 	inline fixed() {
 	}
@@ -183,9 +183,10 @@ class fixed {
 		return t;
 	}
 
-  private:
+private:
 	template <unsigned int P1>
 	friend fixed<P1> fabs(const fixed<P1> & f);
+
 	int value;
 };
 

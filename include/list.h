@@ -129,7 +129,7 @@ protected:
 				owner->last = this->prev;
 		}
 	}
-	// Be a bit social.
+
 	//friend class O;
 	friend class list_owned<O,T>;
 };

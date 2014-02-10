@@ -95,14 +95,13 @@ protected:
 	// The reliability class does most of the work for us...
 	friend class reliability;
 
-	double param(int i, double dp) { // Set distribution parmater i. 
-		return (i < 0 || i >  (RV_DIST_PARAM-1) ? 0.0 : d[i] = dp);
-	}
-	
 	double d[RV_DIST_PARAM];			// Four distribution parmeters.
 	double stdnormal;					// The current std normal value.
 	double ustdnormal;					// Uncorrelated std normal value.
 
+	double param(int i, double dp) { // Set distribution parmater i. 
+		return (i < 0 || i >  (RV_DIST_PARAM-1) ? 0.0 : d[i] = dp);
+	}
 	randomvar(reliability * /* owner */, randomvar * /* prev */);
 	virtual ~randomvar();
 

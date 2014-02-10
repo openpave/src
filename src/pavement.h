@@ -210,6 +210,7 @@ public:
 
 private:
 	friend class LEsystem;
+
 	double h;                           // The thickness of the layer.
 	double E;                           // The elastic modulus.
 	double v;                           // Poisson's ratio.
@@ -250,6 +251,7 @@ public:
 
 private:
 	friend class LEsystem;
+
 	double f;                          // Force.
 	double p;                          // Pressure.
 };
@@ -467,11 +469,12 @@ public:
 	bool calc_fastnum();
 
 private:
-	ksset<pavepoint,pavedata> data;
-	sset<paveload> load;
 	friend class listelement_o<LEsystem, LElayer>;
 	friend class list_owned<LEsystem, LElayer>;
 	friend class LEbackcalc;
+
+	ksset<pavepoint,pavedata> data;
+	sset<paveload> load;
 };
 
 /*

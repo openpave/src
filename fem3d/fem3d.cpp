@@ -1963,6 +1963,7 @@ public:
 
 private:
 	friend class mesh;
+
 	unsigned nnd;
 	smatrix_diag * diag;
 };
