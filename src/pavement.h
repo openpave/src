@@ -395,24 +395,23 @@ public:
 	}
 	void addlayer(const double h, const double e, const double v,
 	              const double s = 1.0, const unsigned p = UINT_MAX);
-	bool removelayer(const unsigned l);
-	bool removelayers() {
+	void removelayer(const unsigned l);
+	void removelayers() {
 		empty();
-		return isempty();
 	}
 	inline unsigned layers() const {
 		return length();
 	}
 	LElayer & layer(const unsigned l) const;
 
-	bool addload(const point2d & l, double f, double p, double r = 0) {
+	void addload(const point2d & l, double f, double p, double r = 0) {
 		return load.add(paveload(l,f,p,r));
 	}
-	bool addload(const paveload & l) {
-		return load.add(l);
+	void addload(const paveload & l) {
+		load.add(l);
 	}
-	bool removeload(const unsigned i) {
-		return load.remove(i);
+	void removeload(const unsigned i) {
+		load.remove(i);
 	}
 	void removeloads() {
 		load.empty();
@@ -424,14 +423,14 @@ public:
 		return load[i];
 	}
 
-	bool addpoint(const point3d & p, unsigned l = UINT_MAX) {
-		return data.add(pavedata(p,l));
+	void addpoint(const point3d & p, unsigned l = UINT_MAX) {
+		data.add(pavedata(p,l));
 	}
-	bool addgrid(const unsigned nx, const double * xp,
+	void addgrid(const unsigned nx, const double * xp,
 				 const unsigned ny, const double * yp,
 				 const unsigned nz, const double * zp);
-	bool removepoint(const point3d & p, unsigned l = UINT_MAX) {
-		return data.remove(pavepoint(p,l));
+	void removepoint(const point3d & p, unsigned l = UINT_MAX) {
+		data.remove(pavepoint(p,l));
 	}
 	void removepoints() {
 		data.empty();
@@ -503,11 +502,11 @@ struct defldata : public point3d {
  */
 class LEbackcalc : public LEsystem {
 public:
-	inline bool adddefl(const point3d & p, double d) {
-		return defl.add(defldata(p,d));
+	inline void adddefl(const point3d & p, double d) {
+		defl.add(defldata(p,d));
 	}
-	inline bool adddefl(const defldata & d) {
-		return defl.add(d);
+	inline void adddefl(const defldata & d) {
+		defl.add(d);
 	}
 	inline unsigned deflections() {
 		return defl.length();
@@ -518,7 +517,7 @@ public:
 	void removedeflections() {
 		defl.empty();
 	}
-	void setup(double p, double n, double t, int m) {
+	void setup(double p, double n, double t, unsigned m) {
 		precision = MAX(0.0,p);
 		noise = MAX(0.0,n);
 		tolerance = MAX(1e-6,t);
@@ -540,7 +539,7 @@ private:
 	double precision;
 	double noise;
 	double tolerance;
-	int maxsteps;
+	unsigned maxsteps;
 
 	enum calctype {slow, fast, reuse};
 	bool seed(unsigned nl, double * P);

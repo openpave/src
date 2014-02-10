@@ -132,7 +132,7 @@ LEsystem::addlayer(double h, double e, const double v, const double s,
 	new LElayer(this,(p == UINT_MAX ? last : &layer(p)),h,e,v,s);
 }
 
-bool
+void
 LEsystem::removelayer(const unsigned l)
 {
 	LElayer * pl = first;
@@ -140,26 +140,20 @@ LEsystem::removelayer(const unsigned l)
 
 	while (i++ < l && pl != 0)
 		pl = pl->next;
-	if (pl != 0) {
-		delete pl;
-		return true;
-	}
-	return false;
+	delete pl;
 }
 
-bool
+void
 LEsystem::addgrid(const unsigned nx, const double * xp,
                   const unsigned ny, const double * yp,
                   const unsigned nz, const double * zp)
 {
-	bool rv = true;
 	for (unsigned ix = 0; ix < nx; ix++) {
 		for (unsigned iy = 0; iy < ny; iy++) {
 			for (unsigned iz = 0; iz < nz; iz++)
-				rv = rv && data.add(pavedata(point3d(xp[ix],yp[iy],zp[iz])));
+				data.add(pavedata(point3d(xp[ix],yp[iy],zp[iz])));
 		}
 	}
-	return rv;
 }
 
 LElayer &
@@ -957,8 +951,7 @@ LEsystem::calculate(resulttype res, const double * Q)
 			d.deflgrad.resize(nl);
 			memset(&(d.deflgrad[0]),0,nl*sizeof(double));
 		}
-		if (!z.add(zpoint(d.z,d.il)))
-			goto abort;
+		z.add(zpoint(d.z,d.il));
 	}
 	z.sort();
 	nz = z.length();
@@ -967,10 +960,8 @@ LEsystem::calculate(resulttype res, const double * Q)
 		iT = new double[nz][2][4];
 
 	// Gerenate a list of load radii, then sort them and map from loads.
-	for (ild = 0; ild < load.length(); ild++) {
-		if (!a.add(load[ild].radius()))
-			goto abort;
-	}
+	for (ild = 0; ild < load.length(); ild++)
+		a.add(load[ild].radius());
 	a.sort();
 
 	// Now loop through the list of load radii, calculating only for
@@ -981,10 +972,8 @@ LEsystem::calculate(resulttype res, const double * Q)
 		for (ild = 0; ild < load.length(); ild++) {
 			if (fabs(load[ild].radius()-a[ia]) > DBL_MIN)
 				continue;
-			for (ixy = 0; ixy < data.length(); ixy++) {
-				if (!r.add(load[ild].distance(data[ixy])))
-					goto abort;
-			}
+			for (ixy = 0; ixy < data.length(); ixy++)
+				r.add(load[ild].distance(data[ixy]));
 		}
 		r.sort();
 		nr = r.length();
@@ -993,18 +982,13 @@ LEsystem::calculate(resulttype res, const double * Q)
 
 		// Now gerenate a list of integration intervals, then sort them.
 		bm.empty();
-		if (!bm.add(0.0))
-			goto abort;
-		for (ib = 0; ib < (nbz+1); ib++) {
-			if (!bm.add(j1r[ib]/a[ia]))
-				goto abort;
-		}
-
+		bm.add(0.0);
+		for (ib = 0; ib < (nbz+1); ib++)
+			bm.add(j1r[ib]/a[ia]);
 		// The correct stopping points for each radius.
 		for (ir = 0; ir < nr; ir++) {
 			stoppingpoints(nbz,a[ia],r[ir],&m0[ir],&m1[ir]);
-			if (!bm.add(m0[ir]) || !bm.add(m1[ir]))
-				goto abort;
+			bm.add(m0[ir]), bm.add(m1[ir]);
 		}
 		bm.sort();
 
@@ -1021,8 +1005,7 @@ LEsystem::calculate(resulttype res, const double * Q)
 						MIN(x1-bm[ib-1],bm[ib]-x1)*r[ir-1]
 							 < MAX(4,ngqp-6)*M_PI_4)
 					continue;
-				if (!bm.add(ib,x2 = x1))
-					goto abort;
+				bm.add(ib,x2 = x1);
 			}
 		}
 		// Account for big z's.  We drop approximately three orders of
@@ -1039,8 +1022,7 @@ LEsystem::calculate(resulttype res, const double * Q)
 				if (ib == bm.length() ||
 						MIN(x1-bm[ib-1],bm[ib]-x1)*z[iz-1].z < 5*a[ia])
 					continue;
-				if (!bm.add(ib,x2 = x1))
-					goto abort;
+				bm.add(ib,x2 = x1);
 			}
 		}
 		bm.sort();
@@ -1192,7 +1174,6 @@ gradloop:
 			}
 		}
 	}
-abort:
 	delete [] R;
 	delete [] ABCD;
 	delete [] iT;

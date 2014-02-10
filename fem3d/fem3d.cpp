@@ -64,6 +64,7 @@
 #define alloca _alloca
 #endif
 #include "event.h"
+#include "autodelete.h"
 #include "fixed.h"
 #include "set.h"
 #include "tmatrix.h"
@@ -508,12 +509,10 @@ public:
 		return order;
 	}
 	// Add node.
-	inline bool add(const coord3d & v) {
+	inline void add(const coord3d & v) {
 		allocate(size+1);
-		if (!append(root,v))
-			return false;
+		append(root,v);
 		value[root].red = false;
-		return true;
 	}
 
 protected:
@@ -537,12 +536,12 @@ protected:
 		value = temp;
 		buffer = b;
 	}
-	bool append(unsigned & r, const coord3d & c) {
+	void append(unsigned & r, const coord3d & c) {
 		// If we're UINT_MAX that means we need to make a new node...
 		if (r == UINT_MAX) {
 			new(&value[size]) node3d(c);
 			r = size++;
-			return true;
+			return;
 		}
 		// Split double reds on the way down.
 		if (value[r].left != UINT_MAX && value[value[r].left].red) {
@@ -559,16 +558,14 @@ protected:
 		int cmp = c.compare(value[r]);
 		if (cmp == 0) {
 			assert(false);
-			return false;
+			return;
 		} else if (cmp < 0) {
 			// Re-root insert into left tree.
-			if (!append(value[r].left,c))
-				return false;
+			append(value[r].left,c);
 			value[r].order++;
 		} else {
 			// Or right tree.  Same issue here as above.
-			if (!append(value[r].right,c))
-				return false;
+			append(value[r].right,c);
 		}
 		if (value[r].right != UINT_MAX && value[value[r].right].red) {
 			unsigned x = value[r].right;
@@ -579,7 +576,6 @@ protected:
 			value[r].red = value[value[r].left].red;
 			value[value[r].left].red = true;
 		}
-		return true;
 	}
 };
 
@@ -640,10 +636,8 @@ inv_mul_gauss(const unsigned nnd, double (& J)[NDIM][NDIM],
 
 	for (i = 0; i < NDIM; i++) {
 		double pvt = J[i][i];
-		if (fabs(pvt) < DBL_EPSILON) {
-			event_msg(EVENT_ERROR,"Singular matrix in inv_mul_gauss()!");
-			return 0.0;
-		}
+		if (fabs(pvt) < DBL_EPSILON)
+			throw std::range_error("Singular matrix in inv_mul_gauss()!");
 		det *= pvt;
 		for (k = i+1; i < NDIM && k < NDIM; k++) {
 			double tmp = J[k][i]/pvt;
@@ -1075,7 +1069,6 @@ protected:
 			gw *= inv_mul_gauss(nnd,J,dNdr);
 			assert(gw > 0.0);
 			if (gw <= 0.0) {
-				event_msg(EVENT_ERROR,"Bad determinate in element_base::buildKe()!");
 				printf("J residual:\n");
 				for (i = 0; i < NDIM; i++) {
 					for (j = 0; j < NDIM; j++)
@@ -1113,7 +1106,7 @@ protected:
 					printf("\n");
 				}
 				delete K;
-				return 0;
+				throw std::runtime_error("Bad determinate in element_base::buildKe()!");
 			}
 			for (i = 0; i < nnd; i++) {
 				for (j = i; j < nnd; j++) {
@@ -1252,8 +1245,7 @@ private:
 				swap(cc[1],cc[5]); swap(cc[3],cc[7]);
 				continue;
 			}
-			event_msg(EVENT_ERROR,"Bad or degenerate element shape!");
-			return;
+			throw std::runtime_error("Bad or degenerate element shape!");
 		} while(true);
 	}
 	// This adds nodes according to linear shape functions...
@@ -1663,7 +1655,7 @@ class smatrix_node {
 class smatrix_diag {
 	// Add one element to the storage, fixing up as needed.
 	// The new elements will always start at nodes[nnz];
-	bool expand(unsigned nn) {
+	void expand(unsigned nn) {
 		if (nnz+nn > nnd) {
 			// We're out of space, so allocate more.
 			nnd = nnz+nn;
@@ -1673,7 +1665,7 @@ class smatrix_diag {
 			if (temp == 0)
 				throw std::bad_alloc();
 			// If realloc moved us we need to fix up everyone's pointers.
-			// This is finds the offset into the old array, and then adds
+			// This finds the offset into the old array, and then adds
 			// that to the new array.
 			if (nodes != temp) {
 				if (col_head != 0)
@@ -1686,7 +1678,6 @@ class smatrix_diag {
 				nodes = temp;
 			}
 		}
-		return true;
 	}
 
 	friend class smatrix;
@@ -1696,6 +1687,12 @@ class smatrix_diag {
 	smatrix_node * col_head;
 	smatrix_node * nodes;
 	unsigned nnz, nnd;
+};
+
+// Cannot use local types in templates...
+struct row_ptr {
+	int col;
+	row_ptr *prev;
 };
 
 /*
@@ -1725,8 +1722,7 @@ public:
 		for (unsigned i = 0; i < nnd; i++) {
 			smatrix_diag * d = &(A.diag[i]);
 			// Pre-allocate the space.
-			if (!diag[i].expand(d->nnz))
-				return;
+			diag[i].expand(d->nnz);
 			append(i,i,d->K);
 			smatrix_node * p = d->col_head;
 			while (p) {
@@ -1745,11 +1741,11 @@ public:
 			free(diag);
 		}
 	}
-	bool append(unsigned i, unsigned j, const smatrix_dof & t) {
+	void append(unsigned i, unsigned j, const smatrix_dof & t) {
 		// If we're appending to the diagonal, just do it.
 		if (i == j) {
 			diag[i].K += t;
-			return true;
+			return;
 		}
 		// Here we don't know if we're above or below the diagonal,
 		// so we must use MIN/MAX.  We start by trying to find the
@@ -1765,12 +1761,11 @@ public:
 				p->K += ~t;
 			else
 				p->K += t;
-			return true;
+			return;
 		}
 		// We've either run off the end, or we don't have a matching
 		// node.  In this case we need to add one.
-		if (!d->expand(1))
-			return false;
+		d->expand(1);
 		// Now fill in the new element.
 		n = &(d->nodes[(d->nnz)++]);
 	  	if (j < i) {
@@ -1789,7 +1784,6 @@ public:
 		else
 			o->col_next = n;
 		n->col_next = p;
-		return true;
 	}
 	// This just makes things faster by sorting the node lists.
 	void tidy() {
@@ -1821,24 +1815,17 @@ public:
 	// using append, and memset() them to zero, and set their row numbers. 
 	// Then we call tidy(), which will sort by row numbers and fix the
 	// col_next pointers.
-	bool fillin() {
+	void fillin() {
 		smatrix_diag * d;
 		smatrix_node * p;
 
 		// The fill in works best if we can follow rows and columns.  Since
 		// we don't normally store rows, we need to construct the row
 		// linked lists here.
-		struct row_ptr {
-			int col;
-			row_ptr *prev;
-		};
 		unsigned nnz = 0;
-		bool rv = true;
 		for (unsigned n = 0; n < nnd; n++)
 			nnz += diag[n].nnz;
-		row_ptr * rows = new row_ptr[nnd+nnz];
-		if (rows == 0)
-			return false;
+		autodelete<row_ptr> rows(new row_ptr[nnd+nnz]);
 		memset(rows,0,(nnd+nnz)*sizeof(row_ptr));
 		nnz = 0;
 		for (unsigned n = 0; n < nnd; n++) {
@@ -1876,10 +1863,7 @@ public:
 				if (rows[i].col == -1)
 					add++;
 			}
-			if (!d->expand(add)) {
-				rv = false;
-				goto bail;
-			}
+			d->expand(add);
 			memset(&(d->nodes[d->nnz]),0,add*sizeof(smatrix_node));
 			for (unsigned i = 0, j = add; i < n-c; i++) {
 				if (rows[i].col == -1)
@@ -1890,14 +1874,10 @@ public:
 		}
 		// Now call tidy to magically add these nodes.
 		tidy();
-
-	bail:
-		delete [] rows;
-		return rv;
 	}
 	// Incomplete Cholesky decompostion, by block.  Look at the small
 	// internal version to understand what the whole thing is doing.
-	bool incchol() {
+	void incchol() {
 		smatrix_diag * d;
 		smatrix_node * p;
 
@@ -1940,7 +1920,7 @@ public:
 				assert(d->K(i,i) > 0.0);
 				if (d->K(i,i) < DBL_EPSILON) {
 					printf("OOOOPS... (%g) %i/%i %i\n",d->K(i,i),n,nnd,i);
-					return false;
+					throw std::range_error("Non-positive definite matrix in incchol()!");
 				}
 				// NOTE: We store the inverse of the diagonal to avoid
 				// divisions.
@@ -1953,11 +1933,10 @@ public:
 				}
 			}
 		}
-		return true;
 	}
 	// Do a complete Cholesky decompostion, by filling in all the blocks and
 	// then doing an 'incomplete' Cholesky...
-	bool chol() {
+	void chol() {
 		smatrix_diag * d;
 		smatrix_node * p;
 
@@ -1966,8 +1945,7 @@ public:
 			if (!(p = d->col_head))
 				continue; // Diagional only is OK.
 			unsigned r = p->i, a = r - n - d->nnz;
-			if (!d->expand(a))
-				return false;
+			d->expand(a);
 			memset(&(d->nodes[d->nnz]),0,a*sizeof(smatrix_node));
 			p = d->col_head; // The array's probably been realloced.
 			for (; r < n; r++) {
@@ -1980,7 +1958,7 @@ public:
 		}
 		// Now call tidy to magically add these nodes.
 		tidy();
-		return incchol();
+		incchol();
 	}
 
 private:
@@ -2096,42 +2074,42 @@ public:
 			break;
 		case element::variable18:
 			e = new element_variable<element::linear>(this,m,c);
-			if (e != 0 && e->nnd == 8) {
+			if (e->nnd == 8) {
 				delete e;
 				e = new element_block<element::linear>(this,m,c);
 			}
 			break;
 		case element::variable26:
 			e = new element_variable<element::quadratic>(this,m,c);
-			if (e != 0 && e->nnd == 12) {
+			if (e->nnd == 12) {
 				delete e;
 				e = new element_block<element::quadratic>(this,m,c);
 			}
 			break;
 		case element::variable34:
 			e = new element_variable<element::cubic>(this,m,c);
-			if (e != 0 && e->nnd == 16) {
+			if (e->nnd == 16) {
 				delete e;
 				e = new element_block<element::cubic>(this,m,c);
 			}
 			break;
 		case element::adaptor18:
 			e = new element_adaptor<element::linear>(this,m,c);
-			if (e != 0 && e->nnd == 8) {
+			if (e->nnd == 8) {
 				delete e;
 				e = new element_block<element::linear>(this,m,c);
 			}
 			break;
 		case element::adaptor26:
 			e = new element_adaptor<element::quadratic>(this,m,c);
-			if (e != 0 && e->nnd == 12) {
+			if (e->nnd == 12) {
 				delete e;
 				e = new element_block<element::quadratic>(this,m,c);
 			}
 			break;
 		case element::adaptor34:
 			e = new element_adaptor<element::cubic>(this,m,c);
-			if (e != 0 && e->nnd == 16) {
+			if (e->nnd == 16) {
 				delete e;
 				e = new element_block<element::cubic>(this,m,c);
 			}
@@ -2353,10 +2331,7 @@ public:
 					unsigned nj = node.getorder(gj);
 					if ((node[gj].fixed & ((1<<NDOF)-1)) == ((1<<NDOF)-1))
 						continue;
-					if (!K.append(ni,nj,(*ke)(i,j))) {
-						delete ke;
-						return false;
-					}
+					K.append(ni,nj,(*ke)(i,j));
 				}
 			}
 			delete ke;
@@ -2374,23 +2349,13 @@ public:
 		}
 
 		timeme("\nTidying up...");
-
 		K.tidy();
-
 		timeme("\nCopying...");
-
 		smatrix M(K);
-
 		timeme("\nComputing fill in...");
-
-		if (!M.fillin())
-			return false;
-
+		M.fillin();
 		timeme("\nComputing incomplete Cholesky...");
-
-		if (!M.incchol())
-			return false;
-
+		M.incchol();
 		timeme("\nBeginning CG...");
 
 		unsigned it = 0;

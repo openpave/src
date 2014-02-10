@@ -176,13 +176,11 @@ public:
 	}
 	// access the value to which the pointer refers
 	matrix_storage & operator* () const {
-		if (ptr == 0)
-			event_msg(EVENT_ERROR,"Null pointer deference in class matrix!");
+		assert(ptr != 0);
 		return *ptr;
 	}
 	matrix_storage * operator-> () const {
-		if (ptr == 0)
-			event_msg(EVENT_ERROR,"Null pointer deference in class matrix!");
+		assert(ptr != 0);
 		return ptr;
 	}
 	
@@ -726,51 +724,51 @@ operator- (const matrix & b) {
                                    ((j)+1)*(w)+(i)-(w)*((w)+1)/2)
 
 void orth_gs(const unsigned n, double * Q);
-bool equ_gauss(const unsigned n, const double * A, const double * b,
+void equ_gauss(const unsigned n, const double * A, const double * b,
 	double * x);
 double inv_mul_gauss(const unsigned n, const unsigned m, double * A, double * B);
-bool decmp_lu(const unsigned n, double * A, unsigned * idx, int & d);
+void decmp_lu(const unsigned n, double * A, unsigned * idx, int & d);
 void bksub_lu(const unsigned n, const double * A, const unsigned * idx,
 	double * b, const unsigned m = 1, const unsigned c = 0);
-bool equ_lu(const unsigned n, const double * A, const double * b, double * x,
+void equ_lu(const unsigned n, const double * A, const double * b, double * x,
 	const double tol = ERR_TOL);
 double inv_mul_lu(const unsigned n, const unsigned m, double * A,
 	double * B);
-bool inv_lu(const unsigned n, double * A);
-bool decmp_chol(const unsigned n, double * A);
-bool decmp_chol_tri(const unsigned n, double * A);
-bool decmp_chol(const unsigned n, const unsigned w, double * A);
+void inv_lu(const unsigned n, double * A);
+void decmp_chol(const unsigned n, double * A);
+void decmp_chol_tri(const unsigned n, double * A);
+void decmp_chol(const unsigned n, const unsigned w, double * A);
 void bksub_chol(const unsigned n, const double * A, double * b,
 	const unsigned m = 1, const unsigned c = 0);
 void bksub_chol(const unsigned n, const unsigned w, const double * A, double * b,
 	const unsigned m = 1, const unsigned c = 0);
-bool equ_chol(const unsigned n, const double * A, const double * b, double * x,
+void equ_chol(const unsigned n, const double * A, const double * b, double * x,
 	const double tol = ERR_TOL);
-bool equ_chol(const unsigned n, const unsigned w, const double * A, const double * b,
+void equ_chol(const unsigned n, const unsigned w, const double * A, const double * b,
 	double * x, const double tol = ERR_TOL);
-bool inv_chol(const unsigned n, double * A);
-bool decmp_ldl(const unsigned n, double * A);
+void inv_chol(const unsigned n, double * A);
+void decmp_ldl(const unsigned n, double * A);
 void bksub_ldl(const unsigned n, const double * A, double * b,
 	const unsigned m = 1, const unsigned c = 0);
-bool equ_ldl(const unsigned n, const double * A, const double * b, double * x,
+void equ_ldl(const unsigned n, const double * A, const double * b, double * x,
 	const double tol = ERR_TOL);
-bool decmp_svd(const unsigned m, const unsigned n, double * A, double * W, double * V);
-bool bksub_svd(const unsigned m, const unsigned n, const double * U, const double * W,
+void decmp_svd(const unsigned m, const unsigned n, double * A, double * W, double * V);
+void bksub_svd(const unsigned m, const unsigned n, const double * U, const double * W,
 	const double * V, double * b, const unsigned p = 1, const unsigned c = 0);
-bool equ_svd(const unsigned n, const double * A,	const double * b, double * x,
+void equ_svd(const unsigned n, const double * A, const double * b, double * x,
 	const double tol = ERR_TOL);
-bool inv_svd(const unsigned n, double * A);
-bool orth_svd(const unsigned n, double * Q);
+void inv_svd(const unsigned n, double * A);
+void orth_svd(const unsigned n, double * Q);
 bool decmp_qr(const unsigned n, double * A, double * s, double * d);
 void bksub_qr(const unsigned n, const double * A, const double * s,
 	const double * d, double * b, const unsigned m = 1, const unsigned c = 0);
 void tridiag_hh(const unsigned n, double * A, double * d, double * e);
 void eig_tri_ql(const unsigned n, double * d, double * e, double * A);
-bool eig_ql(const unsigned n, double * A, double * d, bool sorted = true);
-bool bksub_eig(const unsigned n, const double * Q, const double * d, double * b,
+void eig_ql(const unsigned n, double * A, double * d, bool sorted = true);
+void bksub_eig(const unsigned n, const double * Q, const double * d, double * b,
 	const unsigned p = 1, const unsigned c = 0);
-bool equ_eig(const unsigned n, const double * A, const double * b, double * x,
+void equ_eig(const unsigned n, const double * A, const double * b, double * x,
 	const double tol = ERR_TOL);
-bool inv_eig(const unsigned n, double * A);
+void inv_eig(const unsigned n, double * A);
 
 #endif // MATRIX_H

@@ -268,30 +268,29 @@ public:
 	}
 
 	// Add one element, at the end.
-	inline bool add(const V & v) {
-		return add(this->size,&v,1);
+	inline void add(const V & v) {
+		add(this->size,&v,1);
 	}
 	// Add a whole set, at the end.
-	inline bool add(const fset<V> & v) {
-		return add(this->size,&(v[0]),v.length());
+	inline void add(const fset<V> & v) {
+		add(this->size,&(v[0]),v.length());
 	}
 	// Add an array, at the end.
-	inline bool add(const V * v, const unsigned s = 1) {
-		return add(this->size,v,s);
+	inline void add(const V * v, const unsigned s = 1) {
+		add(this->size,v,s);
 	}
 	// Insert one element at position p.
-	inline bool add(const unsigned p, const V & v) {
-		return add(p,&v,1);
+	inline void add(const unsigned p, const V & v) {
+		add(p,&v,1);
 	}
 	// Insert a set at position p.
-	inline bool add(const unsigned p, const fset<V> & v) {
-		return add(p,&(v[0]),v.length());
+	inline void add(const unsigned p, const fset<V> & v) {
+		add(p,&(v[0]),v.length());
 	}
 	// Add an array at position p. (Actually do the work too).
-	bool add(unsigned p, const V * v, const unsigned s = 1) {
+	void add(unsigned p, const V * v, const unsigned s = 1) {
 		unsigned i;
-		if (s == 0 || v == 0)
-			return false;
+		assert(s > 0 && v != 0);
 		if (p >= this->size) {
 			this->allocate(p+s);
 			for (i = this->size; p > 0 && i < p-1; i++)
@@ -305,16 +304,14 @@ public:
 		}
 		for (i = 0; i < s; i++)
 			this->init(p+i,&v[i]);
-		return true;
 	}
 	// Remove the last element.
-	inline bool remove() {
-		return remove(this->size-1,1);
+	inline void remove() {
+		remove(this->size-1,1);
 	}
 	// Remove s elements, starting at position p.
-	bool remove(unsigned p, unsigned s = 1) {
-		if (!this->inbounds(p) || s == 0)
-			return false;
+	void remove(unsigned p, unsigned s = 1) {
+		assert(this->inbounds(p) && s > 0);
 		s = (p+s > this->size ? this->size-p : s);
 		for (unsigned i = 0; i < s; i++)
 			this->value[p+i].~V();
@@ -323,7 +320,6 @@ public:
 				(this->size-p-s)*sizeof(V));
 		this->size -= s;
 		this->allocate(this->size);
-		return true;
 	}
 	inline void empty() {
 		this->deallocate();
@@ -576,31 +572,28 @@ public:
 	}
 
 	// Add one value at the end.
-	inline bool add(const V & v) {
+	inline void add(const V & v) {
 		return add(&v,1);
 	}
 	// Add a whole set, at the end.
-	inline bool add(const iset<V> & v) {
+	inline void add(const iset<V> & v) {
 		return add(v.value,v.size);
 	}
-	inline bool add(const fset<V> & v) {
+	inline void add(const fset<V> & v) {
 		return add(v.value,v.size);
 	}
 	// Add an array of values... There is no point in
 	// a position based addition. 
-	bool add(const V * v, const unsigned s = 1) {
-		if (s == 0 || v == 0)
-			return false;
+	void add(const V * v, const unsigned s = 1) {
+		assert(s > 0 && v != 0);
 		allocate(size+s);
 		copy(s,v,true);
 		allocate(size);
-		return true;
 	}
 	// Now start removing them...
-	bool remove(const V & v) {
+	void remove(const V & v) {
 		unsigned p = hasvalue(v), q = UINT_MAX;
-		if (p == UINT_MAX)
-			return false;
+		assert(p != UINT_MAX);
 		value[p].~V();
 		if (p < --size)
 			memmove(&value[p],&value[p+1],(size-p)*sizeof(V));
@@ -613,15 +606,12 @@ public:
 		if (q < size)
 			memmove(&idx[q],&idx[q+1],(size-q)*sizeof(unsigned));
 		allocate(size);
-		return true;
 	}
 	// Replace key/value with another.
-	inline bool replace(const V & v) {
+	inline void replace(const V & v) {
 		unsigned p = hasvalue(v);
-		if (p == UINT_MAX)
-			return false;
+		assert (p != UINT_MAX);
 		value[p] = v;
-		return true;
 	}
 	inline void empty() {
 		deallocate();
@@ -853,42 +843,36 @@ public:
 	}
 
 	// Add one value at the end.
-	inline bool add(const V & v) {
-		return add(&v,1);
+	inline void add(const V & v) {
+		add(&v,1);
 	}
 	// Add a whole set, at the end.
-	inline bool add(const kfset<K,V> & v) {
-		return add(v.value,v.size);
+	inline void add(const kfset<K,V> & v) {
+		add(v.value,v.size);
 	}
 	// Add an array of values... There is no point in
 	// a position based addition. 
-	bool add(const V * v, const unsigned s = 1) {
-		if (s == 0 || v == 0)
-			return false;
+	void add(const V * v, const unsigned s = 1) {
+		assert(s >= 0 && v != 0);
 		this->allocate(this->size+s);
 		this->copy(s,v,true);
 		this->allocate(this->size);
-		return true;
 	}
 	// Remove based on key.
-	bool remove(const K & k) {
+	void remove(const K & k) {
 		unsigned p = this->haskey(k);
-		if (p == UINT_MAX)
-			return false;
+		assert(p != UINT_MAX);
 		this->value[p].~V();
 		if (p < --this->size)
 			memmove(&this->value[p],&this->value[p+1],
 				(this->size-p)*sizeof(V));
 		this->allocate(this->size);
-		return true;
 	}
 	// Replace key/value with another.
-	inline bool replace(const V & v) {
+	inline void replace(const V & v) {
 		unsigned p = this->haskey(v);
-		if (p == UINT_MAX)
-			return false;
+		assert(p != UINT_MAX);
 		this->value[p] = v;
-		return true;
 	}
 	inline void empty() {
 		this->deallocate();
@@ -1055,28 +1039,25 @@ public:
 	}
 
 	// Add one value at the end.
-	inline bool add(const V & v) {
-		return add(&v,1);
+	inline void add(const V & v) {
+		add(&v,1);
 	}
 	// Add a whole set, at the end.
-	inline bool add(const kfset<K,V> & v) {
-		return add(v.value,v.size);
+	inline void add(const kfset<K,V> & v) {
+		add(v.value,v.size);
 	}
 	// Add an array of values... There is no point in
 	// a position based addition. 
-	bool add(const V * v, const unsigned s = 1) {
-		if (s == 0 || v == 0)
-			return false;
+	void add(const V * v, const unsigned s = 1) {
+		assert(s >= 0 && v != 0);
 		allocate(size+s);
 		copy(s,v,true);
 		allocate(size);
-		return true;
 	}
 	// Now start removing them...
-	bool remove(const K & k) {
+	void remove(const K & k) {
 		unsigned p = haskey(k), q = UINT_MAX;
-		if (p == UINT_MAX)
-			return false;
+		assert(p != UINT_MAX);
 		value[p].~V();
 		if (p < --size)
 			memmove(&value[p],&value[p+1],(size-p)*sizeof(V));
@@ -1089,15 +1070,12 @@ public:
 		if (q < size)
 			memmove(&idx[q],&idx[q+1],(size-q)*sizeof(unsigned));
 		allocate(size);
-		return true;
 	}
 	// Replace key/value with another.
-	inline bool replace(const V & v) {
+	inline void replace(const V & v) {
 		unsigned p = haskey(v);
-		if (p == UINT_MAX)
-			return false;
+		assert(p != UINT_MAX);
 		value[p] = v;
-		return true;
 	}
 	inline void empty() {
 		deallocate();
@@ -1357,29 +1335,26 @@ public:
 	}
 
 	// Add one...
-	inline bool add(const K & k,const V & v) {
-		return add(&k,&v,1);
+	inline void add(const K & k,const V & v) {
+		add(&k,&v,1);
 	}
 	// Add a whole set, at the end.
-	inline bool add(const afset<K,V> & v) {
-		return add(v.key,v.value,v.size);
+	inline void add(const afset<K,V> & v) {
+		add(v.key,v.value,v.size);
 	}
 	// Add a whole bunch...
-	bool add(const K * k, const V * v = 0,
+	void add(const K * k, const V * v = 0,
 			const unsigned s = 1) {
-		if (s == 0 || k == 0)
-			return false;
+		assert(s > 0 && k != 0);
 		this->allocate(this->size+s);
 		this->copy(s,k,v,true);
 		this->allocate(this->size);
-		return true;
 	}
 	// Now start removing them...
-	bool remove(const K & k) {
-		unsigned p = this->haskey(k) + 1;
-		if (p == 0)
-			return false;
-		this->key[p].~K();
+	void remove(const K & k) {
+		unsigned p = this->haskey(k);
+		assert(p != UINT_MAX);
+		this->key[++p].~K();
 		this->value[p].~V();
 		if (p < --this->size) {
 			memmove(&this->key[p],&this->key[p+1],
@@ -1388,15 +1363,12 @@ public:
 					(this->size-p)*sizeof(V));
 		}
 		this->allocate(this->size);
-		return true;
 	}
 	// Or replacing them...
-	inline bool replace(const K & k, const V & v) {
+	inline void replace(const K & k, const V & v) {
 		unsigned p = this->haskey(k);
-		if (p == UINT_MAX)
-			return false;
+		assert(p != UINT_MAX);
 		this->value[p] = v;
-		return true;
 	}
 	inline void empty() {
 		this->deallocate();

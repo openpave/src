@@ -30,8 +30,9 @@
 
 *************************************************************************/
 
-#include "matrix.h"
 #include <stdio.h>
+#include "matrix.h"
+#include "autodelete.h"
 
 /*
  * Orthonormalize the nxn matrix Q, using the Gramm-Schmidt algorithm.
@@ -63,16 +64,15 @@ orth_gs(const unsigned n, double * Q)
  *
  * This function employs Gaussian elimination with full pivoting.
  */
-bool
+void
 equ_gauss(const unsigned n, const double * A, const double * b,
           double * x)
 {
-	bool rv = true;
 	unsigned i, j, k;
 
 	if (n == 0)
-		return true;
-	double * a = new double[n*n];
+		return;
+	autodelete<double> a(new double[n*n]);
 	// avoid destroying A, B by copying them to a, x resp.
 	memcpy(a,A,sizeof(double)*n*n);
 	memcpy(x,b,sizeof(double)*n);
@@ -82,11 +82,8 @@ equ_gauss(const unsigned n, const double * A, const double * b,
 			if (fabs(pvt = a[j*n+i]) >= DBL_EPSILON)
 				break;
 		}
-		if (j == n) {
-			event_msg(EVENT_ERROR,"Singular matrix in equ_gauss()!");
-			rv = false;
-			goto abort;
-		}
+		if (j == n)
+			throw std::range_error("Singular matrix in equ_gauss()!");
 		if (j != i) {
 			for (k = 0; k < n; k++)
 				swap(a[j*n+k],a[i*n+k]);
@@ -104,9 +101,6 @@ equ_gauss(const unsigned n, const double * A, const double * b,
 			x[i-1] -= a[(i-1)*n+j]*x[j];
 		x[i-1] /= a[(i-1)*n+(i-1)];
 	}
-  abort:
-	delete [] a;
-	return rv;
 }
 
 /*
@@ -128,11 +122,8 @@ inv_mul_gauss(const unsigned n, const unsigned m, double * A,
 			if (fabs(pvt = A[j*n+i]) >= DBL_EPSILON)
 				break;
 		}
-		if (j == n) {
-			event_msg(EVENT_ERROR,"Singular matrix in inv_mul_gauss()!");
-			det = 0.0;
-			goto abort;
-		}
+		if (j == n)
+			throw std::range_error("Singular matrix in inv_mul_gauss()!");
 		if (j != i) {
 			for (k = 0; k < n; k++)
 				swap(A[j*n+k],A[i*n+k]);
@@ -155,7 +146,6 @@ inv_mul_gauss(const unsigned n, const unsigned m, double * A,
 		for (k = 0; k < m; k++)
 			B[(i-1)*m+k] /= A[(i-1)*n+(i-1)];
 	}
-abort:
 	return det;
 }
 
@@ -168,16 +158,15 @@ abort:
  * idx holds the row interchange index, and d is negative if an odd number
  * of interchanges have been performed (this is for the determinant calc).
  */
-bool
+void
 decmp_lu(const unsigned n, double * A, unsigned * idx,
          int & d)
 {
-	bool rv = true;
 	unsigned i, j, k;
 
 	if (n == 0)
-		return true;
-	double * work = new double[n];
+		return;
+	autodelete<double> work(new double[n]);
 	d = 1;
 	// compute the LU decomposition of a row permutation of matrix a;
 	// the permutation itself is saved in idx[]
@@ -186,11 +175,8 @@ decmp_lu(const unsigned n, double * A, unsigned * idx,
 		for (j = 0; j < n; j++)
 			if ((tmp = fabs(A[i*n+j])) > max)
 				max = tmp;
-		if (max < DBL_EPSILON) {
-			event_msg(EVENT_WARN,"Singular matrix A in decmp_lu()!");
-			rv = false;
-			goto abort;
-		}
+		if (max < DBL_EPSILON)
+			throw std::range_error("Singular matrix A in decmp_lu()!");
 		work[i] = max;
 	}
 	for (i = 0; i < n; i++) {
@@ -213,16 +199,11 @@ decmp_lu(const unsigned n, double * A, unsigned * idx,
 			swap(work[idx[i]],work[i]);
 		}
 		if (A[i*n+i] == 0.0) {
-			event_msg(EVENT_WARN,"Singular matrix A in decmp_lu()!");
-			rv = false;
-			goto abort;
+			throw std::range_error("Singular matrix A in decmp_lu()!");
 		}
 		for (j = i+1; j < n; j++)
 			A[j*n+i] /= A[i*n+i];
 	}
-abort:
-	delete [] work;
-	return rv;
 }
 
 /*
@@ -264,27 +245,22 @@ bksub_lu(const unsigned n, const double * A, const unsigned * idx,
  * The function employs LU decomposition followed by forward/back
  * substitution, with a single step refinement.
  */
-bool
+void
 equ_lu(const unsigned n, const double * A, const double * b,
        double * x, const double tol)
 {
-	bool rv = true;
 	unsigned i, j;
 	int d;
 
 	if (n == 0)
-		return true;
-	unsigned * idx = new unsigned[n];
-	double * a = new double[n*n];
-	double * r = new double[n];
+		return;
+	autodelete<unsigned> idx(new unsigned[n]);
+	autodelete<double> a(new double[n*n]);
+	autodelete<double> r(new double[n]);
 	// avoid destroying A, B by copying them to a, x resp.
 	memcpy(a,A,sizeof(double)*n*n);
 	memcpy(x,b,sizeof(double)*n);
-	if (!decmp_lu(n,a,idx,d)) {
-		memset(x,0,sizeof(double)*n);
-		rv = false;
-		goto abort;
-	}
+	decmp_lu(n,a,idx,d);
 	bksub_lu(n,a,idx,x);
 	for (i = 0; i < n; i++) {
 		for (j = 0, r[i] = -b[i]; j < n; j++)
@@ -293,12 +269,6 @@ equ_lu(const unsigned n, const double * A, const double * b,
 	bksub_lu(n,a,idx,r);
 	for (i = 0; i < n; i++)
 		x[i] -= r[i];
-
-  abort:
-	delete [] r;
-	delete [] a;
-	delete [] idx;
-	return rv;
 }
 
 /*
@@ -315,48 +285,35 @@ inv_mul_lu(const unsigned n, const unsigned m, double * A,
 
 	if (n == 0)
 		return 0.0;
-	unsigned * idx = new unsigned[n];
-	if (!decmp_lu(n,A,idx,d)) {
-		memset(B,0,sizeof(double)*n*m);
-		goto abort;
-	}
+	autodelete<unsigned> idx(new unsigned[n]);
+	decmp_lu(n,A,idx,d);
 	for (i = 0, det = d; i < n; i++)
 		det *= A[i*n+i];
 	for (i = 0; i < m; i++)
 		bksub_lu(n,A,idx,B,m,i);
-abort:
-	delete [] idx;
 	return det;
 }
 
 /*
  * Matrix inverse of the real nxn matrix A using LU decomposition.  
  */
-bool
+void
 inv_lu(const unsigned n, double * A)
 {
-	bool rv = true;
 	unsigned i;
 	int d;
 
 	if (n == 0)
-		return true;
-	unsigned * idx = new unsigned[n];
-	double * a = new double[n*n];
+		return;
+	autodelete<unsigned> idx(new unsigned[n]);
+	autodelete<double> a(new double[n*n]);
 	memcpy(a,A,sizeof(double)*n*n);
 	memset(A,0,sizeof(double)*n*n);
 	for (i = 0; i < n; i++)
 		A[i*n+i] = 1.0;
-	if (!decmp_lu(n,a,idx,d)) {
-		rv = false;
-		goto abort;
-	}
+	decmp_lu(n,a,idx,d);
 	for (i = 0; i < n; i++)
 		bksub_lu(n,a,idx,A,n,i);
-abort:
-	delete [] a;
-	delete [] idx;
-	return rv;
 }
 
 /*
@@ -364,7 +321,7 @@ abort:
  *
  * Returns L in the lower triangle of A.
  */
-bool
+void
 decmp_chol(const unsigned n, double * A)
 {
 	unsigned i, j, k;
@@ -376,16 +333,13 @@ decmp_chol(const unsigned n, double * A)
 			for (k = 0; k < i; k++)
 				sum -= A[i*n+k]*A[j*n+k];
 			if (i == j) {
-				if (sum <= 0.0) {
-					event_msg(EVENT_WARN,"Non-positive definite matrix in decmp_chol(%f)!",sum);
-					return false;
-				}
+				if (sum <= 0.0)
+					throw std::runtime_error("Non-positive definite matrix in decmp_chol()!");
 				A[i*n+i] = 1.0/sqrt(sum);
 			} else
 				A[j*n+i] = sum*A[i*n+i];
 		}
 	}
-	return true;
 }
 
 /*
@@ -393,7 +347,7 @@ decmp_chol(const unsigned n, double * A)
  *
  * Returns U in the trianglar matrix.
  */
-bool
+void
 decmp_chol_tri(const unsigned n, double * A)
 {
 	unsigned i, j, k;
@@ -405,16 +359,13 @@ decmp_chol_tri(const unsigned n, double * A)
 			for (k = 0; k < i; k++)
 				sum -= A[T_IDX(k,i)]*A[T_IDX(k,j)];
 			if (i == j) {
-				if (sum <= 0.0) {
-					event_msg(EVENT_WARN,"Non-positive definite matrix in decmp_chol_tri(%f)!",sum);
-					return false;
-				}
+				if (sum <= 0.0)
+					throw std::runtime_error("Non-positive definite matrix in decmp_chol_tri()!");
 				A[T_IDX(i,i)] = sqrt(sum);
 			} else
 				A[T_IDX(i,j)] = sum/A[T_IDX(i,i)];
 		}
 	}
-	return true;
 }
 
 /*
@@ -423,7 +374,7 @@ decmp_chol_tri(const unsigned n, double * A)
  *
  * Returns U in the upper triangle of A.
  */
-bool
+void
 decmp_chol(const unsigned n, const unsigned w, double * A)
 {
 	unsigned i, j, k;
@@ -434,16 +385,13 @@ decmp_chol(const unsigned n, const unsigned w, double * A)
 			for (k = (w>j?0:j-w); k < i; k++)
 				sum -= A[B_IDX(n,w,k,i)]*A[B_IDX(n,w,k,j)];
 			if (i == j) {
-				if (sum <= 0) {
-					event_msg(EVENT_WARN,"Non-positive definite matrix in decmp_chol(%f)!",double(sum));
-					return false;
-				}
+				if (sum <= 0)
+					throw std::runtime_error("Non-positive definite matrix in decmp_chol()!");
 				A[B_IDX(n,w,i,i)] = 1.0/sqrt(sum);
 			} else
 				A[B_IDX(n,w,i,j)] = sum*A[B_IDX(n,w,i,i)];
 		}
 	}
-	return true;
 }
 
 /*
@@ -496,41 +444,34 @@ bksub_chol(const unsigned n, const unsigned w, const double * A,
  * Solve of Ax = b by Cholesky decomposition followed by forward/back
  * substitution.
  */
-bool
+void
 equ_chol(const unsigned n, const double * A, const double * b,
          double * x, const double tol)
 {
-	bool rv = true;
 	//unsigned i, j;
 
 	if (n == 0)
-		return true;
-	double * a = new double[n*n];
-	//double * r = new double[n];
+		return;
+	autodelete<double> a(new double[n*n]);
+	//autodelete<double> r(new double[n]);
 	// avoid destroying A and B by copying them to a and x resp.
 	memcpy(a,A,sizeof(double)*n*n);
 	memcpy(x,b,sizeof(double)*n);
-	if (!decmp_chol(n,a)) {
-		memset(x,0,sizeof(double)*n);
-		rv = false;
-		goto abort;
-	}
+	decmp_chol(n,a);
 	bksub_chol(n,a,x);
-	/*for (i = 0, dot = 0.0; i < n; i++) {
+	/*
+	for (i = 0, dot = 0.0; i < n; i++) {
 		for (j = 0, r[i] = -b[i]; j < n; j++)
 			r[i] += A[i*n+j]*x[j];
 		dot += r[i]*r[i];
 	}
-	printf(" %g",dot);
+	//printf(" %g",dot);
 	if (dot > ERR_TOL)
-		return rv;
+		return;
 	bksub_chol(n,a,r);
 	for (i = 0; i < n; i++)
-		x[i] -= r[i];*/
-abort:
-	//delete [] r;
-	delete [] a;
-	return rv;
+		x[i] -= r[i];
+	*/
 }
 
 /*
@@ -539,27 +480,22 @@ abort:
  * The function employs Cholesky decomposition followed by forward/back
  * substitution, with a single step refinement.
  */
-bool
+void
 equ_chol(const unsigned n, const unsigned w, const double * A,
          const double * b, double * x, const double tol)
         
 {
-	bool rv = true;
 	unsigned i, j, iter = 0;
 	double dot, c1, y1, t1, c, y, t;
 
 	if (n == 0)
-		return true;
-	double * a = new double[B_SIZE(n,w)];
-	double * r = new double[n];
+		return;
+	autodelete<double> a(new double[B_SIZE(n,w)]);
+	autodelete<double> r(new double[n]);
 	// avoid destroying A and B by copying them to a and x resp.
 	memcpy(a,A,sizeof(double)*B_SIZE(n,w));
 	memcpy(x,b,sizeof(double)*n);
-	if (!decmp_chol(n,w,a)) {
-		memset(x,0,sizeof(double)*n);
-		rv = false;
-		goto abort;
-	}
+	decmp_chol(n,w,a);
 	bksub_chol(n,w,a,x);
 	while (1) {
 		dot = 0.0; c1 = 0.0;
@@ -582,24 +518,19 @@ equ_chol(const unsigned n, const unsigned w, const double * A,
 		for (i = 0; i < n; i++)
 			x[i] -= r[i];
 	}
-abort:
-	delete [] r;
-	delete [] a;
-	return rv;
 }
 
 /*
  * Matrix inverse of the real positive definite nxn matrix A using
  * Cholesky decomposition.  
  */
-bool
+void
 inv_chol(unsigned n, double * A)
 {
 	unsigned i, j, k;
 	double sum;
 
-	if (!decmp_chol(n,A))
-		return false;
+	decmp_chol(n,A);
 	for (i = 0; i < n; i++) {
 		for (j = i+1; j < n; j++) {
 			for (k = i, sum = 0.0; i < j && k < j; k++)
@@ -618,7 +549,6 @@ inv_chol(unsigned n, double * A)
 			A[j*n+i] = A[i*n+j];
 		}
 	}
-	return true;
 }
 
 /*
@@ -628,7 +558,7 @@ inv_chol(unsigned n, double * A)
  * Returns L in the lower triangle of A (all diagonal elements are 1),
  * with D in the diagonal.
  */
-bool
+void
 decmp_ldl(const unsigned n, double * A)
 {
 	unsigned i, j, k;
@@ -638,10 +568,8 @@ decmp_ldl(const unsigned n, double * A)
 		for (k = 0, sum = 0.0; k < i; k++)
 			sum += A[k*n+k]*(A[i*n+k]*A[i*n+k]);
 		A[i*n+i] -= sum;
-		if (fabs(A[i*n+i]) < DBL_EPSILON) {
-			event_msg(EVENT_WARN,"Indefinite matrix in decmp_ldl(%f)!",A[i*n+i]);
-			return false;
-		}
+		if (fabs(A[i*n+i]) < DBL_EPSILON)
+			throw std::runtime_error("Indefinite matrix in decmp_ldl()!");
 		for (j = i+1; j < n; j++) {
 			for (k = 0, sum = 0.0; k < i; k++) {
 				sum += A[k*n+k]*(A[i*n+k]*A[j*n+k]);
@@ -649,7 +577,6 @@ decmp_ldl(const unsigned n, double * A)
 			A[j*n+i] = (A[j*n+i]-sum)/A[i*n+i];
 		}
 	}
-	return true;
 }
 
 /*
@@ -684,25 +611,20 @@ bksub_ldl(const unsigned n, const double * A,
  * The function employs LDL^T decomposition followed by forward/back
  * substitution, (with a single step refinement).
  */
-bool
+void
 equ_ldl(const unsigned n, const double * A,
         const double * b, double * x, const double tol)
 {
-	bool rv = true;
 	unsigned i, j;
 
 	if (n == 0)
-		return true;
-	double * a = new double[n*n];
-	double * r = new double[n];
+		return;
+	autodelete<double> a(new double[n*n]);
+	autodelete<double> r(new double[n]);
 	// avoid destroying A and B by copying them to a and x resp.
 	memcpy(a,A,sizeof(double)*n*n);
 	memcpy(x,b,sizeof(double)*n);
-	if (!decmp_ldl(n,a)) {
-		memset(x,0,sizeof(double)*n);
-		rv = false;
-		goto abort;
-	}
+	decmp_ldl(n,a);
 	bksub_ldl(n,a,x);
 	for (i = 0; i < n; i++) {
 		for (j = 0, r[i] = -b[i]; j < n; j++)
@@ -711,10 +633,6 @@ equ_ldl(const unsigned n, const double * A,
 	bksub_ldl(n,a,r);
 	for (i = 0; i < n; i++)
 		x[i] -= r[i];
-  abort:
-	delete [] r;
-	delete [] a;
-	return rv;
 }
 
 /*
@@ -723,7 +641,7 @@ equ_ldl(const unsigned n, const double * A,
  * The diagonal matrix of singular values, W, is output as a vector W.
  * The matrix V (not the transpose of V) is output as V.
  */
-bool
+void
 decmp_svd(const unsigned m, const unsigned n, double * A,
           double * W, double * V)
 {
@@ -734,8 +652,8 @@ decmp_svd(const unsigned m, const unsigned n, double * A,
 	unsigned iter, i, j, k, q;
 	
 	if (m == 0 || n == 0)
-		return true;
-	double * rv1 = new double[n];
+		return;
+	autodelete<double> rv1(new double[n]);
 	// Householder reduction to bidiagonal form.
 	for (i = 0; i < n; i++) {
 		rv1[i] = scale*G;
@@ -891,11 +809,10 @@ decmp_svd(const unsigned m, const unsigned n, double * A,
 			rv1[i] = F; W[i] = X;
 		}
 	}
-	delete [] rv1;
-	return true;
+	return;
 }
 
-bool
+void
 bksub_svd(const unsigned m, const unsigned n, const double * U,
           const double * W, const double * V,
           double * b, const unsigned p, const unsigned c)
@@ -903,8 +820,8 @@ bksub_svd(const unsigned m, const unsigned n, const double * U,
 	unsigned i, j;
 
 	if (m == 0 || n == 0)
-		return true;
-	double * tmp = new double[n];
+		return;
+	autodelete<double> tmp(new double[n]);
 	for (j = 0; j < n; j++) {
 		tmp[j] = 0.0;
 		if (W[j] != 0.0) {
@@ -918,8 +835,7 @@ bksub_svd(const unsigned m, const unsigned n, const double * U,
 		for (i = 0; i < n; i++)
 			b[j*p+c] += V[j*n+i]*tmp[i];
 	}
-	delete [] tmp;
-	return true;
+	return;
 }
 
 /*
@@ -928,75 +844,55 @@ bksub_svd(const unsigned m, const unsigned n, const double * U,
  * The function employs SVD decomposition followed by forward/back
  * substitution, with refinement.
  */
-bool
+void
 equ_svd(const unsigned n, const double * A, const double * b,
         double * x, const double tol)
 {
-	bool rv = true;
 	double max;
 	unsigned i, j;
 
 	if (n == 0)
-		return true;
-	double * U = new double[n*n];
-	double * W = new double[n];
-	double * V = new double[n*n];
-	double * r = new double[n];
+		return;
+	autodelete<double> U(new double[n*n]);
+	autodelete<double> W(new double[n]);
+	autodelete<double> V(new double[n*n]);
+	autodelete<double> r(new double[n]);
 	// avoid destroying A, B by copying them to U, x resp.
 	memcpy(U,A,sizeof(double)*n*n);
 	memcpy(x,b,sizeof(double)*n);
-	if (!decmp_svd(n,n,U,W,V)) {
-		rv = false;
-		goto abort;
-	}
+	decmp_svd(n,n,U,W,V);
 	for (i = 0, max = 0.0; i < n; i++)
 		if (W[i] > max)
 			max = W[i];
 	for (i = 0, max *= EIG_TOL; i < n; i++)
 		if (W[i] < max)
 			W[i] = 0.0;
-	if (!bksub_svd(n,n,U,W,V,x)) {
-		rv = false;
-		goto abort;
-	}
+	bksub_svd(n,n,U,W,V,x);
 	for (i = 0; i < n; i++) {
 		for (j = 0, r[i] = -b[i]; j < n; j++)
 			r[i] += A[i*n+j]*x[j];
 	}
-	if (!bksub_svd(n,n,U,W,V,r)) {
-		rv = false;
-		goto abort;
-	}
+	bksub_svd(n,n,U,W,V,r);
 	for (i = 0; i < n; i++)
 		x[i] -= r[i];
-abort:
-	delete [] r;
-	delete [] U;
-	delete [] W;
-	delete [] V;
-	return rv;
 }
 
 /*
  * Matrix inverse of the real nxn matrix A using SVD decomposition.
  */
-bool
+void
 inv_svd(const unsigned n, double * A)
 {
-	bool rv = true;
 	double max;
 	unsigned i, j, k;
 
 	if (n == 0)
-		return true;
-	double * U = new double[n*n];
-	double * W = new double[n];
-	double * V = new double[n*n];
+		return;
+	autodelete<double> U(new double[n*n]);
+	autodelete<double> W(new double[n]);
+	autodelete<double> V(new double[n*n]);
 	memcpy(U,A,sizeof(double)*n*n);
-	if (!decmp_svd(n,n,U,W,V)) {
-		rv = false;
-		goto abort;
-	}
+	decmp_svd(n,n,U,W,V);
 	for (i = 0, max = 0.0; i < n; i++)
 		if (W[i] > max)
 			max = W[i];
@@ -1011,30 +907,19 @@ inv_svd(const unsigned n, double * A)
 			}
 		}
 	}
-abort:
-	delete [] U;
-	delete [] W;
-	delete [] V;
-	return rv;
 }
 
 /*
  * Orthonormalize the nxn matrix Q, using the SVD decomposition.
  */
-bool
+void
 orth_svd(const unsigned n, double * Q)
 {
-	bool rv = true;
-	
 	if (n == 0)
-		return true;
-	double * W = new double[n];
-	double * V = new double[n*n];
-	if (!decmp_svd(n,n,Q,W,V))
-		rv = false;
-	delete [] W;
-	delete [] V;
-	return rv;
+		return;
+	autodelete<double> W(new double[n]);
+	autodelete<double> V(new double[n*n]);
+	decmp_svd(n,n,Q,W,V);
 }
 
 /*
@@ -1224,15 +1109,15 @@ eig_tri_ql(const unsigned n, double * d, double * e,
  * Obtain the eigenvalues and eigenvectors of a real symmetric matrix by
  * QL transform.
  */
-bool
+void
 eig_ql(const unsigned n, double * A, double * d, bool sorted)
 {
 	double t;
 	unsigned i, j, k;
 
 	if (n == 0)
-		return true;
-	double * e = new double[n];
+		return;
+	autodelete<double> e(new double[n]);
 	tridiag_hh(n,A,d,e);
 	eig_tri_ql(n,d,e,A);
 	// Sort the eigenvalues into descending order
@@ -1251,19 +1136,17 @@ eig_ql(const unsigned n, double * A, double * d, bool sorted)
 			}
 		}
 	}
-	delete [] e;
-	return true;
 }
 
-bool
+void
 bksub_eig(const unsigned n, const double * Q, const double * d,
           double * b, const unsigned p, const unsigned c)
 {
 	unsigned i, j;
 
 	if (n == 0)
-		return true;
-	double * tmp = new double[n];
+		return;
+	autodelete<double> tmp(new double[n]);
 	memset(tmp,0,sizeof(double)*n);
 	for (j = 0; j < n; j++) {
 		if (d[j] != 0.0) {
@@ -1276,8 +1159,6 @@ bksub_eig(const unsigned n, const double * Q, const double * d,
 		for (i = 0, b[j] = 0.0; i < n; i++)
 			b[j] += Q[j*n+i]*tmp[i];
 	}
-	delete [] tmp;
-	return true;
 }
 
 /*
@@ -1286,20 +1167,19 @@ bksub_eig(const unsigned n, const double * Q, const double * d,
  * The function employs an Eigenvalue decomposition followed by forward/back
  * substitution, with refinement.
  */
-bool
+void
 equ_eig(const unsigned n, const double * A, const double * b,
         double * x, const double tol)
 {
-	bool rv = true;
 	double max;
 	unsigned i, j;
 
 	if (n == 0)
-		return true;
-	double * Q = new double[n*n];
-	double * d = new double[n];
-	double * e = new double[n];
-	double * r = new double[n];
+		return;
+	autodelete<double> Q(new double[n*n]);
+	autodelete<double> d(new double[n]);
+	autodelete<double> e(new double[n]);
+	autodelete<double> r(new double[n]);
 	memcpy(Q,A,sizeof(double)*n*n);
 	memcpy(x,b,sizeof(double)*n);
 	tridiag_hh(n,Q,d,e);
@@ -1320,28 +1200,22 @@ equ_eig(const unsigned n, const double * A, const double * b,
 	bksub_eig(n,Q,d,r);
 	for (i = 0; i < n; i++)
 		x[i] -= r[i];
-	delete [] r;
-	delete [] e;
-	delete [] d;
-	delete [] Q;
-	return rv;
 }
 
 /*
  * Matrix inverse of the real symmetric nxn matrix A using eigenvalue decomposition.
  */
-bool
+void
 inv_eig(const unsigned n, double * A)
 {
-	bool rv = true;
 	double max;
 	unsigned i, j, k;
 
 	if (n == 0)
-		return true;
-	double * Q = new double[n*n];
-	double * d = new double[n];
-	double * e = new double[n];
+		return;
+	autodelete<double> Q(new double[n*n]);
+	autodelete<double> d(new double[n]);
+	autodelete<double> e(new double[n]);
 	memcpy(Q,A,sizeof(double)*n*n);
 	tridiag_hh(n,Q,d,e);
 	eig_tri_ql(n,d,e,Q);
@@ -1361,8 +1235,4 @@ inv_eig(const unsigned n, double * A)
 			}
 		}
 	}
-	delete [] e;
-	delete [] d;
-	delete [] Q;
-	return rv;
 }

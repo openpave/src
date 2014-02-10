@@ -44,6 +44,7 @@
 #define __EVENT_H
 
 #include <exception>
+#include <stdexcept>
 #include <new>
 
 /* Error levels */
@@ -183,7 +184,7 @@ void event_progress(const int type, const int marker,
 		break;
 	case EVENT_PROGRESS_UPDATE:
 		if (level < 0) {
-			event_msg(EVENT_ERROR,"Event updated called on unstarted progress indicator!");
+			throw std::logic_error("Event update called on unstarted progress indicator!");
 		} else if (level < 3) {
 			double p = 0.0, m = 1.0;
 			mark[level] = marker;
@@ -204,7 +205,7 @@ void event_progress(const int type, const int marker,
 		break;
 		level--;
 	default:
-		event_msg(EVENT_ERROR,"Invalid progress indication!");
+		throw std::invalid_argument("Invalid progress indication!");
 	}
 	va_end(args);
 }

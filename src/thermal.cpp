@@ -30,8 +30,9 @@
 
 *************************************************************************/
 
-#include "matrix.h"
 #include "event.h"
+#include "autodelete.h"
+#include "matrix.h"
 #include "thermal.h"
 
 /*
@@ -82,7 +83,7 @@ FEMthermal::FEMthermal(const int nl, const double * lh, const double * ld,
 
 	assert(n >= w+1);
 	assert((n-1) % w == 0);
-	double * lb = new double[nl];	// Layer bottom
+	autodelete<double> lb(new double[nl]);	// Layer bottom
 	nd = new double[n];
 	nt = new double[n];
 	ng = new double[n];
@@ -136,9 +137,7 @@ FEMthermal::FEMthermal(const int nl, const double * lh, const double * ld,
 			}
 			break;
 		default:
-			event_msg(EVENT_ERROR,
-				"Invalid choice of bandwidth in temperature!");
-			goto abort;
+			throw std::invalid_argument("Invalid choice of bandwidth in temperature!");
 		}
 	}
 
@@ -156,13 +155,10 @@ FEMthermal::FEMthermal(const int nl, const double * lh, const double * ld,
 		KK[B_IDX(n,w,i,n-1)] = (i == n-1 ? 1.0 : 0.0);
 	}
 	// Perform cholesky decompostion
-	if (!decmp_chol(n,w,KK))
-		goto abort;
+	decmp_chol(n,w,KK);
 	// Setup the initial gradient vector
 	for (i = 0; i < n; i++)
 		ng[i] = 2*nt[i]/dt;
-abort:
-	delete lb;
 }
 
 void
@@ -234,8 +230,7 @@ FEMthermal::interpolate(const int np, const double * pd, double * pt)
 				    z*(z+1)*(4*z*z-1)*nt[j  ]/6;
 			break;
 		default:
-			event_msg(EVENT_ERROR,
-				"Invalid choice of bandwidth in temperature!");
+			throw std::invalid_argument("Invalid choice of bandwidth in temperature!");
 		}
 	}
 }
