@@ -483,7 +483,7 @@ case "$target" in
         ASM_SUFFIX=asm
         OBJ_SUFFIX=obj
         LIB_SUFFIX=lib
-        CPPFLAGS="$CPPFLAGS -W3 -GF -Gy -GR- -EHs-c-"
+        CPPFLAGS="$CPPFLAGS -W3 -GF -Gy -GR- -EHsc"
         _OPTIMIZE_FLAGS="-Ox -Ob2 -Oi -Ot -arch:SSE2 -fp:fast -GS-"
         _PROFILE_FLAGS=""
         _DEBUG_FLAGS="-Z7 -RTCsu -GS"
@@ -531,7 +531,7 @@ case "$target" in
         ASM_SUFFIX=asm
         OBJ_SUFFIX=obj
         LIB_SUFFIX=lib
-        CPPFLAGS="$CPPFLAGS -W3 -GF -Gy -GR- -EHs-c-"
+        CPPFLAGS="$CPPFLAGS -W3 -GF -Gy -GR- -EHsc"
         _OPTIMIZE_FLAGS="-Ox -Ob2 -Oi -Ot -arch:SSE2 -fp:fast -GS-"
         _PROFILE_FLAGS=""
         _DEBUG_FLAGS="-Z7 -RTCsu -GS"
