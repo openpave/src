@@ -66,56 +66,37 @@ AVAILABLE_PROJECTS = \
   fcgi  \
   $(NULL)
 
-BOOTSTRAP_core :=                                \
-  openpave/.cvsignore                            \
-  openpave/COPYING-ADDL-1.0                      \
-  openpave/aclocal.m4                            \
-  openpave/configure.in                          \
-  openpave/Makefile.in                           \
-  openpave/build                                 \
+BOOTSTRAP_core :=                       \
+  .cvsignore                            \
+  COPYING-ADDL-1.0                      \
+  aclocal.m4                            \
+  configure.in                          \
+  Makefile.in                           \
+  build                                 \
   $(NULL)
 
-MODULES_core :=                                  \
-  openpave/include                               \
-  openpave/src                                   \
+ifndef OP_AUTOCONF
+BOOTSTRAP_core += configure
+endif
+
+MODULES_core :=                         \
+  include                               \
+  src                                   \
   $(NULL)
 
-REQUIRES_test :=                                 \
-  core                                           \
-  $(NULL)
-
-MODULES_test :=                                  \
-  openpave/test                                  \
-  $(NULL)
-
-REQUIRES_libop :=                                \
-  core                                           \
-  $(NULL)
-
-MODULES_libop :=                                 \
-  openpave/libop                                 \
-  $(NULL)
-
-REQUIRES_fem3d :=                                \
-  core                                           \
-  $(NULL)
-
-MODULES_fem3d :=                                 \
-  openpave/fem3d                                 \
-  $(NULL)
-
-REQUIRES_fcgi :=                                 \
-  core                                           \
-  $(NULL)
-
-MODULES_fcgi :=                                  \
-  openpave/fcgi                                  \
-  $(NULL)
+define default_mods =
+ifndef MODULES_$(1)
+	MODULES_$(1) := $(1)
+endif
+ifndef REQUIRES_$(1)
+	REQUIRES_$(1) := core
+endif
+endef
+$(foreach p,$(filter-out core,$(AVAILABLE_PROJECTS)),$(eval $(call default_mods,$(p))))
 
 #######################################################################
 # Defines
 #
-CVS ?= cvs
 comma := ,
 empty :=
 space := $(empty) $(empty)
@@ -146,6 +127,7 @@ ROOTDIR := /.
 endif
 
 AUTOCONF ?= autoconf
+CVS ?= cvs
 MKDIR ?= mkdir
 SH ?= /bin/sh
 MAKE ?= gmake
@@ -208,28 +190,40 @@ OPCONFIG := $(shell cd $(ROOTDIR) && $(OPCONFIG_FINDER) $(TOPSRCDIR))
 
 OP_PROJECT_LIST := $(subst $(comma), ,$(OP_PROJECTS))
 ifeq ($(OP_PROJECT_LIST),)
-  OP_PROJECT_LIST := all
+	OP_PROJECT_LIST := all
 endif
 ifeq (all,$(filter all,$(OP_PROJECT_LIST)))
-  OP_PROJECT_LIST := $(AVAILABLE_PROJECTS)
+	OP_PROJECT_LIST := $(AVAILABLE_PROJECTS)
 endif
 ifneq (,$(filter-out $(AVAILABLE_PROJECTS),$(OP_PROJECT_LIST)))
 $(error OP_PROJECTS contains an unrecognized project.  Options are $(strip $(AVAILABLE_PROJECTS)))
 endif
-OP_PROJECT_TMP := $(OP_PROJECT_LIST)
-OP_PROJECT_LIST := $(empty)
+OP_PROJECT_TMP := $(empty)
 define requires =
-	OP_PROJECT_LIST += $(foreach r,$(REQUIRES_$(1)),$(eval $(call requires,$(r)))) $(filter-out $(OP_PROJECT_LIST),$(1))
+	OP_PROJECT_TMP += $(foreach r,$(REQUIRES_$(1)),$(eval $(call requires,$(r)))) $(filter-out $(OP_PROJECT_TMP),$(1))
 endef
-$(foreach project,$(OP_PROJECT_TMP),$(eval $(call requires,$(project))))
-OP_PROJECT_LIST := $(strip $(OP_PROJECT_LIST))
+$(foreach project,$(OP_PROJECT_LIST),$(eval $(call requires,$(project))))
+OP_PROJECT_LIST := $(strip $(OP_PROJECT_TMP))
 
 OP_MODULE_LIST := $(strip $(foreach project,$(OP_PROJECT_LIST),$(MODULES_$(project))))
 OP_BOOTSTRAP_LIST := $(strip $(foreach project,$(OP_PROJECT_LIST),$(BOOTSTRAP_$(project))))
 
-ifndef OP_AUTOCONF
-OP_BOOTSTRAP_LIST += openpave/configure
-endif
+OP_PROJECT_TMP := $(empty)
+define requires_mod =
+	OP_MODULE_REQUIRES_$(1) := $(strip $(foreach project,$(OP_PROJECT_REQUIRES_$(2)),$(filter-out $(1),$(MODULES_$(project)))))
+endef
+define requires_proj =
+	$(eval $(call requires,$(1)))
+	$(eval OP_PROJECT_REQUIRES_$(1) := $(strip $(foreach project,$(OP_PROJECT_TMP),$(project))))
+	OP_PROJECT_TMP := $(empty)
+	$(foreach module,$(MODULES_$(1)),$(eval $(call requires_mod,$(module),$(1))))
+endef
+$(foreach project,$(OP_PROJECT_LIST),$(eval $(call requires_proj,$(project))))
+OP_MODULE_REQUIRES := $(empty)
+define requires_list =
+	OP_MODULE_REQUIRES += OP_MODULE_REQUIRES_$(1)=$(subst $(space),:,$(OP_MODULE_REQUIRES_$(1)))
+endef
+$(foreach module,$(OP_MODULE_LIST),$(eval $(call requires_list,$(module))))
 
 ifdef OP_OBJDIR
   OBJDIR = $(OP_OBJDIR)
@@ -268,8 +262,8 @@ checkout::
 	@set -e; \
 	echo "*** CVS checkout started: "`date` | tee $(CVSCO_LOGFILE); \
 	echo '*** Checking out bootstrap files...'; \
-	    cd $(ROOTDIR) && \
-	        $(CVSCO) openpave/openpave.mk $(sort $(OP_BOOTSTRAP_LIST)); \
+	cd $(ROOTDIR) && \
+	    $(CVSCO) openpave/openpave.mk $(addprefix openpave/,$(sort $(OP_BOOTSTRAP_LIST))) 2>&1 | tee -a $(CVSCO_LOGFILE); \
 	cd $(ROOTDIR) && \
 	    $(MAKE) $(OP_MAKE_ARGS) -f openpave/openpave.mk real_checkout
 
@@ -286,7 +280,7 @@ real_checkout:
 else
 real_checkout:
 	@echo '*** Checking out project files...'; \
-	    $(CVSCO) $(sort $(OP_MODULE_LIST)) 2>&1 | tee -a $(CVSCO_LOGFILE); \
+	    $(CVSCO) $(addprefix openpave/,$(sort $(OP_MODULE_LIST))) 2>&1 | tee -a $(CVSCO_LOGFILE); \
 	echo "*** CVS checkout finished: "`date` | tee -a $(CVSCO_LOGFILE); \
 	conflicts=`egrep "^C " $(CVSCO_LOGFILE)`; \
 	if test "$$conflicts"; then \
@@ -330,6 +324,7 @@ CONFIG_STATUS_DEPS := \
 	$(TOPSRCDIR)/configure.in \
 	$(TOPSRCDIR)/configure \
 	$(TOPSRCDIR)/.opconfig.mk \
+	$(TOPSRCDIR)/build/autoconf.mk.in \
 	$(OPCONFIG)
 
 CONFIG_STATUS_OUTS := \
@@ -353,7 +348,10 @@ ifdef OP_CONFIGURE_ENV
 else
   CONFIGURE_ENV := $(NULL)
 endif
-CONFIGURE_ENV   += OP_PROJECTS="$(OP_PROJECT_LIST)" OP_MODULES="$(subst openpave/,,$(OP_MODULE_LIST))"
+CONFIGURE_ENV   += OP_PROJECTS="$(OP_PROJECT_LIST)"
+CONFIGURE_ENV   += OP_MODULES="$(OP_MODULE_LIST)"
+CONFIGURE_ENV   += OP_MODULE_REQUIRES="$(OP_MODULE_REQUIRES)"
+CONFIGURE_ENV   += OBJDIR="$(OBJDIR)"
 ifdef OP_CVS_USER
   CONFIGURE_ENV += OP_CVS_USER="$(OP_CVS_USER)"
 endif
@@ -371,7 +369,7 @@ configure:: $(CONFIG_STATUS_DEPS)
 	echo '*** Running configure...' && \
 	cd $(OBJDIR) && $(CONFIGURE_ENV) $(CONFIGURE) $(CONFIGURE_ARGS) \
 	  || ( echo "*** Fix above errors and then restart with\
-	           \"gmake -f openpave.mk build\"" && exit 1 )
+	           \"$(value MAKE) -f openpave.mk build\"" && exit 1 )
 
 $(CONFIG_STATUS_OUTS): $(CONFIG_STATUS_DEPS)
 	@cd $(TOPSRCDIR) && \

@@ -692,8 +692,9 @@ AC_SUBST(LIB_SUFFIX)
 AC_SUBST(DLL_SUFFIX)
 AC_SUBST(EXE_SUFFIX)
 
-AC_SUBST(OP_PROJECTS)
 AC_SUBST(OP_MODULES)
+AC_SUBST(OP_MODULE_REQUIRES)
+AC_SUBST(OBJDIR)
 
 dnl ========================================================
 dnl Generate output files.

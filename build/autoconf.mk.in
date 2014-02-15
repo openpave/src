@@ -1,47 +1,62 @@
 # $OpenPave$
 
 INCLUDED_AUTOCONF_MK = 1
+comma := ,
+empty :=
+space := $(empty) $(empty)
 
-OP_VERSION_MAJOR= @OP_VERSION_MAJOR@
-OP_VERSION_MINOR= @OP_VERSION_MINOR@
-OP_VERSION_MICRO= @OP_VERSION_MICRO@
+VPATH = $(srcdir)
+MOD_DEPTH := $(subst $(space),/,$(strip $(patsubst %,..,$(subst /, ,$(subst $(topsrcdir),,$(srcdir))))))
+ifeq (,$(MOD_DEPTH))
+MOD_DEPTH := .
+endif
 
-prefix		= @prefix@
-exec_prefix	= @exec_prefix@
-bindir		= @bindir@
-includedir	= @includedir@
-libdir		= @libdir@
-datadir		= @datarootdir@
+PWD := $(shell pwd)
+OP_MODULE_REQUIRES := @OP_MODULE_REQUIRES@
+$(foreach module,$(OP_MODULE_REQUIRES),$(eval $(subst :, ,$(module))))
+ifneq (.,$(MOD_DEPTH))
+OP_MODULE := $(notdir $(PWD))
+endif
 
-ASM_SUFFIX	= @ASM_SUFFIX@
-OBJ_SUFFIX	= @OBJ_SUFFIX@
-LIB_SUFFIX	= @LIB_SUFFIX@
-DLL_SUFFIX	= @DLL_SUFFIX@
-EXE_SUFFIX	= @EXE_SUFFIX@
+OP_VERSION_MAJOR  = @OP_VERSION_MAJOR@
+OP_VERSION_MINOR  = @OP_VERSION_MINOR@
+OP_VERSION_MICRO  = @OP_VERSION_MICRO@
 
-WIN32		= @WIN32@
-USING_CC	= @USING_CC@
-CC		= @CC@
-CXX		= @CXX@
-CC_VER		= @CC_VER@
-AS		= @AS@
-ASFLAGS		= @ASFLAGS@
-AR		= @AR@
-ARFLAGS		= @ARFLAGS@
-LD		= @LD@
-RANLIB		= @RANLIB@
-RC		= @RC@
-RCFLAGS		= @RCFLAGS@
-STRIP		= @STRIP@
+prefix            = @prefix@
+exec_prefix       = @exec_prefix@
+bindir            = @bindir@
+includedir        = @includedir@
+libdir            = @libdir@
 
-OS_CPPFLAGS	= @CPPFLAGS@
-OS_CFLAGS	= @CFLAGS@ $(OS_CPPFLAGS) $(DSO_CFLAGS)
-OS_CXXFLAGS	= @CXXFLAGS@ $(OS_CPPFLAGS) $(DSO_CFLAGS)
-OS_LIBS         = @OS_LIBS@
-OS_LDFLAGS	= @LDFLAGS@
-DSO_CFLAGS	= @DSO_CFLAGS@
-DSO_LDFLAGS	= @DSO_LDFLAGS@
+ASM_SUFFIX        = @ASM_SUFFIX@
+OBJ_SUFFIX        = @OBJ_SUFFIX@
+LIB_SUFFIX        = @LIB_SUFFIX@
+DLL_SUFFIX        = @DLL_SUFFIX@
+EXE_SUFFIX        = @EXE_SUFFIX@
 
-BUILD_OPT	= @OP_OPTIMIZE@
-BUILD_PRF	= @OP_PROFILE@
-BUILD_DBG	= @OP_DEBUG@
+WIN32             = @WIN32@
+USING_CC          = @USING_CC@
+CC                = @CC@
+CXX               = @CXX@
+CC_VER            = @CC_VER@
+AS                = @AS@
+ASFLAGS           = @ASFLAGS@
+AR                = @AR@
+ARFLAGS           = @ARFLAGS@
+LD                = @LD@
+RANLIB            = @RANLIB@
+RC                = @RC@
+RCFLAGS           = @RCFLAGS@
+STRIP             = @STRIP@
+
+OS_CPPFLAGS       = @CPPFLAGS@
+OS_CFLAGS         = @CFLAGS@ $(OS_CPPFLAGS) $(DSO_CFLAGS)
+OS_CXXFLAGS       = @CXXFLAGS@ $(OS_CPPFLAGS) $(DSO_CFLAGS)
+OS_LIBS           = @OS_LIBS@
+OS_LDFLAGS        = @LDFLAGS@
+DSO_CFLAGS        = @DSO_CFLAGS@
+DSO_LDFLAGS       = @DSO_LDFLAGS@
+
+BUILD_OPT         = @OP_OPTIMIZE@
+BUILD_PRF         = @OP_PROFILE@
+BUILD_DBG         = @OP_DEBUG@

@@ -2388,6 +2388,7 @@ CPPFLAGS="$_CONFIG_H $CPPFLAGS $_DEBUG_DEFINES"
 
 
 
+
 if test -z "$OP_PROJECT_core"; then
     { echo "configure: error: The core project must be built!" 1>&2; exit 1; }
 fi
@@ -2401,7 +2402,7 @@ for m in $OP_MODULES; do
 done;
 
 echo $ac_n "checking if config.h needs rebuilding""... $ac_c" 1>&6
-echo "configure:2405: checking if config.h needs rebuilding" >&5
+echo "configure:2406: checking if config.h needs rebuilding" >&5
 
 echo "$ac_t""done" 1>&6
 
@@ -2600,8 +2601,9 @@ s%@OBJ_SUFFIX@%$OBJ_SUFFIX%g
 s%@LIB_SUFFIX@%$LIB_SUFFIX%g
 s%@DLL_SUFFIX@%$DLL_SUFFIX%g
 s%@EXE_SUFFIX@%$EXE_SUFFIX%g
-s%@OP_PROJECTS@%$OP_PROJECTS%g
 s%@OP_MODULES@%$OP_MODULES%g
+s%@OP_MODULE_REQUIRES@%$OP_MODULE_REQUIRES%g
+s%@OBJDIR@%$OBJDIR%g
 
 CEOF
 EOF

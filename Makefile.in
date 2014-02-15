@@ -2,17 +2,14 @@
 #
 # $OpenPave$
 
-MOD_DEPTH	= .
-topsrcdir	= @top_srcdir@
-srcdir		= @srcdir@
-VPATH		= @srcdir@
+topsrcdir   = @top_srcdir@
+srcdir      = @srcdir@
 
-OP_PROJECTS	= @OP_PROJECTS@
-OP_MODULES	= @OP_MODULES@
+OP_MODULES  = @OP_MODULES@
 
-include $(MOD_DEPTH)/build/autoconf.mk
+include @OBJDIR@/build/autoconf.mk
 
-DIRS = $(OP_MODULES)
+DIRS        = $(OP_MODULES)
 
 DIST_GARBAGE = config.cache config.log config.status
 

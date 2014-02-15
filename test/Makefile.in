@@ -1,39 +1,26 @@
 #! gmake
 #
 # $OpenPave$
-#
 
-MOD_DEPTH	= ..
-topsrcdir	= @top_srcdir@
-srcdir		= @srcdir@
-VPATH		= @srcdir@
+topsrcdir        = @top_srcdir@
+srcdir           = @srcdir@
 
-include $(MOD_DEPTH)/build/autoconf.mk
+include @OBJDIR@/build/autoconf.mk
 
-PROGRAM_NAME	= test
+PROGRAMS         = test test_set
 
-DIRS =                                 \
-	$(NULL)
+CXXSRCS_test =                         \
+    test.cpp                           \
+    test_backcalc.cpp                  \
+    test_fft.cpp                       \
+    test_matrix.cpp                    \
+    test_pavement.cpp                  \
+    test_rng.cpp                       \
+    test_thermal.cpp                   \
+    $(NULL)
 
-INCLUDES =                             \
-	-I$(MOD_DEPTH)/include 	       \
-	-I$(srcdir)/../include         \
-	-I$(srcdir)/../src             \
-	$(NULL)
-
-LIBS =                                 \
-	src                            \
-	$(NULL)
-
-CXXSRCS =                              \
-	test.cpp                       \
-	test_backcalc.cpp              \
-	test_fft.cpp                   \
-	test_matrix.cpp                \
-	test_pavement.cpp              \
-	test_rng.cpp                   \
-	test_set.cpp                   \
-	test_thermal.cpp               \
-	$(NULL)
+CXXSRCS_test_set =                     \
+    test_set.cpp                       \
+    $(NULL)
 
 include $(topsrcdir)/build/rules.mk

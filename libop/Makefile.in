@@ -1,29 +1,13 @@
 #!gmake
 #
 # $OpenPave$
-#
 
-MOD_DEPTH	= ..
-topsrcdir	= @top_srcdir@
-srcdir		= @srcdir@
-VPATH		= @srcdir@
+topsrcdir       = @top_srcdir@
+srcdir          = @srcdir@
 
-include $(MOD_DEPTH)/build/autoconf.mk
+include @OBJDIR@/build/autoconf.mk
 
-LIBRARY_NAME	= op
-
-DIRS = \
-	$(NULL)
-
-INCLUDES = \
-	-I$(MOD_DEPTH)/include \
-	-I$(srcdir)/../include \
-	-I$(srcdir)/../src     \
-	$(NULL)
-
-LIBS =                         \
-	src                    \
-	$(NULL)
+LIBRARY         = op
 
 CXXSRCS = \
 	libop.cpp              \

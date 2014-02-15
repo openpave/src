@@ -1,25 +1,14 @@
 #!gmake
 #
 # $OpenPave$
-#
 
-MOD_DEPTH	= ..
-topsrcdir	= @top_srcdir@
-srcdir		= @srcdir@
-VPATH		= @srcdir@
+topsrcdir       = @top_srcdir@
+srcdir          = @srcdir@
 
-include $(MOD_DEPTH)/build/autoconf.mk
+include @OBJDIR@/build/autoconf.mk
 
-LIBRARY_NAME	= openpave
+LIBRARY         = openpave
 ONLY_STATIC_LIB	= 1
-
-DIRS = \
-	$(NULL)
-
-INCLUDES = \
-	-I$(MOD_DEPTH)/include \
-	-I$(srcdir)/../include \
-	$(NULL)
 
 CXXSRCS = \
 	matrix.cpp          \

@@ -248,31 +248,8 @@ test_set4()
 	}
 }
 
-#ifdef NOBUILD
 int
-main()
-{
-	printf("Test 1a:\n");
-	test_set1a();
-	printf("\nTest 1b:\n");
-	test_set1b();
-	printf("\nTest 1c:\n");
-	test_set1c();
-	printf("\nTest 1d:\n");
-	test_set1d();
-	printf("\nTest 2:\n");
-	test_set2();
-	printf("\nTest 3:\n");
-	test_set3();
-	printf("\nTest 4:\n");
-	test_set4();
-	printf("\n");
-	return 0;
-}
-#endif
-
-#ifdef NOBUILD
-int main()
+test_set5()
 {
 	BST<key,value> bst;
 	
@@ -297,4 +274,26 @@ int main()
 	printf("\n");
 	return 0;
 }
-#endif
+
+int
+main()
+{
+	printf("Test 1a:\n");
+	test_set1a();
+	printf("\nTest 1b:\n");
+	test_set1b();
+	printf("\nTest 1c:\n");
+	test_set1c();
+	printf("\nTest 1d:\n");
+	test_set1d();
+	printf("\nTest 2:\n");
+	test_set2();
+	printf("\nTest 3:\n");
+	test_set3();
+	printf("\nTest 4:\n");
+	test_set4();
+	printf("\n");
+	printf("\nTest 4:\n");
+	test_set5();
+	return 0;
+}
