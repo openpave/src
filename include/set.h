@@ -853,7 +853,7 @@ public:
 	// Add an array of values... There is no point in
 	// a position based addition. 
 	void add(const V * v, const unsigned s = 1) {
-		assert(s >= 0 && v != 0);
+		assert(s > 0 && v != 0);
 		this->allocate(this->size+s);
 		this->copy(s,v,true);
 		this->allocate(this->size);
@@ -1049,7 +1049,7 @@ public:
 	// Add an array of values... There is no point in
 	// a position based addition. 
 	void add(const V * v, const unsigned s = 1) {
-		assert(s >= 0 && v != 0);
+		assert(s > 0 && v != 0);
 		allocate(size+s);
 		copy(s,v,true);
 		allocate(size);
