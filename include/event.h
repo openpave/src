@@ -108,7 +108,7 @@ void timeme(const char * msg)
 		return;
 	}
 	clock_gettime(CLOCK_PROF,&stop);
-	run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
+	run_time = double(stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
 #elif defined(DARWIN)
 	static struct timeval start;
 	struct timeval stop;
@@ -118,7 +118,7 @@ void timeme(const char * msg)
 		return;
 	}
 	gettimeofday(&stop,NULL);
-	run_time = (stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000.0;
+	run_time = double(stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000.0;
 #elif defined(_MSC_VER)
 	static clock_t start;
 	clock_t stop;
@@ -202,8 +202,8 @@ void event_progress(const int type, const int marker,
 			max[level] = 0, mark[level] = 0;
 		if (level == 0)
 			fprintf(stderr,"\n");
-		break;
 		level--;
+		break;
 	default:
 		throw std::invalid_argument("Invalid progress indication!");
 	}
