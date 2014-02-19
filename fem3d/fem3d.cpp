@@ -75,8 +75,8 @@
 #if defined(__FreeBSD__)
 #include <stdlib.h>
 extern "C" {
-extern const char * _malloc_options = "ajz";
-};
+const char * _malloc_options = "ajz";
+}
 #endif
 
 #define NDOF 3
@@ -189,7 +189,7 @@ struct meta_stiffness<0,J,K,L>
 /*
  * Calculate the principle stresses or strains.
  */
-ematrix
+static ematrix
 principle(const ematrix & s)
 {
 	double t1, t2;
@@ -589,7 +589,7 @@ protected:
 class smatrix_elem {
 public:
 	explicit smatrix_elem(const unsigned n)
-	  : nnd(n), K(0) {
+	  : K(0), nnd(n) {
 		// calloc() to zero the memory...
 		K = static_cast<smatrix_dof *>
 				(calloc(size(),sizeof(smatrix_dof)));
@@ -608,8 +608,8 @@ public:
 private:
 	friend class mesh;
 
-	const unsigned nnd;
 	smatrix_dof * K;
+	const unsigned nnd;
 
 	// Size of the triangular matrix storage
 	inline unsigned size() const {
@@ -627,7 +627,7 @@ private:
  * pivot for the hessian, and it is always NDIMxNDIM.  It also takes the
  * transpose of the B matrix, since the column dimension is fixed.
  */
-double
+static double
 inv_mul_gauss(const unsigned nnd, double (& J)[NDIM][NDIM],
 		double (* B)[NDIM])
 {
@@ -944,7 +944,7 @@ protected:
 				dNdr[l][2] -= dNdr[j][2]/2;
 			}
 			const int Jxy[4] = {+2,-1,+1,-2};
-			if ((j = mask[l+Jxy[l%4]]) != 0) {
+			if ((j = mask[int(l)+Jxy[l%4]]) != 0) {
 				N[l] -= N[j]/2;
 				dNdr[l][0] -= dNdr[j][0]/2;
 				dNdr[l][1] -= dNdr[j][1]/2;
@@ -983,12 +983,12 @@ protected:
 			const int Jy[4] = { 0,-1,+1, 0};
 			// Start with the corners.
 			for (unsigned l = 0; l < 4; l++) {
-				if (mask[i*4+l+Jx[l]] != 0) {
+				if (mask[int(i*4+l)+Jx[l]] != 0) {
 					Nx = N_3(2*(l/2),gx); dNdx = dN_3(2*(l/2),gx);
 				} else {
 					Nx = N_2(l/2,gx);     dNdx = dN_2(l/2,gx);
 				}
-				if (mask[i*4+l+Jy[l]] != 0) {
+				if (mask[int(i*4+l)+Jy[l]] != 0) {
 					Ny = N_3(2*(l%2),gy); dNdy = dN_3(2*(l%2),gy);
 				} else {
 					Ny = N_2(l%2,gy);     dNdy = dN_2(l%2,gy);
@@ -1318,7 +1318,7 @@ private:
 		case 1: return 0.5*(1.0+r);
 		} assert(false); return 0.0;
 	}
-	static inline double dN_2(const unsigned n, const double r) {
+	static inline double dN_2(const unsigned n, const double ) {
 		switch (n) {
 		case 0: return -0.5;
 		case 1: return  0.5;
@@ -1831,7 +1831,7 @@ public:
 		for (unsigned n = 0; n < nnd; n++) {
 			p = diag[n].col_head;
 			while (p) {
-				rows[nnd+nnz].col = n;
+				rows[nnd+nnz].col = int(n);
 				rows[nnd+nnz].prev = rows[p->i].prev;
 				rows[p->i].prev = &rows[nnd+nnz];
 				p = p->col_next;
@@ -1854,7 +1854,7 @@ public:
 				row_ptr * r = rows[p->i].prev->prev;
 				rows[p->i].prev = r;
 				while (r) {
-					rows[n-r->col-1].col = -1;
+					rows[int(n)-r->col-1].col = -1;
 					r = r->prev;
 				}
 				p = p->col_next;
@@ -2208,8 +2208,6 @@ public:
 				if ((p & mesh::above) && (n.z > cc.z))
 					add_bc(n,f,d);
 				break;
-			default:
-				return false;
 			}
 		}
 		return true;
@@ -2553,7 +2551,7 @@ struct femlayer {
 	}
 };
 
-sset<femlayer> layer;
+static sset<femlayer> layer;
 
 inline double
 circlearea(double x, double y, double r)
@@ -2675,11 +2673,12 @@ struct region_list : sset<region> {
 	}
 };
 
+#if 0
 /*
  * This outputs the results for all the elements in the list
  * Obviously, the list must be ones returned by add().
  */
-void
+static void
 result_mesh(const fset<const element *> & e, const fset<point3d> & c)
 {
 	fset<pavedata> data(c.length(),c.length());
@@ -2700,12 +2699,13 @@ result_mesh(const fset<const element *> & e, const fset<point3d> & c)
 	}
 	fclose(f);
 }
+#endif
 
 /*
  * This outputs the results for all the elements in the list
  * Obviously, the list must be ones returned by add().
  */
-void
+static void
 results(const fset<const element *> & e, const fset<point3d> & c,
 		const char * dname)
 {
@@ -2731,7 +2731,7 @@ results(const fset<const element *> & e, const fset<point3d> & c,
 }
 
 int
-main(int argc, char *argv[])
+main()
 {
 	timeme();
 
@@ -3268,8 +3268,9 @@ main(int argc, char *argv[])
 	return 0;
 }
 
-int
-main_test()
+#if 0
+static void
+test1()
 {
 	timeme();
 	printf("Constructing Mesh...");
@@ -3383,6 +3384,5 @@ main_test()
 	results(face,poly,"test");*/
 
 	timeme(" Done.\n");
-
-	return 0;
 }
+#endif
