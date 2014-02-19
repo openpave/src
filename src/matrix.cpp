@@ -246,8 +246,7 @@ bksub_lu(const unsigned n, const double * A, const unsigned * idx,
  * substitution, with a single step refinement.
  */
 void
-equ_lu(const unsigned n, const double * A, const double * b,
-       double * x, const double tol)
+equ_lu(const unsigned n, const double * A, const double * b, double * x)
 {
 	unsigned i, j;
 	int d;
@@ -445,8 +444,7 @@ bksub_chol(const unsigned n, const unsigned w, const double * A,
  * substitution.
  */
 void
-equ_chol(const unsigned n, const double * A, const double * b,
-         double * x, const double tol)
+equ_chol(const unsigned n, const double * A, const double * b, double * x)
 {
 	//unsigned i, j;
 
@@ -482,7 +480,7 @@ equ_chol(const unsigned n, const double * A, const double * b,
  */
 void
 equ_chol(const unsigned n, const unsigned w, const double * A,
-         const double * b, double * x, const double tol)
+         const double * b, double * x)
         
 {
 	unsigned i, j, iter = 0;
@@ -512,7 +510,7 @@ equ_chol(const unsigned n, const unsigned w, const double * A,
 			y1 = fma(r[i],r[i],-c1); t1 = dot + y1;
 			c1 = t1 - dot - y1; dot = t1;
 		}
-		if (++iter > ITER_MAX || sqrt(dot) <= tol)
+		if (++iter > ITER_MAX || sqrt(dot) <= ERR_TOL)
 			break;
 		bksub_chol(n,w,a,r);
 		for (i = 0; i < n; i++)
@@ -612,8 +610,7 @@ bksub_ldl(const unsigned n, const double * A,
  * substitution, (with a single step refinement).
  */
 void
-equ_ldl(const unsigned n, const double * A,
-        const double * b, double * x, const double tol)
+equ_ldl(const unsigned n, const double * A, const double * b, double * x)
 {
 	unsigned i, j;
 
@@ -845,8 +842,7 @@ bksub_svd(const unsigned m, const unsigned n, const double * U,
  * substitution, with refinement.
  */
 void
-equ_svd(const unsigned n, const double * A, const double * b,
-        double * x, const double tol)
+equ_svd(const unsigned n, const double * A, const double * b, double * x)
 {
 	double max;
 	unsigned i, j;
@@ -1168,8 +1164,7 @@ bksub_eig(const unsigned n, const double * Q, const double * d,
  * substitution, with refinement.
  */
 void
-equ_eig(const unsigned n, const double * A, const double * b,
-        double * x, const double tol)
+equ_eig(const unsigned n, const double * A, const double * b, double * x)
 {
 	double max;
 	unsigned i, j;
