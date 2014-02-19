@@ -73,13 +73,13 @@ const double Fe4[5][5] = {
 	{ -29.0/2835.0,   8.0/ 405.0, -58.0/945.0, 296.0/2835.0, 292.0/2835.0 }
 };
 
-FEMthermal::FEMthermal(const int nl, const double * lh, const double * ld,
-		const int _n, const double * _nd, const double * _nt,
-		const double _dt, const int _w)
+FEMthermal::FEMthermal(const unsigned nl, const double * lh, const double * ld,
+		const unsigned _n, const double * _nd, const double * _nt,
+		const double _dt, const unsigned _w)
   : n(_n), w(_w), dt(_dt), nd(0), nt(0), ng(0),
 		KK(0), FF(0), Kt(0), Kb(0)
 {
-	int il, i, j, k;
+	unsigned il, i, j, k;
 
 	assert(n >= w+1);
 	assert((n-1) % w == 0);
@@ -164,7 +164,7 @@ FEMthermal::FEMthermal(const int nl, const double * lh, const double * ld,
 void
 FEMthermal::step(double tt, double tb)
 {
-	int i, j;
+	unsigned i, j;
 	
 	// All of the information is already in the gradient.
 	memset(nt,0,n*sizeof(double));
@@ -173,7 +173,7 @@ FEMthermal::step(double tt, double tb)
 	for (i = 1; i < w+1; i++)
 		nt[i] -= tt*Kt[i];
 	for (i = 1; i < n-1; i++) {
-		for (j = MAX(i-w,0); j < i; j++)
+		for (j = MAX(int(i-w),0); j < i; j++)
 			nt[i] += FF[B_IDX(n,w,j,i)]*ng[j];
 		for (j = i; j < MIN(i+w+1,n); j++)
 			nt[i] += FF[B_IDX(n,w,i,j)]*ng[j];
@@ -190,9 +190,9 @@ FEMthermal::step(double tt, double tb)
 }
 
 void
-FEMthermal::interpolate(const int np, const double * pd, double * pt)
+FEMthermal::interpolate(const unsigned np, const double * pd, double * pt)
 {
-	int i, j;
+	unsigned i, j;
 	
 	for (i = 0, j = 0; i < np; i++) {
 		if (pd[i] <= nd[0]) {

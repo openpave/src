@@ -233,11 +233,11 @@ OP_LE_Calc_CalME(const unsigned flags,
 }
 
 long OP_EXPORT
-OP_HT_Init(const int nl, const double * h, const double * D,
-           const int nn, const double * nd, const double * nt,
-           const int nw, const double dt)
+OP_HT_Init(const unsigned nl, const double * h, const double * D,
+           const unsigned nn, const double * nd, const double * nt,
+           const unsigned nw, const double dt)
 {
-	int i;
+	unsigned i;
 
 	if (!(nw == 1 || nw == 2 || nw == 4)) {
 		event_msg(EVENT_WARN, "Invalid bandwidth!");
@@ -263,11 +263,11 @@ OP_HT_Init(const int nl, const double * h, const double * D,
 }
 
 void OP_EXPORT
-OP_HT_Step(const long token, const int nt, const double * tt, const double tb)
+OP_HT_Step(const long token, const unsigned nt, const double * tt, const double tb)
 {
 	FEMthermal * system = reinterpret_cast<FEMthermal *>(token);
 	
-	for (int i = 0; i < nt; i++)
+	for (unsigned i = 0; i < nt; i++)
 		system->step(tt[i],tb);
 #if defined(_MSC_VER) || defined(__MINGW32__)
 	_clearfp();
@@ -275,7 +275,7 @@ OP_HT_Step(const long token, const int nt, const double * tt, const double tb)
 }
 
 void OP_EXPORT
-OP_HT_Interpolate(const long token, const int np, const double * pd,
+OP_HT_Interpolate(const long token, const unsigned np, const double * pd,
                   double * pt)
 {
 	FEMthermal * system = reinterpret_cast<FEMthermal *>(token);

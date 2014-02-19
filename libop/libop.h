@@ -59,7 +59,8 @@ Declare Function OP_LE_Calc Lib "libop.dll" Alias "_OP_LE_Calc@68" ( _
  *
  * Note: VB uses Fortan array storage (cols first) so the results are Res(1,i).
  */
-int OP_EXPORT OP_LE_Calc(
+int OP_EXPORT
+OP_LE_Calc(
 	const unsigned flags,           // Flags to choose method
 	const unsigned nl,              // Number of layers
 	const double * h,               // Layer thickness (0 for semi-inf)
@@ -79,7 +80,8 @@ int OP_EXPORT OP_LE_Calc(
 	const unsigned * pl,            // Point layer (0 for auto)
 	double (* res)[27]);            // Results
 
-int OP_EXPORT OP_LE_Calc_CalME(
+int OP_EXPORT
+OP_LE_Calc_CalME(
 	const unsigned flags,           // Flags to choose method
 	const unsigned nl,              // Number of layers
 	const double * h,               // Layer thickness (0 for semi-inf)
@@ -99,16 +101,17 @@ int OP_EXPORT OP_LE_Calc_CalME(
 	double * res);                  // Results
 
 long OP_EXPORT
-OP_HT_Init(const int nl, const double * h, const double * D,
-           const int nn, const double * nd, const double * nt,
-           const int nw, const double dt);
+OP_HT_Init(const unsigned nl, const double * h, const double * D,
+           const unsigned nn, const double * nd, const double * nt,
+           const unsigned nw, const double dt);
 
 void OP_EXPORT
-OP_HT_Step(const long token, const int nt, const double * tt, const double tb);
+OP_HT_Step(const long token, const unsigned nt,
+           const double * tt, const double tb);
 
 void OP_EXPORT
-OP_HT_Interpolate(const long token, const int np, const double * pd,
-                    double * pt);
+OP_HT_Interpolate(const long token, const unsigned np, const double * pd,
+                  double * pt);
 
 void OP_EXPORT
 OP_HT_Reset(const long token);

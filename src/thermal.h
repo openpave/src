@@ -50,9 +50,9 @@
 class FEMthermal
 {
 public:
-	FEMthermal(const int nl, const double * lh, const double * ld,
-			const int _n, const double * _nd, const double * _nt,
-			const double _dt = 1, const int _w = 1);
+	FEMthermal(const unsigned nl, const double * lh, const double * ld,
+			const unsigned _n, const double * _nd, const double * _nt,
+			const double _dt = 1, const unsigned _w = 1);
 	~FEMthermal() {
 		delete [] nd;
 		delete [] nt;
@@ -67,11 +67,11 @@ public:
 	// repeatedly to obtain temperatures at sucessive time steps.
 	void step(double tt, double tb);
 	// Interpolate temperatures at abitrary depths. pd must be sorted.
-	void interpolate(const int np, const double * pd, double * pt);
+	void interpolate(const unsigned np, const double * pd, double * pt);
 
 private:
-	const int n;				// Number of nodes
-	const int w;				// Number of bands (element size)
+	const unsigned n;  			// Number of nodes
+	const unsigned w;			// Number of bands (element size)
 	const double dt;			// Time delta
 	double * nd;				// Nodal depths
 	double * nt;				// Nodal temperatures
