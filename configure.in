@@ -330,9 +330,9 @@ MAYBE_WARN="-Wall -Wextra \
 -Wswitch-enum \
 -Wunsafe-loop-optimizations \
 -Wwrite-strings \
--Wno-attributes \
--Wno-missing-field-initializers \
--Wno-unused-parameter \
+-Wattributes \
+-Wmissing-field-initializers \
+-Wunused-parameter \
 "
 
 MAYBE_WARN_C="$MAYBE_WARN \
@@ -344,7 +344,6 @@ MAYBE_WARN_C="$MAYBE_WARN \
 -Wold-style-definition \
 -Wstrict-prototypes \
 -Wtraditional \
--Wunsafe-loop-optimizations \
 -Wwrite-strings \
 "
 
