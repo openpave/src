@@ -81,7 +81,7 @@ protected:
 		}
 	}
 	// Unlink ourselves from the list before we die...
-	virtual ~listelement_d() {
+	~listelement_d() {
 		if (prev != 0)
 			prev->next = next;
 		if (next != 0)
@@ -121,7 +121,7 @@ protected:
 		}
 	}
 	// Also manage our owner's pointers.
-	virtual ~listelement_o() {
+	~listelement_o() {
 		if (owner != 0) {
 			if (this->prev == 0)
 				owner->first = this->next;
@@ -150,7 +150,7 @@ protected:
 	list_double()
 	  : first(0), last(0) {
 	}
-	virtual ~list_double() {
+	~list_double() {
 		empty();
 	}
 
@@ -191,7 +191,7 @@ protected:
 	list_owned()
 	  : list_double<T>() {
 	}
-	virtual ~list_owned() {
+	~list_owned() {
 	}
 
 	friend class listelement_o<O,T>;
