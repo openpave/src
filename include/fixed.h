@@ -34,7 +34,7 @@
 		binary (power of two) space.  Just use integers for that...
 
 	Design:
-		Based on code from various places on the Internet...  
+		Based on code from various places on the Internet...
 
 	History:
 		2006/07/20 - Created by Jeremy Lea <reg@openpave.org>
@@ -47,7 +47,7 @@
 /*
  * class fixed - A fixed point type.
  *
- * The precision template arguement is the number of bits to the left of
+ * The precision template argument is the number of bits to the left of
  * the decimal point.
  */
 template <unsigned int P>
@@ -75,7 +75,7 @@ public:
 	}
 	inline ~fixed() {
 	}
-	
+
 	// Some assignment operators...
 	inline fixed & operator = (const fixed & f) {
 		value = f.value;
@@ -97,7 +97,7 @@ public:
 		*this = double(*this) / double(f);
 		return *this;
 	}
-	
+
 	// Some conversion operators...
 	inline fixed<P> & operator = (const int i) {
 		value = i << P;
@@ -117,7 +117,7 @@ public:
 	inline operator double () const {
 		return (double(value))/(1 << P);
 	}
-  
+
 	// Comparison operators...
 	inline bool operator == (const fixed & f) const {
 		return (value == f.value);
@@ -137,7 +137,7 @@ public:
 	inline bool operator >= (const fixed & f) const {
 		return (value >= f.value);
 	}
-	
+
 	// Some math operators...
 	inline fixed operator - () const {
 		fixed t;
@@ -163,7 +163,7 @@ public:
 		return t;
 	}
 
-	// The prefix and postfix operators, for convienience.
+	// The prefix and postfix operators, for convenience.
 	inline fixed & operator ++ () {
 		value += (1 << P);
 		return *this;

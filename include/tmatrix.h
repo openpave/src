@@ -34,7 +34,7 @@
 		for C++ template meta programs and expression templates.  There are
 		a number of existing classes which do all of this, and better than
 		here, but they do not integrate well into the OpenPave.org world.
-		
+
 		These are quite difficult to understand.  Please don't play without
 		extensive testing.  Also, this class will not compile on VC6.
 
@@ -57,63 +57,63 @@ template<unsigned I, unsigned J>
 struct meta_assign {
 	template<class A, class E>
 	static inline void assignR(A & lhs, const E & rhs) {
-	    meta_assign<I,J-1>::assignR(lhs,rhs);
-	    lhs(I-1,J-1) = rhs(I-1,J-1);
+		meta_assign<I,J-1>::assignR(lhs,rhs);
+		lhs(I-1,J-1) = rhs(I-1,J-1);
 	}
 	template<class A, class E>
 	static inline void assign(A & lhs, const E & rhs) {
-	    meta_assign<I-1,J>::assign(lhs,rhs);
-	    meta_assign<I,J>::assignR(lhs,rhs);
+		meta_assign<I-1,J>::assign(lhs,rhs);
+		meta_assign<I,J>::assignR(lhs,rhs);
 	}
 	template<class A, class E>
 	static inline void assignR_add(A & lhs, const E & rhs) {
-	    meta_assign<I,J-1>::assignR_add(lhs,rhs);
-	    lhs(I-1,J-1) += rhs(I-1,J-1);
+		meta_assign<I,J-1>::assignR_add(lhs,rhs);
+		lhs(I-1,J-1) += rhs(I-1,J-1);
 	}
 	template<class A, class E>
 	static inline void assign_add(A & lhs, const E & rhs) {
-	    meta_assign<I-1,J>::assign_add(lhs,rhs);
-	    meta_assign<I,J>::assignR_add(lhs,rhs);
+		meta_assign<I-1,J>::assign_add(lhs,rhs);
+		meta_assign<I,J>::assignR_add(lhs,rhs);
 	}
 	template<class A, class E>
 	static inline void assignR_sub(A & lhs, const E & rhs) {
-	    meta_assign<I,J-1>::assignR_sub(lhs,rhs);
-	    lhs(I-1,J-1) -= rhs(I-1,J-1);
+		meta_assign<I,J-1>::assignR_sub(lhs,rhs);
+		lhs(I-1,J-1) -= rhs(I-1,J-1);
 	}
 	template<class A, class E>
 	static inline void assign_sub(A & lhs, const E & rhs) {
-	    meta_assign<I-1,J>::assign_sub(lhs,rhs);
-	    meta_assign<I,J>::assignR_sub(lhs,rhs);
+		meta_assign<I-1,J>::assign_sub(lhs,rhs);
+		meta_assign<I,J>::assignR_sub(lhs,rhs);
 	}
 	template<class A, typename T>
 	static inline void assignR_d(A & lhs, const T & d) {
-	    meta_assign<I,J-1>::assignR_d(lhs,d);
-	    lhs(I-1,J-1) = d;
+		meta_assign<I,J-1>::assignR_d(lhs,d);
+		lhs(I-1,J-1) = d;
 	}
 	template<class A, typename T>
 	static inline void assign_d(A & lhs, const T & d) {
-	    meta_assign<I-1,J>::assign_d(lhs,d);
-	    meta_assign<I,J>::assignR_d(lhs,d);
+		meta_assign<I-1,J>::assign_d(lhs,d);
+		meta_assign<I,J>::assignR_d(lhs,d);
 	}
 	template<class A, typename T>
 	static inline void assignR_add_d(A & lhs, const T & d) {
-	    meta_assign<I,J-1>::assignR_add_d(lhs,d);
-	    lhs(I-1,J-1) += d;
+		meta_assign<I,J-1>::assignR_add_d(lhs,d);
+		lhs(I-1,J-1) += d;
 	}
 	template<class A, typename T>
 	static inline void assign_add_d(A & lhs, const T & d) {
-	    meta_assign<I-1,J>::assign_add_d(lhs,d);
-	    meta_assign<I,J>::assignR_add_d(lhs,d);
+		meta_assign<I-1,J>::assign_add_d(lhs,d);
+		meta_assign<I,J>::assignR_add_d(lhs,d);
 	}
 	template<class A, typename T>
 	static inline void assignR_mul_d(A & lhs, const T & d) {
-	    meta_assign<I,J-1>::assignR_mul_d(lhs,d);
-	    lhs(I-1,J-1) *= d;
+		meta_assign<I,J-1>::assignR_mul_d(lhs,d);
+		lhs(I-1,J-1) *= d;
 	}
 	template<class A, typename T>
 	static inline void assign_mul_d(A & lhs, const T & d) {
-	    meta_assign<I-1,J>::assign_mul_d(lhs,d);
-	    meta_assign<I,J>::assignR_mul_d(lhs,d);
+		meta_assign<I-1,J>::assign_mul_d(lhs,d);
+		meta_assign<I,J>::assignR_mul_d(lhs,d);
 	}
 };
 template<unsigned I> struct meta_assign<I,0> {
@@ -378,20 +378,20 @@ template<typename T, class E>
 struct tmatrix_expr_trans {
 	explicit tmatrix_expr_trans(const E & e) : m_e(e) { }
 	inline T operator() (const unsigned i, const unsigned j) const {
-  		return m_e(j,i);
-  	}
+		return m_e(j,i);
+	}
 private:
 	const E m_e;
 };
 template<typename T, unsigned M, unsigned N>
 inline tmatrix_expr<T,tmatrix_expr_trans<T,tmatrix<T,M,N> >,N,M>
-operator~ (const tmatrix<T,M,N> & m) {  
+operator~ (const tmatrix<T,M,N> & m) {
 	typedef tmatrix_expr_trans<T,tmatrix<T,M,N> > expr_t;
 	return tmatrix_expr<T,expr_t,N,M>(expr_t(m));
 }
 template<typename T, class E, unsigned M, unsigned N>
 inline tmatrix_expr<T,tmatrix_expr_trans<T,tmatrix_expr<T,E,M,N> >,N,M>
-operator~ (const tmatrix_expr<T,E,M,N> & m) {  
+operator~ (const tmatrix_expr<T,E,M,N> & m) {
 	typedef tmatrix_expr_trans<T,tmatrix_expr<T,E,M,N> > expr_t;
 	return tmatrix_expr<T,expr_t,N,M>(expr_t(m));
 }
@@ -403,20 +403,20 @@ template<typename T, class E>
 struct tmatrix_expr_neg {
 	explicit tmatrix_expr_neg(const E & e) : m_e(e) { }
 	inline T operator() (const unsigned i, const unsigned j) const {
-  		return -m_e(i,j);
-  	}
+		return -m_e(i,j);
+	}
 private:
 	const E m_e;
 };
 template<typename T, unsigned M, unsigned N>
 inline tmatrix_expr<T,tmatrix_expr_neg<T,tmatrix<T,M,N> >,M,N>
-operator- (const tmatrix<T,M,N> & m) {  
+operator- (const tmatrix<T,M,N> & m) {
 	typedef tmatrix_expr_neg<T,tmatrix<T,M,N> > expr_t;
 	return tmatrix_expr<T,expr_t,M,N>(expr_t(m));
 }
 template<typename T, class E, unsigned M, unsigned N>
 inline tmatrix_expr<T,tmatrix_expr_neg<T,tmatrix_expr<T,E,M,N> >,M,N>
-operator- (const tmatrix_expr<T,E,M,N> & m) {  
+operator- (const tmatrix_expr<T,E,M,N> & m) {
 	typedef tmatrix_expr_neg<T,tmatrix_expr<T,E,M,N> > expr_t;
 	return tmatrix_expr<T,expr_t,M,N>(expr_t(m));
 }
@@ -437,7 +437,7 @@ private:
 };
 
 template<typename T, unsigned M, unsigned N>
-inline tmatrix_expr<T,tmatrix_expr_add_d<T,tmatrix<T,M,N> >,M,N> 
+inline tmatrix_expr<T,tmatrix_expr_add_d<T,tmatrix<T,M,N> >,M,N>
 operator+ (const tmatrix<T,M,N> & e, const T & d) {
 	typedef tmatrix_expr_add_d<T,tmatrix<T,M,N> > expr_t;
 	return tmatrix_expr<T,expr_t,M,N>(expr_t(e,d));
@@ -449,7 +449,7 @@ operator+ (const tmatrix_expr<T,E,M,N> & e, const T & d) {
 	return tmatrix_expr<T,expr_t,M,N>(expr_t(e,d));
 }
 template<typename T, unsigned M, unsigned N>
-inline tmatrix_expr<T,tmatrix_expr_add_d<T,tmatrix<T,M,N> >,M,N> 
+inline tmatrix_expr<T,tmatrix_expr_add_d<T,tmatrix<T,M,N> >,M,N>
 operator+ (const T & d, const tmatrix<T,M,N> & e) {
 	typedef tmatrix_expr_add_d<T,tmatrix<T,M,N> > expr_t;
 	return tmatrix_expr<T,expr_t,M,N>(expr_t(e,d));
@@ -461,7 +461,7 @@ operator+ (const T & d, const tmatrix_expr<T,E,M,N> & e) {
 	return tmatrix_expr<T,expr_t,M,N>(expr_t(e,d));
 }
 template<typename T, unsigned M, unsigned N>
-inline tmatrix_expr<T,tmatrix_expr_add_d<T,tmatrix<T,M,N> >,M,N> 
+inline tmatrix_expr<T,tmatrix_expr_add_d<T,tmatrix<T,M,N> >,M,N>
 operator- (const tmatrix<T,M,N> & e, const T & d) {
 	typedef tmatrix_expr_add_d<T,tmatrix<T,M,N> > expr_t;
 	return tmatrix_expr<T,expr_t,M,N>(expr_t(e,-d));
@@ -489,7 +489,7 @@ private:
 };
 
 template<typename T, unsigned M, unsigned N>
-inline tmatrix_expr<T,tmatrix_expr_sub_d<T,tmatrix<T,M,N> >,M,N> 
+inline tmatrix_expr<T,tmatrix_expr_sub_d<T,tmatrix<T,M,N> >,M,N>
 operator- (const T & d, const tmatrix<T,M,N> & e) {
 	typedef tmatrix_expr_sub_d<T,tmatrix<T,M,N> > expr_t;
 	return tmatrix_expr<T,expr_t,M,N>(expr_t(e,d));
@@ -517,7 +517,7 @@ private:
 };
 
 template<typename T, unsigned M, unsigned N>
-inline tmatrix_expr<T,tmatrix_expr_mul_d<T,tmatrix<T,M,N> >,M,N> 
+inline tmatrix_expr<T,tmatrix_expr_mul_d<T,tmatrix<T,M,N> >,M,N>
 operator* (const tmatrix<T,M,N> & e, const T & d) {
 	typedef tmatrix_expr_mul_d<T,tmatrix<T,M,N> > expr_t;
 	return tmatrix_expr<T,expr_t,M,N>(expr_t(e,d));
@@ -529,7 +529,7 @@ operator* (const tmatrix_expr<T,E,M,N> & e, const T & d) {
 	return tmatrix_expr<T,expr_t,M,N>(expr_t(e,d));
 }
 template<typename T, unsigned M, unsigned N>
-inline tmatrix_expr<T,tmatrix_expr_mul_d<T,tmatrix<T,M,N> >,M,N> 
+inline tmatrix_expr<T,tmatrix_expr_mul_d<T,tmatrix<T,M,N> >,M,N>
 operator* (const T & d, const tmatrix<T,M,N> & e) {
 	typedef tmatrix_expr_mul_d<T,tmatrix<T,M,N> > expr_t;
 	return tmatrix_expr<T,expr_t,M,N>(expr_t(e,d));
@@ -557,7 +557,7 @@ private:
 };
 
 template<typename T, unsigned M, unsigned N>
-inline tmatrix_expr<T,tmatrix_expr_div_d<T,tmatrix<T,M,N> >,M,N> 
+inline tmatrix_expr<T,tmatrix_expr_div_d<T,tmatrix<T,M,N> >,M,N>
 operator/ (const tmatrix<T,M,N> & e, const T & d) {
 	typedef tmatrix_expr_div_d<T,tmatrix<T,M,N> > expr_t;
 	return tmatrix_expr<T,expr_t,M,N>(expr_t(e,d));
@@ -585,7 +585,7 @@ private:
 };
 
 template<typename T, unsigned M, unsigned N>
-inline tmatrix_expr<T,tmatrix_expr_d_div<T,tmatrix<T,M,N> >,M,N> 
+inline tmatrix_expr<T,tmatrix_expr_d_div<T,tmatrix<T,M,N> >,M,N>
 operator/ (const T & d, const tmatrix<T,M,N> & e) {
 	typedef tmatrix_expr_d_div<T,tmatrix<T,M,N> > expr_t;
 	return tmatrix_expr<T,expr_t,M,N>(expr_t(e,d));
@@ -613,7 +613,7 @@ private:
 };
 
 template<typename T, unsigned M, unsigned N>
-inline tmatrix_expr<T,tmatrix_expr_add<T,tmatrix<T,M,N>,tmatrix<T,M,N> >,M,N> 
+inline tmatrix_expr<T,tmatrix_expr_add<T,tmatrix<T,M,N>,tmatrix<T,M,N> >,M,N>
 operator+ (const tmatrix<T,M,N> & e1, const tmatrix<T,M,N> & e2) {
 	typedef tmatrix_expr_add<T,tmatrix<T,M,N>,tmatrix<T,M,N> > expr_t;
 	return tmatrix_expr<T,expr_t,M,N>(expr_t(e1,e2));
@@ -653,7 +653,7 @@ private:
 };
 
 template<typename T, unsigned M, unsigned N>
-inline tmatrix_expr<T,tmatrix_expr_sub<T,tmatrix<T,M,N>,tmatrix<T,M,N> >,M,N> 
+inline tmatrix_expr<T,tmatrix_expr_sub<T,tmatrix<T,M,N>,tmatrix<T,M,N> >,M,N>
 operator- (const tmatrix<T,M,N> & e1, const tmatrix<T,M,N> & e2) {
 	typedef tmatrix_expr_sub<T,tmatrix<T,M,N>,tmatrix<T,M,N> > expr_t;
 	return tmatrix_expr<T,expr_t,M,N>(expr_t(e1,e2));
@@ -719,7 +719,7 @@ private:
 };
 
 template<typename T, unsigned M, unsigned K, unsigned N>
-inline tmatrix_expr<T,tmatrix_expr_prod<T,tmatrix<T,M,K>,tmatrix<T,K,N>,K>,M,N> 
+inline tmatrix_expr<T,tmatrix_expr_prod<T,tmatrix<T,M,K>,tmatrix<T,K,N>,K>,M,N>
 operator* (const tmatrix<T,M,K> & e1, const tmatrix<T,K,N> & e2) {
 	typedef tmatrix_expr_prod<T,tmatrix<T,M,K>,tmatrix<T,K,N>,K> expr_t;
 	return tmatrix_expr<T,expr_t,M,N>(expr_t(e1,e2));
@@ -750,13 +750,13 @@ template<typename T, class E>
 struct tmatrix_expr_diag {
 	explicit tmatrix_expr_diag(const E & e) : m_e(e) { }
 	inline T operator() (const unsigned i, const unsigned) const {
-  		return m_e(i,i);
-  	}
+		return m_e(i,i);
+	}
 private:
 	const E m_e;
 };
 template<typename T, unsigned N>
-inline tmatrix_expr<T,tmatrix_expr_diag<T,tmatrix<T,N,N> >,N,1> 
+inline tmatrix_expr<T,tmatrix_expr_diag<T,tmatrix<T,N,N> >,N,1>
 diag(const tmatrix<T,N,N> & e) {
 	typedef tmatrix_expr_diag<T,tmatrix<T,N,N> > expr_t;
 	return tmatrix_expr<T,expr_t,N,1>(expr_t(e));

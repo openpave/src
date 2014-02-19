@@ -33,17 +33,17 @@
 		one variable. Then there are associative sets, which store
 		a key and a value.
 
-		The heirarchy goes from a fixed size set, to a resizeable set,
-		to a sorted resizable set.
+		The hierarchy goes from a fixed size set, to a resizeable set,
+		to a sorted resizeable set.
 
 		All of the templated sets take a minimum block size.  Major
-		performance enhancements will be seen on resizable sets if this
+		performance enhancements will be seen on resizeable sets if this
 		value is bigger than the maximum size of the set, because the
 		memory is reused.
-		
+
 	Status:
 		The swaps in the sorts should be replaced by memmove.  It should
-		also learn to throw expections...
+		also learn to throw exceptions...
 
 	History:
 		1994       - Created by Jeremy Lea <reg@openpave.org>
@@ -62,13 +62,13 @@
 #include <limits.h>
 #include <assert.h>
 
-#define DFLT_BLK	64
+#define DFLT_BLK    64
 
 /*
  * class set - Set base class
  *
  * This class provides the basic working for the rest of the set classes,
- * including the calcualtion of the buffer size.
+ * including the calculation of the buffer size.
  */
 class set {
 public:
@@ -165,9 +165,9 @@ protected:
 		explicit _V(const V & v) : _v(v) {}
 		void * operator new(size_t, void * p) {
 			return p;
-		} 
+		}
 		void operator delete(void * , void *) {
-		} 
+		}
 	};
 
 	// Since this is a fixed size set, hide the allocator...
@@ -239,7 +239,7 @@ inline void fset<double>::init(const unsigned i, const double * v) {
 }
 
 /*
- * class sset - Sizable set of type V.
+ * class sset - Sizeable set of type V.
  *
  * This class builds on fset to make a set which can be resized
  * at will. Lots of nice add() and remove() options are available.
@@ -247,7 +247,7 @@ inline void fset<double>::init(const unsigned i, const double * v) {
 template <class V>
 class sset : public fset<V> {
 public:
-	// Provide a null constuctor for empty sets.
+	// Provide a null constructor for empty sets.
 	inline explicit sset()
 	  : fset<V>() {
 	}
@@ -334,7 +334,7 @@ public:
  * the sets to read only, this has to be lazy, so you need to call sort
  * before you expect the set to be sorted.
  *
- * If you want to store your own classes, then define operator's >, 
+ * If you want to store your own classes, then define operator's >,
  * <=, and =.
  */
 template <class V>
@@ -412,7 +412,7 @@ protected:
 		} else {
 			qsort(l,p);
 			qsort(p+1,r);
-		}	
+		}
 	}
 	// Insertion sort for if the set looks sorted already.
 	void isort(const unsigned l, const unsigned r) {
@@ -515,7 +515,7 @@ public:
 		copy(s,v,true);
 		allocate(size);
 	}
-	// Copy constuctor.
+	// Copy constructor.
 	inline explicit iset(const iset<V> & v)
 	  : set(v), idx(0), value(0) {
 		allocate(v.size);
@@ -560,7 +560,7 @@ public:
 		assert(inbounds(p));
 		return value[p];
 	}
-	// Allow sorted acess.
+	// Allow sorted access.
 	inline const V & getindex(const unsigned i) const {
 		assert(inbounds(i));
 		return value[idx[i]];
@@ -583,7 +583,7 @@ public:
 		return add(v.value,v.size);
 	}
 	// Add an array of values... There is no point in
-	// a position based addition. 
+	// a position based addition.
 	void add(const V * v, const unsigned s = 1) {
 		assert(s > 0 && v != 0);
 		allocate(size+s);
@@ -626,9 +626,9 @@ protected:
 		explicit _V(const V & v) : _v(v) {}
 		void * operator new(size_t, void * p) {
 			return p;
-		} 
+		}
 		void operator delete(void * , void *) {
-		} 
+		}
 	};
 
 	// Make some space...
@@ -721,7 +721,7 @@ public:
 		copy(s,v,true);
 		allocate(size);
 	}
-	// Copy constuctor.
+	// Copy constructor.
 	inline explicit kfset(const kfset<K,V> & v)
 	  : set(v), value(0) {
 		allocate(v.size);
@@ -766,9 +766,9 @@ protected:
 		explicit _V(const V & v) : _v(v) {}
 		void * operator new(size_t, void * p) {
 			return p;
-		} 
+		}
 		void operator delete(void * , void *) {
-		} 
+		}
 	};
 
 	// Hide the allocation function.
@@ -818,7 +818,7 @@ protected:
 };
 
 /*
- * class ksset - Keyed sizable set
+ * class ksset - Keyed sizeable set
  *
  * Think combination of sset and kfset.
  */
@@ -851,7 +851,7 @@ public:
 		add(v.value,v.size);
 	}
 	// Add an array of values... There is no point in
-	// a position based addition. 
+	// a position based addition.
 	void add(const V * v, const unsigned s = 1) {
 		assert(s > 0 && v != 0);
 		this->allocate(this->size+s);
@@ -882,7 +882,7 @@ public:
 
 /*
  * class koset - Keyed ordered set
- * 
+ *
  * Think oset and ksset.
  */
 template <class K, class V>
@@ -976,7 +976,7 @@ public:
 		copy(s,v,true);
 		allocate(size);
 	}
-	// Copy constuctor.
+	// Copy constructor.
 	inline explicit kiset(const kiset<K,V> & v)
 	  : set(v), idx(0), value(0) {
 		allocate(v.size);
@@ -1027,7 +1027,7 @@ public:
 		assert(inbounds(p));
 		return value[p];
 	}
-	// Allow sorted acess.
+	// Allow sorted access.
 	inline const V & getindex(const unsigned i) const {
 		assert(inbounds(i));
 		return value[idx[i]];
@@ -1047,7 +1047,7 @@ public:
 		add(v.value,v.size);
 	}
 	// Add an array of values... There is no point in
-	// a position based addition. 
+	// a position based addition.
 	void add(const V * v, const unsigned s = 1) {
 		assert(s > 0 && v != 0);
 		allocate(size+s);
@@ -1090,9 +1090,9 @@ protected:
 		explicit _V(const V & v) : _v(v) {}
 		void * operator new(size_t, void * p) {
 			return p;
-		} 
+		}
 		void operator delete(void * , void *) {
-		} 
+		}
 	};
 
 	// Make some space...
@@ -1162,10 +1162,10 @@ protected:
 };
 
 /*
- * class afset - Assosiative fixed set
+ * class afset - Associative fixed set
  *
  * Instead of having the key as a base class of the values, these
- * classes have seperate keys and values. Now we have to manage
+ * classes have separate keys and values. Now we have to manage
  * two arrays of things...
  */
 template <class K, class V>
@@ -1176,7 +1176,7 @@ public:
 	  : set(b), key(0), value(0) {
 		allocate(s);
 	}
-	inline explicit afset(const unsigned s,	const K * k = 0,
+	inline explicit afset(const unsigned s, const K * k = 0,
 			const V * v = 0, const unsigned b = DFLT_BLK)
 	  : set(b), key(0), value(0) {
 		allocate(s);
@@ -1202,7 +1202,7 @@ public:
 		}
 		return UINT_MAX;
 	}
-	// Assignement operator.
+	// Assignment operator.
 	inline afset<K,V> & operator= (const afset<K,V> & v) {
 		deallocate();
 		allocate(v.size);
@@ -1233,9 +1233,9 @@ protected:
 		explicit _K(const K & k) : _k(k) {}
 		void * operator new(size_t, void * p) {
 			return p;
-		} 
+		}
 		void operator delete(void * , void *) {
-		} 
+		}
 	};
 	struct _V {                // Placement new wrapper
 		V _v;
@@ -1243,9 +1243,9 @@ protected:
 		explicit _V(const V & v) : _v(v) {}
 		void * operator new(size_t, void * p) {
 			return p;
-		} 
+		}
 		void operator delete(void * , void *) {
-		} 
+		}
 	};
 
 	// Make some space...
@@ -1309,7 +1309,7 @@ protected:
 };
 
 /*
- * class asset - Associative sizable set
+ * class asset - Associative sizeable set
  */
 template <class K, class V>
 class asset : public afset<K,V> {

@@ -213,7 +213,7 @@ private:
 		if (h->right != 0 && h->right->red)
 			h = leanLeft(h);
 		return h;
-	}	
+	}
 	void print(int level, unsigned order, node * h) {
 		if (h->right != 0)
 			print(level+1,order+h->order+1,h->right);
@@ -224,7 +224,6 @@ private:
 		if (h->left != 0)
 			print(level+1,order,h->left);
 	}
-	
 };
 
 #endif // TREE_H

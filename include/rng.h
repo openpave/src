@@ -109,7 +109,7 @@ public:
 		uint32_t * psfmt32 = &(status[0].u32[0]);
 		psfmt32[0] = seed;
 		for (unsigned i = 1; i < (DSFMT_N+1)*4; i++) {
-			psfmt32[i] = static_cast<uint32_t>(1812433253UL 
+			psfmt32[i] = static_cast<uint32_t>(1812433253UL
 			    * (psfmt32[i-1] ^ (psfmt32[i-1] >> 30)) + i);
 		}
 		uint64_t * psfmt64 = &(status[0].u[0]);
@@ -117,7 +117,7 @@ public:
 			psfmt64[i] = (psfmt64[i] & DSFMT_LOW_MASK) | DSFMT_HIGH_CONST;
 		inner  = (status[DSFMT_N].u[0] ^ DSFMT_FIX1) & DSFMT_PCV1;
 		inner ^= (status[DSFMT_N].u[1] ^ DSFMT_FIX2) & DSFMT_PCV2;
-		for (unsigned i = 32; i > 0; i >>= 1) 
+		for (unsigned i = 32; i > 0; i >>= 1)
 			inner ^= inner >> i;
 		inner &= 1;
 		if (inner != 1)

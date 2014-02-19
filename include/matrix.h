@@ -25,7 +25,7 @@
 
 	Purpose:
 		This header implements simple C++ matrix structures and
-		mathmematics.  The idea is to create classes which are as easy to
+		mathematics.  The idea is to create classes which are as easy to
 		use as MATLAB, but without the overhead of a class based matrix
 		approach.  There are a number of low level functions which can also
 		be called directly.
@@ -41,7 +41,7 @@
 		and to perform optimisations which are not possible with a direct
 		approach.  This also allows for reference counting and copy on write
 		syntax, so that storage is shared.
-		
+
 		The idea is to provide basic classes, and then to tie into
 		BLAS/LAPACK etc.
 
@@ -109,7 +109,7 @@ protected:
 
 private:
 	friend class matrix_storage_ptr;
-	
+
 	inline int addref() {
 		return ++count;
 	}
@@ -183,7 +183,7 @@ public:
 		assert(ptr != 0);
 		return ptr;
 	}
-	
+
 private:
 	matrix_storage * ptr;
 };
@@ -288,12 +288,12 @@ public:
 	}
 	virtual matrix_dense getdense() const {
 		return matrix_dense(*this);
-	} 
+	}
 
 protected:
-	unsigned M;					// The rows
-	unsigned N;					// The cols
-	double * data;		// The data
+	unsigned M;         // The rows
+	unsigned N;         // The cols
+	double * data;      // The data
 	void resize(const unsigned m, const unsigned n) {
 		if (data != 0)
 			delete [] data;
@@ -422,8 +422,8 @@ public:
 	}
 
 protected:
-	unsigned M;						// The rows
-	unsigned N;						// The cols
+	unsigned M;         // The rows
+	unsigned N;         // The cols
 	void resize(const unsigned m, const unsigned n) {
 		M = m, N = n;
 	}
@@ -455,7 +455,7 @@ public:
 	}
 
 protected:
-	unsigned N;						// The rows and cols
+	unsigned N;                     // The rows and cols
 	void resize(const unsigned n) {
 		N = n;
 	}
@@ -506,7 +506,7 @@ public:
 		case mul:
 			return op1->rows();
 		case inv:
-			return op1->rows();						
+			return op1->rows();
 		default:
 			return 0; // XXX
 		}
@@ -528,7 +528,7 @@ public:
 		case mul:
 			return op2->cols();
 		case inv:
-			return op1->cols();						
+			return op1->cols();
 		default:
 			return 0; // XXX
 		}
@@ -560,14 +560,14 @@ public:
 		const_cast<matrix_operator *>(this)->evaluate();
 		matrix_dense t(rows(),cols());
 		for (unsigned i = 0; i < rows(); i++)
-			for (unsigned j = 0; j < cols(); j++) 
+			for (unsigned j = 0; j < cols(); j++)
 				t(i,j) = (*op1)(i,j);
 		return t;
 	}
 
 protected:
 	matrix_storage_ptr op1;
-	matrix_storage_ptr op2; 
+	matrix_storage_ptr op2;
 	op_t op;
 
 	inline void evaluate() {
@@ -648,7 +648,7 @@ public:
 				if ((*data)(i,j) != a(i,j))
 					return false;
 			}
-		} 
+		}
 		return true;
 	}
 	// Comparison operators...
@@ -696,7 +696,7 @@ operator- (const matrix & b) {
  */
 #define EIG_TOL 10e-18
 /*
- * The miminimum error in the result of an equals operation to trigger
+ * The minimum error in the result of an equals operation to trigger
  * a refinement, and the maximum number of refinements.
  */
 #define ERR_TOL 10e-6
@@ -707,8 +707,8 @@ operator- (const matrix & b) {
  */
 #define T_SIZE(n)    ((n)*((n)+1)/2)
 /*
- * Returns the index into the triangluar matrix storage array
- * This is in column major format, so loops over i are efficent.
+ * Returns the index into the triangular matrix storage array
+ * This is in column major format, so loops over i are efficient.
  */
 #define T_IDX(i,j)   ((j)*((j)+1)/2+(i))
 
@@ -718,10 +718,10 @@ operator- (const matrix & b) {
 #define B_SIZE(n,w)    (((w)+1)*(n)-(w)*((w)+1)/2)
 /*
  * Returns the index into the special banded matrix storage array
- * This is in column major format, so loops over i are efficent.
+ * This is in column major format, so loops over i are efficient.
  */
 #define B_IDX(n,w,i,j) ((j) <= (w) ? (j)*((j)+1)/2+(i) : \
-                                   ((j)+1)*(w)+(i)-(w)*((w)+1)/2)
+                                     ((j)+1)*(w)+(i)-(w)*((w)+1)/2)
 
 void orth_gs(const unsigned n, double * Q);
 void equ_gauss(const unsigned n, const double * A, const double * b,

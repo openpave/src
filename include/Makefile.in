@@ -2,13 +2,13 @@
 #
 # $OpenPave$
 
-topsrcdir	= @top_srcdir@
-srcdir		= @srcdir@
+topsrcdir   = @top_srcdir@
+srcdir      = @srcdir@
 
 include @OBJDIR@/build/autoconf.mk
 
-EXPORTS =                   \
-	list.h              \
-	$(NULL)
+EXPORTS =               \
+    list.h              \
+    $(NULL)
 
 include $(topsrcdir)/build/rules.mk

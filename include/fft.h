@@ -53,7 +53,7 @@ template<unsigned A, unsigned B, unsigned N = 34, unsigned M = 2>
 struct SIN {
 	static inline double series() {
 		return 1-(A*M_PI/B)*(A*M_PI/B)/M/(M+1)
-				*SIN<A,B,N,M+2>::series();
+		       *SIN<A,B,N,M+2>::series();
 	}
 	static inline double sin() {
 		return (A*M_PI/B)*SIN<A,B>::series();
@@ -311,8 +311,8 @@ fftr_mul(double * a, double * b)
 {
 	double t0 = a[0]*b[0], t1 = a[1]*b[1];
 	fftc_mul<N/2>(reinterpret_cast<complex *>(a),
-			reinterpret_cast<complex *>(b));
-	a[0] = t0; a[1] = t1; 
+	              reinterpret_cast<complex *>(b));
+	a[0] = t0; a[1] = t1;
 }
 template<>
 inline void

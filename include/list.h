@@ -30,7 +30,7 @@
 	Design:
 		There are three types of list elements, and obviously the lists
 		require that you use the right types.  There are singly linked,
-		doubally linked and owned elements.  Owned elements are the only
+		doubly linked and owned elements.  Owned elements are the only
 		strange ones, since they require that you define the type of
 		class that can own this list type.  This is very useful for a
 		number of engineering problems, where you want the list class
@@ -39,7 +39,7 @@
 		and destructors.
 
 	Status:
-		At the moment this only does owned doubally linked lists, since
+		At the moment this only does owned doubly linked lists, since
 		that's all I need.
 
 	History:
@@ -57,7 +57,7 @@ template <class O, class T>
 class list_owned;
 
 /*
- * class listelement_d - Templated doublally linked list element.
+ * class listelement_d - Templated doubly linked list element.
  *
  * Use this class as a base class for the data you want to store in the
  * list.
@@ -65,8 +65,8 @@ class list_owned;
 template <class T>
 class listelement_d {
 protected:
-	T * next;					// The next element.
-	T * prev;					// The previous element.
+	T * next;                   // The next element.
+	T * prev;                   // The previous element.
 
 	// Create a new list element, with an optional previous element.
 	// We force the consumer to use 0 so that they have to think.
@@ -103,7 +103,7 @@ protected:
 template <class O, class T>
 class listelement_o : public listelement_d<T> {
 protected:
-	O * owner;					// Our owner.
+	O * owner;                  // Our owner.
 
 	// Create an element.
 	listelement_o(O * o, T * p = 0)
@@ -137,14 +137,14 @@ protected:
 /*
  * class list_double - Templated list management class.
  *
- * This class manages a doubally linked list of type listelement_d<T>.
+ * This class manages a doubly linked list of type listelement_d<T>.
  * It has both a head and a tail pointer.
  */
 template <class T>
 class list_double {
 protected:
-	T * first;					// The head of the list.
-	T * last;					// The tail of the list.
+	T * first;                  // The head of the list.
+	T * last;                   // The tail of the list.
 
 	// All lists start empty...
 	list_double()
