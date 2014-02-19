@@ -28,15 +28,17 @@
 
 **************************************************************************/
 
+#define _EVENT_IMP
+#define _PROGRESS_IMP
+#include "event.h"
 #include "pavement.h"
 #include <stdio.h>
 
-#ifdef NOBUILD
-int
-main()
+static void
+test1()
 {
 	LEsystem Pavement;
-	int i;
+	unsigned i;
 
 	//Pavement.addlayer(1000.0,1000.0,0.45);
 	//for (i =0; i< 100; i++)
@@ -65,16 +67,14 @@ main()
 	//Pavement.addpoint(point3d(200,0,0));
 	Pavement.calculate();
 	const pavedata & d = Pavement.result(point3d(0,0,0));
-	cout << d.result(pavedata::deflct, pavedata::zz) << endl;
+	printf("%f\n",d.result(pavedata::deflct, pavedata::zz));
 }
-#endif
 
-#ifdef NOBUILD
-int
-main()
+static void
+test2()
 {
 	LEsystem Pavement;
-	int i;
+	unsigned i;
 
 	Pavement.addload(point2d(0,0),0,1.0,1.0);
 	Pavement.addpoint(point3d(0,0,0));
@@ -85,22 +85,20 @@ main()
 	const pavedata & d = Pavement.result(point3d(0,0,0));
 	printf("Result: %f\n",d.result(pavedata::deflct, pavedata::zz));
 }
-#endif
 
 /*
  * This test adds a bunch of points at various depths below the center
  * of circular load on an infinite layer and compares the results of the
  * two methods (accurate and normal) against the exact solution.
  */
-#ifdef NOBUILD
-int
-main()
+static void
+test3()
 {
 	cset<point3d> p(0,1000);
 	LEsystem Best;
 	LEsystem Slow;
 	LEsystem Fast;
-	int i;
+	unsigned i;
 
 	Best.addlayer(0.0,1.0,0.5);
 	Slow.addlayer(0.0,1.0,0.5);
@@ -139,22 +137,20 @@ main()
 		printf("\n");
 	}
 }
-#endif
 
 /*
  * This test adds a lot of points along the surface of a single
  * layer pavement, and compares the three basic solutions for this
  * problem (accurate, normal, numerical).
  */
-#ifdef NOBUILD
-int
-main()
+static void
+test4()
 {
 	cset<point3d> p(0,100);
 	LEsystem Best;
 	LEsystem Slow;
 	LEsystem Fast;
-	int i;
+	unsigned i;
 
 	for (i = 0; i < 9; i++) {
 		Best.addlayer(0.1,1.0,0.5);
@@ -214,11 +210,9 @@ main()
 		printf("\n");
 	}
 }
-#endif
 
-#ifdef NOBUILD
-int
-main()
+static void
+test5()
 {
 	cset<point3d> p(0,100);
 	LEsystem pave;
@@ -252,11 +246,9 @@ main()
 		printf("\n");
 	}
 }
-#endif
 
-#ifdef NOBUILD
-int
-main()
+static void
+test6()
 {
 	//LEsystem Best;
 	LEsystem Slow;
@@ -279,11 +271,9 @@ main()
 		printf("%10.4e\t%+0.8e\n",7.4*i,s.result(pavedata::deflct,pavedata::zz));
 	}
 }
-#endif
 
-#ifdef NOBUILD
-int
-main()
+static void
+test7()
 {
 	double t = 0;
 	
@@ -293,7 +283,7 @@ main()
 	double E4i =   90.0;
 	do {
 		LEsystem Pavement;
-		int i, j;
+		unsigned i, j;
 
 		double E1 = E1i*(0.05+0.95*exp(-t/10.0));
 		double E2 = E2i*(1+0.40*((E1-E1i)/E1i));
@@ -336,20 +326,18 @@ main()
 		printf("\n");
 	} while (++t < 20);
 }
-#endif
 
-#ifdef NOBUILD
-int
-main(int argc, char* argv[])
+static void
+test8()
 {
-	int i;
+	unsigned i;
 	double t;
 
 	LEsystem Test;
 	LEsystem Fast;
 
 	//srand((unsigned)time(NULL));
-redo:
+//redo:
 	Test.removelayers();
 	Fast.removelayers();
 	for (i = 0; i < 4; i++) {
@@ -373,7 +361,7 @@ redo:
 	for (i = 0; i < Test.layers(); i++) {
 		T[i] = pow(10,RAND(4.0,7.0));
 		while (i > 0 && (T[i] > 20*T[i-1] || T[i] < T[i-1]/20.0))
-			T[i] = pow(10,RAND(4.0,7.0)));
+			T[i] = pow(10,RAND(4.0,7.0));
 		Test.layer(i).emod(T[i]);
 		Fast.layer(i).emod(T[i]);
 		//printf("%0.4e\t%g\n",log10(T[i]),T[i]);
@@ -412,8 +400,8 @@ redo:
 	Test.calculate();
 	//Fast.calc_odemark();
 	Fast.calculate(LEsystem::fast);
-	for (i = 0; i < Test.data.length(); i++) {
-		point3d & p = Test.data[i];
+	for (i = 0; i < Test.results(); i++) {
+		const point3d & p = Test.result(i);
 		const pavedata & d = Test.result(p);
 		printf("%7.2f\t%7.2f\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\t%10.6g\n", d.y, d.z,
 		d.result(pavedata::stress, pavedata::xx),
@@ -438,30 +426,11 @@ redo:
 		f.result(pavedata::deflct, pavedata::zz));
 	}
 	printf("\n");
-	goto redo;
-	return 0;
+	//goto redo;
 }
-#endif
 
-#ifdef NOBUILD
-double quad8_vdp(double r, double z, double s, double v, double a = 0.0, double b = M_PI, double Q = 10.0);
-int
-main()
-{
-	int i;
-
-	FILE * fp = fopen("real.dat","w");
-	for (i = 0; i < 1<<16; i++) {
-		double d = quad8_vdp(0.01*i,0.0,1.0,0.5);
-		fprintf(fp,"%0.16f\t%0.16f\n",0.01*i,d);
-	}
-	fclose(fp);
-}
-#endif
-
-#ifdef NOBUILD
-int
-main()
+static void
+test9()
 {
 	LEsystem Pavement;
 
@@ -505,14 +474,11 @@ main()
 	printf("%0.16f\n",d2.result(pavedata::stress,pavedata::xz));
 	printf("%0.16f\n",d2.result(pavedata::stress,pavedata::yz));
 }
-#endif
 
-#ifdef NOBUILD
-
-int
-main(int argc, char* argv[])
+static void
+test10()
 {
-	int l, i;
+	unsigned l, i;
 	double T[10], h[10], v[10];
 	sset<point3d> P;
 
@@ -520,8 +486,8 @@ main(int argc, char* argv[])
 	LEsystem Test;
 
 	//srand((unsigned)time(NULL));
-redo:
-	l = int(ceil(RAND(1,10)));
+//redo:
+	l = unsigned(ceil(RAND(1,10)));
 	Base.removelayers();
 	Test.removelayers();
 	for (i = 0; i < l; i++) {
@@ -569,7 +535,7 @@ redo:
 			printf("%7.2f\t%7.2f\t%10.6g\t", f.y, f.z, fz);
 			printf("%7.2f\t%7.2f\t%10.6g\t", d.y, d.z, dz);
 			printf("%10.6g\n",err);
-			for (int j = 0; j < l; j++)
+			for (unsigned j = 0; j < l; j++)
 				printf("Layer %d: %8.4f %12.6f %6.4f\n",j+1,h[j],T[j]/1000,v[j]);
 			printf("\n");
 			exit(1);
@@ -577,17 +543,14 @@ redo:
 			printf(".");		
 	}
 	fflush(NULL);
-	goto redo;
-	return 0;
+	//goto redo;
 }
-#endif
 
 /*
  * MB Road under a single wheel.
  */
-#ifdef NOBUILD
-int
-main()
+static void
+test11()
 {
 	LEsystem Pavement;
 	cset<point3d> p;
@@ -646,4 +609,30 @@ main()
 		printf("%0.16f\n",d.result(pavedata::stress,pavedata::s3));
 	}
 }
-#endif
+
+int
+main()
+{
+	printf("Test 1:\n");
+	test1();
+	printf("Test 2:\n");
+	test2();
+	printf("Test 3:\n");
+	test3();
+	printf("Test 4:\n");
+	test4();
+	printf("Test 5:\n");
+	test5();
+	printf("Test 6:\n");
+	test6();
+	printf("Test 7:\n");
+	test7();
+	printf("Test 8:\n");
+	test8();
+	printf("Test 9:\n");
+	test9();
+	printf("Test 10:\n");
+	test10();
+	printf("Test 11:\n");
+	test11();
+}

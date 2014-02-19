@@ -31,7 +31,9 @@
 #include "mathplus.h"
 #include "matrix.h"
 
-void print_matlab(const char * c, unsigned m, unsigned n, double * A) {
+static void
+print_matlab(const char * c, unsigned m, unsigned n, double * A)
+{
 	printf("%s = [ ",c);
 	for (unsigned i = 0; i < m; i++) {
 		for (unsigned j = 0; j < n; j++)
@@ -40,7 +42,9 @@ void print_matlab(const char * c, unsigned m, unsigned n, double * A) {
 	printf("];\n");
 }
 
-void init_matrix_u(unsigned n, unsigned w, double * A) {
+static void
+init_matrix_u(unsigned n, unsigned w, double * A)
+{
 	memset(A,0,sizeof(double)*n*n);
 	for (unsigned i = 0; i < n; i++) {
 		for (unsigned j = i; j <= i+w && j < n; j++)
@@ -48,7 +52,9 @@ void init_matrix_u(unsigned n, unsigned w, double * A) {
 	}
 }
 
-void init_matrix_pd(unsigned n, double * A, double * B) {
+static void
+init_matrix_pd(unsigned n, double * A, double * B)
+{
 	for (unsigned i = 0; i < n; i++) {
 		for (unsigned j = 0; j < n; j++) {
 			B[i*n+j] = 0.0;
@@ -59,12 +65,16 @@ void init_matrix_pd(unsigned n, double * A, double * B) {
 	memcpy(A,B,sizeof(double)*n*n);
 }
 
-void init_vector(unsigned n, double * b) {
+static void
+init_vector(unsigned n, double * b)
+{
 	for (unsigned i = 0; i < n; i++)
 		b[i] = RAND(0.0,1.0);
 }
 
-double residual(unsigned n, double * B, double * x, double * b) {
+static double
+residual(unsigned n, double * B, double * x, double * b)
+{
 	unsigned i, j;
 	double dot, s;
 	double c1, y1, t1, c2, y2, t2;
@@ -88,7 +98,9 @@ double residual(unsigned n, double * B, double * x, double * b) {
 	return dot;
 }
 
-double identity(unsigned n, double * A, double * B) {
+static double
+identity(unsigned n, double * A, double * B)
+{
 	unsigned i, j, k;
 	double res = 0.0;
 
@@ -114,8 +126,8 @@ double identity(unsigned n, double * A, double * B) {
 #define N 10
 #define W 3
 
-void
-test_matrix1()
+static void
+test1()
 {
 	int i, j, iter = 30;
 	double * A = new double[N*N];
@@ -157,8 +169,8 @@ test_matrix1()
 	delete [] A;
 }
 
-void
-test_matrix2()
+static void
+test2()
 {
 	unsigned iter = 30;
 	double * A = new double[N*N];
@@ -187,8 +199,8 @@ test_matrix2()
 	delete [] B;
 }
 
-void
-test_matrix3()
+static void
+test3()
 {
 	unsigned iter = 30;
 	double * A = new double[N*N];
@@ -219,8 +231,8 @@ test_matrix3()
 	delete [] I;
 }
 
-void
-test_matrix4()
+static void
+test4()
 {
 	int i;
 
@@ -241,7 +253,7 @@ test_matrix4()
 	delete [] A;
 }
 
-void
+static void
 test_tmatrix()
 {
 	tmatrix<double,3,2> B;
@@ -288,28 +300,26 @@ test_tmatrix()
 	printf(" I = "); I.print();
 }
 
-#ifdef NOBUILD
 int
 main()
 {
 	printf("Test 1:\n");
-	test_matrix1();
+	test1();
 	printf("Test 2:\n");
-	test_matrix2();
+	test2();
 	printf("Test 3:\n");
-	test_matrix3();
+	test3();
 	printf("Test 4:\n");
-	test_matrix4();
+	test4();
 	printf("Test tmatrix:\n");
 	test_tmatrix();
 	return 0;
 }
-#endif
 
 #undef N
 #undef W 
 
-#ifdef NOBUILD
+#if 0
 
 /*
  * struct tensor_indexX - tensor indices

@@ -28,12 +28,15 @@
 
 **************************************************************************/
 
+#define _EVENT_IMP
+#define _PROGRESS_IMP
 #include "event.h"
 #include <stdio.h>
 #include <math.h>
+#include <time.h>
 #include "fft.h"
 
-double
+static double
 myrand()
 {
   static int pos = 0;
@@ -73,7 +76,7 @@ myrand()
     if (!++in[0]) if (!++in[1]) if (!++in[2]) ++in[3];
     pos = 16;
   }
-  return 0.0000000004656612873077392578125 * long(t[--pos] & 0x7fffffff);
+  return 0.0000000004656612873077392578125 * double(t[--pos] & 0x7fffffffL);
 }
 
 template<unsigned N>
@@ -157,7 +160,6 @@ doitc8()
   timeme("\n");
 }
 
-#ifdef NOBUILD
 int
 main()
 {
@@ -189,4 +191,3 @@ main()
   doitc8<8192>();
   return 0;
 }
-#endif

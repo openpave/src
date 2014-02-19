@@ -7,20 +7,35 @@ srcdir           = @srcdir@
 
 include @OBJDIR@/build/autoconf.mk
 
-PROGRAMS         = test test_set
+PROGRAMS = \
+    test                               \
+    test_set                           \
+    test_matrix                        \
+    test_pavement                      \
+    test_fft                           \
+    $(NULL)
 
 CXXSRCS_test =                         \
     test.cpp                           \
     test_backcalc.cpp                  \
-    test_fft.cpp                       \
-    test_matrix.cpp                    \
-    test_pavement.cpp                  \
     test_rng.cpp                       \
     test_thermal.cpp                   \
     $(NULL)
 
 CXXSRCS_test_set =                     \
     test_set.cpp                       \
+    $(NULL)
+
+CXXSRCS_test_matrix =                  \
+    test_matrix.cpp                    \
+    $(NULL)
+
+CXXSRCS_test_pavement =                \
+    test_pavement.cpp                  \
+    $(NULL)
+
+CXXSRCS_test_fft =                     \
+    test_fft.cpp                       \
     $(NULL)
 
 include $(topsrcdir)/build/rules.mk

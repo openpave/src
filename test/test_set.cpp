@@ -64,7 +64,7 @@ void fset_print(const fset<T> & t) {
 	printf("}\n");
 }
 
-void
+static void
 test_set1a()
 {
 	const int d1[14] = {1,2,2,3,4,4,5,6,7,8,9,10,11,12};
@@ -109,7 +109,7 @@ void kfset_print(const kfset<K,V> & t) {
 	printf("}\n");
 }
 
-void
+static void
 test_set1b()
 {
 	koset<key,pair> k(7);
@@ -135,7 +135,7 @@ void kiset_print(const kiset<K,V> & t) {
 	printf("}\n");
 }
 
-void
+static void
 test_set1c()
 {
 	kiset<key,pair> i(7);
@@ -157,7 +157,7 @@ void afset_print(const afset<K,V> & t) {
 	printf("}\n");
 }
 
-void
+static void
 test_set1d()
 {
 	aoset<key,value> a(7);
@@ -173,7 +173,7 @@ test_set1d()
 	afset_print(a);
 }
 
-void
+static void
 test_set2()
 {
 	unsigned i, j, l = 10;
@@ -197,7 +197,7 @@ test_set2()
 	}
 }
 
-void
+static void
 test_set3()
 {
 	unsigned i, j, l = 10;
@@ -220,7 +220,7 @@ test_set3()
 	}
 }
 
-void
+static void
 test_set4()
 {
 	unsigned i, l = 100;
@@ -248,7 +248,7 @@ test_set4()
 	}
 }
 
-int
+static void
 test_set5()
 {
 	BST<key,value> bst;
@@ -272,7 +272,6 @@ test_set5()
 		//bst.print();
 	}
 	printf("\n");
-	return 0;
 }
 
 int
