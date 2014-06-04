@@ -38,7 +38,9 @@
 #define TB 15.0
 #define ALPHA 2000.0
 
-double solution(double t, double z) {
+static double
+solution(double t, double z)
+{
 	double d = 1.0/24.0;
 	double y = 1.0/24.0/365.0;
 	double D = sqrt(2*ALPHA/d);
@@ -54,7 +56,7 @@ main()
 	double h, D = ALPHA;
 	double nd[NT+1], nt[NT+1];
 	double pd = 50.0, pt, at;
-	
+
 	for (t = 0; t < NT+1; t++) {
 		nd[t] = (2000.0/NT)*t;
 		nt[t] = solution(0,nd[t]);

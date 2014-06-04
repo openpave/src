@@ -38,7 +38,7 @@
 # ***** END LICENSE BLOCK *****
 
 # opconfigfind - Loads options from opconfig onto configure's
-#    command-line. The opconfig file is searched for in the 
+#    command-line. The opconfig file is searched for in the
 #    order:
 #       if $OPCONFIG is set, use that.
 #       Otherwise, use $TOPSRCDIR/opconfig
@@ -49,8 +49,8 @@
 topsrcdir=$1
 
 if test $OSTYPE = "cygwin"; then
-	OPCONFIG=`cygpath -u "$OPCONFIG"`
-	HOME=`cygpath -u "$HOME"`
+  OPCONFIG=`cygpath -u "$OPCONFIG"`
+  HOME=`cygpath -u "$HOME"`
 fi
 
 for _config in "$OPCONFIG" \

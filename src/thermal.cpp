@@ -173,9 +173,9 @@ FEMthermal::step(double tt, double tb)
 	for (i = 1; i < w+1; i++)
 		nt[i] -= tt*Kt[i];
 	for (i = 1; i < n-1; i++) {
-		for (j = MAX(int(i-w),0); j < i; j++)
+		for (j = (i > w ? i-w : 0); j < i; j++)
 			nt[i] += FF[B_IDX(n,w,j,i)]*ng[j];
-		for (j = i; j < MIN(i+w+1,n); j++)
+		for (j = i; j <= i+w && j < n; j++)
 			nt[i] += FF[B_IDX(n,w,i,j)]*ng[j];
 	}
 	// Make corrections for last nodes

@@ -39,11 +39,11 @@ struct key {
 	int i;
 	key() : i(0) {}
 	key(int s) : i(s) {}
-	bool operator== (const key & k) const { return (i==k.i); }  
-	bool operator<  (const key & k) const { return (i< k.i); }  
-	bool operator<= (const key & k) const { return (i<=k.i); }  
-	bool operator>  (const key & k) const { return (i> k.i); }  
-	bool operator>= (const key & k) const { return (i>=k.i); }  
+	bool operator== (const key & k) const { return (i==k.i); }
+	bool operator<  (const key & k) const { return (i< k.i); }
+	bool operator<= (const key & k) const { return (i<=k.i); }
+	bool operator>  (const key & k) const { return (i> k.i); }
+	bool operator>= (const key & k) const { return (i>=k.i); }
 };
 struct pair : public key {
 	double d;
@@ -202,12 +202,13 @@ test_set3()
 {
 	unsigned i, j, l = 10;
 	iset<double> t(0,N);
+
 	while (l-- > 0) {
 		t.empty();
 		for (i = 0; i < N; i++)
 			t.add(RAND(-N,N));
 		//for (j = 0; j < N; j++)
-		//	printf("%4.2f\n",t[j]);
+		//  printf("%4.2f\n",t[j]);
 		printf(".");
 		fflush(NULL);
 		for (i = 1; i < N; i++) {
@@ -236,7 +237,7 @@ test_set4()
 			//kiset_print(t);
 		}
 		//for (j = 0; j < N; j++)
-		//	printf("%4.2f\n",t[j]);
+		//  printf("%4.2f\n",t[j]);
 		printf(".");
 		fflush(NULL);
 		for (i = 1; i < t.length(); i++) {
@@ -252,7 +253,7 @@ static void
 test_set5()
 {
 	BST<key,value> bst;
-	
+
 	unsigned i, l = 1;
 	oset<double> t(0,N);
 	while (l-- > 0) {

@@ -263,10 +263,11 @@ OP_HT_Init(const unsigned nl, const double * h, const double * D,
 }
 
 void OP_EXPORT
-OP_HT_Step(const long token, const unsigned nt, const double * tt, const double tb)
+OP_HT_Step(const long token, const unsigned nt,
+           const double * tt, const double tb)
 {
 	FEMthermal * system = reinterpret_cast<FEMthermal *>(token);
-	
+
 	for (unsigned i = 0; i < nt; i++)
 		system->step(tt[i],tb);
 #if defined(_MSC_VER) || defined(__MINGW32__)
@@ -279,7 +280,7 @@ OP_HT_Interpolate(const long token, const unsigned np, const double * pd,
                   double * pt)
 {
 	FEMthermal * system = reinterpret_cast<FEMthermal *>(token);
-	
+
 	system->interpolate(np,pd,pt);
 #if defined(_MSC_VER) || defined(__MINGW32__)
 	_clearfp();

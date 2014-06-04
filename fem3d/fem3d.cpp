@@ -39,16 +39,16 @@
 		linear elasticity.  The solution is built of elements, which are
 		connected to a global nodes.  These elements are integrated to
 		obtain a element stiffness matrix, which is done by doing
-		gaussian integration over the point stifness matrix, with the
-		approriate transforms.  The element stiffness matrix is then
-		assembled into a global stifness matrix.  A nodal force vector is
-		assembled, and the bondary conditions are applied, and then the
+		Gaussian integration over the point stiffness matrix, with the
+		appropriate transforms.  The element stiffness matrix is then
+		assembled into a global stiffness matrix.  A nodal force vector is
+		assembled, and the boundary conditions are applied, and then the
 		global stiffness matrix is inverted to find the nodal
 		displacements.  These are then used to get the final results.
 
 		The inversion is not done directly, but via a conjugate gradient
-		itterative solver, with an incomplete Cholesky decompostion as a
-		preconditioner.
+		iterative solver, with an incomplete Cholesky decomposition as a
+		pre-conditioner.
 
 	History:
 		2007/09/07 - Created by Jeremy Lea <reg@openpave.org>
@@ -337,22 +337,22 @@ struct coord3d {
  * Gauss Quadrature abscissa and weights.
  */
 const double gp_2[2][2] = {{-1/sqrt(3.0), 1},
-                           {+1/sqrt(3.0), 1}};
+						   {+1/sqrt(3.0), 1}};
 const double gp_3[3][2] = {{-sqrt(3/5.0), 5/9.0},
-                           {           0, 8/9.0},
-                           {+sqrt(3/5.0), 5/9.0}};
+						   {           0, 8/9.0},
+						   {+sqrt(3/5.0), 5/9.0}};
 const double gp_4[4][2] = {{-sqrt(525+70*sqrt(30.0))/35, (18-sqrt(30.0))/36},
-                           {-sqrt(525-70*sqrt(30.0))/35, (18+sqrt(30.0))/36},
-                           {+sqrt(525-70*sqrt(30.0))/35, (18+sqrt(30.0))/36},
-                           {+sqrt(525+70*sqrt(30.0))/35, (18-sqrt(30.0))/36}};
+						   {-sqrt(525-70*sqrt(30.0))/35, (18+sqrt(30.0))/36},
+						   {+sqrt(525-70*sqrt(30.0))/35, (18+sqrt(30.0))/36},
+						   {+sqrt(525+70*sqrt(30.0))/35, (18-sqrt(30.0))/36}};
 const double gp_A[4][2] = {{-(1+1/sqrt(3.0))/2, 1/2.0},
-                           {-(1-1/sqrt(3.0))/2, 1/2.0},
-                           {+(1-1/sqrt(3.0))/2, 1/2.0},
-                           {+(1+1/sqrt(3.0))/2, 1/2.0}};
+						   {-(1-1/sqrt(3.0))/2, 1/2.0},
+						   {+(1-1/sqrt(3.0))/2, 1/2.0},
+						   {+(1+1/sqrt(3.0))/2, 1/2.0}};
 const double gl_4[4][2] = {{        -1.0, 1.0/6},
-                           {-sqrt(5.0)/5, 5.0/6},
-                           {+sqrt(5.0)/5, 5.0/6},
-                           {         1.0, 1.0/6}};
+						   {-sqrt(5.0)/5, 5.0/6},
+						   {+sqrt(5.0)/5, 5.0/6},
+						   {         1.0, 1.0/6}};
 
 class mesh;                    // Forward declare.
 class node_list;               // Forward declare.
@@ -410,7 +410,7 @@ private:
 
 	unsigned order;            // Number of nodes on left
 	unsigned left, right;      // Left and right node numbers
-	bool red:1;                // Color of link to parent
+	bool red:1;                // Colour of link to parent
 	unsigned fixed:31;         // Bitmask of fixed DOFs
 
 	explicit node3d(const coord3d & c)
@@ -475,7 +475,7 @@ public:
 	inline node3d & operator[] (const unsigned p) const {
 		return value[p];
 	}
-	// Allow sorted acess.
+	// Allow sorted access.
 	inline node3d & getindex(const unsigned i) const {
 		unsigned x = root, order = 0;
 		while (x != UINT_MAX) {
@@ -622,14 +622,13 @@ private:
 };
 
 /*
- * This is a specialised version of the general inv_mul_gauss function,
+ * This is a specialized version of the general inv_mul_gauss function,
  * which does not pivot, and has fixed size, since we know that we never
- * pivot for the hessian, and it is always NDIMxNDIM.  It also takes the
+ * pivot for the Hessian, and it is always NDIMxNDIM.  It also takes the
  * transpose of the B matrix, since the column dimension is fixed.
  */
 static double
-inv_mul_gauss(const unsigned nnd, double (& J)[NDIM][NDIM],
-		double (* B)[NDIM])
+inv_mul_gauss(const unsigned nnd, double (& J)[NDIM][NDIM], double (* B)[NDIM])
 {
 	double det = 1.0;
 	unsigned i, j, k;
@@ -731,8 +730,7 @@ public:
 template <element::shape_t SZ, unsigned NND>
 class element_base : public element {
 public:
-	element_base(mesh * o, const shape_t x, const shape_t y,
-			const material & m)
+	element_base(mesh * o, const shape_t x, const shape_t y,const material & m)
 	  : element(o,m), sx(x), sy(y) {
 	}
 	virtual unsigned l2g(const unsigned i) const {
@@ -935,7 +933,7 @@ protected:
 			dNdr[j][2] = Nx*Ny*dNdz;
 		}
 		// Correct the shape functions for the corners and sides,
-		// depending on the existance of the extra nodes.
+		// depending on the existence of the extra nodes.
 		for (unsigned l = 0; l < 4*nz; l++) {
 			if ((j = mask[l]) != 0) {
 				N[l] -= N[j]/2;
@@ -1263,8 +1261,8 @@ private:
 					double x = 0.0, y = 0.0, z = 0.0;
 					for (unsigned l = 0; l < 8; l++) {
 						double s = (l   < 4 ? mz-i : i)
-							      *(l%4 < 2 ? mx-j : j)
-							      *(l%2 < 1 ? my-k : k)/(mz*mx*my);
+								  *(l%4 < 2 ? mx-j : j)
+								  *(l%2 < 1 ? my-k : k)/(mz*mx*my);
 						x += s*double(cc[l].x);
 						y += s*double(cc[l].y);
 						z += s*double(cc[l].z);
@@ -1768,12 +1766,12 @@ public:
 		d->expand(1);
 		// Now fill in the new element.
 		n = &(d->nodes[(d->nnz)++]);
-	  	if (j < i) {
-	  		n->K = ~t;
-	  		swap(i,j);
-	  	} else
-	  		n->K = t;
-	  	n->i = i;
+		if (j < i) {
+			n->K = ~t;
+			swap(i,j);
+		} else
+			n->K = t;
+		n->i = i;
 		// Fix up the column references.
 		p = d->col_head, o = 0;
 		while (p != 0 && p->i < i)
@@ -1809,10 +1807,10 @@ public:
 		}
 	}
 	// Do a level 1 fill in on the sparse matrix for incomplete Cholesky
-	// decompostion.  We need to insert nodes, which is costly, so we rely
+	// decomposition.  We need to insert nodes, which is costly, so we rely
 	// on some tricks here...  We don't use nnz, only col_next, while tidy
 	// will only use nnz not col_next.  So we add nodes ourself without
-	// using append, and memset() them to zero, and set their row numbers. 
+	// using append, and memset() them to zero, and set their row numbers.
 	// Then we call tidy(), which will sort by row numbers and fix the
 	// col_next pointers.
 	void fillin() {
@@ -1838,7 +1836,7 @@ public:
 				nnz++;
 			}
 		}
-		
+
 		// Now that the list is constructed we do fill in from the last
 		// element.
 		for (unsigned n = nnd; n > 0; ) {
@@ -1875,7 +1873,7 @@ public:
 		// Now call tidy to magically add these nodes.
 		tidy();
 	}
-	// Incomplete Cholesky decompostion, by block.  Look at the small
+	// Incomplete Cholesky decomposition, by block.  Look at the small
 	// internal version to understand what the whole thing is doing.
 	void incchol() {
 		smatrix_diag * d;
@@ -1913,7 +1911,7 @@ public:
 				d->K -= ~(p->K)*(p->K);
 				p = p->col_next;
 			}
-			// Cholesky decompostion of the diagonal.
+			// Cholesky decomposition of the diagonal.
 			for (unsigned i = 0; i < NDOF; i++) {
 				for (unsigned k = 0; k < i; k++)
 					d->K(i,i) -= d->K(k,i)*d->K(k,i);
@@ -1934,7 +1932,7 @@ public:
 			}
 		}
 	}
-	// Do a complete Cholesky decompostion, by filling in all the blocks and
+	// Do a complete Cholesky decomposition, by filling in all the blocks and
 	// then doing an 'incomplete' Cholesky...
 	void chol() {
 		smatrix_diag * d;
@@ -1943,7 +1941,7 @@ public:
 		for (unsigned n = 0; n < nnd; n++) {
 			d = &(diag[n]);
 			if (!(p = d->col_head))
-				continue; // Diagional only is OK.
+				continue; // Diagonal only is OK.
 			unsigned r = p->i, a = r - n - d->nnz;
 			d->expand(a);
 			memset(&(d->nodes[d->nnz]),0,a*sizeof(smatrix_node));
@@ -2174,7 +2172,7 @@ public:
 			disp_bc.add(mesh_bc(k,2,d));
 		return true;
 	}
-	// Add constrints along a plane.
+	// Add constraints along a plane.
 	bool add_bc_plane(const dof o, const bcplane p, const double c,
 			const dof f, const double d) {
 		assert(!((o & mesh::X) && (o & mesh::Y)));
@@ -2322,7 +2320,7 @@ public:
 			for (i = 0; i < ke->nnd; i++) {
 				unsigned gi = e->l2g(i);
 				unsigned ni = node.getorder(gi);
-				// If this node is completly fixed, don't add anything.
+				// If this node is completely fixed, don't add anything.
 				if ((node[gi].fixed & ((1<<NDOF)-1)) == ((1<<NDOF)-1))
 					continue;
 				for (j = i; j < ke->nnd; j++) {
@@ -2384,7 +2382,7 @@ public:
 				timeme("\n");
 				break;
 			}
-			// Forward substitution of IC preconditioner.
+			// Forward substitution of IC pre-conditioner.
 			for (n = 0; n < nnd; n++) {
 				d = &(M.diag[n]);
 				svector_dof t(R(n));
@@ -2400,7 +2398,7 @@ public:
 				}
 				V(n) = t;
 			}
-			// Backward substitution of IC preconditioner.
+			// Backward substitution of IC pre-conditioner.
 			for (n = nnd; n > 0; n--) {
 				d = &(M.diag[n-1]);
 				svector_dof t(V(n-1));
@@ -2745,7 +2743,7 @@ main()
 	//test.addlayer( 186.5, 684.6993e3,0.35);
 	//test.addlayer( 186.0, 684.6993e3,0.35);
 	//test.addlayer(1544.0, 188.9532e3,0.35);
-	
+
 	//test.addlayer(  83.5,2596.5850e3,0.40);
 	//test.addlayer( 186.5, 684.6993e3,0.35);
 	//test.addlayer( 186.0, 684.6993e3,0.35);
@@ -2984,7 +2982,7 @@ main()
 			b = t+1;
 		unsigned s = 1;
 		//if (i == 0)
-		//	s = 3; // Make sure we have three nodes in the top layer.
+		//  s = 3; // Make sure we have three nodes in the top layer.
 		while (b < stop.length() && (b-t)%s > 0)
 			b++;
 		if (b == stop.length()) {
@@ -3008,10 +3006,10 @@ main()
 			stop[j] = zmax - double(stop[b]-stop[j])*hl/hs;
 	}
 	stop[stop.length()-1] = zmax = layer[layer.length()-1].bot;
-	
+
 	// Add 3mm thick layers to smooth stresses...
 	//stop.add(1,2); level.add(1,level[0]);
-#ifndef	QUAD
+#ifndef QUAD
 	for (unsigned i = 0, b = 0; i < layer.length()-1; i++) {
 		femlayer & l = layer[i];
 		while (b < stop.length() && stop[b] < l.bot)
@@ -3025,7 +3023,7 @@ main()
 		}
 	}
 #endif
-	
+
 	// Now add the elements from below the tire, working outwards.
 	zi = 0;
 	while (zi <= level[level.length()-1] || filled.xp() < edge) {
@@ -3211,13 +3209,13 @@ main()
 		zi++;
 	}
 	//FEM.add_bc_plane(mesh::X,mesh::at|mesh::below,-edge,
-	//		mesh::X,0.0);
+	//      mesh::X,0.0);
 	//FEM.add_bc_plane(mesh::X,mesh::at|mesh::above, edge,
-	//		mesh::X,0.0);
+	//      mesh::X,0.0);
 	//FEM.add_bc_plane(mesh::Y,mesh::at|mesh::below,-edge,
-	//		mesh::Y,0.0);
+	//      mesh::Y,0.0);
 	//FEM.add_bc_plane(mesh::Y,mesh::at|mesh::above, edge,
-	//		mesh::Y,0.0);
+	//      mesh::Y,0.0);
 	FEM.add_bc_plane(mesh::Z,mesh::at|mesh::below,-zmax,
 			mesh::X|mesh::Y|mesh::Z,0.0);
 
@@ -3349,12 +3347,12 @@ test1()
 	}
 
 	//for (i = 0; i < FEM.getnodes(); i++) {
-	//	node3d n = FEM.getorderednode(i);
-	//	n.ux =  0.0006*(double(n.x)+10.0)/20.0;
-	//	n.uy =  0.0006*(double(n.y)+10.0)/20.0;
-	//	n.uz = -0.0015*(double(n.z)+10.0)/10.0;
-	//	//n.ux = 0.0; n.uy = 0.0; n.uz = 0.0;
-	//	FEM.updatenode(n);
+	//  node3d n = FEM.getorderednode(i);
+	//  n.ux =  0.0006*(double(n.x)+10.0)/20.0;
+	//  n.uy =  0.0006*(double(n.y)+10.0)/20.0;
+	//  n.uz = -0.0015*(double(n.z)+10.0)/10.0;
+	//  //n.ux = 0.0; n.uy = 0.0; n.uz = 0.0;
+	//  FEM.updatenode(n);
 	//}
 	FEM.solve(1e-25);
 
@@ -3366,7 +3364,7 @@ test1()
 		double y = n.y;
 		double z = n.z;
 		//if (y != 0.0 || x != 0.0)
-		//	continue;
+		//  continue;
 		double ux = n.ux;
 		double uy = n.uy;
 		double uz = n.uz;

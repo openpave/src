@@ -124,11 +124,11 @@ template<unsigned I> struct meta_assign<I,0> {
 	template<class A, class E>
 	static inline void assignR_sub(A &, const E &) {}
 	template<class A, typename T>
-	static inline void assignR_d(A &, const T & d) {}
+	static inline void assignR_d(A &, const T &) {}
 	template<class A, typename T>
-	static inline void assignR_add_d(A &, const T & d) {}
+	static inline void assignR_add_d(A &, const T &) {}
 	template<class A, typename T>
-	static inline void assignR_mul_d(A &, const T & d) {}
+	static inline void assignR_mul_d(A &, const T &) {}
 };
 template<unsigned J> struct meta_assign<0,J> {
 	template<class A, class E>
@@ -138,11 +138,11 @@ template<unsigned J> struct meta_assign<0,J> {
 	template<class A, class E>
 	static inline void assign_sub(A &, const E &) {}
 	template<class A, typename T>
-	static inline void assign_d(A &, const T & d) {}
+	static inline void assign_d(A &, const T &) {}
 	template<class A, typename T>
-	static inline void assign_add_d(A &, const T & d) {}
+	static inline void assign_add_d(A &, const T &) {}
 	template<class A, typename T>
-	static inline void assign_mul_d(A &, const T & d) {}
+	static inline void assign_mul_d(A &, const T &) {}
 };
 #endif
 

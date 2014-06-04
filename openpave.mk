@@ -238,7 +238,7 @@ endif
 # 
 
 # Print out any options loaded from opconfig.
-all build checkout clean depend distclean install realclean::
+all build scan-build checkout clean depend distclean install realclean::
 	@if test -f .opconfig.out; then \
 	  cat .opconfig.out; \
 	  rm -f .opconfig.out; \
@@ -301,6 +301,11 @@ ifdef _IS_FIRST_CHECKOUT
 build::
 	@cd $(TOPSRCDIR) && \
 	    $(MAKE) $(OP_MAKE_ARGS) -f openpave.mk build
+
+.PHONY: scan-build
+scan-build::
+	@cd $(TOPSRCDIR) && \
+	    $(MAKE) $(OP_MAKE_ARGS) -f openpave.mk scan-build
 else
 
 #####################################################
@@ -382,6 +387,11 @@ $(CONFIG_STATUS_OUTS): $(CONFIG_STATUS_DEPS)
 build:: $(CONFIG_STATUS_OUTS)
 	@echo '*** Building...' && \
 	    $(OP_MAKE)
+
+.PHONY: scan-build
+scan-build:: $(CONFIG_STATUS_OUTS)
+	@echo '*** Building...' && \
+	    scan-build34 -v $(OP_MAKE)
 
 # Pass these target onto the real build system
 .PHONY: depend install install clean realclean distclean

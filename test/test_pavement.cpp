@@ -107,7 +107,7 @@ test3()
 	Best.addload(point2d(0.0,0.0),0,1.0,1.0);
 	Slow.addload(point2d(0.0,0.0),0,1.0,1.0);
 	Fast.addload(point2d(0.0,0.0),0,1.0,1.0);
-	
+
 	for (i = 0; i < 100; i++)
 		p.add(point3d(0,0,double(i)/100.0));
 	for (i = 10; i < 100; i++)
@@ -164,7 +164,7 @@ test4()
 	Best.addload(point2d(0.0,0.0),0,1.0,1.0);
 	Slow.addload(point2d(0.0,0.0),0,1.0,1.0);
 	Fast.addload(point2d(0.0,0.0),0,1.0,1.0);
-	
+
 	p.add(point3d(0,0,0));
 	p.add(point3d(1,0,0));
 	for (i = 0; i < 50; i++) {
@@ -202,7 +202,7 @@ test4()
 		//printf("\t%+0.12e",s.result(pavedata::stress,pavedata::zz)-l);
 		//printf("\t%+0.12e",f.result(pavedata::stress,pavedata::zz)-l);
 		//double e = b.result(pavedata::stress,pavedata::zz)
-		//	      -s.result(pavedata::stress,pavedata::zz);
+		//       -s.result(pavedata::stress,pavedata::zz);
 		//printf("\t%+0.8e",e);
 		printf("\t%+0.8e",b.result(pavedata::deflct,pavedata::zz));
 		printf("\t%+0.8e",s.result(pavedata::deflct,pavedata::zz));
@@ -223,7 +223,7 @@ test5()
 	pave.addlayer(0.0,1.0,0.5);
 
 	pave.addload(point2d(0.0,0.0),0,1.0,1.0);
-	
+
 	for (j = 0; j < 20; j++) {
 		double z = j*0.05;
 		p.add(point3d(0,0,z));
@@ -259,10 +259,10 @@ test6()
 	Slow.addlayer( 150.0, 600.0*1e3,0.35);
 	Slow.addlayer( 250.0, 250.0*1e3,0.35);
 	Slow.addlayer(   0.0,  90.0*1e3,0.35);
-	
+
 	Slow.addload(point2d(   0.0,  0.0),20*1e6,720.0);
 	Slow.addload(point2d(   0.0,350.0),20*1e6,720.0);
-	
+
 	for (i = -898; i < (1024-898); i++)
 		Slow.addpoint(point3d(7.4*i,175.0,0.0));
 	Slow.calculate(LEsystem::all);
@@ -276,7 +276,7 @@ static void
 test7()
 {
 	double t = 0;
-	
+
 	double E1i = 5800.0;
 	double E2i =  150.0;
 	double E3i =  150.0;
@@ -300,7 +300,7 @@ test7()
 
 		Pavement.addload(point2d(   0.0,  0.0),20*1e6,720.0);
 		Pavement.addload(point2d(   0.0,350.0),20*1e6,720.0);
-	
+
 		for (i = 0; i <= 100; i++) {
 			for (j = 0; j <= 200; j++)
 				Pavement.addpoint(point3d(0.0,i*5.0+175.0,j*5.0));
@@ -540,7 +540,7 @@ test10()
 			printf("\n");
 			exit(1);
 		} else
-			printf(".");		
+			printf(".");
 	}
 	fflush(NULL);
 	//goto redo;

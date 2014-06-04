@@ -152,7 +152,6 @@ $(TARGETS): $(CONFIG_DEPS)
 all:: $(TARGETS)
 endif
 
-
 .PHONY: install
 install:: $(RELEASE_BINS) $(RELEASE_HEADERS) $(RELEASE_LIBS)
 ifdef RELEASE_BINS
@@ -224,7 +223,7 @@ endif
 ifndef BUILD_DBG
 ifndef BUILD_PRF
 ifdef BUILD_OPT
-	$(STRIP) $@
+	$$(STRIP) $$@
 endif
 endif
 endif
@@ -283,7 +282,7 @@ endif
 
 %.$(OBJ_SUFFIX): %.cpp
 ifdef WIN32
-	@echo $@ ": \\" > $@.d 
+	@echo $@ ": \\" > $@.d
 	@sh $(topsrcdir)/build/cygwin-wrapper -quiet \
 	    $(CXX) -EP -showIncludes $(OS_CXXFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<) 2>&1 > /dev/null \
 	        | grep "including" | grep -v ";" \
@@ -292,12 +291,12 @@ ifdef WIN32
 	@sh $(topsrcdir)/build/cygwin-wrapper \
 	    $(CXX) -Fo$@ -c $(OS_CXXFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<)
 else
-	$(CXX) -c -MMD -MP $(OS_CXXFLAGS) $(DEFINES) $(INCLUDES) $< -o $@ 
+	$(CXX) -c -MMD -MP $(OS_CXXFLAGS) $(DEFINES) $(INCLUDES) $< -o $@
 endif
 
 %.$(OBJ_SUFFIX): %.c
 ifdef WIN32
-	@echo $@ ": \\" > $@.d 
+	@echo $@ ": \\" > $@.d
 	@sh $(topsrcdir)/build/cygwin-wrapper -quiet \
 	    $(CC) -EP -showIncludes $(OS_CFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<) 2>&1 > /dev/null \
 	        | grep "including" | grep -v ";" \
@@ -306,11 +305,11 @@ ifdef WIN32
 	@sh $(topsrcdir)/build/cygwin-wrapper \
 	    $(CC) -Fo$@ -c $(OS_CFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<)
 else
-	$(CC) -c -MMD -MP $(OS_CFLAGS) $(DEFINES) $(INCLUDES) $< -o $@ 
+	$(CC) -c -MMD -MP $(OS_CFLAGS) $(DEFINES) $(INCLUDES) $< -o $@
 endif
 
 %.$(OBJ_SUFFIX): %.$(ASM_SUFFIX)
-	$(AS) -c $(ASFLAGS) $<-o $@ 
+	$(AS) -c $(ASFLAGS) $<-o $@
 
 %.i: %.c
 	$(CPP) -C $(OS_CPPFLAGS) $(DEFINES) $(INCLUDES) $< > $@

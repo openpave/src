@@ -2,23 +2,23 @@
 #
 # $OpenPave$
 
-topsrcdir       = @top_srcdir@
-srcdir          = @srcdir@
+topsrcdir        = @top_srcdir@
+srcdir           = @srcdir@
 
 include @OBJDIR@/build/autoconf.mk
 
-LIBRARY         = op
+LIBRARY          = op
 
-CXXSRCS = \
-	libop.cpp              \
-	$(NULL)
+CXXSRCS =                  \
+    libop.cpp              \
+    $(NULL)
 
-EXPORTS = \
-	libop.h                \
-	$(NULL)
+EXPORTS =                  \
+    libop.h                \
+    $(NULL)
 
 ifdef WIN32
-DSO_LDFLAGS += user32.lib
+DSO_LDFLAGS     += user32.lib
 endif
 
 include $(topsrcdir)/build/rules.mk

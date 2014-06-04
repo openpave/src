@@ -7,7 +7,7 @@ srcdir           = @srcdir@
 
 include @OBJDIR@/build/autoconf.mk
 
-PROGRAMS = \
+PROGRAMS =                             \
     test                               \
     test_set                           \
     test_matrix                        \

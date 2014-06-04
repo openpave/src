@@ -31,6 +31,7 @@
 #include "mathplus.h"
 #include "matrix.h"
 
+#if defined(DEBUG)
 static void
 print_matlab(const char * c, unsigned m, unsigned n, double * A)
 {
@@ -41,6 +42,7 @@ print_matlab(const char * c, unsigned m, unsigned n, double * A)
 	}
 	printf("];\n");
 }
+#endif
 
 static void
 init_matrix_u(unsigned n, unsigned w, double * A)
@@ -78,6 +80,7 @@ residual(unsigned n, double * B, double * x, double * b)
 	unsigned i, j;
 	double dot, s;
 	double c1, y1, t1, c2, y2, t2;
+
 	for (i = 0, dot = 0.0, c1 = 0.0; i < n; i++) {
 		for (j = 0, s = -b[i], c2 = 0.0; j < n; j++) {
 			y2 = fma(B[i*n+j],x[j],-c2); t2 = s + y2;
@@ -134,13 +137,14 @@ test1()
 	double * B = new double[N*N];
 	double * b = new double[N];
 	double * x = new double[N];
+
 	while (iter-- > 0) {
 		init_matrix_u(N,W,A);
 		init_matrix_pd(N,A,B);
 		init_vector(N,b);
 		printf("Repeat: %d\n",30-iter);
 		fflush(NULL);
-		
+
 		equ_gauss(N,A,b,x);
 		printf("gauss: %9.5g\n",residual(N,B,x,b));
 		equ_lu(N,A,b,x);
@@ -153,14 +157,14 @@ test1()
 		printf("svd:   %9.5g\n",residual(N,B,x,b));
 		equ_eig(N,A,b,x);
 		printf("eig:   %9.5g\n",residual(N,B,x,b));
-	
+
 		for (i = 0; i < N; i++) {
 			for (j = i; j <= i+W && j < N; j++)
 				A[B_IDX(N,W,i,j)] = B[i*N+j];
 		}
 		equ_chol(N,W,A,b,x);
 		printf("bchol  %9.5g\n",residual(N,B,x,b));
-		
+
 		printf("\n");
 	}
 	delete [] x;
@@ -175,12 +179,13 @@ test2()
 	unsigned iter = 30;
 	double * A = new double[N*N];
 	double * B = new double[N*N];
+
 	while (iter-- > 0) {
 		init_matrix_u(N,N-1,A);
 		init_matrix_pd(N,A,B);
 		printf("Repeat: %d\n",30-iter);
 		fflush(NULL);
-		
+
 		inv_lu(N,A);
 		printf("lu:    %9.5g\n",identity(N,A,B));
 		memcpy(A,B,N*N*sizeof(double));
@@ -206,12 +211,13 @@ test3()
 	double * A = new double[N*N];
 	double * B = new double[N*N];
 	double * I = new double[N*N];
+
 	while (iter-- > 0) {
 		init_matrix_u(N,N-1,A);
 		init_matrix_pd(N,A,B);
 		printf("Repeat: %d\n",30-iter);
 		fflush(NULL);
-		
+
 		memset(I,0,N*N*sizeof(double));
 		for (unsigned i = 0; i < N; i++)
 			I[i*N+i] = 1.0;
@@ -235,15 +241,15 @@ static void
 test4()
 {
 	int i;
-
 	double * A = new double[N*N];
+
 	for (i = 0; i < N*N; i++)
 		A[i] = RAND(0.0,1.0);
 
-	matrix_dense *s = new matrix_dense(N,N,A);
+		matrix_dense *s = new matrix_dense(N,N,A);
 	matrix a(s);
 	matrix b;
-	
+
 	b = -a;
 	matrix c(~a);
 
@@ -268,7 +274,7 @@ test_tmatrix()
 	D[2][0] = 0;    D[2][1] = 0;    D[2][2] = 500;
 
 	printf("B = "); B.print();
-	printf("D = ");	D.print();
+	printf("D = "); D.print();
 
 	tmatrix<double,2,2> BT;
 	BT = ~B*B;
@@ -317,7 +323,7 @@ main()
 }
 
 #undef N
-#undef W 
+#undef W
 
 #if 0
 
@@ -326,7 +332,7 @@ main()
  *
  * We use a struct here rather than a raw char, because these create
  * distinct types, so the compiler sees the various functions as distinct
- * function signatures.  The 2, 3 and 4 valued ones are just for convience.
+ * function signatures.  The 2, 3 and 4 valued ones are just for convenience.
  */
 template<char I>
 struct tensor_index { explicit tensor_index() {} };
@@ -454,7 +460,7 @@ template<unsigned M, unsigned N, unsigned P, unsigned Q> struct tensor4;
 /*
  * struct tensor4_ref - an encapsulated tensor4.
  *
- * This struct holds a reference to a tensor4, but adds the four implict
+ * This struct holds a reference to a tensor4, but adds the four implicit
  * indices, so that it can be used in expressions.
  */
 template<unsigned M, unsigned N, unsigned P, unsigned Q,
@@ -482,8 +488,8 @@ struct tensor4_trans_ikjl {
 	explicit tensor4_trans_ikjl(const tensor4<M,P,N,Q> & e) : m_e(e) { }
 	inline double operator() (const unsigned i, const unsigned j,
 			const unsigned k, const unsigned l) const {
-  		return m_e(i,k,j,l);
-  	}
+		return m_e(i,k,j,l);
+	}
 private:
 	const tensor4<M,P,N,Q> & m_e;
 };
@@ -591,7 +597,7 @@ int main()
 
 	s(ij) = E(ijkl)*e(kl);
 	tensor2<3,3> w(s);
-	//w(pq) = E(ijkl)*e(kl); // Compile error...	
+	//w(pq) = E(ijkl)*e(kl); // Compile error...
 	a(ik) = K(ijkl,ikjl)*b(jl);
 }
 

@@ -36,7 +36,6 @@
 #ifndef __LIBOP_H
 #define __LIBOP_H
 
-
 BEGIN_C_DECLS
 
 /*
@@ -48,13 +47,13 @@ BEGIN_C_DECLS
  *  13-15: dxx, dyy, dzz
  *  16-21: exx, eyy, ezz, exy, exz, eyz
  *  22-27: ep1, ep2, ep3, es1, es2, es3
- * 
+ *
  * For Visual Basic use:
 Declare Function OP_LE_Calc Lib "libop.dll" Alias "_OP_LE_Calc@68" ( _
-    ByVal flags as Long,
-    ByVal nl As Long, h As Double, E As Double, v As Double, f As Double_
-    ByVal na As Long, Ax As Double, Ay As Double, Al As Double, Ap As Double, Ar as Double_
-    ByVal np As Long, Px As Double, Py As Double, Pz As Double, Pl As Long, Res As Double) _
+	ByVal flags as Long,
+	ByVal nl As Long, h As Double, E As Double, v As Double, f As Double_
+	ByVal na As Long, Ax As Double, Ay As Double, Al As Double, Ap As Double, Ar as Double_
+	ByVal np As Long, Px As Double, Py As Double, Pz As Double, Pl As Long, Res As Double) _
   As Long
  *
  * Note: VB uses Fortan array storage (cols first) so the results are Res(1,i).
@@ -70,7 +69,7 @@ OP_LE_Calc(
 	const unsigned na,              // Number of loads
 	const double * ax,              // Center X location
 	const double * ay,              // Center Y location
-	const double * al,              // Load (0 for auto) 
+	const double * al,              // Load (0 for auto)
 	const double * ap,              // Pressure (0 for auto)
 	const double * ar,              // Radius (0 for auto)
 	const unsigned np,              // Number of evaluation points

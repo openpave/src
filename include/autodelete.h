@@ -45,7 +45,7 @@ public:
 		: ptr(p) {
 	}
 	~autodelete() {
-		delete ptr;
+		delete [] ptr;
 	}
 	T & operator[] (const int i) {
 		return ptr[i];

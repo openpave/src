@@ -750,7 +750,7 @@ decmp_svd(const unsigned m, const unsigned n, double * A,
 					break;
 			}
 			// Cancellation of rv1[q], if q > 0.
-			C = 0.0; S = 1.0;
+			S = 1.0;
 			for (k = q; flag && q <= i && k <= i; k++) {
 				F = S*rv1[k];
 				if ((fabs(F) + anorm) != anorm) {
