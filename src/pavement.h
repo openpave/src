@@ -49,12 +49,18 @@
 #define __PAVEMENT_H
 
 #include <memory.h>
+#if defined(_MSC_VER)
+#include <stddef.h>
+#else
+#include <stdint.h>
+#endif
 #include "mathplus.h"
 #include "event.h"
 #include "set.h"
 #include "list.h"
 
 class LEsystem;
+class LEsystem_cache;
 class LEbackcalc;
 
 /*
@@ -250,8 +256,6 @@ public:
 	}
 
 private:
-	friend class LEsystem;
-
 	double f;                          // Force.
 	double p;                          // Pressure.
 };
@@ -266,7 +270,7 @@ struct pavepoint : public point3d {
 	  : point3d(0.0,0.0,0.0), il(UINT_MAX) {
 	}
 	pavepoint(double px, double py, double pz, unsigned l = UINT_MAX)
-	  : point3d(px,py,py), il(l) {
+	  : point3d(px,py,pz), il(l) {
 	}
 	pavepoint(const point3d & p, unsigned l = UINT_MAX)
 	  : point3d(p), il(l) {
@@ -333,8 +337,6 @@ struct pavedata : public pavepoint {
 				return data[2][d-p1];
 			case s1: case s2: case s3:
 				return data[3][d-s1];
-			default:
-				return 0.0;
 			}
 		case deflct:
 			switch (d) {
@@ -343,7 +345,6 @@ struct pavedata : public pavepoint {
 			case xy: case xz: case yz:
 			case p1: case p2: case p3:
 			case s1: case s2: case s3:
-			default:
 				return 0.0;
 			}
 		case strain:
@@ -356,8 +357,6 @@ struct pavedata : public pavepoint {
 				return data[7][d-p1];
 			case s1: case s2: case s3:
 				return data[8][d-s1];
-			default:
-				return 0.0;
 			}
 		default:
 			return 0.0;
@@ -388,12 +387,17 @@ struct pavedata : public pavepoint {
 class LEsystem : private list_owned<LEsystem, LElayer> {
 public:
 	LEsystem()
-	  : list_owned<LEsystem,LElayer>(), data(), load() {
+	  : list_owned<LEsystem,LElayer>(), data(), load(),
+	    cache(0), ischecked(false), iscached(false) {
+	    cache_reset();
 	}
 	LEsystem(LEsystem & p)
-	  : list_owned<LEsystem,LElayer>(p), data(p.data), load(p.load) {
+	  : list_owned<LEsystem,LElayer>(p), data(p.data), load(p.load),
+	    cache(0), ischecked(false), iscached(false) {
+	    cache_reset();
 	}
 	~LEsystem() {
+		cache_free();
 	}
 	void addlayer(const double h, const double e, const double v,
 	              const double s = 1.0, const unsigned p = UINT_MAX);
@@ -407,15 +411,23 @@ public:
 	LElayer & layer(const unsigned l) const;
 
 	void addload(const point2d & l, double f, double p, double r = 0) {
+		ischecked = false;
+		iscached = false;
 		return load.add(paveload(l,f,p,r));
 	}
 	void addload(const paveload & l) {
+		ischecked = false;
+		iscached = false;
 		load.add(l);
 	}
 	void removeload(const unsigned i) {
+		ischecked = false;
+		iscached = false;
 		load.remove(i);
 	}
 	void removeloads() {
+		ischecked = false;
+		iscached = false;
 		load.empty();
 	}
 	inline unsigned loads() const {
@@ -426,15 +438,21 @@ public:
 	}
 
 	void addpoint(const point3d & p, unsigned l = UINT_MAX) {
+		ischecked = false;
+		iscached = false;
 		data.add(pavedata(p,l));
 	}
 	void addgrid(const unsigned nx, const double * xp,
 				 const unsigned ny, const double * yp,
 				 const unsigned nz, const double * zp);
 	void removepoint(const point3d & p, unsigned l = UINT_MAX) {
+		ischecked = false;
+		iscached = false;
 		data.remove(pavepoint(p,l));
 	}
 	void removepoints() {
+		ischecked = false;
+		iscached = false;
 		data.empty();
 	}
 	inline unsigned results() const {
@@ -461,12 +479,17 @@ public:
 		dispgrad  = 0x0300,
 		fastdisp  = 0x0101,
 		dirtydisp = 0x0102,
-		fastgrad  = 0x0301,
+		fastgrad  = 0x0301
 	};
 	bool calc_accurate();
 	bool calculate(resulttype result = all, const double * Q = 0);
 	bool calc_odemark();
 	bool calc_fastnum();
+
+protected:
+	void * cache_alloc(size_t len);
+	void cache_reset();
+	void cache_free();
 
 private:
 	friend class listelement_o<LEsystem, LElayer>;
@@ -475,6 +498,10 @@ private:
 
 	ksset<pavepoint,pavedata> data;
 	sset<paveload> load;
+	
+	LEsystem_cache * cache;
+	bool ischecked;
+	bool iscached;
 };
 
 /*

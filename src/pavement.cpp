@@ -125,11 +125,149 @@ pavedata::principle(double v, double E)
 	}
 }
 
+/*
+ * class LEsystem_cache - A hackish slab allocator.
+ *
+ * The result cache is a very hackish slab allocator which stores
+ * intermediate calculation values.  It is implemented via a single pointer. 
+ * That is the head of a linked list of malloc()'ed pages where memory is
+ * handed out from.  The pointer to the next page is stored in the first
+ * slot in the slab, and the second slot stores the fill level of the slab. 
+ * If that is NULL then it means the slab is full.  There is a second void
+ * pointer in the class which stores the next allocation address.  If this
+ * points to the same address as the cache pointer then we are in a reset
+ * state and will not allocate memory but will give back pointers to already
+ * allocated space.  The class knows if it can just reuse these arrays
+ * without recalculating the contents.
+ *
+ * The pointers are always aligned to sixteen byte boundaries.  On some
+ * platforms this could be assisted by allocation aligned space.
+ */
+class LEsystem_cache {
+	friend class LEsystem;
+	static const size_t page_size = 4*1024*1024;
+	
+	void * next;
+	void * mark;
+	void * pool; // Unused in all but first
+	
+	LEsystem_cache()
+	  : next(0), mark(0), pool(0) {
+	}
+	~LEsystem_cache() {
+	}
+	void * allocate(const size_t len) {
+		void * p, * q;
+		ptrdiff_t l;
+		
+		assert(mark != 0 && pool != 0);
+		p = align(pool);
+		if (mark == pool) {
+			// We are on the first page
+			mark = align(reinterpret_cast<char *>(p)
+			          +sizeof(LEsystem_cache));
+		}
+		q = mark;
+		while (true) {
+			l = reinterpret_cast<char *>(p) + MAX(len,page_size)
+			      -reinterpret_cast<char *>(q);
+			if (l-static_cast<ssize_t>(len) >= 0)
+				break;
+			p = (p == align(pool) ? p = next :
+				  *reinterpret_cast<void **>(p));
+			if (p == 0)
+				break;
+			q = *(reinterpret_cast<void **>(p)+1);
+		}
+		if (p == 0) {
+			p = malloc(page_size);
+			if (p == 0)
+				throw std::bad_alloc();
+			q = align(reinterpret_cast<void **>(p)+2);
+		}
+		return q;
+	}
+	void reset() {
+		mark = pool;
+	}
+	static LEsystem_cache * create() {
+		void * p, * q;
+		LEsystem_cache * c;
+		
+		p = malloc(page_size);
+		if (p == 0)
+			throw std::bad_alloc();
+		q = align(p);
+		c = new(q) LEsystem_cache();
+		c->pool = p;
+		c->mark = p;
+		return c;
+	}
+	static void destroy(LEsystem_cache * cache) {
+		void * p, * q;
+		
+		if (cache == 0)
+			return;
+		p = cache->next;
+		while (p != 0) {
+			q = p, p = *reinterpret_cast<void **>(p);
+			free(q);
+		}
+		p = cache->pool;
+		cache->~LEsystem_cache();
+		free(p);
+	}
+	static uintptr_t align(const uintptr_t s) {
+		return 16*(s/16 + (s%16 ? 1 : 0));
+	}
+	static void * align(const void * p) {
+		uintptr_t s = reinterpret_cast<uintptr_t>(p);
+		return reinterpret_cast<void *>(align(s));
+	}
+	void * operator new(size_t, void * p) {
+		return p;
+	}
+	void operator delete(void * , void *) {
+	}
+};
+
+void *
+LEsystem::cache_alloc(size_t len)
+{
+	if (cache == 0)
+		cache = LEsystem_cache::create();
+	return cache->allocate(len);
+}
+
+void
+LEsystem::cache_reset()
+{
+	if (cache != 0)
+		cache->reset();
+}
+
+void
+LEsystem::cache_free()
+{
+	LEsystem_cache::destroy(cache);
+	cache = 0;
+}
+
 void
 LEsystem::addlayer(double h, double e, const double v, const double s,
 		const unsigned p)
 {
-	new LElayer(this,(p == UINT_MAX ? last : &layer(p)),h,e,v,s);
+	LElayer * pl = first;
+	unsigned i = 0;
+
+	ischecked = false;
+	iscached = false;
+	if (p == UINT_MAX)
+		pl = last;
+	else
+		while (i++ < p && pl->next != 0)
+			pl = pl->next;
+	new LElayer(this,pl,h,e,v,s);
 }
 
 void
@@ -138,6 +276,8 @@ LEsystem::removelayer(const unsigned l)
 	LElayer * pl = first;
 	unsigned i = 0;
 
+	ischecked = false;
+	iscached = false;
 	while (i++ < l && pl != 0)
 		pl = pl->next;
 	delete pl;
@@ -148,6 +288,8 @@ LEsystem::addgrid(const unsigned nx, const double * xp,
                   const unsigned ny, const double * yp,
                   const unsigned nz, const double * zp)
 {
+	ischecked = false;
+	iscached = false;
 	for (unsigned ix = 0; ix < nx; ix++) {
 		for (unsigned iy = 0; iy < ny; iy++) {
 			for (unsigned iz = 0; iz < nz; iz++)
@@ -176,64 +318,64 @@ LEsystem::check()
 {
 	unsigned il, nl = layers();
 	const LElayer * pl;
-	bool rv = true;
-
+	
+	ischecked = true;
 	if (nl == 0) {
 		event_msg(EVENT_WARN,
 			"Cannot calculate a pavement without any layers!");
-		rv = false;
+		ischecked = false;
 	}
 	if (load.length() == 0) {
 		event_msg(EVENT_WARN,
 			"Cannot calculate a pavement without any loads!");
-		rv = false;
+		ischecked = false;
 	}
 	if (data.length() == 0) {
 		event_msg(EVENT_WARN,
 			"Cannot calculate a pavement without any evaluation points!");
-		rv = false;
+		ischecked = false;
 	}
 	for (il = 1, pl = first; pl != 0; il++, pl = pl->next) {
 		if (pl->emod() <= 0.0) {
 			event_msg(EVENT_WARN,
 				"Error: Elastic modulus of layer %d must be greater"
 				" than zero not %f!", il, pl->emod());
-			rv = false;
+			ischecked = false;
 		}
 		if (pl->poissons() <= 0.0 || pl->poissons() > 0.5) {
 			event_msg(EVENT_WARN,
 				"Error: Poisson's ratio of layer %d must be between"
 				" zero and one half not %f!", il, pl->poissons());
-			rv = false;
+			ischecked = false;
 		}
 		if (pl->thickness() < 0.0) {
 			event_msg(EVENT_WARN,
 				"Error: Layer %d cannot have negative thickness!", il);
-			rv = false;
+			ischecked = false;
 		}
 		if (pl->slip() < 0.0 || pl->slip() > 1.0 ) {
 			event_msg(EVENT_WARN,
 				"Error: Layer %d has an invalid bonding coefficent!", il);
-			rv = false;
+			ischecked = false;
 		}
 		if (pl->thickness() == 0.0 && pl->next != 0) {
 			event_msg(EVENT_WARN,
 				"Error: Layer %d cannot have zero thickness!", il);
-			rv = false;
+			ischecked = false;
 		}
 		if (pl->thickness() == 0.0 && pl->next == 0 && pl->slip() != 1.0) {
 			event_msg(EVENT_WARN,
 				"Error: Infinite layer %d cannot have imperfect bonding!", il);
-			rv = false;
+			ischecked = false;
 		}
 	}
 	if (last && last->bottom() > 0.0 && last->poissons() == 0.75) {
  		event_msg(EVENT_WARN,
 			"Error: Last layer cannot have a Poisson's ratio of 0.75!");
-		rv = false;
+		ischecked = false;
 	}
-	if (rv == false)
-		return rv;
+	if (ischecked == false)
+		return ischecked;
 	for (unsigned ixy = 0; ixy < data.length(); ixy++) {
 		pavedata & d = data[ixy];
 		// Clear the data.
@@ -244,7 +386,7 @@ LEsystem::check()
  			event_msg(EVENT_WARN,
 				"Error: evaluation point %d (%f,%f,%f) not within pavement!",
 				ixy+1,d.x,d.y,d.z);
-			rv = false;
+			ischecked = false;
 			continue;
 		}
 		for (pl = first, il = 0; pl != 0; pl = pl->next, il++) {
@@ -264,10 +406,10 @@ LEsystem::check()
  			event_msg(EVENT_WARN,
 				"Error: evaluation point %d (%f,%f,%f) not within layer %d!",
 				ixy+1,d.x,d.y,d.z,d.il+1);
-			rv = false;
+			ischecked = false;
 		}
 	}
-	return rv;
+	return ischecked;
 }
 
 /*
@@ -275,7 +417,6 @@ LEsystem::check()
  * stored in the ax set, indexed by the radius and depth.
  */
 struct axialdata {
-	bool   active;
 	double rse;
 	double tse;
 	double vse;
@@ -288,6 +429,7 @@ struct axialdata {
 	double sse2;
 	double rdp2;
 	double vdp2;
+	bool   active;
 	
 	// This function takes the results from the xxx2 variables, and adds
 	// them to the main varaibles, reseting them, and then deactivating
@@ -1188,8 +1330,7 @@ gradloop:
  * Boussinesq's equations for a point and circular load.
  */
 static inline double
-boussinesq_vse(double z, double r, double a, double v, double E,
-		double R, double A)
+boussinesq_vse(double z, double r, double a, double R, double A)
 {
 	if (r > 0.0)
 		return -3*a*a*pow(z,3)/(2*pow(R,5));
@@ -1198,8 +1339,7 @@ boussinesq_vse(double z, double r, double a, double v, double E,
 }
 
 static inline double
-boussinesq_rse(double z, double r, double a, double v, double E,
-		double R, double A)
+boussinesq_rse(double z, double r, double a, double v, double R, double A)
 {
 	if (r > 0.0)
 		return -a*a*(3*z*r*r/pow(R,4)-(1-2*v)/(R+z))/(2*R);
@@ -1209,8 +1349,7 @@ boussinesq_rse(double z, double r, double a, double v, double E,
 }
 
 static inline double
-boussinesq_tse(double z, double r, double a, double v, double E,
-		double R)
+boussinesq_tse(double z, double r, double a, double v, double R)
 {
 	if (r > 0.0)
 		return -a*a*(1-2*v)*(-z/(R*R) + 1.0/(R+z))/(2*R);
@@ -1219,8 +1358,7 @@ boussinesq_tse(double z, double r, double a, double v, double E,
 }
 
 static inline double
-boussinesq_sse(double z, double r, double a, double v, double E,
-		double R)
+boussinesq_sse(double z, double r, double a, double R)
 {
 	if (r > 0.0)
 		return -3*a*a*z*z*r/(2*pow(R,5));
@@ -1307,10 +1445,10 @@ LEsystem::calc_odemark()
 				R = hypot(r,z); A = (r > 0.0 ? 0.0 : hypot(z,a));
 				double tv = v[d.il];
 				double tE = E[d.il];
-				s.vse = boussinesq_vse(z,r,a,tv,tE,R,A);
-				s.rse = boussinesq_rse(z,r,a,tv,tE,R,A);
-				s.tse = boussinesq_tse(z,r,a,tv,tE,R);
-				s.sse = boussinesq_sse(z,r,a,tv,tE,R);
+				s.vse = boussinesq_vse(z,r,a,R,A);
+				s.rse = boussinesq_rse(z,r,a,tv,R,A);
+				s.tse = boussinesq_tse(z,r,a,tv,R);
+				s.sse = boussinesq_sse(z,r,a,R);
 				s.rdp = boussinesq_rdp(z,r,a,tv,tE,R);
 				s.vdp = boussinesq_vdp(z,r,a,tv,tE,R,A);
 				if (h[il] == 0.0)
