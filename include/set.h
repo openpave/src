@@ -120,6 +120,7 @@ public:
 	inline explicit fset(const unsigned s, const unsigned b)
 	  : set(b), value(0) {
 		allocate(s);
+		copy(s,0);
 	}
 	inline explicit fset(const unsigned s, const V * v = 0,
 			const unsigned b = DFLT_BLK)
@@ -502,10 +503,12 @@ public:
 	inline explicit iset()
 	  : set(), idx(0), value(0) {
 		allocate(size);
+		copy(size,0,true);
 	}
 	inline explicit iset(const unsigned s, const unsigned b)
 	  : set(b), idx(0), value(0) {
 		allocate(s);
+		copy(s,0,true);
 	}
 	// Basic constructor
 	inline explicit iset(const unsigned s, const V * v = 0,
@@ -713,6 +716,7 @@ public:
 	inline explicit kfset(const unsigned s, const unsigned b)
 	  : set(b), value(0) {
 		allocate(s);
+		copy(s,0,true);
 	}
 	inline explicit kfset(const unsigned s, const V * v = 0,
 			const unsigned b = DFLT_BLK)
@@ -967,6 +971,7 @@ public:
 	inline explicit kiset(const unsigned s, const unsigned b)
 	  : set(b), idx(0), value(0) {
 		allocate(s);
+		copy(s,0,true);
 	}
 	// Basic constructor
 	inline explicit kiset(const unsigned s, const V * v = 0,
@@ -1175,6 +1180,7 @@ public:
 	inline explicit afset(const unsigned s, const unsigned b)
 	  : set(b), key(0), value(0) {
 		allocate(s);
+		copy(s,0,0,true);
 	}
 	inline explicit afset(const unsigned s, const K * k = 0,
 			const V * v = 0, const unsigned b = DFLT_BLK)
