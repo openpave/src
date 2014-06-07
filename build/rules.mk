@@ -206,7 +206,7 @@ CXXSRCS_$(1)     = $(CXXSRCS)
 endif
 OBJS_$(1)        = $(OBJS)
 endif
-$(1): $$(OBJS_$(1)) $(_LIB_DEPS)
+$(1)$(EXE_SUFFIX): $$(OBJS_$(1)) $(_LIB_DEPS)
 ifdef WIN32
 	@sh $$(topsrcdir)/build/cygwin-wrapper \
 	    $$(CC) $$(OBJS_$(1)) -Fe$$@ -link $$(OS_LDFLAGS) \
@@ -284,7 +284,7 @@ endif
 ifdef WIN32
 	@echo $@ ": \\" > $@.d
 	@sh $(topsrcdir)/build/cygwin-wrapper -quiet \
-	    $(CXX) -EP -showIncludes $(OS_CXXFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<) 2>&1 > /dev/null \
+	    $(CXX) -EP -showIncludes $(OS_CXXFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<) 2>&1 > $@.i \
 	        | grep "including" | grep -v ";" \
 	        | sed -e's/^.*file:[ ]*//g' -e's/^/\"/g' -e's/$$/\"/g' -e's#^[.][.]#$(PWD)/#g' \
 	        | xargs cygpath -a -s -m | xargs cygpath -u | sed -e 's/^/\t/g' -e 's/$$/ \\/g' >> $@.d
@@ -298,7 +298,7 @@ endif
 ifdef WIN32
 	@echo $@ ": \\" > $@.d
 	@sh $(topsrcdir)/build/cygwin-wrapper -quiet \
-	    $(CC) -EP -showIncludes $(OS_CFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<) 2>&1 > /dev/null \
+	    $(CC) -EP -showIncludes $(OS_CFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<) 2>&1 > $@.i \
 	        | grep "including" | grep -v ";" \
 	        | sed -e's/^.*file:[ ]*//g' -e's/^/\"/g' -e's/$$/\"/g' -e's#^[.][.]#$(PWD)/#g' \
 	        | xargs cygpath -a -s -m | xargs cygpath -u | sed -e 's/^/\t/g' -e 's/$$/ \\/g' >> $@.d
