@@ -2728,6 +2728,7 @@ results(const fset<const element *> & e, const fset<point3d> & c,
 	fclose(f);
 }
 
+#ifdef BUILD
 int
 main()
 {
@@ -3265,18 +3266,21 @@ main()
 	timeme("\n");
 	return 0;
 }
+#endif
 
-#if 0
-static void
-test1()
+#ifdef NOBUILD
+int
+main()
 {
 	timeme();
 	printf("Constructing Mesh...");
 
-	material m(1000,0.2);
+	layer.empty();
+	layer.add(femlayer(0,0,1000,0.2));
+
 
 	const double cube[3][2] = {{-10, 10}, {-10, 10}, {-10, 0}};
-	const unsigned ndiv[3] = {10, 10, 3};
+	const unsigned ndiv[3] = {1, 1, 1};
 	unsigned i, j, k;
 	mesh FEM;
 	cset<const element *> face;
@@ -3310,7 +3314,7 @@ test1()
 				//printf("%4.2f\t%4.2f\t%4.2f\n",x,y,z);
 				element::element_t s = (k == 0 ? element::block18 :
 					element::adaptor18);
-				const element * e = FEM.add(s,m,coord);
+				const element * e = FEM.add(s,layer[0].mat,coord);
 				if (i == ndiv[0]/2)
 					face.add(e);
 			}
@@ -3374,12 +3378,12 @@ test1()
 	//const node3d & n = FEM.getnode(FEM.hasnode(coord3d(cube[0][1],cube[1][1],cube[2][1])));
 	//printf("(%+f,%+f,%+f)\n",n.ux,n.uy,n.uz);
 
-	/*fset<point3d> poly(4,4);
+	fset<point3d> poly(4);
 	poly[0] = point3d(-1,-1,-1);
 	poly[1] = point3d(-1,-1,+1);
 	poly[2] = point3d(-1,+1,+1);
 	poly[3] = point3d(-1,+1,-1);
-	results(face,poly,"test");*/
+	results(face,poly,"test");
 
 	timeme(" Done.\n");
 }
