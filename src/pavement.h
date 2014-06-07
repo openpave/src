@@ -51,6 +51,8 @@
 #include <memory.h>
 #if defined(_MSC_VER)
 #include <stddef.h>
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
 #else
 #include <stdint.h>
 #endif
