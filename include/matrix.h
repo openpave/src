@@ -723,6 +723,7 @@ operator- (const matrix & b) {
 #define B_IDX(n,w,i,j) ((j) <= (w) ? (j)*((j)+1)/2+(i) : \
                                      ((j)+1)*(w)+(i)-(w)*((w)+1)/2)
 
+void transpose(const unsigned m, const unsigned n, double * A);
 void orth_gs(const unsigned n, double * Q);
 void equ_gauss(const unsigned n, const double * A, const double * b,
 	double * x);

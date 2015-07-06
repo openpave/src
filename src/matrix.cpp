@@ -35,6 +35,28 @@
 #include "autodelete.h"
 
 /*
+ * In-place transpose a rectangular matrix.
+ */
+void
+transpose(const unsigned m, const unsigned n, double * A)
+{
+	for (unsigned s = 0, j = 0, i = 0; s < m * n; j = ++s, i = 0) {
+		do {
+			i++;
+			j = (j%m)*n+j/m;
+		} while (j > s);
+		if (j < s || i == 1)
+			continue;
+		double tmp = A[j = s];
+		do {
+			i = (j%m)*n+j/m;
+			A[j] = (i == s ? tmp : A[i]);
+			j = i;
+		} while (j > s);
+	}
+}
+
+/*
  * Orthonormalize the nxn matrix Q, using the Gramm-Schmidt algorithm.
  */
 void
@@ -104,7 +126,7 @@ equ_gauss(const unsigned n, const double * A, const double * b,
 }
 
 /*
- * This function returns the nxm matrix X = A^-1*B.  Both A and B are destoryed...
+ * This function returns the nxm matrix X = A^-1*B.  Both A and B are destroyed...
  * The result is returned in B, and the determinant in the return value.
  *
  * This function employs Gaussian elimination with full pivoting.
