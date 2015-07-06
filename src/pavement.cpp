@@ -133,92 +133,98 @@ pavedata::principle(double v, double E)
  * That is the head of a linked list of malloc()'ed pages where memory is
  * handed out from.  The pointer to the next page is stored in the first
  * slot in the slab, and the second slot stores the fill level of the slab. 
- * If that is NULL then it means the slab is full.  There is a second void
- * pointer in the class which stores the next allocation address.  If this
- * points to the same address as the cache pointer then we are in a reset
- * state and will not allocate memory but will give back pointers to already
- * allocated space.  The class knows if it can just reuse these arrays
- * without recalculating the contents.
+ * If this points to the same address as the cache pointer then we are in a
+ * reset state and will not allocate memory but will give back pointers to
+ * already allocated space.  The LEsystem class knows if it can just reuse
+ * these arrays without recalculating the contents.
  *
  * The pointers are always aligned to sixteen byte boundaries.  On some
- * platforms this could be assisted by allocation aligned space.
+ * platforms this could be assisted by allocating aligned space.
  */
 class LEsystem_cache {
 	friend class LEsystem;
 	static const size_t page_size = 4*1024*1024;
 	
-	void * next;
-	void * mark;
-	void * pool; // Unused in all but first
+	void * next;        // the next slab
+	void * mark;        // the fill level for this slab
 	
 	LEsystem_cache()
-	  : next(0), mark(0), pool(0) {
+	  : next(0), mark(0) {
 	}
 	~LEsystem_cache() {
 	}
 	void * allocate(const size_t len) {
 		void * p, * q;
 		ptrdiff_t l;
+		LEsystem_cache * c;
 		
-		assert(mark != 0 && pool != 0);
-		p = align(pool);
-		if (mark == pool) {
-			// We are on the first page
-			mark = align(reinterpret_cast<char *>(p)
-			          +sizeof(LEsystem_cache));
+		assert(mark != 0);
+		p = this;
+		c = this;
+		if (mark == this) {
+			// The cache is empty
+			mark = align(this + sizeof(LEsystem_cache));
 		}
 		q = mark;
 		while (true) {
+		    // get the amount of space left in this slab.
 			l = reinterpret_cast<char *>(p) + MAX(len,page_size)
 			      -reinterpret_cast<char *>(q);
+			// check if there is enough space for this request
 			if (l-static_cast<ssize_t>(len) >= 0)
 				break;
-			p = (p == align(pool) ? p = next :
-				  *reinterpret_cast<void **>(p));
+			// get the next slab
+			p = c->next;
+			// do we need a new slab?
 			if (p == 0)
 				break;
-			q = *(reinterpret_cast<void **>(p)+1);
+			// now get the new mark
+			c = reinterpret_cast<LEsystem_cache *>(p);
+			q = c->mark;
 		}
 		if (p == 0) {
-			p = malloc(page_size);
+			p = malloc(MAX(len,page_size) + sizeof(LEsystem_cache));
 			if (p == 0)
 				throw std::bad_alloc();
-			q = align(reinterpret_cast<void **>(p)+2);
+			c->next = p;
+			c = new(p) LEsystem_cache();
+			q = c->mark = align(c + sizeof(LEsystem_cache));
 		}
+		c->mark = align(reinterpret_cast<char *>(q) + len);
 		return q;
 	}
 	void reset() {
-		mark = pool;
+		mark = this;
 	}
 	static LEsystem_cache * create() {
-		void * p, * q;
+		void * p;
 		LEsystem_cache * c;
 		
 		p = malloc(page_size);
 		if (p == 0)
 			throw std::bad_alloc();
-		q = align(p);
-		c = new(q) LEsystem_cache();
-		c->pool = p;
+		c = new(p) LEsystem_cache();
 		c->mark = p;
 		return c;
 	}
 	static void destroy(LEsystem_cache * cache) {
-		void * p, * q;
+		void * p;
+		LEsystem_cache * c = cache;
 		
-		if (cache == 0)
+		if (c == 0)
 			return;
-		p = cache->next;
+		p = c->next;
 		while (p != 0) {
-			q = p, p = *reinterpret_cast<void **>(p);
-			free(q);
+			c = reinterpret_cast<LEsystem_cache *>(p);
+			p = c->next;
+			c->~LEsystem_cache();
+			free(c);
 		}
-		p = cache->pool;
 		cache->~LEsystem_cache();
-		free(p);
+		free(cache);
 	}
 	static uintptr_t align(const uintptr_t s) {
-		return 16*(s/16 + (s%16 ? 1 : 0));
+		return s + (16 - s%16)%16;
 	}
 	static void * align(const void * p) {
 		uintptr_t s = reinterpret_cast<uintptr_t>(p);
@@ -260,8 +266,7 @@ LEsystem::addlayer(double h, double e, const double v, const double s,
 	LElayer * pl = first;
 	unsigned i = 0;
 
-	ischecked = false;
-	iscached = false;
+	cache_state &= ~cachestate::geom;
 	if (p == UINT_MAX)
 		pl = last;
 	else
@@ -276,26 +281,17 @@ LEsystem::removelayer(const unsigned l)
 	LElayer * pl = first;
 	unsigned i = 0;
 
-	ischecked = false;
-	iscached = false;
+	cache_state &= ~cachestate::geom;
 	while (i++ < l && pl != 0)
 		pl = pl->next;
 	delete pl;
 }
 
 void
-LEsystem::addgrid(const unsigned nx, const double * xp,
-                  const unsigned ny, const double * yp,
-                  const unsigned nz, const double * zp)
+LEsystem::removelayers()
 {
-	ischecked = false;
-	iscached = false;
-	for (unsigned ix = 0; ix < nx; ix++) {
-		for (unsigned iy = 0; iy < ny; iy++) {
-			for (unsigned iz = 0; iz < nz; iz++)
-				data.add(pavedata(point3d(xp[ix],yp[iy],zp[iz])));
-		}
-	}
+	cache_state &= ~cachestate::geom;
+	empty();
 }
 
 LElayer &
@@ -309,6 +305,69 @@ LEsystem::layer(const unsigned l) const
 	return *pl;
 }
 
+void
+LEsystem::addload(const point2d & l, double f, double p, double r)
+{
+	cache_state &= ~cachestate::geom;
+	return load.add(paveload(l,f,p,r));
+}
+
+void
+LEsystem::addload(const paveload & l)
+{
+	cache_state &= ~cachestate::geom;
+	load.add(l);
+}
+
+void
+LEsystem::removeload(const unsigned i)
+{
+	cache_state &= ~cachestate::geom;
+	load.remove(i);
+}
+
+void
+LEsystem::removeloads()
+{
+	cache_state &= ~cachestate::geom;
+	load.empty();
+}
+
+void
+LEsystem::addpoint(const point3d & p, unsigned l)
+{
+	cache_state &= ~cachestate::geom;
+	data.add(pavedata(p,l));
+}
+
+void
+LEsystem::addgrid(const unsigned nx, const double * xp,
+                  const unsigned ny, const double * yp,
+                  const unsigned nz, const double * zp)
+{
+	cache_state &= ~cachestate::geom;
+	for (unsigned ix = 0; ix < nx; ix++) {
+		for (unsigned iy = 0; iy < ny; iy++) {
+			for (unsigned iz = 0; iz < nz; iz++)
+				data.add(pavedata(point3d(xp[ix],yp[iy],zp[iz])));
+		}
+	}
+}
+
+void
+LEsystem::removepoint(const point3d & p, unsigned l)
+{
+	cache_state &= ~cachestate::geom;
+	data.remove(pavepoint(p,l));
+}
+
+void
+LEsystem::removepoints()
+{
+	cache_state &= ~cachestate::geom;
+	data.empty();
+}
+
 /*
  * This checks the structure of the pavement to ensure that is is
  * good...
@@ -319,7 +378,7 @@ LEsystem::check()
 	unsigned il, nl = layers();
 	const LElayer * pl;
 	
-	ischecked = true;
+	bool ischecked = true;
 	if (nl == 0) {
 		event_msg(EVENT_WARN,
 			"Cannot calculate a pavement without any layers!");
@@ -1047,6 +1106,7 @@ LEsystem::calculate(resulttype res, const double * Q)
 	initarrays();
 	if (!check())
 		return false;
+	cache_reset();
 	unsigned ngqp = NGQP, nbz = NBZ, gl = UINT_MAX, nl = layers();
 	if ((res & mask) == dirty) {
 		ngqp = MIN(NGQP,8);
@@ -1101,7 +1161,7 @@ LEsystem::calculate(resulttype res, const double * Q)
 	if (interpolate)
 		iT = new double[nz][2][4];
 
-	// Gerenate a list of load radii, then sort them and map from loads.
+	// Generate a list of load radii, then sort them and map from loads.
 	for (ild = 0; ild < load.length(); ild++)
 		a.add(load[ild].radius());
 	a.sort();
@@ -1109,7 +1169,7 @@ LEsystem::calculate(resulttype res, const double * Q)
 	// Now loop through the list of load radii, calculating only for
 	// the applicable loads... (load[ild].radius() == a[ia])
 	for (ia = 0; ia < a.length(); ia++) {
-		// Gerenate a list of radii, then sort them.
+		// Generate a list of radii, then sort them.
 		r.empty();
 		for (ild = 0; ild < load.length(); ild++) {
 			if (fabs(load[ild].radius()-a[ia]) > DBL_MIN)
@@ -1122,7 +1182,7 @@ LEsystem::calculate(resulttype res, const double * Q)
 		m0.resize(nr);
 		m1.resize(nr);
 
-		// Now gerenate a list of integration intervals, then sort them.
+		// Now generate a list of integration intervals, then sort them.
 		bm.empty();
 		bm.add(0.0);
 		for (ib = 0; ib < (nbz+1); ib++)

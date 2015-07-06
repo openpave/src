@@ -390,12 +390,12 @@ class LEsystem : private list_owned<LEsystem, LElayer> {
 public:
 	LEsystem()
 	  : list_owned<LEsystem,LElayer>(), data(), load(),
-	    cache(0), ischecked(false), iscached(false) {
+	    cache(0), cache_state(cachestate::reset) {
 	    cache_reset();
 	}
 	LEsystem(LEsystem & p)
 	  : list_owned<LEsystem,LElayer>(p), data(p.data), load(p.load),
-	    cache(0), ischecked(false), iscached(false) {
+	    cache(0), cache_state(cachestate::reset) {
 	    cache_reset();
 	}
 	~LEsystem() {
@@ -404,34 +404,16 @@ public:
 	void addlayer(const double h, const double e, const double v,
 	              const double s = 1.0, const unsigned p = UINT_MAX);
 	void removelayer(const unsigned l);
-	void removelayers() {
-		empty();
-	}
+	void removelayers();
 	inline unsigned layers() const {
 		return length();
 	}
 	LElayer & layer(const unsigned l) const;
 
-	void addload(const point2d & l, double f, double p, double r = 0) {
-		ischecked = false;
-		iscached = false;
-		return load.add(paveload(l,f,p,r));
-	}
-	void addload(const paveload & l) {
-		ischecked = false;
-		iscached = false;
-		load.add(l);
-	}
-	void removeload(const unsigned i) {
-		ischecked = false;
-		iscached = false;
-		load.remove(i);
-	}
-	void removeloads() {
-		ischecked = false;
-		iscached = false;
-		load.empty();
-	}
+	void addload(const point2d & l, double f, double p, double r = 0);
+	void addload(const paveload & l);
+	void removeload(const unsigned i);
+	void removeloads();
 	inline unsigned loads() const {
 		return load.length();
 	}
@@ -439,24 +421,12 @@ public:
 		return load[i];
 	}
 
-	void addpoint(const point3d & p, unsigned l = UINT_MAX) {
-		ischecked = false;
-		iscached = false;
-		data.add(pavedata(p,l));
-	}
+	void addpoint(const point3d & p, unsigned l = UINT_MAX);
 	void addgrid(const unsigned nx, const double * xp,
 				 const unsigned ny, const double * yp,
 				 const unsigned nz, const double * zp);
-	void removepoint(const point3d & p, unsigned l = UINT_MAX) {
-		ischecked = false;
-		iscached = false;
-		data.remove(pavepoint(p,l));
-	}
-	void removepoints() {
-		ischecked = false;
-		iscached = false;
-		data.empty();
-	}
+	void removepoint(const point3d & p, unsigned l = UINT_MAX);
+	void removepoints();
 	inline unsigned results() const {
 		return data.length();
 	}
@@ -492,6 +462,15 @@ protected:
 	void * cache_alloc(size_t len);
 	void cache_reset();
 	void cache_free();
+	enum cachestate {
+	    reset    = 0x0000,
+		geom     = 0x0001,
+		pressure = 0x0002,
+		emod     = 0x0004,
+		checked  = 0x0008
+	} cache_state;
+	friend cachestate & operator&= (cachestate & l, const cachestate r);
+	friend cachestate operator~ (const cachestate l);
 
 private:
 	friend class listelement_o<LEsystem, LElayer>;
@@ -502,9 +481,18 @@ private:
 	sset<paveload> load;
 	
 	LEsystem_cache * cache;
-	bool ischecked;
-	bool iscached;
 };
+
+inline LEsystem::cachestate &
+operator&= (LEsystem::cachestate & l, const LEsystem::cachestate r)
+{
+	return l = static_cast<LEsystem::cachestate>(unsigned(l) & unsigned(r));
+}
+inline LEsystem::cachestate
+operator~ (const LEsystem::cachestate l)
+{
+	return static_cast<LEsystem::cachestate>(~unsigned(l));
+}
 
 /*
  * class defldata - A measured point within the pavement structure.
