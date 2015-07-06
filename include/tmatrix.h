@@ -116,7 +116,8 @@ struct meta_assign {
 		meta_assign<I,J>::assignR_mul_d(lhs,d);
 	}
 };
-template<unsigned I> struct meta_assign<I,0> {
+template<unsigned I>
+struct meta_assign<I,0> {
 	template<class A, class E>
 	static inline void assignR(A &, const E &) {}
 	template<class A, class E>
@@ -130,7 +131,8 @@ template<unsigned I> struct meta_assign<I,0> {
 	template<class A, typename T>
 	static inline void assignR_mul_d(A &, const T &) {}
 };
-template<unsigned J> struct meta_assign<0,J> {
+template<unsigned J>
+struct meta_assign<0,J> {
 	template<class A, class E>
 	static inline void assign(A &, const E &) {}
 	template<class A, class E>
