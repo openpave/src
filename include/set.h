@@ -110,8 +110,7 @@ private:
 /*
  * class fset - Fixed size set of type V.
  *
- * This class acts like a fixed size array, except that it returns
- * the default member if the index is out of bounds.
+ * This class acts like a fixed size array.
  */
 template <class V>
 class fset : public set {
@@ -119,8 +118,8 @@ public:
 	// Nice simple constructor...
 	inline explicit fset(const unsigned s, const unsigned b)
 	  : set(b), value(0) {
-		allocate(s);
-		copy(s,0);
+		allocate(s); // Creates enough space
+		copy(s,0);   // Constructs the elements and increases size
 	}
 	inline explicit fset(const unsigned s, const V * v = 0,
 			const unsigned b = DFLT_BLK)
@@ -571,7 +570,7 @@ public:
 	// Get the position of an element in the sort.
 	inline unsigned getorder(const unsigned i) const {
 		assert(inbounds(i));
-		return findvalue(value[i]);
+		return idx[i];
 	}
 
 	// Add one value at the end.
@@ -824,7 +823,7 @@ protected:
 /*
  * class ksset - Keyed sizeable set
  *
- * Think combination of sset and kfset.
+ * Think combination of cset and kfset.
  */
 template <class K, class V>
 class ksset : public kfset<K,V> {
@@ -919,18 +918,23 @@ protected:
 		if (r <= l)
 			return;
 		unsigned i, j, k, p = l+(r-1-l)/2;
-		if (this->value[l] > this->value[p])
+		if (static_cast<K &>(this->value[l])
+				> static_cast<K &>(this->value[p]))
 			swap(this->value[l],this->value[p]);
-		if (this->value[l] > this->value[r-1])
+		if (static_cast<K &>(this->value[l])
+				> static_cast<K &>(this->value[r-1]))
 			swap(this->value[l],this->value[r-1]);
-		if (this->value[p] > this->value[r-1])
+		if (static_cast<K &>(this->value[p])
+				> static_cast<K &>(this->value[r-1]))
 			swap(this->value[p],this->value[r-1]);
 		if (r-1-l <= 2)
 			return;
 		for (i = l, j = r-1, k = 0; ;
 						p = (p==i?j++:(p==j?i--:p)), k++) {
-			while (++i < p && !(this->value[i] > this->value[p])) {};
-			while (p < --j && !(this->value[p] > this->value[j])) {};
+			while (++i < p && !(static_cast<K &>(this->value[i])
+					> static_cast<K &>(this->value[p]))) {};
+			while (p < --j && !(static_cast<K &>(this->value[p])
+					> static_cast<K &>(this->value[j]))) {};
 			if (i >= j)
 				break;
 			swap(this->value[i],this->value[j]);
@@ -945,8 +949,9 @@ protected:
 	}
 	void isort(const unsigned l, const unsigned r) {
 		for (unsigned i = l; l < r && i < r-1; i++) {
-			for (unsigned j = i+1; j > l
-					 && this->value[j-1] > this->value[j]; j--) {
+			for (unsigned j = i+1; j > l 
+					 && static_cast<K &>(this->value[j-1])
+					 > static_cast<K &>(this->value[j]); j--) {
 				swap(this->value[j-1],this->value[j]);
 			}
 		}
