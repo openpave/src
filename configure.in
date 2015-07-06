@@ -469,6 +469,10 @@ case "$target" in
             CXXFLAGS="$CXXFLAGS -Zc:wchar_t-"
             DEFINES="$DEFINES _CRT_SECURE_NO_WARNINGS"
             DEFINES="$DEFINES _CRT_NONSTDC_NO_WARNINGS"
+        elif test "$_CC_MAJOR_VERSION" = "18"; then
+            CXXFLAGS="$CXXFLAGS -Zc:wchar_t-"
+            DEFINES="$DEFINES _CRT_SECURE_NO_WARNINGS"
+            DEFINES="$DEFINES _CRT_NONSTDC_NO_WARNINGS"
         fi
         CC="$CC -nologo"
         CXX=$CC
@@ -483,7 +487,11 @@ case "$target" in
         OBJ_SUFFIX=obj
         LIB_SUFFIX=lib
         CPPFLAGS="$CPPFLAGS -W3 -GF -Gy -GR- -EHsc"
-        _OPTIMIZE_FLAGS="-Ox -Ob2 -Oi -Ot -arch:SSE2 -fp:fast -GS-"
+        if test "$_CC_MAJOR_VERSION" = "18"; then
+			_OPTIMIZE_FLAGS="-Ox -Ob2 -Oi -Ot -fp:fast -GS-"
+		else
+			_OPTIMIZE_FLAGS="-Ox -Ob2 -Oi -Ot -arch:SSE2 -fp:fast -GS-"
+		fi
         _PROFILE_FLAGS=""
         _DEBUG_FLAGS="-Z7 -RTCsu -GS"
         _CONFIG_H="-FIconfig.h"

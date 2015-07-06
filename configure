@@ -1932,6 +1932,10 @@ test -n "$RC" || RC=":"
             CXXFLAGS="$CXXFLAGS -Zc:wchar_t-"
             DEFINES="$DEFINES _CRT_SECURE_NO_WARNINGS"
             DEFINES="$DEFINES _CRT_NONSTDC_NO_WARNINGS"
+        elif test "$_CC_MAJOR_VERSION" = "18"; then
+            CXXFLAGS="$CXXFLAGS -Zc:wchar_t-"
+            DEFINES="$DEFINES _CRT_SECURE_NO_WARNINGS"
+            DEFINES="$DEFINES _CRT_NONSTDC_NO_WARNINGS"
         fi
         CC="$CC -nologo"
         CXX=$CC
@@ -1946,7 +1950,11 @@ test -n "$RC" || RC=":"
         OBJ_SUFFIX=obj
         LIB_SUFFIX=lib
         CPPFLAGS="$CPPFLAGS -W3 -GF -Gy -GR- -EHsc"
-        _OPTIMIZE_FLAGS="-Ox -Ob2 -Oi -Ot -arch:SSE2 -fp:fast -GS-"
+        if test "$_CC_MAJOR_VERSION" = "18"; then
+			_OPTIMIZE_FLAGS="-Ox -Ob2 -Oi -Ot -fp:fast -GS-"
+		else
+			_OPTIMIZE_FLAGS="-Ox -Ob2 -Oi -Ot -arch:SSE2 -fp:fast -GS-"
+		fi
         _PROFILE_FLAGS=""
         _DEBUG_FLAGS="-Z7 -RTCsu -GS"
         _CONFIG_H="-FIconfig.h"
@@ -2035,14 +2043,14 @@ case "$host" in
 *)
     
 echo $ac_n "checking for library containing sqrt""... $ac_c" 1>&6
-echo "configure:2039: checking for library containing sqrt" >&5
+echo "configure:2047: checking for library containing sqrt" >&5
 if eval "test \"`echo '$''{'ac_cv_search_sqrt'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   ac_func_search_save_LIBS="$LIBS"
 ac_cv_search_sqrt="no"
 cat > conftest.$ac_ext <<EOF
-#line 2046 "configure"
+#line 2054 "configure"
 #include "confdefs.h"
 /* Override any gcc2 internal prototype to avoid an error.  */
 /* We use char because int might match the return type of a gcc2
@@ -2053,7 +2061,7 @@ int main() {
 sqrt()
 ; return 0; }
 EOF
-if { (eval echo configure:2057: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+if { (eval echo configure:2065: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
   rm -rf conftest*
   ac_cv_search_sqrt="none required"
 else
@@ -2064,7 +2072,7 @@ rm -f conftest*
 test "$ac_cv_search_sqrt" = "no" && for i in m; do
 LIBS="-l$i  $ac_func_search_save_LIBS"
 cat > conftest.$ac_ext <<EOF
-#line 2068 "configure"
+#line 2076 "configure"
 #include "confdefs.h"
 /* Override any gcc2 internal prototype to avoid an error.  */
 /* We use char because int might match the return type of a gcc2
@@ -2075,7 +2083,7 @@ int main() {
 sqrt()
 ; return 0; }
 EOF
-if { (eval echo configure:2079: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+if { (eval echo configure:2087: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
   rm -rf conftest*
   ac_cv_search_sqrt="-l$i"
 break
@@ -2097,14 +2105,14 @@ else :
 fi
     
 echo $ac_n "checking for library containing clock_gettime""... $ac_c" 1>&6
-echo "configure:2101: checking for library containing clock_gettime" >&5
+echo "configure:2109: checking for library containing clock_gettime" >&5
 if eval "test \"`echo '$''{'ac_cv_search_clock_gettime'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   ac_func_search_save_LIBS="$LIBS"
 ac_cv_search_clock_gettime="no"
 cat > conftest.$ac_ext <<EOF
-#line 2108 "configure"
+#line 2116 "configure"
 #include "confdefs.h"
 /* Override any gcc2 internal prototype to avoid an error.  */
 /* We use char because int might match the return type of a gcc2
@@ -2115,7 +2123,7 @@ int main() {
 clock_gettime()
 ; return 0; }
 EOF
-if { (eval echo configure:2119: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+if { (eval echo configure:2127: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
   rm -rf conftest*
   ac_cv_search_clock_gettime="none required"
 else
@@ -2126,7 +2134,7 @@ rm -f conftest*
 test "$ac_cv_search_clock_gettime" = "no" && for i in rt; do
 LIBS="-l$i  $ac_func_search_save_LIBS"
 cat > conftest.$ac_ext <<EOF
-#line 2130 "configure"
+#line 2138 "configure"
 #include "confdefs.h"
 /* Override any gcc2 internal prototype to avoid an error.  */
 /* We use char because int might match the return type of a gcc2
@@ -2137,7 +2145,7 @@ int main() {
 clock_gettime()
 ; return 0; }
 EOF
-if { (eval echo configure:2141: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+if { (eval echo configure:2149: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
   rm -rf conftest*
   ac_cv_search_clock_gettime="-l$i"
 break
@@ -2162,17 +2170,17 @@ fi
 do
 ac_safe=`echo "$ac_hdr" | sed 'y%./+-%__p_%'`
 echo $ac_n "checking for $ac_hdr""... $ac_c" 1>&6
-echo "configure:2166: checking for $ac_hdr" >&5
+echo "configure:2174: checking for $ac_hdr" >&5
 if eval "test \"`echo '$''{'ac_cv_header_$ac_safe'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 2171 "configure"
+#line 2179 "configure"
 #include "confdefs.h"
 #include <$ac_hdr>
 EOF
 ac_try="$ac_cpp conftest.$ac_ext >/dev/null 2>conftest.out"
-{ (eval echo configure:2176: \"$ac_try\") 1>&5; (eval $ac_try) 2>&5; }
+{ (eval echo configure:2184: \"$ac_try\") 1>&5; (eval $ac_try) 2>&5; }
 ac_err=`grep -v '^ *+' conftest.out | grep -v "^conftest.${ac_ext}\$"`
 if test -z "$ac_err"; then
   rm -rf conftest*
@@ -2193,7 +2201,7 @@ if eval "test \"`echo '$ac_cv_header_'$ac_safe`\" = yes"; then
 #define $ac_tr_hdr 1
 EOF
  echo $ac_n "checking for FCGX_Init in -lfcgi""... $ac_c" 1>&6
-echo "configure:2197: checking for FCGX_Init in -lfcgi" >&5
+echo "configure:2205: checking for FCGX_Init in -lfcgi" >&5
 ac_lib_var=`echo fcgi'_'FCGX_Init | sed 'y%./+-%__p_%'`
 if eval "test \"`echo '$''{'ac_cv_lib_$ac_lib_var'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
@@ -2201,7 +2209,7 @@ else
   ac_save_LIBS="$LIBS"
 LIBS="-lfcgi  $LIBS"
 cat > conftest.$ac_ext <<EOF
-#line 2205 "configure"
+#line 2213 "configure"
 #include "confdefs.h"
 /* Override any gcc2 internal prototype to avoid an error.  */
 /* We use char because int might match the return type of a gcc2
@@ -2212,7 +2220,7 @@ int main() {
 FCGX_Init()
 ; return 0; }
 EOF
-if { (eval echo configure:2216: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+if { (eval echo configure:2224: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
   rm -rf conftest*
   eval "ac_cv_lib_$ac_lib_var=yes"
 else
@@ -2245,12 +2253,12 @@ if test "$USING_CC" = "intel"; then
         DEFINES="$DEFINES NEED_FMA"
 else
 echo $ac_n "checking for fma()""... $ac_c" 1>&6
-echo "configure:2249: checking for fma()" >&5
+echo "configure:2257: checking for fma()" >&5
 if eval "test \"`echo '$''{'ac_cv_func_fma'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 2254 "configure"
+#line 2262 "configure"
 #include "confdefs.h"
 
         #include <math.h>
@@ -2259,7 +2267,7 @@ int main() {
 double foo = fma(1.0,1.0,1.0)
 ; return 0; }
 EOF
-if { (eval echo configure:2263: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+if { (eval echo configure:2271: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
   rm -rf conftest*
   ac_cv_func_fma=yes
 else
@@ -2279,12 +2287,12 @@ fi
 fi
 
 echo $ac_n "checking for random()""... $ac_c" 1>&6
-echo "configure:2283: checking for random()" >&5
+echo "configure:2291: checking for random()" >&5
 if eval "test \"`echo '$''{'ac_cv_func_random'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 2288 "configure"
+#line 2296 "configure"
 #include "confdefs.h"
 
         #include <stdlib.h>
@@ -2293,7 +2301,7 @@ int main() {
 int foo = random()
 ; return 0; }
 EOF
-if { (eval echo configure:2297: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+if { (eval echo configure:2305: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
   rm -rf conftest*
   ac_cv_func_random=yes
 else
@@ -2401,7 +2409,7 @@ for m in $OP_MODULES; do
 done;
 
 echo $ac_n "checking if config.h needs rebuilding""... $ac_c" 1>&6
-echo "configure:2405: checking if config.h needs rebuilding" >&5
+echo "configure:2413: checking if config.h needs rebuilding" >&5
 
 echo "$ac_t""done" 1>&6
 

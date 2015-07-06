@@ -39,7 +39,12 @@
 
 #include <float.h>
 #include <limits.h>
+#if defined(_MSC_VER) && _MSC_VER >= 1800
+#define _USE_MATH_DEFINES
+#include <cmath>
+#else
 #include <math.h>
+#endif
 #if defined(_MSC_VER)
 #include <ymath.h>
 #endif
@@ -141,12 +146,14 @@
 #define hypot(a,b)  _hypot((a),(b))
 #define isnan(x)    _isnan(x)
 #define isfinite(x) _finite(x)
+#if _MSC_VER < 1800
 #if _MSC_VER > 1200
 #define INFINITY    _Inf._Double
 #define NAN         _Nan._Double
 #else
 #define INFINITY    _Inf._D
 #define NAN         _Nan._D
+#endif
 #endif
 #endif
 
