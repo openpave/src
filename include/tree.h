@@ -36,7 +36,9 @@
 #ifndef __TREE_H
 #define __TREE_H
 
+#ifdef TEST_TREES
 #include <stdio.h>
+#endif
 
 /*
  * class tree
@@ -76,14 +78,14 @@ struct BST
 		if (root != 0)
 			root->red = false;
 	}
+#ifdef TEST_TREES
 	void print() {
-		printf("Dumping:\n");
 		if (root == 0)
 			printf("Empty!\n");
 		else
 			print(0,0,root);
-		printf("\n");
 	}
+#endif
 
 private:
 	struct node {
@@ -214,6 +216,7 @@ private:
 			h = leanLeft(h);
 		return h;
 	}
+#ifdef TEST_TREES
 	void print(int level, unsigned order, node * h) {
 		if (h->right != 0)
 			print(level+1,order+h->order+1,h->right);
@@ -224,6 +227,467 @@ private:
 		if (h->left != 0)
 			print(level+1,order,h->left);
 	}
+#endif
+};
+
+template <class K, class V>
+class ktree_avl {
+public:
+	// Make one...
+	inline explicit ktree_avl()
+	  : size(0), buffer(0), block(DFLT_BLK), root(UINT_MAX), value(0) {
+	}
+	// Clean up.
+	inline ~ktree_avl() {
+		if (value)
+			free(value);
+	}
+	// The length. Nice for lots of things...
+	inline unsigned length() const {
+		return size;
+	}
+	// Do a key lookup, and return UINT_MAX if the key is not found.
+	inline unsigned haskey(const K & k) const {
+		unsigned x = root;
+		while (x != UINT_MAX) {
+			int cmp = k.compare(value[x]._v);
+			if (cmp == 0)
+				break;
+			else if (cmp < 0)
+				x = value[x].left;
+			else
+				x = value[x].right;
+		}
+		return x;
+	}
+	// We use node numbers to find our nodes...
+	inline V & operator[] (const unsigned p) const {
+		return value[p]._v;
+	}
+	// Add node.
+	inline void add(const V & v) {
+		bool grew = false;
+		
+		allocate(size+1);
+		append(root,v,&grew);
+		if (grew)
+			rebalance(root);
+	}
+#ifdef TEST_TREES
+	void print() {
+		if (root == UINT_MAX)
+			printf("Empty!\n");
+		else
+			print(0,root);
+	}
+#endif
+
+protected:
+	unsigned size;             // The size of the set...
+	unsigned buffer;           // The allocated buffer size...
+	unsigned block;            // The minimum block size.
+	unsigned root;             // Root of the tree.
+	struct _V {
+	private:
+		V _v;
+		
+		friend class ktree_avl;
+
+		int weight;            // Number of nodes under this one (including it).
+		unsigned left, right;  // Left and right node numbers
+
+		explicit _V(const V & v)
+		  : _v(v), 
+		    weight(1), left(UINT_MAX), right(UINT_MAX) {
+		}
+		// Placement new to support inplace init in the list.
+		void * operator new(size_t, void * p) {
+			return p;
+		}
+		void operator delete(void *, void *) {
+		}
+	} * value;            // Take a guess...
+
+	// Make some space...
+	void allocate(const unsigned s) {
+		while (s > 8*block)
+			block *= 8;
+		unsigned b = block*(s/block+(s%block?1:0));
+		if (b == buffer)
+			return;
+		_V * temp = static_cast<_V *>(realloc(value,b*sizeof(_V)));
+		if (temp == 0)
+			throw std::bad_alloc();
+		value = temp;
+		buffer = b;
+	}
+	void append(unsigned & r, const V & v, bool * grew) {
+		// If we're UINT_MAX that means we need to make a new node...
+		if (r == UINT_MAX) {
+			new(&value[size]) _V(v);
+			r = size++;
+			*grew = true;
+			return;
+		}
+#ifdef TEST_TREES
+		printf("Append @%d before:\n",r);
+		print();
+#endif
+		int cmp = static_cast<const K &>(v).compare(value[r]._v);
+		if (cmp == 0) {
+			value[r]._v = v;
+			return;
+		} else if (cmp < 0) {
+			// Re-root insert into left tree.
+			append(value[r].left,v,grew);
+			if (*grew)
+				value[r].weight++;
+		} else {
+			append(value[r].right,v,grew);
+			if (*grew)
+				value[r].weight++;
+		}
+#ifdef TEST_TREES
+		printf("Append @%d after:\n",r);
+		print();
+#endif
+	}
+	int balance(unsigned r) const {
+		return (value[r].right != UINT_MAX ? value[value[r].right].weight : 0)
+			   -(value[r].left != UINT_MAX ? value[value[r].left].weight : 0);
+	}
+	void rebalance(unsigned & r) {
+		unsigned x;
+		int b;
+		
+		if (r == UINT_MAX || value[r].weight <= 2)
+			return;
+#ifdef TEST_TREES
+		printf("Rebalance @%d before:\n",r);
+		print();
+#endif
+		b = balance(r);
+		if (b < -1) {
+			x = value[r].left;
+			while (value[x].right != UINT_MAX) {
+				rotate_left(x);
+				value[r].left = x;
+			}
+			rotate_right(r);
+		} else if (b > 1) {
+			x = value[r].right;
+			while (value[x].left != UINT_MAX) {
+				rotate_right(x);
+				value[r].right = x;
+			}
+			rotate_left(r);
+		}
+		rebalance(value[r].right);
+		rebalance(value[r].left);
+#ifdef TEST_TREES
+		printf("Rebalance @%d after:\n",r);
+		print();
+#endif
+	}
+	void rotate_left(unsigned & r) {
+		unsigned x = value[r].right;
+		value[r].weight -= value[x].weight;
+		value[r].right = value[x].left;
+		value[r].weight += (value[x].left != UINT_MAX ? value[value[x].left].weight : 0);
+		value[x].weight -= (value[x].left != UINT_MAX ? value[value[x].left].weight : 0);
+		value[x].left = r;
+		value[x].weight += value[r].weight;
+		r = x;
+	}
+	void rotate_right(unsigned & r) {
+		unsigned x = value[r].left;
+		value[r].weight -= value[x].weight;
+		value[r].left = value[x].right;
+		value[r].weight += (value[x].right != UINT_MAX ? value[value[x].right].weight : 0);
+		value[x].weight -= (value[x].right != UINT_MAX ? value[value[x].right].weight : 0);
+		value[x].right = r;
+		value[x].weight += value[r].weight;
+		r = x;
+	}
+#ifdef TEST_TREES
+	void print(int level, unsigned r) {
+		if (value[r].right != UINT_MAX)
+			print(level+1,value[r].right);
+		printf("%2d (%2i %+i): ",r,value[r].weight,balance(r));
+		for (int i = 0; i < level; i++)
+			printf(" ");
+		printf("%2d: %2.1f\n",value[r]._v.i,value[r]._v.d);
+		if (value[r].left != UINT_MAX)
+			print(level+1,value[r].left);
+	}
+#endif
+};
+
+template <class K, class V>
+class ktree_llrb {
+public:
+	// Make one...
+	inline explicit ktree_llrb()
+	  : size(0), buffer(0), block(DFLT_BLK), root(UINT_MAX), value(0) {
+	}
+	// Clean up.
+	inline ~ktree_llrb() {
+		if (value)
+			free(value);
+	}
+	// The length. Nice for lots of things...
+	inline unsigned length() const {
+		return size;
+	}
+	// Do a key lookup, and return UINT_MAX if the key is not found.
+	inline unsigned haskey(const K & k) const {
+		unsigned x = root;
+		while (x != UINT_MAX) {
+			int cmp = k.compare(value[x]._v);
+			if (cmp == 0)
+				break;
+			else if (cmp < 0)
+				x = value[x].left;
+			else
+				x = value[x].right;
+		}
+		return x;
+	}
+	// We use node numbers to find our nodes...
+	inline V & operator[] (const unsigned p) const {
+		return value[p]._v;
+	}
+	// Allow sorted access.
+	inline V & getindex(const unsigned i) const {
+		unsigned x = root, order = 0;
+		while (x != UINT_MAX) {
+			if (i == order + value[x].order)
+				break;
+			else if (i < order + value[x].order)
+				x = value[x].left;
+			else {
+				order += value[x].order + 1;
+				x = value[x].right;
+			}
+		}
+		return value[x]._v;
+	}
+	// Get the position of an element in the sort.
+	inline unsigned getorder(const unsigned i) const {
+		const K & k = static_cast<K &>(value[i]._v);
+		unsigned x = root, order = 0;
+		while (x != UINT_MAX) {
+			int cmp = k.compare(value[x]._v);
+			if (cmp == 0) {
+				order += value[x].order;
+				break;
+			} else if (cmp < 0) {
+				x = value[x].left;
+			} else {
+				order += value[x].order + 1;
+				x = value[x].right;
+			}
+		}
+		return order;
+	}
+	// Add node.
+	inline void add(const V & v) {
+		bool grew = false;
+		
+		allocate(size+1);
+		append(root,v,&grew);
+		allocate(size);
+		value[root].red = false;
+	}
+#ifdef TEST_TREES
+	void print() {
+		if (root == UINT_MAX)
+			printf("Empty!\n");
+		else
+			print(0,0,root);
+	}
+#endif
+
+protected:
+	unsigned size;             // The size of the set...
+	unsigned buffer;           // The allocated buffer size...
+	unsigned block;            // The minimum block size.
+	unsigned root;             // Root of red-black tree.
+	struct _V {
+	private:
+		V _v;
+		
+		friend class ktree_llrb;
+
+		unsigned order;        // Number of nodes on left
+		unsigned left, right;  // Left and right node numbers
+		bool red;              // Colour of link to parent
+
+		explicit _V(const V & v)
+		  : _v(v), 
+		    order(0), left(UINT_MAX), right(UINT_MAX), red(true) {
+		}
+		// Placement new to support inplace init in the list.
+		void * operator new(size_t, void * p) {
+			return p;
+		}
+		void operator delete(void *, void *) {
+		}
+	} * value;            // Take a guess...
+
+
+	// Make some space...
+	void allocate(const unsigned s) {
+		while (s > 8*block)
+			block *= 8;
+		unsigned b = block*(s/block+(s%block?1:0));
+		if (b == buffer)
+			return;
+		_V * temp = static_cast<_V *>(realloc(value,
+				b*sizeof(_V)));
+		if (temp == 0)
+			throw std::bad_alloc();
+		value = temp;
+		buffer = b;
+	}
+	void append(unsigned & r, const V & v, bool * grew) {
+		unsigned x;
+		
+		// If we're UINT_MAX that means we need to make a new node...
+		if (r == UINT_MAX) {
+			new(&value[size]) _V(v);
+			r = size++;
+			*grew = true;
+			return;
+		}
+		// Split double reds on the way down.
+		x = value[r].left;
+		if (x != UINT_MAX && value[x].red) {
+			if (value[x].left != UINT_MAX && value[value[x].left].red) {
+				value[r].left = value[x].right;
+				value[x].right = r;
+				value[r].order -= value[x].order + 1;
+				r = x;
+				value[value[r].left].red = false;
+			}
+		}
+		int cmp = static_cast<const K &>(v).compare(value[r]._v);
+		if (cmp == 0) {
+			value[r]._v = v;
+			return;
+		} else if (cmp < 0) {
+			// Re-root insert into left tree.
+			append(value[r].left,v,grew);
+			if (*grew)
+				value[r].order++;
+		} else {
+			// Or right tree.  Same issue here as above.
+			append(value[r].right,v,grew);
+		}
+		x = value[r].right;
+		if (x != UINT_MAX && value[x].red) {
+			value[r].right = value[x].left;
+			value[x].left = r;
+			value[x].order += value[r].order + 1;
+			r = x;
+			value[r].red = value[value[r].left].red;
+			value[value[r].left].red = true;
+		}
+	}
+	unsigned remove(unsigned r, const K & k) {
+		int cmp = k.compare(value[r]._v);
+		if (cmp < 0) {
+			// If k is missing do nothing.
+			if (value[r].left == UINT_MAX)
+				return r;
+			// move red left is needed.
+			if (!value[value[r].left].red
+			 && (value[value[r].left].left == UINT_MAX || !value[value[value[r].left].left].red)) {
+				value[r].red = false;
+				value[value[r].left].red = true;
+				if (value[value[r].right].left != UINT_MAX && value[value[value[r].right].left].red) {
+					unsigned x = value[value[r].right].left;
+					value[r].left = value[x].right;
+					value[x].right = r;
+					value[r].order -= value[x].order + 1;
+					value[r].right = value[x].left;
+					value[x].left = r;
+					value[x].order += value[r].order + 1;
+					r = x;
+				} else
+					value[value[r].right].red = true;
+			}
+			// Re-root delete in left branch.
+			value[r].left = remove(value[r].left,k);
+		} else {
+			// Lean red links right going down.
+			if (value[value[r].left != UINT_MAX && value[r].left].red) {
+				unsigned x = value[r].left;
+				value[r].left = value[x].right;
+				value[x].right = r;
+				value[r].order -= value[x].order + 1;
+				r = x;
+				value[r].red = value[value[r].right].red;
+				value[value[r].right].red = true;
+			}
+			// We've found our node, and it's a leaf.
+			if (cmp == 0 && value[r].right == UINT_MAX) {
+				value[r].~_V();
+				return UINT_MAX;
+			}
+			// Push red right going down.
+			if (!value[value[r].right].red
+			 && (value[value[r].right->left == UINT_MAX || !value[r].right->left].red)) {
+				value[r].red = false;
+				value[value[r].right].red = true;
+				if (value[value[r].left->left != UINT_MAX && value[r].left->left].red) {
+					unsigned x = value[r].left;
+					value[r].left = value[x].right;
+					value[x].right = r;
+					value[r].order -= value[x].order + 1;
+					r = x;
+					value[r].red = true;
+					value[value[r].left].red = false;
+				} else
+					value[value[r].left].red = true;
+			}
+			// We've found our node, but it's not a leaf...
+			// Replace it with the minimum right node and
+			// then remove that node...
+			if (cmp == 0) {
+				unsigned x = value[r].right;
+				while (value[x].left != UINT_MAX)
+					x = value[x].left;
+				value[r]._v = value[x]._v;
+				value[r].right = remove(value[r].right,value[x]._v);
+			} else
+				// Look on the right.
+				value[r].right = remove(value[r].right,k);
+		}
+		// fixed up right leaning reds on the way up.
+		if (value[r].right != 0 && value[r].right->red) {
+			unsigned x = value[r].right;
+			value[r].right = value[x].left;
+			value[x].left = r;
+			value[x].order += value[r].order + 1;
+			r = x;
+			value[r].red = value[value[r].left].red;
+			value[value[r].left].red = true;
+		}
+		return r;
+	}
+#ifdef TEST_TREES
+	void print(int level, unsigned order, unsigned r) {
+		if (value[r].right != UINT_MAX)
+			print(level+1,order+value[r].order+1,value[r].right);
+		printf("%d: (%d %d %d) ",r,order,value[r].order,order+value[r].order);
+		for (int i = 0; i < level; i++)
+			printf(" ");
+		printf("%02d: %f %s\n",value[r]._v.i,value[r]._v.d,(value[r].red?"RED  ":"BLACK"));
+		if (value[r].left != UINT_MAX)
+			print(level+1,order,value[r].left);
+	}
+#endif
 };
 
 #endif // TREE_H

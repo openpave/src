@@ -28,6 +28,7 @@
 
 **************************************************************************/
 
+#define TEST_TREES
 #include "mathplus.h"
 #include "set.h"
 #include "tree.h"
@@ -39,6 +40,7 @@ struct key {
 	int i;
 	key() : i(0) {}
 	key(int s) : i(s) {}
+	int compare (const key & k) const { return (i==k.i ? 0 : SGN(i-k.i)); }
 	bool operator== (const key & k) const { return (i==k.i); }
 	bool operator<  (const key & k) const { return (i< k.i); }
 	bool operator<= (const key & k) const { return (i<=k.i); }
@@ -264,7 +266,61 @@ test_set5()
 			double v = double(i);
 			printf("Inserting %d: %f\n",s,v);
 			bst.insert(key(s),value(v));
+			printf("Dumping:\n");
 			bst.print();
+			printf("\n");
+		}
+		//bst.print();
+		//for (i = 0; i < N; i++) {
+		//	bst.remove(key(i));
+		//}
+		//bst.print();
+	}
+	printf("\n");
+}
+
+static void
+test_set6a()
+{
+	ktree_llrb<key,pair> bst;
+
+	unsigned i, l = 1;
+	while (l-- > 0) {
+		fflush(NULL);
+		for (i = 0; i < N; i++) {
+			int s = int(floor(RAND(0,N)));
+			double v = double(i);
+			printf("Inserting %d: %f\n",s,v);
+			bst.add(pair(s,v));
+			printf("Dumping:\n");
+			bst.print();
+			printf("\n");
+		}
+		//bst.print();
+		//for (i = 0; i < N; i++) {
+		//	bst.remove(key(i));
+		//}
+		//bst.print();
+	}
+	printf("\n");
+}
+
+static void
+test_set6b()
+{
+	ktree_avl<key,pair> bst;
+
+	unsigned i, l = 1;
+	while (l-- > 0) {
+		fflush(NULL);
+		for (i = 0; i < N; i++) {
+			int s = int(floor(RAND(0,10*N)));
+			double v = double(i);
+			printf("Inserting %d: %f\n",s,v);
+			bst.add(pair(s,v));
+			printf("Dumping:\n");
+			bst.print();
+			printf("\n");
 		}
 		//bst.print();
 		//for (i = 0; i < N; i++) {
@@ -293,7 +349,11 @@ main()
 	printf("\nTest 4:\n");
 	test_set4();
 	printf("\n");
-	printf("\nTest 4:\n");
+	printf("\nTest 5:\n");
 	test_set5();
+	printf("\nTest 6a:\n");
+	test_set6a();
+	printf("\nTest 6b:\n");
+	test_set6b();
 	return 0;
 }
