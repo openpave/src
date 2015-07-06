@@ -31,7 +31,6 @@
 #include "mathplus.h"
 #include "matrix.h"
 
-#if defined(DEBUG)
 static void
 print_matlab(const char * c, unsigned m, unsigned n, double * A)
 {
@@ -42,7 +41,6 @@ print_matlab(const char * c, unsigned m, unsigned n, double * A)
 	}
 	printf("];\n");
 }
-#endif
 
 static void
 init_matrix_u(unsigned n, unsigned w, double * A)
@@ -90,14 +88,12 @@ residual(unsigned n, double * B, double * x, double * b)
 		c1 = t1 - dot - y1; dot = t1;
 	}
 	dot = sqrt(dot);
-#if defined(DEBUG)
 	if (dot > n*n*1e-8) {
 		printf("\n%g\n",dot);
 		print_matlab("A",n,n,B);
 		print_matlab("b",n,1,b);
 		print_matlab("x",n,1,x);
 	}
-#endif
 	return dot;
 }
 
@@ -116,17 +112,16 @@ identity(unsigned n, double * A, double * B)
 				res = fabs(I);
 		}
 	}
-#if defined(DEBUG)
 	if (res > n*n*1e-8) {
 		printf("\n%g\n",res);
 		print_matlab("A",n,n,A);
 		print_matlab("B",n,n,B);
 	}
-#endif
 	return res;
 }
 
 #define N 10
+#define M 5
 #define W 3
 
 static void
@@ -260,6 +255,31 @@ test4()
 }
 
 static void
+test5()
+{
+	int i, j;
+	double * A = new double[N*M];
+	double * B = new double[M*N];
+
+	for (i = 0; i < M; i++) {
+		for (j = 0; j < N; j++)
+			B[j*M+i] = A[i*N+j] = RAND(0.0,1.0);
+	}
+	print_matlab("A",M,N,A);
+	transpose(M,N,A);
+	print_matlab("At",N,M,A);
+	print_matlab("B",N,M,B);
+	for (i = 0; i < M; i++) {
+		for (j = 0; j < N; j++) {
+			if (B[j*M+i] != A[j*M+i])
+				printf("Transpose doesn't work!");
+		}
+	}
+	delete [] A;
+	delete [] B;
+}
+
+static void
 test_tmatrix()
 {
 	tmatrix<double,3,2> B;
@@ -317,12 +337,15 @@ main()
 	test3();
 	printf("Test 4:\n");
 	test4();
+	printf("Test 5:\n");
+	test5();
 	printf("Test tmatrix:\n");
 	test_tmatrix();
 	return 0;
 }
 
 #undef N
+#undef M
 #undef W
 
 #if 0
