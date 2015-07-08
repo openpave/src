@@ -388,12 +388,12 @@ class LEsystem : private list_owned<LEsystem, LElayer> {
 public:
 	LEsystem()
 	  : list_owned<LEsystem,LElayer>(), data(), load(),
-	    cache(0), cache_state(cachestate::reset) {
+	    cache_state(reset), cache(0) {
 	    cache_reset();
 	}
 	LEsystem(LEsystem & p)
 	  : list_owned<LEsystem,LElayer>(p), data(p.data), load(p.load),
-	    cache(0), cache_state(cachestate::reset) {
+	    cache_state(reset), cache(0) {
 	    cache_reset();
 	}
 	~LEsystem() {
@@ -466,7 +466,7 @@ protected:
 		pressure = 0x0002,
 		emod     = 0x0004,
 		checked  = 0x0008
-	} cache_state;
+	};
 	friend cachestate & operator&= (cachestate & l, const cachestate r);
 	friend cachestate operator~ (const cachestate l);
 
@@ -478,6 +478,7 @@ private:
 	ksset<pavepoint,pavedata> data;
 	sset<paveload> load;
 	
+	cachestate cache_state;
 	LEsystem_cache * cache;
 };
 

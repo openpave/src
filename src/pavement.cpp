@@ -264,7 +264,7 @@ LEsystem::addlayer(double h, double e, const double v, const double s,
 	LElayer * pl = first;
 	unsigned i = 0;
 
-	cache_state &= ~cachestate::geom;
+	cache_state &= ~geom;
 	if (p == UINT_MAX)
 		pl = last;
 	else
@@ -279,7 +279,7 @@ LEsystem::removelayer(const unsigned l)
 	LElayer * pl = first;
 	unsigned i = 0;
 
-	cache_state &= ~cachestate::geom;
+	cache_state &= ~geom;
 	while (i++ < l && pl != 0)
 		pl = pl->next;
 	delete pl;
@@ -288,7 +288,7 @@ LEsystem::removelayer(const unsigned l)
 void
 LEsystem::removelayers()
 {
-	cache_state &= ~cachestate::geom;
+	cache_state &= ~geom;
 	empty();
 }
 
@@ -306,35 +306,35 @@ LEsystem::layer(const unsigned l) const
 void
 LEsystem::addload(const point2d & l, double f, double p, double r)
 {
-	cache_state &= ~cachestate::geom;
+	cache_state &= ~geom;
 	return load.add(paveload(l,f,p,r));
 }
 
 void
 LEsystem::addload(const paveload & l)
 {
-	cache_state &= ~cachestate::geom;
+	cache_state &= ~geom;
 	load.add(l);
 }
 
 void
 LEsystem::removeload(const unsigned i)
 {
-	cache_state &= ~cachestate::geom;
+	cache_state &= ~geom;
 	load.remove(i);
 }
 
 void
 LEsystem::removeloads()
 {
-	cache_state &= ~cachestate::geom;
+	cache_state &= ~geom;
 	load.empty();
 }
 
 void
 LEsystem::addpoint(const point3d & p, unsigned l)
 {
-	cache_state &= ~cachestate::geom;
+	cache_state &= ~geom;
 	data.add(pavedata(p,l));
 }
 
@@ -343,7 +343,7 @@ LEsystem::addgrid(const unsigned nx, const double * xp,
                   const unsigned ny, const double * yp,
                   const unsigned nz, const double * zp)
 {
-	cache_state &= ~cachestate::geom;
+	cache_state &= ~geom;
 	for (unsigned ix = 0; ix < nx; ix++) {
 		for (unsigned iy = 0; iy < ny; iy++) {
 			for (unsigned iz = 0; iz < nz; iz++)
@@ -355,14 +355,14 @@ LEsystem::addgrid(const unsigned nx, const double * xp,
 void
 LEsystem::removepoint(const point3d & p, unsigned l)
 {
-	cache_state &= ~cachestate::geom;
+	cache_state &= ~geom;
 	data.remove(pavepoint(p,l));
 }
 
 void
 LEsystem::removepoints()
 {
-	cache_state &= ~cachestate::geom;
+	cache_state &= ~geom;
 	data.empty();
 }
 
