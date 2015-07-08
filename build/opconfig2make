@@ -40,8 +40,6 @@
 # opconfig2make - Translates opconfig into options for openpave.mk.
 #    Prints defines to stdout.
 #
-# $OpenPave$
-#
 # See opconfig2configure for more details
 
 print_header() {

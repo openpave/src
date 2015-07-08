@@ -1,6 +1,5 @@
 #!gmake
 #
-# $OpenPave$
 
 topsrcdir        = @top_srcdir@
 srcdir           = @srcdir@

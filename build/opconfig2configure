@@ -41,8 +41,6 @@
 #    command-line. See opconfig-find for how the config file is
 #    found
 #
-# $OpenPave$
-#
 #    The options from opconfig are inserted into the command-line
 #    before the real command-line options. This way the real options
 #    will override any opconfig options.

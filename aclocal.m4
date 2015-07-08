@@ -1,6 +1,3 @@
-dnl
-dnl $OpenPave$
-dnl 
 dnl READ_OPCONFIG() - Read in 'opconfig' file
 AC_DEFUN([READ_OPCONFIG],
 [AC_REQUIRE([AC_INIT_BINSH])dnl

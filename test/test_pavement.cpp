@@ -2,8 +2,6 @@
 
 	TEST_PAVEMENT.CPP - A test harness for LEsystem.
 
-	$OpenPave$
-
 	The contents of this file are subject to the Academic Development
 	and Distribution License Version 1.0 (the "License"); you may not
 	use this file except in compliance with the License.  You should

@@ -1,8 +1,6 @@
 #
 #    OPENPAVE.MK - Global makefile for the Openpave source
 #
-#    $OpenPave$
-#
 #    The OpenPave build system is based on the Mozilla build system and is
 #    thus sibject to their license, as given below.
 #

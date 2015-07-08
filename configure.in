@@ -3,7 +3,6 @@ dnl
 dnl CONFIGURE.IN - Autoconf macros to generate configure
 dnl  Based on NSPR's configure.in
 dnl
-dnl $OpenPave$
 
 dnl ***** BEGIN LICENSE BLOCK *****
 dnl Version: MPL 1.1/GPL 2.0/LGPL 2.1

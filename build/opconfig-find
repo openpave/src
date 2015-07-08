@@ -44,8 +44,6 @@
 #       Otherwise, use $TOPSRCDIR/opconfig
 #       Otherwise, use $HOME/opconfig
 #
-# $OpenPave$
-#
 topsrcdir=$1
 
 if test $OSTYPE = "cygwin"; then

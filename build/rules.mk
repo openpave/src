@@ -1,6 +1,4 @@
 #
-# $OpenPave$
-#
 
 # Translate source filenames to absolute paths. This is required for
 # debuggers under Windows to find source files automatically.
