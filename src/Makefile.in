@@ -13,6 +13,7 @@ CXXSRCS = \
 	linalg.cpp   \
 	pavement.cpp        \
 	reliability.cpp     \
+	statistics.cpp      \
 	thermal.cpp         \
 	$(NULL)
 

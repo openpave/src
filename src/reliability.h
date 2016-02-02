@@ -1,6 +1,6 @@
 /**************************************************************************
 
-	RELIABILIY.H - Interface for the reliability class.
+	RELIABILITY.H - Interface for the reliability class.
 
 	The contents of this file are subject to the Academic Development
 	and Distribution License Version 1.0 (the "License"); you may not
@@ -57,12 +57,6 @@
 
 #ifndef __RELIABILITY_H
 #define __RELIABILITY_H
-
-double stdnormal_rnd();
-double stdnormal_pdf(double);
-double quad8_stdnormal_pdf(double, double, double);
-double stdnormal_cdf(double);
-double stdnormal_inv(double);
 
 class reliability;
 
