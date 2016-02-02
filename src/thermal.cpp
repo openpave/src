@@ -28,9 +28,12 @@
 
 *************************************************************************/
 
-#include "event.h"
+#include <memory.h>
+#include <assert.h>
+#include <stdio.h>
 #include "autodelete.h"
-#include "matrix.h"
+#include "event.h"
+#include "linalg.h"
 #include "thermal.h"
 
 /*

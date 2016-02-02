@@ -457,7 +457,7 @@ public:
 	bool calc_fastnum();
 
 protected:
-	void * cache_alloc(size_t len);
+	template<typename T> T * cache_alloc(unsigned count);
 	void cache_reset();
 	void cache_free();
 	enum cachestate {

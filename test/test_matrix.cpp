@@ -27,7 +27,9 @@
 **************************************************************************/
 
 #include "mathplus.h"
+#include "tmatrix.h"
 #include "matrix.h"
+#include "linalg.h"
 
 static void
 print_matlab(const char * c, unsigned m, unsigned n, double * A)

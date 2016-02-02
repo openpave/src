@@ -67,7 +67,7 @@
 #include "set.h"
 #include "tree.h"
 #include "tmatrix.h"
-#include "matrix.h"
+#include "linalg.h"
 #include "rng.h"
 #include "pavement.h"
 

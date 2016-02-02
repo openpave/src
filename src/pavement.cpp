@@ -29,7 +29,7 @@
 *************************************************************************/
 
 #include "pavement.h"
-#include "matrix.h"
+#include "linalg.h"
 #include <time.h>
 #include <stdio.h>
 
@@ -166,8 +166,8 @@ class LEsystem_cache {
 		q = mark;
 		while (true) {
 		    // get the amount of space left in this slab.
-			l = reinterpret_cast<char *>(p) + MAX(len,page_size)
-			      -reinterpret_cast<char *>(q);
+			l = static_cast<char *>(p) + MAX(len,page_size)
+			      -static_cast<char *>(q);
 			// check if there is enough space for this request
 			if (l-static_cast<ssize_t>(len) >= 0)
 				break;
@@ -177,7 +177,7 @@ class LEsystem_cache {
 			if (p == 0)
 				break;
 			// now get the new mark
-			c = reinterpret_cast<LEsystem_cache *>(p);
+			c = static_cast<LEsystem_cache *>(p);
 			q = c->mark;
 		}
 		if (p == 0) {
@@ -188,7 +188,7 @@ class LEsystem_cache {
 			c = new(p) LEsystem_cache();
 			q = c->mark = align(c + sizeof(LEsystem_cache));
 		}
-		c->mark = align(reinterpret_cast<char *>(q) + len);
+		c->mark = align(static_cast<char *>(q) + len);
 		return q;
 	}
 	void reset() {
@@ -213,7 +213,7 @@ class LEsystem_cache {
 			return;
 		p = c->next;
 		while (p != 0) {
-			c = reinterpret_cast<LEsystem_cache *>(p);
+			c = static_cast<LEsystem_cache *>(p);
 			p = c->next;
 			c->~LEsystem_cache();
 			free(c);
@@ -235,12 +235,13 @@ class LEsystem_cache {
 	}
 };
 
-void *
-LEsystem::cache_alloc(size_t len)
+template<typename T>
+T *
+LEsystem::cache_alloc(unsigned count)
 {
 	if (cache == 0)
 		cache = LEsystem_cache::create();
-	return cache->allocate(len);
+	return static_cast<T *>(cache->allocate(count*sizeof(T)));
 }
 
 void
@@ -1105,7 +1106,14 @@ LEsystem::calculate(resulttype res, const double * Q)
 	if (!check())
 		return false;
 	cache_reset();
-	unsigned ngqp = NGQP, nbz = NBZ, gl = UINT_MAX, nl = layers();
+	resulttype &c_res = *cache_alloc<resulttype>(1);
+	if (c_res != res)
+		cache_state = reset;
+	c_res = res;	
+	unsigned * c_counts = cache_alloc<unsigned>(4);
+	unsigned &ngqp = c_counts[0], &nbz = c_counts[1];
+	unsigned &gl = c_counts[2], &nl = c_counts[3];
+	ngqp = NGQP, nbz = NBZ, gl = UINT_MAX, nl = layers();
 	if ((res & mask) == dirty) {
 		ngqp = MIN(NGQP,8);
 		nbz = MIN(NBZ,64);

@@ -1,6 +1,6 @@
 /*************************************************************************
 
-	MATRIX.CPP - Implementation for matrix operations.
+	LINALG.CPP - Implementation for linear algebra operations.
 
 	The contents of this file are subject to the Academic Development
 	and Distribution License Version 1.0 (the "License"); you may not
@@ -21,16 +21,20 @@
 
 	Contributor(s): Jeremy Lea <reg@openpave.org>.
 
-	See MATRIX.H.
+	See LINALG.H.
 
 	History:
 		2006/07/19 - Created by Jeremy Lea <reg@openpave.org>
 
 *************************************************************************/
 
+#include <memory.h>
+#include <assert.h>
 #include <stdio.h>
-#include "matrix.h"
 #include "autodelete.h"
+#include "mathplus.h"
+#include "event.h"
+#include "linalg.h"
 
 /*
  * In-place transpose a rectangular matrix.
