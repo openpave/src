@@ -48,6 +48,8 @@
 #ifndef __LIST_H
 #define __LIST_H
 
+#include <assert.h>
+
 // Forward declare some classes...
 template <class T>
 class list_double;
@@ -67,11 +69,19 @@ protected:
 	T * prev;                   // The previous element.
 
 	// Create a new list element, with an optional previous element.
-	// We force the consumer to use 0 so that they have to think.
-	listelement_d(T * p)
-	  : next(0), prev(p) {
-		if (prev != 0) {
-			if (prev->next != 0) {
+	// We force the consumer to use nullptr so that they have to think.
+	listelement_d(T * p, T * n = nullptr)
+	  : next(n), prev(p) {
+		if (next != nullptr) {
+			if (next->prev != nullptr) {
+				if (prev != nullptr)
+					assert(prev == next->prev);
+				prev = next->prev;
+				prev->next = static_cast<T *>(this);
+			}
+			next->prev = static_cast<T *>(this);
+		} else if (prev != nullptr) {
+			if (prev->next != nullptr) {
 				next = prev->next;
 				next->prev = static_cast<T *>(this);
 			}
@@ -80,9 +90,9 @@ protected:
 	}
 	// Unlink ourselves from the list before we die...
 	~listelement_d() {
-		if (prev != 0)
+		if (prev != nullptr)
 			prev->next = next;
-		if (next != 0)
+		if (next != nullptr)
 			next->prev = prev;
 	}
 	// These are so the other classes can access our points.
@@ -104,28 +114,26 @@ protected:
 	O * owner;                  // Our owner.
 
 	// Create an element.
-	listelement_o(O * o, T * p = 0)
-	  : listelement_d<T>(p), owner(o) {
-		if (owner != 0) {
-			if (this->prev == 0) {
-				this->prev = owner->last;
-				if (this->prev != 0)
-					this->prev->next = static_cast<T *>(this);
-				else
-					owner->first = static_cast<T *>(this);
-			}
-			if (this->next == 0)
-				owner->last = static_cast<T *>(this);
+	listelement_o(O * o, T * p = nullptr, T * n = nullptr)
+	  : listelement_d<T>(p,n), owner(o) {
+		assert(owner != nullptr);
+		if (this->prev == nullptr && this->next == nullptr) {
+			this->prev = owner->last;
+			if (this->prev != nullptr)
+				this->prev->next = static_cast<T *>(this);
 		}
+		if (this->prev == nullptr)
+			owner->first = static_cast<T *>(this);
+		if (this->next == nullptr)
+			owner->last = static_cast<T *>(this);
 	}
 	// Also manage our owner's pointers.
 	~listelement_o() {
-		if (owner != 0) {
-			if (this->prev == 0)
-				owner->first = this->next;
-			if (this->next == 0)
-				owner->last = this->prev;
-		}
+		assert(owner != nullptr);
+		if (this->prev == nullptr)
+			owner->first = this->next;
+		if (this->next == nullptr)
+			owner->last = this->prev;
 	}
 
 	//friend class O;
@@ -146,7 +154,7 @@ protected:
 
 	// All lists start empty...
 	list_double()
-	  : first(0), last(0) {
+	  : first(nullptr), last(nullptr) {
 	}
 	~list_double() {
 		empty();
@@ -154,13 +162,13 @@ protected:
 
 	// Check in the list is empty.
 	bool inline isempty() const {
-		return (first == 0 ? true : false);
+		return (first == nullptr ? true : false);
 	}
 	// Figure out the length of the list.
 	unsigned length() const {
 		unsigned s = 0;
 		T * t = first;
-		while (t != 0) {
+		while (t != nullptr) {
 			t = t->next;
 			s++;
 		}
@@ -168,13 +176,10 @@ protected:
 	}
 	// Sometimes you just need to start a new list.
 	void empty() {
-		if (first != 0) {
-			while (first->next != 0)
-				delete first->next;
+		while (first != nullptr)
 			delete first;
-		}
-		first = 0;
-		last = 0;
+		first = nullptr;
+		last = nullptr;
 	}
 };
 
