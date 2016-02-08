@@ -154,6 +154,12 @@ public:
 		assert(inbounds(p));
 		return value[p];
 	}
+	// Flatten the set into a traditional array.  Caller is responsible
+	// for correct size.
+	void copyout(V * v) const {
+		for (unsigned i = 0; i < size; i++)
+			v[i] = value[i];
+	}
 
 protected:
 	V * value;                 // The buffer.
@@ -570,6 +576,13 @@ public:
 		assert(inbounds(i));
 		return idx[i];
 	}
+	// Flatten the set into a traditional array.  Caller is responsible
+	// for correct size.
+	void copyout(V * v) const {
+		for (unsigned i = 0; i < size; i++)
+			v[i] = value[i];
+	}
+
 
 	// Add one value at the end.
 	inline void add(const V & v) {
@@ -606,12 +619,6 @@ public:
 		if (q < size)
 			memmove(&idx[q],&idx[q+1],(size-q)*sizeof(unsigned));
 		allocate(size);
-	}
-	// Replace key/value with another.
-	inline void replace(const V & v) {
-		unsigned p = hasvalue(v);
-		assert (p != UINT_MAX);
-		value[p] = v;
 	}
 	inline void empty() {
 		deallocate();
@@ -759,6 +766,13 @@ public:
 		assert(inbounds(p));
 		return value[p];
 	}
+	// Flatten the set into a traditional array.  Caller is responsible
+	// for correct size.
+	void copyout(V * v) const {
+		for (unsigned i = 0; i < size; i++)
+			v[i] = value[i];
+	}
+
 
 protected:
 	V * value;                 // The data.
@@ -1045,6 +1059,13 @@ public:
 		assert(inbounds(i));
 		return findkey(value[i]);
 	}
+	// Flatten the set into a traditional array.  Caller is responsible
+	// for correct size.
+	void copyout(V * v) const {
+		for (unsigned i = 0; i < size; i++)
+			v[i] = value[i];
+	}
+
 
 	// Add one value at the end.
 	inline void add(const V & v) {
@@ -1234,6 +1255,7 @@ public:
 		assert(inbounds(p));
 		return value[p];
 	}
+
 protected:
 	K * key;                   // The keys.
 	V * value;                 // Take a guess...
@@ -1490,6 +1512,7 @@ public:
 	inline void sort() {
 		qsort(0,this->size);
 	}
+
 protected:
 	void qsort(const unsigned l, const unsigned r) {
 		if (r <= l)
