@@ -141,78 +141,86 @@ pavedata::principle(double v, double E)
  */
 class LEsystem_cache {
 	friend class LEsystem;
-	static const size_t page_size = 4*1024*1024;
-	
-	void * next;        // the next slab
-	void * mark;        // the fill level for this slab
+	// always under allocate a little to help malloc()
+	// 6*sizeof(void *) ~= 32+sizeof(this);
+	static const size_t page_size = 0x400000 - 6*sizeof(void *);
+
+	LEsystem_cache * next;              // the next slab
+	void * mark;                        // the fill level for this slab
 	
 	LEsystem_cache()
-	  : next(0), mark(0) {
+	  : next(nullptr), mark(nullptr) {
 	}
 	~LEsystem_cache() {
 	}
 	void * allocate(const size_t len) {
-		void * p, * q;
+		size_t s = align(MAX(len,page_size)) + align(sizeof(LEsystem_cache));
+		void * p = this, * q;
 		ptrdiff_t l;
 		LEsystem_cache * c;
 		
-		assert(mark != 0);
-		p = this;
-		c = this;
-		if (mark == this) {
-			// The cache is empty
-			mark = align(this + sizeof(LEsystem_cache));
-		}
-		q = mark;
-		while (true) {
+		assert(this->mark != nullptr);
+		while (p != nullptr) {
+			// now get the new mark
+			c = static_cast<LEsystem_cache *>(p);
+			if (c->mark == c)
+				// The cache is empty or has been reset
+				c->mark = align(c + sizeof(LEsystem_cache));
+			q = c->mark;
 		    // get the amount of space left in this slab.
-			l = static_cast<char *>(p) + MAX(len,page_size)
-			      -static_cast<char *>(q);
+			l = static_cast<char *>(p) + s - static_cast<char *>(q);
 			// check if there is enough space for this request
-			if (l-static_cast<ssize_t>(len) >= 0)
+			if (l-static_cast<ssize_t>(align(len)) >= 0)
 				break;
 			// get the next slab
 			p = c->next;
-			// do we need a new slab?
-			if (p == 0)
-				break;
-			// now get the new mark
-			c = static_cast<LEsystem_cache *>(p);
-			q = c->mark;
 		}
-		if (p == 0) {
-			p = malloc(MAX(len,page_size) + sizeof(LEsystem_cache));
-			if (p == 0)
+		// Allocate a new slab
+		if (p == nullptr) {
+			// First mark the current slab as full.
+			c->mark = align(static_cast<char *>(static_cast<void *>(c)) + s);
+			p = malloc(s);
+			if (p == nullptr)
 				throw std::bad_alloc();
-			c->next = p;
+			// Connect to current slab
+			c->next = static_cast<LEsystem_cache *>(p);
+			// Create the new entry at the start of the slab
 			c = new(p) LEsystem_cache();
+			// set the new mark
 			q = c->mark = align(c + sizeof(LEsystem_cache));
 		}
+		// Finally increment the mark to cover the space
 		c->mark = align(static_cast<char *>(q) + len);
+		// Return the original mark to the caller
 		return q;
 	}
 	void reset() {
-		mark = this;
+		LEsystem_cache * c = this;
+
+		while (c != nullptr) {
+			c->mark = c;
+			c = c->next;
+		};
 	}
 	static LEsystem_cache * create() {
 		void * p;
 		LEsystem_cache * c;
 		
 		p = malloc(page_size);
-		if (p == 0)
+		if (p == nullptr)
 			throw std::bad_alloc();
 		c = new(p) LEsystem_cache();
-		c->mark = p;
+		c->mark = c;
 		return c;
 	}
 	static void destroy(LEsystem_cache * cache) {
 		void * p;
 		LEsystem_cache * c = cache;
 		
-		if (c == 0)
+		if (c == nullptr)
 			return;
 		p = c->next;
-		while (p != 0) {
+		while (p != nullptr) {
 			c = static_cast<LEsystem_cache *>(p);
 			p = c->next;
 			c->~LEsystem_cache();
@@ -239,7 +247,7 @@ template<typename T>
 T *
 LEsystem::cache_alloc(unsigned count)
 {
-	if (cache == 0)
+	if (cache == nullptr)
 		cache = LEsystem_cache::create();
 	return static_cast<T *>(cache->allocate(count*sizeof(T)));
 }
@@ -247,7 +255,7 @@ LEsystem::cache_alloc(unsigned count)
 void
 LEsystem::cache_reset()
 {
-	if (cache != 0)
+	if (cache != nullptr)
 		cache->reset();
 }
 
@@ -255,7 +263,7 @@ void
 LEsystem::cache_free()
 {
 	LEsystem_cache::destroy(cache);
-	cache = 0;
+	cache = nullptr;
 }
 
 void
