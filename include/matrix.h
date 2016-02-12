@@ -129,7 +129,7 @@ private:
  */
 class matrix_storage_ptr {
 public:
-	inline matrix_storage_ptr(matrix_storage * p = 0)
+	inline matrix_storage_ptr(matrix_storage * p = nullptr)
 	  : ptr(p) {
 		addref();
 	}
@@ -139,32 +139,32 @@ public:
 	}
 	inline ~matrix_storage_ptr() {
 		release();
-		ptr = 0;
+		ptr = nullptr;
 	}
 	inline int addref() const {
-		if (ptr == 0)
+		if (ptr == nullptr)
 			return 0;
 		return ptr->addref();
 	}
 	inline int refcount() const {
-		if (ptr == 0)
+		if (ptr == nullptr)
 			return 0;
 		return ptr->refcount();
 	}
 	inline int release() {
-		if (ptr == 0)
+		if (ptr == nullptr)
 			return 0;
 		int count = ptr->release();
 		if (count == 0)
 			delete ptr;
-		ptr = 0;
+		ptr = nullptr;
 		return count;
 	}
 	// assignment
 	matrix_storage_ptr & operator= (const matrix_storage_ptr & p) {
 		if (this != &p) {
 			matrix_storage * t = p.ptr;
-			if (t != 0)
+			if (t != nullptr)
 				t->addref();
 			release();
 			ptr = t;
@@ -173,11 +173,11 @@ public:
 	}
 	// access the value to which the pointer refers
 	matrix_storage & operator* () const {
-		assert(ptr != 0);
+		assert(ptr != nullptr);
 		return *ptr;
 	}
 	matrix_storage * operator-> () const {
-		assert(ptr != 0);
+		assert(ptr != nullptr);
 		return ptr;
 	}
 
@@ -192,12 +192,12 @@ class matrix_dense : public matrix_storage {
 public:
 	// A few constructors, for various uses...
 	inline matrix_dense(const unsigned m, const unsigned n)
-	  : matrix_storage(none), data(0) {
+	  : matrix_storage(none), data(nullptr) {
 		resize(m,n);
 	}
 	inline matrix_dense(const unsigned m, const unsigned n,
 		const double d, bool mkdiag = true)
-	  : matrix_storage(none), data(0) {
+	  : matrix_storage(none), data(nullptr) {
 		resize(m,n);
 		if (mkdiag) {
 			memset(data,0,M*N*sizeof(double));
@@ -217,19 +217,19 @@ public:
 	}
 	inline matrix_dense(const unsigned m, const unsigned n,
 		const double * v)
-	  : matrix_storage(none), data(0) {
+	  : matrix_storage(none), data(nullptr) {
 		resize(m,n);
 		memcpy(data,v,M*N*sizeof(double));
 	}
 	inline matrix_dense(const matrix_dense & A)
-	  : matrix_storage(A.getflags()), data(0) {
+	  : matrix_storage(A.getflags()), data(nullptr) {
 		resize(A.M,A.N);
 		memcpy(data,A.data,M*N*sizeof(double));
 	}
 	virtual ~matrix_dense() {
-		if (data != 0)
+		if (data != nullptr)
 			delete [] data;
-		M = N = 0, data = 0;
+		M = N = 0, data = nullptr;
 	}
 
 	// Assignment operator...
@@ -292,7 +292,7 @@ protected:
 	unsigned N;         // The cols
 	double * data;      // The data
 	void resize(const unsigned m, const unsigned n) {
-		if (data != 0)
+		if (data != nullptr)
 			delete [] data;
 		M = m, N = n;
 		data = new double[M*N];
@@ -466,12 +466,12 @@ public:
 
 public:
 	inline matrix_operator(const op_t op_,
-		matrix_storage * op1_ = 0, matrix_storage * op2_ = 0)
+		matrix_storage * op1_ = nullptr, matrix_storage * op2_ = nullptr)
 	  : matrix_storage(none), op1(op1_), op2(op2_), op(op_) {
 	}
 	inline matrix_operator(const op_t op_,
 		const matrix_storage_ptr & op1_)
-	  : matrix_storage(none), op1(op1_), op2(0), op(op_) {
+	  : matrix_storage(none), op1(op1_), op2(nullptr), op(op_) {
 	}
 	inline matrix_operator(const op_t op_,
 		const matrix_storage_ptr & op1_,
@@ -596,10 +596,10 @@ protected:
 class matrix {
 public:
 	inline matrix()
-		: data(0) {
+		: data(nullptr) {
 	}
 	inline matrix(const unsigned m, const unsigned n)
-		: data(0) {
+		: data(nullptr) {
 		matrix_storage * d = new matrix_zero(m,n);
 		data = matrix_storage_ptr(d);
 	}

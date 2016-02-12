@@ -115,19 +115,19 @@ class fset : public set {
 public:
 	// Nice simple constructor...
 	inline explicit fset(const unsigned s, const unsigned b)
-	  : set(b), value(0) {
+	  : set(b), value(nullptr) {
 		allocate(s); // Creates enough space
-		copy(s,0);   // Constructs the elements and increases size
+		copy(s,nullptr);   // Constructs the elements and increases size
 	}
-	inline explicit fset(const unsigned s, const V * v = 0,
+	inline explicit fset(const unsigned s, const V * v = nullptr,
 			const unsigned b = DFLT_BLK)
-	  : set(b), value(0) {
+	  : set(b), value(nullptr) {
 		allocate(s);
 		copy(s,v);
 	}
 	// Copy constructor.
 	inline explicit fset(const fset<V> & v)
-	  : set(v), value(0) {
+	  : set(v), value(nullptr) {
 		allocate(v.size);
 		copy(v.size,v.value);
 	}
@@ -147,7 +147,7 @@ public:
 	void resize(const unsigned s) {
 		deallocate();
 		allocate(s);
-		copy(s,0);
+		copy(s,nullptr);
 	}
 	// Behave like an array. Zero indexed.
 	V & operator[] (const unsigned p) const {
@@ -181,12 +181,12 @@ protected:
 			return;
 		if (b == 0) {
 			free(value);
-			value = 0;
+			value = nullptr;
 			buffer = 0;
 			return;
 		}
 		V * temp = static_cast<V *>(realloc(value,b*sizeof(V)));
-		if (temp == 0)
+		if (temp == nullptr)
 			throw std::bad_alloc();
 		value = temp;
 		buffer = b;
@@ -196,24 +196,24 @@ protected:
 			for (unsigned i = 0; i < size; i++)
 				value[i].~V();
 			free(value);
-			value = 0;
+			value = nullptr;
 		}
 		size = 0;
 		buffer = 0;
 	}
 	void init(const unsigned i, const V * v) {
-		if (v != 0)
+		if (v != nullptr)
 			new(&value[i]) _V(*v);
 		else
 			new(&value[i]) _V();
 	}
 	void copy(const unsigned s, const V * v) {
 		for (unsigned i = 0; i < s; i++)
-			init(size++,(v ? &v[i] : 0));
+			init(size++,(v ? &v[i] : nullptr));
 	}
 	// Also hide the null constructor.
 	inline explicit fset()
-	  : set(), value(0) {
+	  : set(), value(nullptr) {
 		allocate(size);
 	}
 };
@@ -259,7 +259,7 @@ public:
 	  : fset<V>(s,b) {
 	}
 	// Simple constructor.
-	inline explicit sset(const unsigned s, const V * v = 0,
+	inline explicit sset(const unsigned s, const V * v = nullptr,
 			const unsigned b = DFLT_BLK)
 	  : fset<V>(s,v,b) {
 	}
@@ -294,11 +294,11 @@ public:
 	// Add an array at position p. (Actually do the work too).
 	void add(unsigned p, const V * v, const unsigned s = 1) {
 		unsigned i;
-		assert(s > 0 && v != 0);
+		assert(s > 0 && v != nullptr);
 		if (p >= this->size) {
 			this->allocate(p+s);
 			for (i = this->size; p > 0 && i < p-1; i++)
-				this->init(i,0);
+				this->init(i,nullptr);
 			this->size = p+s;
 		} else {
 			this->allocate(this->size+s);
@@ -352,7 +352,7 @@ public:
 	  : sset<V>(s,b) {
 	}
 	// Simple constructor.
-	inline explicit oset(const unsigned s, const V * v = 0,
+	inline explicit oset(const unsigned s, const V * v = nullptr,
 			const unsigned b = DFLT_BLK)
 	  : sset<V>(s,v,b) {
 		if (v)
@@ -446,7 +446,7 @@ public:
 	inline explicit cset(const unsigned s, const unsigned b)
 	  : oset<V>(s,b) {
 	}
-	inline explicit cset(const unsigned s, const V * v = 0,
+	inline explicit cset(const unsigned s, const V * v = nullptr,
 			const unsigned b = DFLT_BLK)
 	  : oset<V>(s,v,b) {
 		if (v)
@@ -504,32 +504,32 @@ class iset : public set {
 public:
 	// Make one...
 	inline explicit iset()
-	  : set(), idx(0), value(0) {
+	  : set(), idx(nullptr), value(nullptr) {
 		allocate(size);
-		copy(size,0,true);
+		copy(size,nullptr,true);
 	}
 	inline explicit iset(const unsigned s, const unsigned b)
-	  : set(b), idx(0), value(0) {
+	  : set(b), idx(nullptr), value(nullptr) {
 		allocate(s);
-		copy(s,0,true);
+		copy(s,nullptr,true);
 	}
 	// Basic constructor
-	inline explicit iset(const unsigned s, const V * v = 0,
+	inline explicit iset(const unsigned s, const V * v = nullptr,
 			const unsigned b = DFLT_BLK)
-	  : set(b), idx(0), value(0) {
+	  : set(b), idx(nullptr), value(nullptr) {
 		allocate(s);
 		copy(s,v,true);
 		allocate(size);
 	}
 	// Copy constructor.
 	inline explicit iset(const iset<V> & v)
-	  : set(v), idx(0), value(0) {
+	  : set(v), idx(nullptr), value(nullptr) {
 		allocate(v.size);
 		copy(v.size,v.value,false);
 	}
 	// Copy from an fset.
 	inline explicit iset(const fset<V> & v)
-	  : set(v), idx(0), value(0) {
+	  : set(v), idx(nullptr), value(nullptr) {
 		allocate(v.size);
 		copy(v.size,v.value,true);
 		allocate(size);
@@ -598,7 +598,7 @@ public:
 	// Add an array of values... There is no point in
 	// a position based addition.
 	void add(const V * v, const unsigned s = 1) {
-		assert(s > 0 && v != 0);
+		assert(s > 0 && v != nullptr);
 		allocate(size+s);
 		copy(s,v,true);
 		allocate(size);
@@ -645,16 +645,16 @@ protected:
 			return;
 		if (b == 0) {
 			free(idx);
-			idx = 0;
+			idx = nullptr;
 			free(value);
-			value = 0;
+			value = nullptr;
 			buffer = 0;
 			return;
 		}
 		unsigned * itemp = static_cast<unsigned *>(
 				realloc(idx,b*sizeof(unsigned)));
 		V * vtemp = static_cast<V *>(realloc(value,b*sizeof(V)));
-		if (itemp == 0 || vtemp == 0)
+		if (itemp == nullptr || vtemp == nullptr)
 			throw std::bad_alloc();
 		idx = itemp;
 		value = vtemp;
@@ -663,13 +663,13 @@ protected:
 	void deallocate() {
 		if (idx) {
 			free(idx);
-			idx = 0;
+			idx = nullptr;
 		}
 		if (value) {
 			for (unsigned i = 0; i < size; i++)
 				value[i].~V();
 			free(value);
-			value = 0;
+			value = nullptr;
 		}
 		size = 0;
 		buffer = 0;
@@ -687,7 +687,7 @@ protected:
 		return l;
 	}
 	void init(const V * v) {
-		assert(v != 0);
+		assert(v != nullptr);
 		new(&value[size]) _V(*v);
 		unsigned p = findvalue(*v);
 		if (p < size)
@@ -718,20 +718,20 @@ class kfset : public set {
 public:
 	// Simple constructor.
 	inline explicit kfset(const unsigned s, const unsigned b)
-	  : set(b), value(0) {
+	  : set(b), value(nullptr) {
 		allocate(s);
-		copy(s,0,true);
+		copy(s,nullptr,true);
 	}
-	inline explicit kfset(const unsigned s, const V * v = 0,
+	inline explicit kfset(const unsigned s, const V * v = nullptr,
 			const unsigned b = DFLT_BLK)
-	  : set(b), value(0) {
+	  : set(b), value(nullptr) {
 		allocate(s);
 		copy(s,v,true);
 		allocate(size);
 	}
 	// Copy constructor.
 	inline explicit kfset(const kfset<K,V> & v)
-	  : set(v), value(0) {
+	  : set(v), value(nullptr) {
 		allocate(v.size);
 		copy(v.size,v.value,false);
 	}
@@ -793,12 +793,12 @@ protected:
 			return;
 		if (b == 0) {
 			free(value);
-			value = 0;
+			value = nullptr;
 			buffer = 0;
 			return;
 		}
 		V * temp = static_cast<V *>(realloc(value,b*sizeof(V)));
-		if (temp == 0)
+		if (temp == nullptr)
 			throw std::bad_alloc();
 		value = temp;
 		buffer = b;
@@ -808,13 +808,13 @@ protected:
 			for (unsigned i = 0; i < size; i++)
 				value[i].~V();
 			free(value);
-			value = 0;
+			value = nullptr;
 		}
 		size = 0;
 		buffer = 0;
 	}
 	void init(const V * v) {
-		assert(v != 0);
+		assert(v != nullptr);
 		new(&value[size++]) _V(*v);
 	}
 	void copy(const unsigned s, const V * v, bool checkdups) {
@@ -827,7 +827,7 @@ protected:
 	}
 	// And the null constructor.
 	inline explicit kfset()
-	  : set(), value(0) {
+	  : set(), value(nullptr) {
 		allocate(size);
 	}
 };
@@ -847,7 +847,7 @@ public:
 	inline explicit ksset(const unsigned s, const unsigned b)
 	  : kfset<K,V>(s,b) {
 	}
-	inline explicit ksset(const unsigned s, const V * v = 0,
+	inline explicit ksset(const unsigned s, const V * v = nullptr,
 			const unsigned b = DFLT_BLK)
 	  : kfset<K,V>(s,v,b) {
 	}
@@ -868,7 +868,7 @@ public:
 	// Add an array of values... There is no point in
 	// a position based addition.
 	void add(const V * v, const unsigned s = 1) {
-		assert(s > 0 && v != 0);
+		assert(s > 0 && v != nullptr);
 		this->allocate(this->size+s);
 		this->copy(s,v,true);
 		this->allocate(this->size);
@@ -909,7 +909,7 @@ public:
 	inline explicit koset(const unsigned s, const unsigned b)
 	  : ksset<K,V>(s,b) {
 	}
-	inline explicit koset(const unsigned s, const V * v = 0,
+	inline explicit koset(const unsigned s, const V * v = nullptr,
 			const unsigned b = DFLT_BLK)
 	  : ksset<K,V>(s,v,b) {
 		if (v)
@@ -982,31 +982,31 @@ class kiset : public set {
 public:
 	// Make one...
 	inline explicit kiset()
-	  : set(), idx(0), value(0) {
+	  : set(), idx(nullptr), value(nullptr) {
 		allocate(size);
 	}
 	inline explicit kiset(const unsigned s, const unsigned b)
-	  : set(b), idx(0), value(0) {
+	  : set(b), idx(nullptr), value(nullptr) {
 		allocate(s);
-		copy(s,0,true);
+		copy(s,nullptr,true);
 	}
 	// Basic constructor
-	inline explicit kiset(const unsigned s, const V * v = 0,
+	inline explicit kiset(const unsigned s, const V * v = nullptr,
 			const unsigned b = DFLT_BLK)
-	  : set(b), idx(0), value(0) {
+	  : set(b), idx(nullptr), value(nullptr) {
 		allocate(s);
 		copy(s,v,true);
 		allocate(size);
 	}
 	// Copy constructor.
 	inline explicit kiset(const kiset<K,V> & v)
-	  : set(v), idx(0), value(0) {
+	  : set(v), idx(nullptr), value(nullptr) {
 		allocate(v.size);
 		copy(v.size,v.value,false);
 	}
 	// Copy from a kfset.
 	inline explicit kiset(const kfset<K,V> & v)
-	  : set(v), idx(0), value(0) {
+	  : set(v), idx(nullptr), value(nullptr) {
 		allocate(v.size);
 		copy(v.size,v.value,true);
 		allocate(size);
@@ -1078,7 +1078,7 @@ public:
 	// Add an array of values... There is no point in
 	// a position based addition.
 	void add(const V * v, const unsigned s = 1) {
-		assert(s > 0 && v != 0);
+		assert(s > 0 && v != nullptr);
 		allocate(size+s);
 		copy(s,v,true);
 		allocate(size);
@@ -1131,16 +1131,16 @@ protected:
 			return;
 		if (b == 0) {
 			free(idx);
-			idx = 0;
+			idx = nullptr;
 			free(value);
-			value = 0;
+			value = nullptr;
 			buffer = 0;
 			return;
 		}
 		unsigned * itemp = static_cast<unsigned *>(
 				realloc(idx,b*sizeof(unsigned)));
 		V * vtemp = static_cast<V *>(realloc(value,b*sizeof(V)));
-		if (itemp == 0 || vtemp == 0)
+		if (itemp == nullptr || vtemp == nullptr)
 			throw std::bad_alloc();
 		idx = itemp;
 		value = vtemp;
@@ -1149,13 +1149,13 @@ protected:
 	void deallocate() {
 		if (idx) {
 			free(idx);
-			idx = 0;
+			idx = nullptr;
 		}
 		if (value) {
 			for (unsigned i = 0; i < size; i++)
 				value[i].~V();
 			free(value);
-			value = 0;
+			value = nullptr;
 		}
 		size = 0;
 		buffer = 0;
@@ -1173,7 +1173,7 @@ protected:
 		return l;
 	}
 	void init(const V * v) {
-		assert(v != 0);
+		assert(v != nullptr);
 		new(&value[size]) _V(*v);
 		unsigned p = findkey(static_cast<const K &>(*v));
 		if (p < size)
@@ -1202,20 +1202,20 @@ class afset : public set {
 public:
 	// Make one...
 	inline explicit afset(const unsigned s, const unsigned b)
-	  : set(b), key(0), value(0) {
+	  : set(b), key(nullptr), value(nullptr) {
 		allocate(s);
-		copy(s,0,0,true);
+		copy(s,nullptr,nullptr,true);
 	}
-	inline explicit afset(const unsigned s, const K * k = 0,
-			const V * v = 0, const unsigned b = DFLT_BLK)
-	  : set(b), key(0), value(0) {
+	inline explicit afset(const unsigned s, const K * k = nullptr,
+			const V * v = nullptr, const unsigned b = DFLT_BLK)
+	  : set(b), key(nullptr), value(nullptr) {
 		allocate(s);
 		copy(s,k,v,true);
 		allocate(size);
 	}
 	// Copy one...
 	inline explicit afset(const afset<K,V> & v)
-	  : set(v), key(0), value(0) {
+	  : set(v), key(nullptr), value(nullptr) {
 		allocate(v.size);
 		copy(v.size,v.key,v.value,false);
 	}
@@ -1286,15 +1286,15 @@ protected:
 			return;
 		if (b == 0) {
 			free(key);
-			key = 0;
+			key = nullptr;
 			free(value);
-			value = 0;
+			value = nullptr;
 			buffer = 0;
 			return;
 		}
 		K * ktemp = static_cast<K *>(realloc(key,b*sizeof(K)));
 		V * vtemp = static_cast<V *>(realloc(value,b*sizeof(V)));
-		if (ktemp == 0 || vtemp == 0)
+		if (ktemp == nullptr || vtemp == nullptr)
 			throw std::bad_alloc();
 		key = ktemp;
 		value = vtemp;
@@ -1305,19 +1305,19 @@ protected:
 			for (unsigned i = 0; i < size; i++)
 				key[i].~K();
 			free(key);
-			key = 0;
+			key = nullptr;
 		}
 		if (value) {
 			for (unsigned i = 0; i < size; i++)
 				value[i].~V();
 			free(value);
-			value = 0;
+			value = nullptr;
 		}
 		size = 0;
 		buffer = 0;
 	}
 	void init(const K * k, const V * v) {
-		assert(k != 0);
+		assert(k != nullptr);
 		if (v)
 			new(&value[size]) _V(*v);
 		else
@@ -1329,12 +1329,12 @@ protected:
 			if (checkdups && (p = haskey(k[i])) != UINT_MAX)
 				value[p] = (v ? v[i] : V());
 			else
-				init(&k[i],(v ? &v[i] : 0));
+				init(&k[i],(v ? &v[i] : nullptr));
 		}
 	}
 	// Don't allow yobos to make empty sets...
 	inline explicit afset()
-	  : set(), key(0), value(0) {
+	  : set(), key(nullptr), value(nullptr) {
 		allocate(size);
 	}
 };
@@ -1353,8 +1353,8 @@ public:
 	  : afset<K,V>(s,b) {
 	}
 	// Simple constructor.
-	inline explicit asset(const unsigned s, const K * k = 0,
-			const V * v = 0, const unsigned b = DFLT_BLK)
+	inline explicit asset(const unsigned s, const K * k = nullptr,
+			const V * v = nullptr, const unsigned b = DFLT_BLK)
 	  : afset<K,V>(s,k,v,b) {
 	}
 	// Copy constructor.
@@ -1374,9 +1374,9 @@ public:
 		add(v.key,v.value,v.size);
 	}
 	// Add a whole bunch...
-	void add(const K * k, const V * v = 0,
+	void add(const K * k, const V * v = nullptr,
 			const unsigned s = 1) {
-		assert(s > 0 && k != 0);
+		assert(s > 0 && k != nullptr);
 		this->allocate(this->size+s);
 		this->copy(s,k,v,true);
 		this->allocate(this->size);
@@ -1421,8 +1421,8 @@ public:
 	inline explicit aoset(const unsigned s, const unsigned b)
 	  : asset<K,V>(s,b) {
 	}
-	inline explicit aoset(const unsigned s, const K * k = 0,
-			const V * v = 0, const unsigned b = DFLT_BLK)
+	inline explicit aoset(const unsigned s, const K * k = nullptr,
+			const V * v = nullptr, const unsigned b = DFLT_BLK)
 	  : asset<K,V>(s,k,v,b) {
 		if (k)
 			sort();
@@ -1496,8 +1496,8 @@ public:
 	inline explicit avoset(const unsigned s, const unsigned b)
 	  : asset<K,V>(s,b) {
 	}
-	inline explicit avoset(const unsigned s, const K * k = 0,
-			const V * v = 0, const unsigned b = DFLT_BLK)
+	inline explicit avoset(const unsigned s, const K * k = nullptr,
+			const V * v = nullptr, const unsigned b = DFLT_BLK)
 	  : asset<K,V>(s,k,v,b) {
 		if (k)
 			sort();

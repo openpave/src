@@ -123,7 +123,7 @@ public:
 		idx = DSFMT_N*2;
 	}
 	inline double c1o2() {
-		double *psfmt = &(status[0].d[0]);
+		double * psfmt = &(status[0].d[0]);
 		if (idx >= DSFMT_N*2) {
 			regen();
 			idx = 0;

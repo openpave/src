@@ -47,14 +47,14 @@ template<class K, class V>
 struct BST
 {
 	BST()
-	  : root(0) {
+	  : root(nullptr) {
 	}
 	~BST() {
 		delete root;
 	}
 	V * get(const K & k) {
 		node * x = root;
-		while (x != 0) {
+		while (x != nullptr) {
 			if (k == x->key)
 				return &(x->value);
 			else if (k < x->key)
@@ -62,7 +62,7 @@ struct BST
 			else
 				x = x->right;
 		}
-		return 0;
+		return nullptr;
 	}
 	void insert(const K & k, const V & v) {
 		bool add = false;
@@ -70,15 +70,15 @@ struct BST
 		root->red = false;
 	}
 	void remove(const K & k) {
-		if (root == 0)
+		if (root == nullptr)
 			return;
 		root = remove(root,k);
-		if (root != 0)
+		if (root != nullptr)
 			root->red = false;
 	}
 #ifdef TEST_TREES
 	void print() {
-		if (root == 0)
+		if (root == nullptr)
 			printf("Empty!\n");
 		else
 			print(0,0,root);
@@ -93,7 +93,8 @@ private:
 		node * left, * right;
 		bool red;
 		node(const K & k, const V & v)
-		  : key(k), value(v), order(0), left(0), right(0), red(true) {
+		  : key(k), value(v), order(0), left(nullptr), right(nullptr),
+		    red(true) {
 		}
 		~node() {
 			delete left;
@@ -103,13 +104,13 @@ private:
 
 	node * insert(node * h, const K & k, const V & v, bool * o) {
 		// If we're zero that means we need to make a new node...
-		if (h == 0) {
+		if (h == nullptr) {
 			*o = true;
 			return new node(k,v);
 		}
 		// Split double reds on the way down.
-		if (h->left != 0 && h->left->red) {
-			if (h->left->left != 0 && h->left->left->red) {
+		if (h->left != nullptr && h->left->red) {
+			if (h->left->left != nullptr && h->left->left->red) {
 				h = rotR(h);
 				h->left->red = false;
 			}
@@ -126,7 +127,7 @@ private:
 			// Or right tree.
 			h->right = insert(h->right,k,v,o);
 		}
-		if (h->right != 0 && h->right->red)
+		if (h->right != nullptr && h->right->red)
 			h = leanLeft(h);
 		return h;
 	}
@@ -159,14 +160,14 @@ private:
 	node * remove(node * h, const K & k) {
 		if (k < h->key) {
 			// If K is missing do nothing.
-			if (h->left == 0)
+			if (h->left == nullptr)
 				return h;
 			// move red left is needed.
 			if (!h->left->red
-			 && (h->left->left == 0 || !h->left->left->red)) {
+			 && (h->left->left == nullptr || !h->left->left->red)) {
 				h->red = false;
 				h->left->red = true;
-				if (h->right->left != 0 && h->right->left->red) {
+				if (h->right->left != nullptr && h->right->left->red) {
 					h->right = rotR(h->right);
 					h = rotL(h);
 				} else
@@ -176,19 +177,19 @@ private:
 			h->left = remove(h->left,k);
 		} else {
 			// Lean red links right going down.
-			if (h->left != 0 && h->left->red)
+			if (h->left != nullptr && h->left->red)
 				h = leanRight(h);
 			// We've found our node, and it's a leaf.
-			if (k == h->key && h->right == 0) {
+			if (k == h->key && h->right == nullptr) {
 				delete h;
-				return 0;
+				return nullptr;
 			}
 			// Push red right going down.
 			if (!h->right->red
-			 && (h->right->left == 0 || !h->right->left->red)) {
+			 && (h->right->left == nullptr || !h->right->left->red)) {
 				h->red = false;
 				h->right->red = true;
-				if (h->left->left != 0 && h->left->left->red) {
+				if (h->left->left != nullptr && h->left->left->red) {
 					h = rotR(h);
 					h->red = true;
 					h->left->red = false;
@@ -200,7 +201,7 @@ private:
 			// then remove that node...
 			if (k == h->key) {
 				node * x = h->right;
-				while (x->left != 0)
+				while (x->left != nullptr)
 					x = x->left;
 				h->key = x->key;
 				h->value = x->value;
@@ -210,19 +211,19 @@ private:
 				h->right = remove(h->right,k);
 		}
 		// fixed up right leaning reds on the way up.
-		if (h->right != 0 && h->right->red)
+		if (h->right != nullptr && h->right->red)
 			h = leanLeft(h);
 		return h;
 	}
 #ifdef TEST_TREES
 	void print(int level, unsigned order, node * h) {
-		if (h->right != 0)
+		if (h->right != nullptr)
 			print(level+1,order+h->order+1,h->right);
 		printf("(%d %d %d) ",order,h->order,order+h->order);
 		for (int i = 0; i < level; i++)
 			printf(" ");
 		printf("%d: %f %s\n",h->key.i,h->value.d,(h->red?"RED  ":"BLACK"));
-		if (h->left != 0)
+		if (h->left != nullptr)
 			print(level+1,order,h->left);
 	}
 #endif
@@ -233,7 +234,7 @@ class ktree_avl {
 public:
 	// Make one...
 	inline explicit ktree_avl()
-	  : size(0), buffer(0), block(DFLT_BLK), root(UINT_MAX), value(0) {
+	  : size(0), buffer(0), block(DFLT_BLK), root(UINT_MAX), value(nullptr) {
 	}
 	// Clean up.
 	inline ~ktree_avl() {
@@ -314,7 +315,7 @@ protected:
 		if (b == buffer)
 			return;
 		_V * temp = static_cast<_V *>(realloc(value,b*sizeof(_V)));
-		if (temp == 0)
+		if (temp == nullptr)
 			throw std::bad_alloc();
 		value = temp;
 		buffer = b;
@@ -426,7 +427,7 @@ class ktree_llrb {
 public:
 	// Make one...
 	inline explicit ktree_llrb()
-	  : size(0), buffer(0), block(DFLT_BLK), root(UINT_MAX), value(0) {
+	  : size(0), buffer(0), block(DFLT_BLK), root(UINT_MAX), value(nullptr) {
 	}
 	// Clean up.
 	inline ~ktree_llrb() {
@@ -543,7 +544,7 @@ protected:
 			return;
 		_V * temp = static_cast<_V *>(realloc(value,
 				b*sizeof(_V)));
-		if (temp == 0)
+		if (temp == nullptr)
 			throw std::bad_alloc();
 		value = temp;
 		buffer = b;

@@ -63,7 +63,7 @@ extern void event_progress_bar(const int level, const double p,
                                const char *fmt,...) OP_PRINTF(3,4);
 extern void event_progress(const int type, const int marker,
                            const char *fmt,...) OP_PRINTF(3,4);
-extern void timeme(const char * msg = 0);
+extern void timeme(const char * msg = nullptr);
 
 #ifdef _EVENT_IMP
 
@@ -80,7 +80,7 @@ event_msg(const int level, const char * fmt, ...)
 	va_list args;
 
 	va_start(args,fmt);
-	if (level < EVENT_DEBUG && fmt != NULL) {
+	if (level < EVENT_DEBUG && fmt != nullptr) {
 		vfprintf(stderr,fmt,args);
 		fprintf(stderr,"\n");
 	}
@@ -103,7 +103,7 @@ timeme(const char * msg)
 	static struct timespec start;
 	struct timespec stop;
 	double run_time;
-	if (msg == 0) {
+	if (msg == nullptr) {
 		clock_gettime(CLOCK_PROF,&start);
 		return;
 	}
@@ -113,7 +113,7 @@ timeme(const char * msg)
 	static struct timeval start;
 	struct timeval stop;
 	double run_time;
-	if (msg == 0) {
+	if (msg == nullptr) {
 		gettimeofday(&start,NULL);
 		return;
 	}
@@ -123,7 +123,7 @@ timeme(const char * msg)
 	static clock_t start;
 	clock_t stop;
 	double run_time;
-	if (msg == 0) {
+	if (msg == nullptr) {
 		start = clock();
 		return;
 	}
@@ -157,7 +157,7 @@ event_progress_bar(const int level, const double p, const char * fmt, ...)
 		fprintf(stderr,"%s",buf);
 		buf[0] = '\0';
 	}
-	if (level == 0 && fmt != NULL)
+	if (level == 0 && fmt != nullptr)
 		vfprintf(stderr,fmt,args);
 	sprintf(buf,"(%3.0f%%)",(p<0.0?0.0:(p>1.0?1.0:p))*100);
 	fprintf(stderr,"%s",buf);
