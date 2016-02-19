@@ -278,7 +278,7 @@ struct pavepoint : public point3d {
 	pavepoint(const pavepoint & p)
 	  : point3d(p), il(p.il) {
 	}
-	pavepoint & operator= (const pavepoint & p) {
+	pavepoint & operator = (const pavepoint & p) {
 		x = p.x; y = p.y; z = p.z;
 		if (il == UINT_MAX || p.il != UINT_MAX)
 			il = p.il;
@@ -386,14 +386,14 @@ struct pavedata : public pavepoint {
  */
 class LEsystem : private list_owned<LEsystem, LElayer> {
 public:
-	LEsystem()
+	explicit inline LEsystem()
 	  : list_owned<LEsystem,LElayer>(), data(), load(),
-	    cache_state(reset), cache(0) {
+	    cache_res(all), cache_state(reset), cache(0) {
 	    cache_reset();
 	}
-	LEsystem(LEsystem & p)
+	explicit inline LEsystem(const LEsystem & p)
 	  : list_owned<LEsystem,LElayer>(p), data(p.data), load(p.load),
-	    cache_state(reset), cache(0) {
+	    cache_res(all), cache_state(reset), cache(0) {
 	    cache_reset();
 	}
 	~LEsystem() {
@@ -478,6 +478,7 @@ private:
 	ksset<pavepoint,pavedata> data;
 	sset<paveload> load;
 	
+	resulttype cache_res;
 	cachestate cache_state;
 	LEsystem_cache * cache;
 };

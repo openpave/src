@@ -124,6 +124,27 @@ pavedata::principle(double v, double E)
 }
 
 /*
+ * Find a value in a sorted array.
+ */
+template<class T>
+inline unsigned
+findvalue(const T * a, const unsigned n, const T & v) {
+	unsigned l = 0, r = n;
+
+	while (l < r) {
+		unsigned i = l + (r-l)/2;
+		if (a[i] < v)
+			l = i+1;
+		else
+			r = i;
+	}
+	if (l < n && a[l] == v)
+		return l;
+	else
+		return UINT_MAX; // XXX throw?
+}
+
+/*
  * class LEsystem_cache - A hackish slab allocator.
  *
  * The result cache is a very hackish slab allocator which stores
@@ -155,9 +176,9 @@ class LEsystem_cache {
 	}
 	void * allocate(const size_t len) {
 		size_t s = align(MAX(len,page_size)) + align(sizeof(LEsystem_cache));
-		void * p = this, * q;
+		LEsystem_cache * c = this;
+		void * p = this, * q = this->mark;
 		ptrdiff_t l;
-		LEsystem_cache * c;
 		
 		assert(this->mark != nullptr);
 		while (p != nullptr) {
@@ -1105,7 +1126,7 @@ LEsystem::calc_accurate()
 bool
 LEsystem::calculate(resulttype res, const double * Q)
 {
-	unsigned ixy, nr, ir, nz, iz, ild, ia, ib, igp, il;
+	unsigned ixy, ir, iz, ild, ia, im, igp, il;
 	const LElayer * pl;
 	double x1, x2;
 	bool interpolate = false;
@@ -1113,14 +1134,16 @@ LEsystem::calculate(resulttype res, const double * Q)
 	initarrays();
 	if (!check())
 		return false;
-	cache_reset();
-	resulttype &c_res = *cache_alloc<resulttype>(1);
-	if (c_res != res)
-		cache_state = reset;
-	c_res = res;	
-	unsigned * c_counts = cache_alloc<unsigned>(4);
+	if (cache_res != res)
+		cache_free();
+	else
+		cache_reset();
+	cache_res = res;
+	unsigned * c_counts = cache_alloc<unsigned>(8);
 	unsigned &ngqp = c_counts[0], &nbz = c_counts[1];
 	unsigned &gl = c_counts[2], &nl = c_counts[3];
+	unsigned &nz = c_counts[4], &na = c_counts[5];
+	unsigned &nr = c_counts[6], &nm = c_counts[7];
 	ngqp = NGQP, nbz = NBZ, gl = UINT_MAX, nl = layers();
 	if ((res & mask) == dirty) {
 		ngqp = MIN(NGQP,8);
@@ -1138,20 +1161,18 @@ LEsystem::calculate(resulttype res, const double * Q)
 			((res & mask) == fast ? 1e-8 : 0.0));
 
 	// The integration constants, per layer.
-	double (* R)[4][2] = new double[nl][4][2];
-	double (* ABCD)[4] = new double[nl][4];
-	double (* iT)[2][4] = 0; // interpolated T's.
+	double (* R)[4][2] = cache_alloc<double[4][2]>(nl);
+	double (* ABCD)[4] = cache_alloc<double[4]>(nl);
+	double (* iT)[2][4] = nullptr; // interpolated T's.
 	// Local variables, so we don't have to walk the list.
-	double * h = new double[nl];
-	double * f = new double[nl];
-	double * v = new double[nl];
-	double * E = new double[nl];
-	// Some place to store our data...
-	cset<double> a, r, bm;
-	cset<zpoint> z;
-	fset<double> m0(data.length()), m1(data.length()); 
-	fset<axialdata> ax(data.length()); 
-	for (pl = first, il = 0; pl != 0; pl = pl->next, il++) {
+	double * h = cache_alloc<double>(nl);
+	double * f = cache_alloc<double>(nl);
+	double * v = cache_alloc<double>(nl);
+	double * E = cache_alloc<double>(nl);
+	double * g = nullptr;
+	if (res & grad)
+		g = cache_alloc<double>(nl);
+	for (pl = first, il = 0; pl != nullptr; pl = pl->next, il++) {
 		h[il] = pl->bottom();
 		f[il] = MAX(0.0,pl->slip());
 		v[il] = pl->poissons();
@@ -1159,6 +1180,7 @@ LEsystem::calculate(resulttype res, const double * Q)
 	}
 
 	// Collect and sort the z positions.
+	cset<zpoint> sz;
 	for (ixy = 0; ixy < data.length(); ixy++) {
 		pavedata & d = data[ixy];
 		// If we're collecting displacement gradient results
@@ -1167,46 +1189,57 @@ LEsystem::calculate(resulttype res, const double * Q)
 			d.deflgrad.resize(nl);
 			memset(&(d.deflgrad[0]),0,nl*sizeof(double));
 		}
-		z.add(zpoint(d.z,d.il));
+		sz.add(zpoint(d.z,d.il));
 	}
-	z.sort();
-	nz = z.length();
+	sz.sort();
+	nz = sz.length();
+	zpoint * z = cache_alloc<zpoint>(nz);
+	sz.copyout(z);
 
 	if (interpolate)
-		iT = new double[nz][2][4];
+		iT = cache_alloc<double[2][4]>(nz);
 
 	// Generate a list of load radii, then sort them and map from loads.
+	cset<double> sa;
 	for (ild = 0; ild < load.length(); ild++)
-		a.add(load[ild].radius());
-	a.sort();
+		sa.add(load[ild].radius());
+	sa.sort();
+	na = sa.length();
+	double * a = cache_alloc<double>(na);
+	sa.copyout(a);
 
 	// Now loop through the list of load radii, calculating only for
 	// the applicable loads... (load[ild].radius() == a[ia])
-	for (ia = 0; ia < a.length(); ia++) {
+	for (ia = 0; ia < na; ia++) {
 		// Generate a list of radii, then sort them.
-		r.empty();
+		cset<double> sr;
 		for (ild = 0; ild < load.length(); ild++) {
 			if (fabs(load[ild].radius()-a[ia]) > DBL_MIN)
 				continue;
 			for (ixy = 0; ixy < data.length(); ixy++)
-				r.add(load[ild].distance(data[ixy]));
+				sr.add(load[ild].distance(data[ixy]));
 		}
-		r.sort();
-		nr = r.length();
-		m0.resize(nr);
-		m1.resize(nr);
+		sr.sort();
+		nr = sr.length();
+		double * r = cache_alloc<double>(nr);
+		sr.copyout(r);
+		double * m0 = cache_alloc<double>(nr);
+		double * m1 = cache_alloc<double>(nr);
+		// Some place to store our data...
+		axialdata * ax = cache_alloc<axialdata>(nz*nr);
 
 		// Now generate a list of integration intervals, then sort them.
-		bm.empty();
-		bm.add(0.0);
-		for (ib = 0; ib < (nbz+1); ib++)
-			bm.add(j1r[ib]/a[ia]);
+		cset<double> sm;
+		sm.empty();
+		sm.add(0.0);
+		for (im = 0; im < (nbz+1); im++)
+			sm.add(j1r[im]/a[ia]);
 		// The correct stopping points for each radius.
 		for (ir = 0; ir < nr; ir++) {
 			stoppingpoints(nbz,a[ia],r[ir],&m0[ir],&m1[ir]);
-			bm.add(m0[ir]), bm.add(m1[ir]);
+			sm.add(m0[ir]), sm.add(m1[ir]);
 		}
-		bm.sort();
+		sm.sort();
 
 		// Account for big r's by adding extra integration intervals...
 		x1 = 0.0, x2 = 0.0;
@@ -1215,13 +1248,13 @@ LEsystem::calculate(resulttype res, const double * Q)
 					i <= nbz; i += MAX(4,ngqp-6)) {
 				if ((x1 = j1r[i]/r[ir-1]) < x2)
 					continue;
-				for (ib = 1; ib < bm.length() && bm[ib] < x1; ib++)
+				for (im = 1; im < sm.length() && sm[im] < x1; im++)
 					;
-				if (ib == bm.length() ||
-						MIN(x1-bm[ib-1],bm[ib]-x1)*r[ir-1]
+				if (im == sm.length() ||
+						MIN(x1-sm[im-1],sm[im]-x1)*r[ir-1]
 							 < MAX(4,ngqp-6)*M_PI_4)
 					continue;
-				bm.add(ib,x2 = x1);
+				sm.add(im,x2 = x1);
 			}
 		}
 		// Account for big z's.  We drop approximately three orders of
@@ -1233,51 +1266,53 @@ LEsystem::calculate(resulttype res, const double * Q)
 					&& i*7*a[ia] < j0r[0]*z[iz-1].z; i++) {
 				if ((x1 = i*7*a[ia]/z[iz-1].z) < x2)
 					continue;
-				for (ib = 1; ib < bm.length() && bm[ib] < x1; ib++)
+				for (im = 1; im < sm.length() && sm[im] < x1; im++)
 					;
-				if (ib == bm.length() ||
-						MIN(x1-bm[ib-1],bm[ib]-x1)*z[iz-1].z < 5*a[ia])
+				if (im == sm.length() ||
+						MIN(x1-sm[im-1],sm[im]-x1)*z[iz-1].z < 5*a[ia])
 					continue;
-				bm.add(ib,x2 = x1);
+				sm.add(im,x2 = x1);
 			}
 		}
-		bm.sort();
+		sm.sort();
+		nm = sm.length();
+		double * bm = cache_alloc<double>(nm);
+		sm.copyout(bm);
 		
 gradloop:
 		// And finally, somewhere to stick the radial data...
-		ax.resize(nr*nz);
 		memset(&ax[0],0,sizeof(axialdata)*nz*nr);
 		// Compute the active set.
 		for (ixy = 0; ixy < data.length(); ixy++) {
 			pavedata & d = data[ixy];
-			iz = z.findvalue(zpoint(d.z,d.il));
+			iz = findvalue(z,nz,zpoint(d.z,d.il));
 			for (ild = 0; ild < load.length(); ild++) {
 				if (fabs(load[ild].radius()-a[ia]) > DBL_MIN)
 					continue;
-				ir = r.findvalue(load[ild].distance(d));
+				ir = findvalue(r,nr,load[ild].distance(d));
 				ax[iz*nr+ir].active = true;
 			}
 		}
 		
 		// Now that we know the radii, get down to work.
 		// We loop through all of our roots and gauss points.
-		for (ib = 1; ib < bm.length(); ib++) {
+		for (im = 1; im < nm; im++) {
 			bool alldone = true;
-			bool firstpanel = (bm[ib]*a[ia] <= j1r[1]);
+			bool firstpanel = (bm[im]*a[ia] <= j1r[1]);
 			unsigned agqp = (firstpanel && (res & mask) != dirty ? NGQP : ngqp);
 			if (interpolate) {
 				if (!firstpanel) {
 					for (iz = 0; iz < nz; iz++)
 						memcpy(iT[iz][0],iT[iz][1],4*sizeof(double));
 				}
-				buildabcd(bm[ib],nl,h,v,E,f,R,ABCD);
+				buildabcd(bm[im],nl,h,v,E,f,R,ABCD);
 				for (iz = 0; iz < nz; iz++)
-					buildT(bm[ib],z[iz].z,ABCD[z[iz].il],iT[iz][1]);
+					buildT(bm[im],z[iz].z,ABCD[z[iz].il],iT[iz][1]);
 			}
 			for (igp = 0; igp < agqp; igp++) {
 				// Calculate the gauss point and weight.
-				double dm = (bm[ib]-bm[ib-1])/2;
-				double m = (bm[ib]+bm[ib-1])/2 + gu[agqp][igp]*dm;
+				double dm = (bm[im]-bm[im-1])/2;
+				double m = (bm[im]+bm[im-1])/2 + gu[agqp][igp]*dm;
 				double w = gf[agqp][igp]*dm;
 				w *= m*j1(m*a[ia]);
 
@@ -1295,7 +1330,7 @@ gradloop:
 						for (unsigned i = 0; i < 4; i++)
 							T[i] = iT[iz][1][i] -
 									(iT[iz][1][i]-iT[iz][0][i])
-										*(bm[ib]-m)/(2*dm);
+										*(bm[im]-m)/(2*dm);
 					}
 					for (ir = 0; ir < nr; ir++) {
 						axialdata & s = ax[iz*nr+ir];
@@ -1324,7 +1359,7 @@ gradloop:
 			if (alldone)
 				break;
 			// Don't accumulate for non-full J1(m*a) panels.
-			if (fabs(j1(bm[ib]*a[ia])) > j1max)
+			if (fabs(j1(bm[im]*a[ia])) > j1max)
 				continue;
 			for (iz = 0; iz < nz; iz++) {
 				for (ir = 0; ir < nr; ir++)
@@ -1342,11 +1377,11 @@ gradloop:
 		// After doing everything in radial coords, translate to cartesian.
 		for (ixy = 0; ixy < data.length(); ixy++) {
 			pavedata & d = data[ixy];
-			iz = z.findvalue(zpoint(d.z,d.il));
+			iz = findvalue(z,nz,zpoint(d.z,d.il));
 			for (ild = 0; ild < load.length(); ild++) {
 				if (fabs(load[ild].radius()-a[ia]) > DBL_MIN)
 					continue;
-				ir = r.findvalue(load[ild].distance(d));
+				ir = findvalue(r,nr,load[ild].distance(d));
 				ax[iz*nr+ir].addtodata(res,&d,load[ild],r[ir],gl);
 			}
 		}
@@ -1381,22 +1416,15 @@ gradloop:
 					d.deflgrad[il] = (d.deflgrad[il]-d.data[4][2])/GRADSTEP;
 			} else {
 				for (il = 0; il < nl; il++)
-					h[il] = (d.deflgrad[il]-d.data[4][2])/GRADSTEP;
+					g[il] = (d.deflgrad[il]-d.data[4][2])/GRADSTEP;
 				for (gl = 0; gl < nl; gl++) {
 					d.deflgrad[gl] = 0.0;
 					for (il = 0; il < nl; il++)
-						d.deflgrad[gl] += h[il]*Q[gl*nl+il];
+						d.deflgrad[gl] += g[il]*Q[gl*nl+il];
 				}
 			}
 		}
 	}
-	delete [] R;
-	delete [] ABCD;
-	delete [] iT;
-	delete [] h;
-	delete [] f;
-	delete [] v;
-	delete [] E;
 	return true;
 }
 
