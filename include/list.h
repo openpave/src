@@ -95,6 +95,7 @@ protected:
 		if (next != nullptr)
 			next->prev = prev;
 	}
+
 	// These are so the other classes can access our points.
 #if defined(_MSC_VER) && (_MSC_VER <= 1200)
 	friend class listelement_d<T>;
@@ -136,7 +137,6 @@ protected:
 			owner->last = this->prev;
 	}
 
-	//friend class O;
 	friend class list_owned<O,T>;
 };
 
@@ -198,7 +198,6 @@ protected:
 	}
 
 	friend class listelement_o<O,T>;
-	//friend class O;
 };
 
 #endif // LIST_H
