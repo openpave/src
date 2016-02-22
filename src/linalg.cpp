@@ -28,12 +28,10 @@
 
 *************************************************************************/
 
-#include <memory.h>
-#include <assert.h>
-#include <stdio.h>
+#include <memory>
+#include <stdexcept>
 #include "autodelete.h"
 #include "mathplus.h"
-#include "event.h"
 #include "linalg.h"
 
 /*
@@ -487,7 +485,6 @@ equ_chol(const unsigned n, const double * A, const double * b, double * x)
 			r[i] += A[i*n+j]*x[j];
 		dot += r[i]*r[i];
 	}
-	//printf(" %g",dot);
 	if (dot > ERR_TOL)
 		return;
 	bksub_chol(n,a,r);
