@@ -28,11 +28,9 @@
 
 *************************************************************************/
 
-#include <memory.h>
-#include <assert.h>
-#include <stdio.h>
+#include <memory>
+#include <stdexcept>
 #include "autodelete.h"
-#include "event.h"
 #include "linalg.h"
 #include "thermal.h"
 
@@ -82,8 +80,10 @@ FEMthermal::FEMthermal(const unsigned nl, const double * lh, const double * ld,
 {
 	unsigned il, i, j, k;
 
-	assert(n >= w+1);
-	assert((n-1) % w == 0);
+	if (n < w+1)
+		throw std::logic_error("Cannot have less elements than bands!");
+	if ((n-1)%w > 0)
+		throw std::logic_error("Number of elements must be a multiple of the number of bands!");
 	autodelete<double> lb(new double[nl]);	// Layer bottom
 	nd = new double[n];
 	nt = new double[n];
@@ -95,7 +95,8 @@ FEMthermal::FEMthermal(const unsigned nl, const double * lh, const double * ld,
 	memcpy(nd,_nd,n*sizeof(double));
 	memcpy(nt,_nt,n*sizeof(double));
 	for (i = 0; i < nl; i++) {
-		assert(lh[i] > 0.0);
+		if (lh[i] <= 0.0)
+			throw std::range_error("Layer thickness must be positive!");
 		lb[i] = (i == 0 ? nd[0] : lb[i-1]) + lh[i];
 	}
 
@@ -107,9 +108,10 @@ FEMthermal::FEMthermal(const unsigned nl, const double * lh, const double * ld,
 	memset(Kt,0,n*sizeof(double));
 	memset(Kb,0,n*sizeof(double));
 	for (j = 0, il = 0; j < n - w; j += w) {
-		while (lb[il] < nd[j])
+		while (lb[il] <= nd[j])
 			il++;
-		assert(lb[il] - lh[il] <= nd[j] && lb[il] >= nd[j+w]);
+		if (lb[il] - lh[il] > nd[j] || lb[il] < nd[j+w])
+			throw std::logic_error("Node coordinates and layers do not align!");
 		double d = ld[il]*2/(nd[j+w]-nd[j]);
 		double f = (nd[j+w]-nd[j])/2;
 		switch (w) {
