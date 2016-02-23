@@ -39,7 +39,11 @@
 #endif
 
 /*
- * class tree
+ * struct BST
+ *
+ * A basic implementation of a left-leaning red/black binary search tree,
+ * using individual allocations for each node.  Not very fancy, mostly here
+ * to understand how the other trees work...  Will be removed.
  *
  * http://www.cs.princeton.edu/~rs/talks/LLRB/RedBlack.pdf
  */
@@ -229,6 +233,21 @@ private:
 #endif
 };
 
+/*
+ * class ktree_avl
+ *
+ * A key/value tree, like ksset<K,V>, using the AVL implementation since
+ * it is relatively simple.  The common code between this any the LLRB tree
+ * needs to be abstracted out into a common base class.
+ *
+ * This does not shrink yet.
+ *
+ * This uses index values rather than pointers, and a fixed storage array
+ * underneath, to minimize the use of small chunks of memory.  The key class
+ * K must implement compare().
+ *
+ * See https://en.wikipedia.org/wiki/AVL_tree 
+ */
 template <class K, class V>
 class ktree_avl {
 public:
@@ -249,7 +268,7 @@ public:
 	inline unsigned haskey(const K & k) const {
 		unsigned x = root;
 		while (x != UINT_MAX) {
-			int cmp = k.compare(value[x]._v);
+			int cmp = k.compare(static_cast<const K &>(value[x]._v));
 			if (cmp == 0)
 				break;
 			else if (cmp < 0)
@@ -259,7 +278,7 @@ public:
 		}
 		return x;
 	}
-	// We use node numbers to find our nodes...
+	// We can use node numbers to find our nodes...
 	inline V & operator[] (const unsigned p) const {
 		return value[p]._v;
 	}
@@ -305,7 +324,7 @@ protected:
 		}
 		void operator delete(void *, void *) {
 		}
-	} * value;            // Take a guess...
+	} * value;                 // Take a guess...
 
 	// Make some space...
 	void allocate(const unsigned s) {
@@ -422,6 +441,20 @@ protected:
 #endif
 };
 
+/*
+ * class ktree_llrb
+ *
+ * A key/value tree, like ksset<K,V>, using the left-leaning red/black
+ * implementation since it is relatively simple.  The common code between
+ * this any the AVL tree needs to be abstracted out into a common base
+ * class.
+ *
+ * This uses index values rather than pointers, and a fixed storage array
+ * underneath, to minimize the use of small chunks of memory.  The key class
+ * K must implement compare().
+ *
+ * http://www.cs.princeton.edu/~rs/talks/LLRB/RedBlack.pdf
+ */
 template <class K, class V>
 class ktree_llrb {
 public:
@@ -452,7 +485,7 @@ public:
 		}
 		return x;
 	}
-	// We use node numbers to find our nodes...
+	// We can use node numbers to find our nodes...
 	inline V & operator[] (const unsigned p) const {
 		return value[p]._v;
 	}
@@ -469,6 +502,7 @@ public:
 				x = value[x].right;
 			}
 		}
+		// XXX throw if x == UINT_MAX
 		return value[x]._v;
 	}
 	// Get the position of an element in the sort.
@@ -533,7 +567,6 @@ protected:
 		void operator delete(void *, void *) {
 		}
 	} * value;            // Take a guess...
-
 
 	// Make some space...
 	void allocate(const unsigned s) {
@@ -601,10 +634,12 @@ protected:
 				return r;
 			// move red left is needed.
 			if (!value[value[r].left].red
-			 && (value[value[r].left].left == UINT_MAX || !value[value[value[r].left].left].red)) {
+			 && (value[value[r].left].left == UINT_MAX
+			  || !value[value[value[r].left].left].red)) {
 				value[r].red = false;
 				value[value[r].left].red = true;
-				if (value[value[r].right].left != UINT_MAX && value[value[value[r].right].left].red) {
+				if (value[value[r].right].left != UINT_MAX
+				 && value[value[value[r].right].left].red) {
 					unsigned x = value[value[r].right].left;
 					value[r].left = value[x].right;
 					value[x].right = r;
@@ -636,10 +671,12 @@ protected:
 			}
 			// Push red right going down.
 			if (!value[value[r].right].red
-			 && (value[value[r].right->left == UINT_MAX || !value[r].right->left].red)) {
+			 && (value[value[r].right->left == UINT_MAX
+			  || !value[r].right->left].red)) {
 				value[r].red = false;
 				value[value[r].right].red = true;
-				if (value[value[r].left->left != UINT_MAX && value[r].left->left].red) {
+				if (value[value[r].left->left != UINT_MAX
+				 && value[r].left->left].red) {
 					unsigned x = value[r].left;
 					value[r].left = value[x].right;
 					value[x].right = r;
