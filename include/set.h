@@ -40,8 +40,7 @@
 		memory is reused.
 
 	Status:
-		The swaps in the sorts should be replaced by memmove.  It should
-		also learn to throw exceptions...
+		The swaps in the sorts should be replaced by memmove.
 
 	History:
 		1994       - Created by Jeremy Lea <reg@openpave.org>
