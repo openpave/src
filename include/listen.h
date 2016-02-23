@@ -112,7 +112,7 @@ protected:
 private:
 	struct sink : message<T,Ts...> {
 		sink(message<T,Ts...> && m)
-		  : message(std::move(m)), next(nullptr) {
+		  : message<T,Ts...>(std::move(m)), next(nullptr) {
 		}
 		sink * next;           // The next listener
 	} * head;                  // The list head
@@ -145,7 +145,7 @@ protected:
 private:
 	// Simple linked list of callbacks to remove ourself from dispatcher
 	struct source {
-		source(std::function<void(void)> & r)
+		source(std::function<void(void)> && r)
 		  : remover(r), next(nullptr) {
 		}
 		~source() {

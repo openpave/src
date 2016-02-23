@@ -12,6 +12,7 @@ PROGRAMS =                             \
     test_matrix                        \
     test_pavement                      \
     test_fft                           \
+    test_listen                        \
     $(NULL)
 
 CXXSRCS_test =                         \
@@ -35,6 +36,10 @@ CXXSRCS_test_pavement =                \
 
 CXXSRCS_test_fft =                     \
     test_fft.cpp                       \
+    $(NULL)
+
+CXXSRCS_test_listen =                  \
+    test_listen.cpp                    \
     $(NULL)
 
 include $(topsrcdir)/build/rules.mk
