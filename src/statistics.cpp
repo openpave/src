@@ -84,8 +84,8 @@ double quad8_stdnormal_pdf(const double a, const double b, const double Q = 1.0)
 	const int dw = 14175;
 	static int level = -1;
 	static double tol = 1e-30;
-	register double h, Q1 = 0.0, Q2 = 0.0;
-	register int i;
+	double h, Q1 = 0.0, Q2 = 0.0;
+	int i;
 
 	level++;
 	h = (b-a)/16.0;
@@ -141,7 +141,7 @@ double stdnormal_cdf(const double u)
 		1.00000000000000000e00,1.28426009614491110e00,4.68238212480865112e-1,
 		6.59881378689285564e-2,3.78239633202758245e-3,7.29751555083966178e-5
 	};
-	register double y, z;
+	double y, z;
 
 	if (isnan(u))
 		return NAN;
@@ -203,7 +203,7 @@ double stdnormal_inv(double p)
 		 2.445134137142996e+00,  3.754408661907416e+00
 	};
 
-	register double q, t, u;
+	double q, t, u;
 
 	if (isnan(p) || p > 1.0 || p < 0.0)
 		return NAN;
