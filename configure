@@ -1850,8 +1850,7 @@ case "$target" in
 
 *-freebsd*)
     DEFINES="$DEFINES XP_UNIX"
-    CPPFLAGS="$CPPFLAGS -ansi"
-    CXXFLAGS="$CXXFLAGS -fexceptions"
+    CXXFLAGS="$CXXFLAGS -std=c++11 -fexceptions"
     DSO_CFLAGS=-fPIC
     DSO_LDFLAGS='-shared -Wl,-soname -Wl,$(notdir $@)'
     _OPTIMIZE_FLAGS=-O2
@@ -1860,6 +1859,7 @@ case "$target" in
 
 *-linux*|*-gnu*|*-k*bsd*-gnu)
     DEFINES="$DEFINES XP_UNIX"
+    CXXFLAGS="$CXXFLAGS -std=c++11 -fexceptions"
     DSO_CFLAGS=-fPIC
     DSO_LDFLAGS='-shared -Wl,-soname -Wl,$(notdir $@)'
     _OPTIMIZE_FLAGS=-O2
