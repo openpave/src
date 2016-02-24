@@ -341,7 +341,7 @@ protected:
 	inline explicit tree(const tree & t)
 	  : block(t.block) {
 		for (unsigned i = 0; i < t.length(); i++) {
-			this
+			add(t[i]);
 		}
 	}
 	inline ~tree() {
@@ -367,6 +367,27 @@ protected:
 			throw std::bad_alloc();
 		value = temp;
 		buffer = b;
+	}
+	// Insert an element
+	unsigned insert(const V & v) {
+		new(&value[size]) _V(v);
+		return size++;
+	}
+	void expunge(const unsigned p) {
+		// Do the ugly work of removing the element and adjusting the offsets
+		// into value[].  This would be better if deferred to a compact()
+		// function of some form and used the nodes to make a free list.
+		value[p].~_V();
+		if (--size > p)
+			memmove(&value[p],&value[p+1],(size-p)*sizeof(_V));
+		if (root != UINT_MAX && root > p)
+			root--;
+		for (unsigned i = 0; i < size; i++) {
+			if (value[i].left != UINT_MAX && value[i].left > p)
+				value[i].left--;
+			if (value[i].right != UINT_MAX && value[i].right > p)
+				value[i].right--;
+		}
 	}
 	// This is the number of nodes in this sub-tree including the root
 	inline unsigned weight(const unsigned r) const {
@@ -404,9 +425,15 @@ private:
 template <typename K, typename V = K>
 class ktree_avl : public tree<K,V,ktree_avl> {
 public:
+	using tree<K,V,::ktree_avl>::value;
+	using tree<K,V,::ktree_avl>::root;
+	using tree<K,V,::ktree_avl>::size;
+	using tree<K,V,::ktree_avl>::weight;
+	using tree<K,V,::ktree_avl>::new_weight;
+
 	// Make one...
 	inline explicit ktree_avl()
-	  : tree() {
+	  : tree<K,V,::ktree_avl>() {
 	}
 	// Clean up
 	inline ~ktree_avl() {
@@ -414,9 +441,9 @@ public:
 	// Add a node.  Returns the new position in value (usually == size)
 	virtual unsigned add(const V & v) override {
 		unsigned p = UINT_MAX;
-		allocate(size+1);
+		this->allocate(size+1);
 		append(root,v,&p);
-		allocate(size);
+		this->allocate(size);
 #ifdef TEST_TREES
 		assert_avl();
 #endif
@@ -428,21 +455,8 @@ public:
 		remove(root,k,&p);
 		if (p == UINT_MAX)
 			return p;
-		// Do the ugly work of removing the element and adjusting the offsets
-		// into value[].  This would be better if deferred to a compact()
-		// function of some form and used the nodes to make a free list.
-		this->value[p].~_V();
-		if (--size > p)
-			memmove(&value[p],&value[p+1],(size-p)*sizeof(_V));
-		if (root != UINT_MAX && root > p)
-			root--;
-		for (unsigned i = 0; i < size; i++) {
-			if (value[i].left != UINT_MAX && value[i].left > p)
-				value[i].left--;
-			if (value[i].right != UINT_MAX && value[i].right > p)
-				value[i].right--;
-		}
-		allocate(size);
+		this->expunge(p);
+		this->allocate(size);
 #ifdef TEST_TREES
 		assert_avl();
 #endif
@@ -484,8 +498,7 @@ private:
 	void append(unsigned & r, const V & v, unsigned * p) {
 		// If we're UINT_MAX that means we need to make a new node...
 		if (r == UINT_MAX) {
-			new(&value[size]) _V(v);
-			*p = r = size++;
+			*p = r = this->insert(v);
 			return;
 		}
 #ifdef TEST_TREES
@@ -604,11 +617,11 @@ private:
 		*s += ls+rs+1;
 		if (value[r].height != new_height(r))
 			throw std::runtime_error("oops");
-		if (value[r].height != *h)
+		if (value[r].height != (int)*h)
 			throw std::runtime_error("oops");
 		if (abs(balance(r)) > 1)
 			throw std::runtime_error("oops");
-		if (balance(r) != (rh-lh))
+		if (balance(r) != ((int)rh-(int)lh))
 			throw std::runtime_error("oops");
 		if (weight(r) != (ls+rs+1))
 			throw std::runtime_error("oops");
