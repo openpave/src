@@ -316,15 +316,26 @@ test_set6b()
 			double v = double(i);
 			printf("Inserting %d: %f\n",s,v);
 			bst.add(pair(s,v));
-			printf("Dumping:\n");
+			printf("Dumping: %u\n",bst.length());
 			bst.print();
 			printf("\n");
 		}
-		//bst.print();
-		//for (i = 0; i < N; i++) {
-		//	bst.remove(key(i));
-		//}
-		//bst.print();
+		for (i = 0; i < bst.length(); i++) {
+			key k = bst[i];
+			if (bst.getpostion(k) != i)
+				printf("ooops\n");
+		}
+		for (i = 0; i < bst.length(); i++) {
+			key k = bst.getorder(i);
+			if (bst.getindex(k) != i)
+				printf("ooops\n");
+		}
+		for (i = 0; bst.length() > 0 && i < N; i++) {
+			bst.remove(key(bst[0]));
+			printf("Dumping: %u\n",bst.length());
+			bst.print();
+			printf("\n");
+		}
 	}
 	printf("\n");
 }
