@@ -22,9 +22,9 @@
 #define BUILD
 
 #define XP_PC
-#define _CRT_SECURE_NO_DEPRECATE
-#define _CRT_NONSTDC_NO_DEPRECATE
-#define NEED_FMA
+#define _CRT_SECURE_NO_WARNINGS
+#define _CRT_NONSTDC_NO_WARNINGS
+#define HAVE_STD_SWAP
 
 #if !defined(__GNUC__)
 #define __attribute__(x)

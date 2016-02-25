@@ -163,6 +163,10 @@ fma(const double a, const double b, const double c)
 }
 #endif
 
+#if defined(HAVE_STD_SWAP)
+#include <utility>
+using std::swap;
+#else
 /*
  * Simple template functions for swapping things. One day
  * someone will make these part of the language...
@@ -175,6 +179,7 @@ swap(T & a, T & b)
 	b = a;
 	a = temp;
 }
+#endif
 
 /*
  * Computes n choose k

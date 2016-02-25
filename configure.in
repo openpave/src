@@ -474,7 +474,7 @@ case "$target" in
             DEFINES="$DEFINES _CRT_NONSTDC_NO_WARNINGS"
         fi
         CC="$CC -nologo"
-        CXX=$CC
+        CXX="$CC -TP"
         CPP="$CC -E"
         RC="rc.exe -nologo"
         LD="link.exe -nologo"
@@ -526,7 +526,7 @@ case "$target" in
         DEFINES="$DEFINES _CRT_SECURE_NO_WARNINGS"
         DEFINES="$DEFINES _CRT_NONSTDC_NO_WARNINGS"
         CC="$CC -nologo"
-        CXX=$CC
+        CXX="$CC -TP"
         CPP="$CC -E"
         RC="rc.exe -nologo"
         LD="xilink.exe -nologo"
@@ -619,6 +619,23 @@ AC_CACHE_CHECK(
     ])
 if test "$ac_cv_func_random" = "yes"; then
     DEFINES="$DEFINES HAVE_RANDOM"
+fi
+
+AC_CACHE_CHECK(
+    [for std::swap()],
+    ac_cv_func_std_swap,
+    [AC_LANG_SAVE
+     AC_LANG_CPLUSPLUS
+     AC_TRY_LINK([
+        #include <utility>
+        ],
+        [int a, b; std::swap(a,b)],
+        [ac_cv_func_std_swap=yes],
+        [ac_cv_func_std_swap=no])
+     AC_LANG_RESTORE
+    ])
+if test "$ac_cv_func_std_swap" = "yes"; then
+    DEFINES="$DEFINES HAVE_STD_SWAP"
 fi
 
 dnl If the user passed in arg to --enable-optimize or --enable-debug,
