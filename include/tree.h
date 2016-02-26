@@ -265,7 +265,7 @@ public:
 		return value[p]._v;
 	}
 	// Do a key lookup, and return UINT_MAX if the key is not found.
-	inline unsigned getpostion(const K & k) const {
+	inline unsigned getposition(const K & k) const {
 		unsigned x = root;
 		while (x != UINT_MAX) {
 			int cmp = k.compare(static_cast<const K &>(value[x]._v));
@@ -348,9 +348,9 @@ protected:
 		free(value);
 	}
 	// The basic add method, that returns the position of the new element
-	virtual unsigned add(const V & v) = 0;
+	virtual void add(const V & v) = 0;
 	// The basic remove method, that returns the old position of the element
-	virtual unsigned remove(const K & k) = 0;
+	virtual void remove(const K & k) = 0;
 	// Make some space...
 	void allocate(const unsigned s) {
 		unsigned b = bufsize(s);
@@ -439,7 +439,7 @@ public:
 	inline ~ktree_avl() {
 	}
 	// Add a node.  Returns the new position in value (usually == size)
-	virtual unsigned add(const V & v) override {
+	virtual void add(const V & v) override {
 		unsigned p = UINT_MAX;
 		this->allocate(size+1);
 		append(root,v,&p);
@@ -447,20 +447,18 @@ public:
 #ifdef TEST_TREES
 		assert_avl();
 #endif
-		return p;
 	}
 	// Remove a node.  Returns the old position in value
-	virtual unsigned remove(const K & k) override {
+	virtual void remove(const K & k) override {
 		unsigned p = UINT_MAX;
 		remove(root,k,&p);
 		if (p == UINT_MAX)
-			return p;
+			return;
 		this->expunge(p);
 		this->allocate(size);
 #ifdef TEST_TREES
 		assert_avl();
 #endif
-		return p;
 	}
 #ifdef TEST_TREES
 	void assert_avl() {

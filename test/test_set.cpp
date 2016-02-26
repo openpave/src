@@ -322,7 +322,7 @@ test_set6b()
 		}
 		for (i = 0; i < bst.length(); i++) {
 			key k = bst[i];
-			if (bst.getpostion(k) != i)
+			if (bst.getposition(k) != i)
 				printf("ooops\n");
 		}
 		for (i = 0; i < bst.length(); i++) {
