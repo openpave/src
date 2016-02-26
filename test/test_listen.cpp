@@ -34,7 +34,7 @@
 
 enum class test_event { test };
 
-class test_source : public dispatcher<message<test_source,test_event>> {
+class test_source : public dispatcher<message<test_event>> {
 public:
 	test_source() {
 		printf("Constructing source\n");
@@ -51,14 +51,13 @@ class test_sink : public listener {
 public:
 	test_sink(test_source & d) {
 		printf("Constructing sink\n");
-		listen(d,message<test_source,test_event>(
-			[this](const test_source & s, test_event e)
-			{ this->onevent(s,e); }));
+		listen(d,message<test_event>(
+			[this](test_event e){ this->onevent(e); }));
 	}
 	~test_sink() {
 		printf("Deleting sink\n");
 	}
-	void onevent(const test_source &, test_event) {
+	void onevent(test_event) {
 		printf("Got event!\n");
 	}
 };

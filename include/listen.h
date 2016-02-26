@@ -50,29 +50,29 @@ template<typename M> class dispatcher;
 /*
  * class message
  */
-template<typename T, typename ...Ts>
+template<typename ...Ts>
 struct message {
-	message(std::function<void(const T &, Ts...)> && f)
+	message(std::function<void(Ts...)> && f)
 	  : handler(std::move(f)) {
 	}
 	~message() {
 	}
 private:
-	friend class dispatcher<message<T,Ts...>>;
+	friend class dispatcher<message<Ts...>>;
 
-	void dispatch(const T & t, Ts...args) {
-		handler(t,args...);
+	void dispatch(Ts...args) {
+		handler(args...);
 	}
-	std::function<void(const T &, Ts...)> handler;
+	std::function<void(Ts...)> handler;
 };
 
 /*
  * class dispatcher
  */
-template<typename T, typename ...Ts>
-class dispatcher<message<T,Ts...>> {
+template<typename ...Ts>
+class dispatcher<message<Ts...>> {
 public:
-	std::function<void(void)> listen(message<T,Ts...> && m) {
+	std::function<void(void)> listen(message<Ts...> && m) {
 		sink ** s = &head;
 		while (*s != nullptr)
 			s = &((*s)->next);
@@ -104,15 +104,15 @@ protected:
 	void dispatch(const Ts &...args) {
 		sink * s = head;
 		while (s != nullptr) {
-			s->dispatch(static_cast<const T &>(*this),args...);
+			s->dispatch(args...);
 			s = s->next;
 		}
 	}
 
 private:
-	struct sink : message<T,Ts...> {
-		sink(message<T,Ts...> && m)
-		  : message<T,Ts...>(std::move(m)), next(nullptr) {
+	struct sink : message<Ts...> {
+		sink(message<Ts...> && m)
+		  : message<Ts...>(std::move(m)), next(nullptr) {
 		}
 		sink * next;           // The next listener
 	} * head;                  // The list head
@@ -134,8 +134,8 @@ protected:
 			delete s;
 		}
 	}
-	template<typename T, typename ...Ts>
-	void listen(dispatcher<message<T,Ts...>> & d, message<T,Ts...> && m) {
+	template<typename ...Ts>
+	void listen(dispatcher<message<Ts...>> & d, message<Ts...> && m) {
 		source ** s = &head;
 		while (*s != nullptr)
 			s = &((*s)->next);
