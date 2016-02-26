@@ -1592,8 +1592,8 @@ quad8_vdp(double r, double z, double a, double v, double A = 0.0,
 	const double dw = 14175;
 	static unsigned level = 0;
 	static double tol = 1e-6;
-	register double h, t, Q1 = 0.0, Q2 = 0.0;
-	register unsigned i;
+	double h, t, Q1 = 0.0, Q2 = 0.0;
+	unsigned i;
 
 	if (a == 0.0)
 		return 0.0;
@@ -1659,8 +1659,8 @@ quad8_vse(double r, double z, double a, double A = 0.0,
 	const double dw = 14175;
 	static unsigned level = 0;
 	static double tol = 1e-6;
-	register double h, t, t1, Q1 = 0.0, Q2 = 0.0;
-	register unsigned i;
+	double h, t, t1, Q1 = 0.0, Q2 = 0.0;
+	unsigned i;
 
 	if (a == 0.0)
 		return 0.0;
