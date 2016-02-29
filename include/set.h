@@ -53,11 +53,9 @@
 #ifndef __SET_H
 #define __SET_H
 
-#include "event.h"
-#include "mathplus.h"
-#include <string.h>
-#include <limits.h>
-#include <assert.h>
+#include <new>
+#include <stdexcept>
+#include <cstring>
 
 #define DFLT_BLK    64
 
@@ -150,7 +148,10 @@ public:
 	}
 	// Behave like an array. Zero indexed.
 	V & operator[] (const unsigned p) const {
-		assert(inbounds(p));
+#if defined(DEBUG)
+		if (~inbounds(p))
+			throw std::out_of_range("Index out of range!");
+#endif
 		return value[p];
 	}
 	// Flatten the set into a traditional array.  Caller is responsible
@@ -293,7 +294,10 @@ public:
 	// Add an array at position p. (Actually do the work too).
 	void add(unsigned p, const V * v, const unsigned s = 1) {
 		unsigned i;
-		assert(s > 0 && v != nullptr);
+		if (s == 0)
+			throw std::invalid_argument("Cannot add zero elements into a set!");
+		if (v == nullptr)
+			throw std::invalid_argument("Cannot add a null into a set!");
 		if (p >= this->size) {
 			this->allocate(p+s);
 			for (i = this->size; p > 0 && i < p-1; i++)
@@ -314,7 +318,10 @@ public:
 	}
 	// Remove s elements, starting at position p.
 	void remove(unsigned p, unsigned s = 1) {
-		assert(this->inbounds(p) && s > 0);
+		if (!this->inbounds(p))
+			throw std::out_of_range("Cannot remove out of range element from set!");
+		if (s == 0)
+			throw std::invalid_argument("Cannot remove zero elements from set!");
 		s = (p+s > this->size ? this->size-p : s);
 		for (unsigned i = 0; i < s; i++)
 			this->value[p+i].~V();
@@ -562,17 +569,26 @@ public:
 	}
 	// Only integer keys make sense.
 	inline const V & operator[] (const unsigned p) const {
-		assert(inbounds(p));
+#if defined(DEBUG)
+		if (~inbounds(p))
+			throw std::out_of_range("Index out of range!");
+#endif
 		return value[p];
 	}
 	// Allow sorted access.
 	inline const V & getindex(const unsigned i) const {
-		assert(inbounds(i));
+#if defined(DEBUG)
+		if (~inbounds(i))
+			throw std::out_of_range("Index out of range!");
+#endif
 		return value[idx[i]];
 	}
 	// Get the position of an element in the sort.
 	inline unsigned getorder(const unsigned i) const {
-		assert(inbounds(i));
+#if defined(DEBUG)
+		if (~inbounds(i))
+			throw std::out_of_range("Index out of range!");
+#endif
 		return idx[i];
 	}
 	// Flatten the set into a traditional array.  Caller is responsible
@@ -597,7 +613,10 @@ public:
 	// Add an array of values... There is no point in
 	// a position based addition.
 	void add(const V * v, const unsigned s = 1) {
-		assert(s > 0 && v != nullptr);
+		if (s == 0)
+			throw std::invalid_argument("Cannot add zero elements into a set!");
+		if (v == nullptr)
+			throw std::invalid_argument("Cannot add a null to a set!");
 		allocate(size+s);
 		copy(s,v,true);
 		allocate(size);
@@ -605,7 +624,8 @@ public:
 	// Now start removing them...
 	void remove(const V & v) {
 		unsigned p = hasvalue(v), q = UINT_MAX;
-		assert(p != UINT_MAX);
+		if (p == UINT_MAX)
+			throw std::invalid_argument("Cannot remove value not in set!");
 		value[p].~V();
 		if (p < --size)
 			memmove(&value[p],&value[p+1],(size-p)*sizeof(V));
@@ -686,7 +706,8 @@ protected:
 		return l;
 	}
 	void init(const V * v) {
-		assert(v != nullptr);
+		if (v == nullptr)
+			throw std::invalid_argument("Cannot insert null element into set!");
 		new(&value[size]) _V(*v);
 		unsigned p = findvalue(*v);
 		if (p < size)
@@ -757,12 +778,18 @@ public:
 	// Return data based on a key lookup.
 	inline V & operator[] (const K & k) const {
 		unsigned p = haskey(k);
-		assert(inbounds(p));
+#if defined(DEBUG)
+		if (~inbounds(p))
+			throw std::out_of_range("Key out of range!");
+#endif
 		return value[p];
 	}
 	// Allow integer keys.
 	inline V & operator[] (const unsigned p) const {
-		assert(inbounds(p));
+#if defined(DEBUG)
+		if (~inbounds(p))
+			throw std::out_of_range("Index out of range!");
+#endif
 		return value[p];
 	}
 	// Flatten the set into a traditional array.  Caller is responsible
@@ -813,7 +840,8 @@ protected:
 		buffer = 0;
 	}
 	void init(const V * v) {
-		assert(v != nullptr);
+		if (v == nullptr)
+			throw std::invalid_argument("Cannot insert null element into set!");
 		new(&value[size++]) _V(*v);
 	}
 	void copy(const unsigned s, const V * v, bool checkdups) {
@@ -867,7 +895,10 @@ public:
 	// Add an array of values... There is no point in
 	// a position based addition.
 	void add(const V * v, const unsigned s = 1) {
-		assert(s > 0 && v != nullptr);
+		if (s == 0)
+			throw std::invalid_argument("Cannot add zero elements to a set!");
+		if (v == nullptr)
+			throw std::invalid_argument("Cannot add a null to a set!");
 		this->allocate(this->size+s);
 		this->copy(s,v,true);
 		this->allocate(this->size);
@@ -875,7 +906,8 @@ public:
 	// Remove based on key.
 	void remove(const K & k) {
 		unsigned p = this->haskey(k);
-		assert(p != UINT_MAX);
+		if (p == UINT_MAX)
+			throw std::invalid_argument("Cannot remove key not in set!");
 		this->value[p].~V();
 		if (p < --this->size)
 			memmove(&this->value[p],&this->value[p+1],
@@ -885,7 +917,8 @@ public:
 	// Replace key/value with another.
 	inline void replace(const V & v) {
 		unsigned p = this->haskey(v);
-		assert(p != UINT_MAX);
+		if (p == UINT_MAX)
+			throw std::invalid_argument("Cannot replace value not in set!");
 		this->value[p] = v;
 	}
 	inline void empty() {
@@ -1040,22 +1073,34 @@ public:
 	// Return data based on a key lookup.
 	inline const V & operator[] (const K & k) const {
 		unsigned p = haskey(k);
-		assert(inbounds(p));
+#if defined(DEBUG)
+		if (~inbounds(p))
+			throw std::out_of_range("Key out of range!");
+#endif
 		return value[p];
 	}
 	// Allow integer keys.
 	inline const V & operator[] (const unsigned p) const {
-		assert(inbounds(p));
+#if defined(DEBUG)
+		if (~inbounds(p))
+			throw std::out_of_range("Index out of range!");
+#endif
 		return value[p];
 	}
 	// Allow sorted access.
 	inline const V & getindex(const unsigned i) const {
-		assert(inbounds(i));
+#if defined(DEBUG)
+		if (~inbounds(i))
+			throw std::out_of_range("Index out of range!");
+#endif
 		return value[idx[i]];
 	}
 	// Get the position of an element in the sort.
 	inline unsigned getorder(const unsigned i) const {
-		assert(inbounds(i));
+#if defined(DEBUG)
+		if (~inbounds(i))
+			throw std::out_of_range("Index out of range!");
+#endif
 		return findkey(value[i]);
 	}
 	// Flatten the set into a traditional array.  Caller is responsible
@@ -1077,7 +1122,10 @@ public:
 	// Add an array of values... There is no point in
 	// a position based addition.
 	void add(const V * v, const unsigned s = 1) {
-		assert(s > 0 && v != nullptr);
+		if (s == 0)
+			throw std::invalid_argument("Cannot add zero elements into a set!");
+		if (v == nullptr)
+			throw std::invalid_argument("Cannot add a null to a set!");
 		allocate(size+s);
 		copy(s,v,true);
 		allocate(size);
@@ -1085,7 +1133,8 @@ public:
 	// Now start removing them...
 	void remove(const K & k) {
 		unsigned p = haskey(k), q = UINT_MAX;
-		assert(p != UINT_MAX);
+		if (p == UINT_MAX)
+			throw std::invalid_argument("Cannot remove key not in set!");
 		value[p].~V();
 		if (p < --size)
 			memmove(&value[p],&value[p+1],(size-p)*sizeof(V));
@@ -1102,7 +1151,8 @@ public:
 	// Replace key/value with another.
 	inline void replace(const V & v) {
 		unsigned p = haskey(v);
-		assert(p != UINT_MAX);
+		if (p == UINT_MAX)
+			throw std::invalid_argument("Cannot replace key not in set!");
 		value[p] = v;
 	}
 	inline void empty() {
@@ -1172,7 +1222,8 @@ protected:
 		return l;
 	}
 	void init(const V * v) {
-		assert(v != nullptr);
+		if (v == nullptr)
+			throw std::invalid_argument("Cannot insert a null into a set");
 		new(&value[size]) _V(*v);
 		unsigned p = findkey(static_cast<const K &>(*v));
 		if (p < size)
@@ -1241,17 +1292,26 @@ public:
 	// Behave like an indexed array...
 	inline V & operator[] (const K & k) const {
 		unsigned p = haskey(k);
-		assert(inbounds(p));
+#if defined(DEBUG)
+		if (~inbounds(p))
+			throw std::out_of_range("Key out of range!");
+#endif
 		return value[p];
 	}
 	// Linear access.
 	inline K & getkey(const unsigned p) const {
-		assert(inbounds(p));
+#if defined(DEBUG)
+		if (~inbounds(p))
+			throw std::out_of_range("Index out of range!");
+#endif
 		return key[p];
 	}
 	// More linear access.
 	inline V & getvalue(const unsigned p) const {
-		assert(inbounds(p));
+#if defined(DEBUG)
+		if (~inbounds(p))
+			throw std::out_of_range("Index out of range!");
+#endif
 		return value[p];
 	}
 
@@ -1316,7 +1376,8 @@ protected:
 		buffer = 0;
 	}
 	void init(const K * k, const V * v) {
-		assert(k != nullptr);
+		if (k == nullptr)
+			throw std::invalid_argument("Cannot insert a null key into a set");
 		if (v)
 			new(&value[size]) _V(*v);
 		else
@@ -1375,7 +1436,10 @@ public:
 	// Add a whole bunch...
 	void add(const K * k, const V * v = nullptr,
 			const unsigned s = 1) {
-		assert(s > 0 && k != nullptr);
+		if (s == 0)
+			throw std::invalid_argument("Cannot add zero elements into a set!");
+		if (k == nullptr)
+			throw std::invalid_argument("Cannot add a null key into a set!");
 		this->allocate(this->size+s);
 		this->copy(s,k,v,true);
 		this->allocate(this->size);
@@ -1383,7 +1447,8 @@ public:
 	// Now start removing them...
 	void remove(const K & k) {
 		unsigned p = this->haskey(k);
-		assert(p != UINT_MAX);
+		if (p == UINT_MAX)
+			throw std::invalid_argument("Cannot remove value not in set!");
 		this->key[++p].~K();
 		this->value[p].~V();
 		if (p < --this->size) {
@@ -1397,7 +1462,8 @@ public:
 	// Or replacing them...
 	inline void replace(const K & k, const V & v) {
 		unsigned p = this->haskey(k);
-		assert(p != UINT_MAX);
+		if (p == UINT_MAX)
+			throw std::invalid_argument("Cannot replace key not in set!");
 		this->value[p] = v;
 	}
 	inline void empty() {
