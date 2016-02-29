@@ -462,7 +462,8 @@ public:
 	}
 #ifdef TEST_TREES
 	void assert_avl() {
-		unsigned h, s = 0;
+		int h;
+		unsigned s = 0;
 		assert_avl(root,&h,&s);
 		if (s != size)
 			throw std::runtime_error("oops");
@@ -577,7 +578,8 @@ private:
 #ifdef TEST_TREES
 		printf("Rebalance @%d after:\n",r);
 		print();
-		unsigned h, s = 0;
+		int h;
+		unsigned s = 0;
 		assert_avl(r,&h,&s);
 #endif
 		return;
@@ -603,8 +605,9 @@ private:
 		r = x;
 	}
 #ifdef TEST_TREES
-	void assert_avl(const unsigned r, unsigned * h, unsigned * s) {
-		unsigned lh, rh, ls = 0, rs = 0;
+	void assert_avl(const unsigned r, int * h, unsigned * s) {
+		int lh, rh;
+		unsigned ls = 0, rs = 0;
 		if (r == UINT_MAX) {
 			*h = 0;
 			return;
@@ -615,11 +618,11 @@ private:
 		*s += ls+rs+1;
 		if (value[r].height != new_height(r))
 			throw std::runtime_error("oops");
-		if (value[r].height != (int)*h)
+		if (value[r].height != *h)
 			throw std::runtime_error("oops");
 		if (abs(balance(r)) > 1)
 			throw std::runtime_error("oops");
-		if (balance(r) != ((int)rh-(int)lh))
+		if (balance(r) != (rh-lh))
 			throw std::runtime_error("oops");
 		if (weight(r) != (ls+rs+1))
 			throw std::runtime_error("oops");
