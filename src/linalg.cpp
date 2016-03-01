@@ -30,6 +30,7 @@
 
 #include <memory>
 #include <stdexcept>
+#include <cstring>
 #include "autodelete.h"
 #include "mathplus.h"
 #include "linalg.h"
