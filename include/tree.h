@@ -35,7 +35,7 @@
 #define __TREE_H
 
 #ifdef TEST_TREES
-#include <stdio.h>
+#include <cstdio>
 #endif
 
 /*
