@@ -28,10 +28,12 @@
 
 *************************************************************************/
 
+#include <assert.h>
 #include "pavement.h"
 #include "linalg.h"
 #include <time.h>
 #include <stdio.h>
+#include <cstddef>
 
 /*
  * Calculate the principle stresses, and the strains.
