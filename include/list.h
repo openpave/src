@@ -48,13 +48,114 @@
 #ifndef __LIST_H
 #define __LIST_H
 
-#include <assert.h>
+#include <stdexcept>
 
 // Forward declare some classes...
-template <class T>
+template <typename T>
+class list_single;
+template <typename T>
 class list_double;
-template <class O, class T>
+template <typename O, typename T>
 class list_owned;
+
+/*
+ * class listelement_s - Templated linked list element
+ *
+ * Use this as a base class for the data you want to store in the list.
+ */
+template <typename T>
+class listelement_s {
+protected:
+	T * next;                   // The next element.
+
+	listelement_s(T * n = nullptr)
+	  : next(n) {
+	}
+	~listelement_s() {
+	}
+
+	friend class list_single<T>;
+};
+
+/*
+ * class list_single - Templated list management class
+ *
+ * This class manages a singally linked list of type listelement_s<T>.
+ */
+template <typename T>
+class list_single {
+protected:
+	T * head;                   // The head of the list.
+
+	// All lists start empty...
+	list_single()
+	  : head(nullptr) {
+	}
+	~list_single() {
+		empty();
+	}
+
+	// Insert an element at the end.
+	T * insert(T * e) {
+		if (e == nullptr)
+			return e;          // Pass-through allocation failure
+		T ** t = &head, ** l = &head;
+		while (*t != nullptr) {
+			if (e->next != nullptr && e->next == *t) {
+				(*l)->next = e;
+				return e;
+			} else
+				l = t, t = &((*t)->next);
+		};
+		return *t = e;
+	}
+	// Remove an element from the list (but don't delete it)
+	T * remove(T * e = nullptr) {
+		T ** t = &head, ** l = &head;
+		while (*t != nullptr) {
+			if (e != nullptr && *t == e) {
+				*l = e->next;
+				e->next = nullptr;
+				return e;
+			} else
+				l = t, t = &((*t)->next);
+		}
+		return *l;
+	}
+	// Push a new element as the head
+	T * push(T * e) {
+		if (e == nullptr)
+			return e;          // Pass-through allocation failure
+		T ** t = &(e->next);
+		while (*t != nullptr)
+			t = &((*t)->next);
+		*t = head, head = e;
+		return e;
+	}
+	// Remove the head element (but don't delete it)
+	T * pop() {
+		T * e = head;
+		head = e->next;
+		return e;
+	}
+	// Check in the list is empty.
+	bool inline isempty() const {
+		return (head == nullptr ? true : false);
+	}
+	// Figure out the length of the list.
+	unsigned length() const {
+		unsigned s = 0;
+		T * t = head;
+		while (t != nullptr)
+			s++, t = t->next;
+		return s;
+	}
+	// Sometimes you just need to start a new list.
+	void empty() {
+		while (!isempty())
+			delete pop();
+	}
+};
 
 /*
  * class listelement_d - Templated doubly linked list element.
@@ -62,7 +163,7 @@ class list_owned;
  * Use this class as a base class for the data you want to store in the
  * list.
  */
-template <class T>
+template <typename T>
 class listelement_d {
 protected:
 	T * next;                   // The next element.
@@ -74,8 +175,8 @@ protected:
 	  : next(n), prev(p) {
 		if (next != nullptr) {
 			if (next->prev != nullptr) {
-				if (prev != nullptr)
-					assert(prev == next->prev);
+				if (prev != nullptr && prev != next->prev)
+					throw std::runtime_error("Linked list pointer mismatch!");
 				prev = next->prev;
 				prev->next = static_cast<T *>(this);
 			}
@@ -96,48 +197,7 @@ protected:
 			next->prev = prev;
 	}
 
-	// These are so the other classes can access our points.
-#if defined(_MSC_VER) && (_MSC_VER <= 1200)
-	friend class listelement_d<T>;
-#endif
 	friend class list_double<T>;
-};
-
-/*
- * class listelement_o - Templated owned list element.
- *
- * List is like listelemt_d, but requires an owner of type O.
- * The owner class must be derived from class list_double.
- */
-template <class O, class T>
-class listelement_o : public listelement_d<T> {
-protected:
-	O * owner;                  // Our owner.
-
-	// Create an element.
-	listelement_o(O * o, T * p = nullptr, T * n = nullptr)
-	  : listelement_d<T>(p,n), owner(o) {
-		assert(owner != nullptr);
-		if (this->prev == nullptr && this->next == nullptr) {
-			this->prev = owner->last;
-			if (this->prev != nullptr)
-				this->prev->next = static_cast<T *>(this);
-		}
-		if (this->prev == nullptr)
-			owner->first = static_cast<T *>(this);
-		if (this->next == nullptr)
-			owner->last = static_cast<T *>(this);
-	}
-	// Also manage our owner's pointers.
-	~listelement_o() {
-		assert(owner != nullptr);
-		if (this->prev == nullptr)
-			owner->first = this->next;
-		if (this->next == nullptr)
-			owner->last = this->prev;
-	}
-
-	friend class list_owned<O,T>;
 };
 
 /*
@@ -146,7 +206,7 @@ protected:
  * This class manages a doubly linked list of type listelement_d<T>.
  * It has both a head and a tail pointer.
  */
-template <class T>
+template <typename T>
 class list_double {
 protected:
 	T * first;                  // The head of the list.
@@ -160,6 +220,53 @@ protected:
 		empty();
 	}
 
+	// Insert an element.  If the element is not already part of the list
+	// it is inserted at the end.
+	T * insert(T * e) {
+		if (e == nullptr)
+			return e;
+		if (e->prev == nullptr && e->next == nullptr) {
+			e->prev = this->last;
+			if (e->prev != nullptr)
+				e->prev->next = e;
+		}
+		if (e->prev == nullptr)
+			this->first = e;
+		if (e->next == nullptr)
+			this->last = e;
+		return e;
+	}
+	// Remove an element from the list (but don't delete it).
+	T * remove(T * e = nullptr) {
+		if (e == nullptr)
+			e = last;
+		if (e == nullptr)
+			return e;
+		if (e->prev == nullptr)
+			this->first = e->next;
+		else
+			e->prev = nullptr;
+		if (e->next == nullptr)
+			this->last = e->prev;
+		else
+			e->next = nullptr;
+		return e;
+	}
+	// Push an element onto the head of the list (or just insert)
+	T * push(T * e) {
+		if (e == nullptr)
+			return e;
+		if (e->prev == nullptr && e->next == nullptr) {
+			e->next = this->first;
+			if (e->next != nullptr)
+				e->next->prev = e;
+		}
+		return insert(e);
+	}
+	// Pop the first element off the list
+	T * pop() {
+		return remove(first);
+	}
 	// Check in the list is empty.
 	bool inline isempty() const {
 		return (first == nullptr ? true : false);
@@ -168,19 +275,54 @@ protected:
 	unsigned length() const {
 		unsigned s = 0;
 		T * t = first;
-		while (t != nullptr) {
-			t = t->next;
-			s++;
-		}
+		while (t != nullptr)
+			s++, t = t->next;
 		return s;
 	}
 	// Sometimes you just need to start a new list.
 	void empty() {
 		while (first != nullptr)
 			delete first;
-		first = nullptr;
-		last = nullptr;
 	}
+};
+
+/*
+ * class listelement_o - Templated owned list element.
+ *
+ * List is like listelemt_d, but requires an owner of type O.
+ * The owner class must be derived from class list_double.
+ */
+template <typename O, typename T>
+class listelement_o : public listelement_d<T> {
+protected:
+	O * owner;                  // Our owner.
+
+	// Create an element.
+	listelement_o(O * o, T * p = nullptr, T * n = nullptr)
+	  : listelement_d<T>(p,n), owner(o) {
+		if (owner == nullptr)
+			throw std::invalid_argument("Owner cannot be null!");
+		if (this->prev == nullptr && this->next == nullptr) {
+			this->prev = owner->last;
+			if (this->prev != nullptr)
+				this->prev->next = static_cast<T *>(this);
+		}
+		if (this->prev == nullptr)
+			owner->first = static_cast<T *>(this);
+		if (this->next == nullptr)
+			owner->last = static_cast<T *>(this);
+	}
+	// Also manage our owner's pointers.
+	~listelement_o() {
+		if (owner == nullptr)
+			throw std::invalid_argument("Owner cannot be null!");
+		if (this->prev == nullptr)
+			owner->first = this->next;
+		if (this->next == nullptr)
+			owner->last = this->prev;
+	}
+
+	friend class list_owned<O,T>;
 };
 
 /*
@@ -188,7 +330,7 @@ protected:
  *
  * This is the base class for the list owner.
  */
-template <class O, class T>
+template <typename O, typename T>
 class list_owned : public list_double<T> {
 protected:
 	list_owned()
