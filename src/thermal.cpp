@@ -29,6 +29,7 @@
 *************************************************************************/
 
 #include <memory>
+#include <cstring>
 #include <stdexcept>
 #include "autodelete.h"
 #include "linalg.h"
