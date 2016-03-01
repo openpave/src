@@ -83,7 +83,7 @@ public:
 				if (*c == *s) {
 					*l = (*c)->next;
 					delete *c;
-					c = l;
+					break;
 				} else
 					l = c, c = &((*c)->next);
 			}
