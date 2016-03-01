@@ -30,6 +30,7 @@
 **************************************************************************/
 
 #include <stdlib.h>
+#include <cmath>
 #include "mathplus.h"
 #include "statistics.h"
 
@@ -143,9 +144,9 @@ double stdnormal_cdf(const double u)
 	};
 	double y, z;
 
-	if (isnan(u))
+	if (std::isnan(u))
 		return NAN;
-	if (!isfinite(u))
+	if (!std::isfinite(u))
 		return (u < 0 ? 0.0 : 1.0);
 	y = fabs(u);
 	if (y <= 0.662912607362388) {
@@ -205,7 +206,7 @@ double stdnormal_inv(double p)
 
 	double q, t, u;
 
-	if (isnan(p) || p > 1.0 || p < 0.0)
+	if (std::isnan(p) || p > 1.0 || p < 0.0)
 		return NAN;
 	if (p == 0.0)
 		return -INFINITY;
