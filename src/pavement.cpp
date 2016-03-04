@@ -1843,9 +1843,7 @@ LEbackcalc::backcalc()
 	// Now settle into our true minimisation algorithm.
 	// First we start by using the deflection gradient in
 	// emod space, since it converges faster...
-	while (true) {
-		if (++steps > maxsteps*nl)
-			break;
+	while (++steps <= maxsteps*nl) {
 		memcpy(T,P,sizeof(double)*nl);
 		astep = step, tstep += step = deflgrad(nl,P,Q,speed);
 		//printf("E%s ",speed == fast ? "*" : speed == slow ? "!" : "@");
@@ -1901,9 +1899,7 @@ LEbackcalc::backcalc()
 		//	break;
 	}
 	// Now change to the Kalman filter to converge in deflection space
-	while (true) {
-		if (++steps > maxsteps*nl)
-			break;
+	while (++steps <= maxsteps*nl) {
 		for (i = 0; i < nl; i++)
 			layer(i).emod(pow(10,P[i]));
 		calculate((speed == fast ? LEsystem::fastgrad : LEsystem::dispgrad));
