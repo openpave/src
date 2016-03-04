@@ -142,9 +142,9 @@
 #define j0(x)       _j0(x)
 #define j1(x)       _j1(x)
 #define hypot(a,b)  _hypot((a),(b))
+#if _MSC_VER < 1800
 #define isnan(x)    _isnan(x)
 #define isfinite(x) _finite(x)
-#if _MSC_VER < 1800
 #if _MSC_VER > 1200
 #define INFINITY    _Inf._Double
 #define NAN         _Nan._Double
