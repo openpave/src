@@ -229,35 +229,35 @@ private:
 class paveload : public point2d {
 public:
 	paveload()
-	  : point2d(0.0,0.0), f(0.0), p(0.0) {
+	  : point2d(0.0,0.0), f(0.0), r(0.0) {
 	}
 	paveload(const point2d & l, double lf, double lp, double lr = 0.0)
-	  : point2d(l), f(lf), p(lp)  {
+	  : point2d(l), f(lf), r(lr)  {
 		if (lf == 0.0) {
-			f = M_PI*lr*lr*p;
-		} else if (lp == 0.0) {
-			p = f/(M_PI*lr*lr);
+			f = M_PI*lr*lr*lp;
+		} else if (lr == 0.0) {
+			r = sqrt(lf/(lp*M_PI));
 		}
 	}
 	paveload(const paveload & pl)
-	  : point2d(pl), f(pl.f), p(pl.p) {
+	  : point2d(pl), f(pl.f), r(pl.r) {
 	}
 	double force() const {
 		return f;
 	}
 	double pressure() const {
-		return p;
+		return (r == 0.0 ? 0.0 : f/(M_PI*r*r));
 	}
 	double radius() const {
-		return (p == 0.0 ? 0.0 : sqrt(f/(p*M_PI)));
+		return r;
 	}
 	double area() const {
-		return (p == 0.0 ? 0.0 : f/p);
+		return M_PI*r*r;
 	}
 
 private:
-	double f;                          // Force.
-	double p;                          // Pressure.
+	double f;                          // Force
+	double r;                          // Load radius
 };
 
 /*
