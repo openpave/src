@@ -32,7 +32,7 @@
 #include <windows.h>
 
 BOOL WINAPI
-DllMain(HANDLE hModule, DWORD fdwReason, LPVOID lpReserved)
+DllMain(HANDLE, DWORD fdwReason, LPVOID)
 {
 	switch (fdwReason) {
 	case DLL_PROCESS_ATTACH:
