@@ -61,6 +61,7 @@
 #include <malloc.h>
 #define alloca _alloca
 #endif
+#include <assert.h>
 #include "event.h"
 #include "autodelete.h"
 #include "fixed.h"
