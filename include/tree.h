@@ -233,6 +233,8 @@ private:
 #endif
 };
 
+#define DFLT_BLK    64
+
 /*
  * class tree - Tree base class
  *
