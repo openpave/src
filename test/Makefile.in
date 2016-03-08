@@ -13,6 +13,7 @@ PROGRAMS =                             \
     test_pavement                      \
     test_fft                           \
     test_listen                        \
+    test_table                         \
     $(NULL)
 
 CXXSRCS_test =                         \
@@ -40,6 +41,10 @@ CXXSRCS_test_fft =                     \
 
 CXXSRCS_test_listen =                  \
     test_listen.cpp                    \
+    $(NULL)
+
+CXXSRCS_test_table =                   \
+    test_table.cpp                     \
     $(NULL)
 
 include $(topsrcdir)/build/rules.mk
