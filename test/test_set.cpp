@@ -326,8 +326,8 @@ test_set6b()
 				printf("ooops\n");
 		}
 		for (i = 0; i < bst.length(); i++) {
-			key k = bst.getorder(i);
-			if (bst.getindex(k) != i)
+			key k = bst.getatorder(i);
+			if (bst.getorderof(k) != i)
 				printf("ooops\n");
 		}
 		for (i = 0; bst.length() > 0 && i < N; i++) {

@@ -263,6 +263,9 @@ public:
 	}
 	// We can use node numbers to find our nodes...
 	inline V & operator[] (const unsigned p) const {
+		return getatposition(p);
+	}
+	inline V & getatposition(const unsigned p) const {
 		if (!inbounds(p))
 			throw std::out_of_range("unordered index out of bounds!");
 		return value[p]._v;
@@ -282,7 +285,7 @@ public:
 		return x;
 	}
 	// Allow sorted access by returning the in-order position in the tree.
-	inline V & getorder(const unsigned i) const {
+	inline V & getatorder(const unsigned i) const {
 		unsigned x = root, o = 0;
 		while (x != UINT_MAX) {
 			if (i == o + order(x))
@@ -299,7 +302,7 @@ public:
 		return value[x]._v;
 	}
 	// Get the ordered position of an element in the sort.
-	inline unsigned getindex(const K & k) const {
+	inline unsigned getorderof(const K & k) const {
 		unsigned x = root, o = 0;
 		while (x != UINT_MAX) {
 			int cmp = k.compare(value[x]._v);
