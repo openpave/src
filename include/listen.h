@@ -72,7 +72,7 @@ private:
 template<typename ...Ts>
 class dispatcher<message<Ts...>> {
 public:
-	std::function<void(void)> listen(message<Ts...> && m) {
+	std::function<void(void)> attach(message<Ts...> && m) {
 		sink ** s = &head;
 		while (*s != nullptr)
 			s = &((*s)->next);
@@ -139,7 +139,7 @@ protected:
 		source ** s = &head;
 		while (*s != nullptr)
 			s = &((*s)->next);
-		*s = new source(d.listen(std::move(m)));
+		*s = new source(d.attach(std::move(m)));
 	}
 
 private:
