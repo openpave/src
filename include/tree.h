@@ -34,6 +34,7 @@
 #ifndef __TREE_H
 #define __TREE_H
 
+#include <stdexcept>
 #ifdef TEST_TREES
 #include <cstdio>
 #endif
