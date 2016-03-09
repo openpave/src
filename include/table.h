@@ -55,31 +55,15 @@
  * Class table
  *
  */
-template<typename A, typename V>
+template<typename V, typename ...As>
 class table : protected listener
 {
 public:
-	table(A & ax, const unsigned b = DFLT_BLK)
-	  : x(ax), len(0), buflen(0), blklen(b), buffer(nullptr) {
-		unsigned s = ax.length();
-
-		listen(ax,message<axis_message,unsigned>(
-			[this](axis_message e, unsigned p){
-				switch (e) {
-				case axis_message::add:
-					this->add(p);
-					break;
-				case axis_message::remove:
-					this->remove(p);
-					break;
-				case axis_message::deleting:
-					throw std::runtime_error("Out of order destructors!");
-				default:
-					break;
-				}
-		}));
+	table(As &... as)
+	  : axes(as...), buflen(0), blklen(64), buffer(nullptr) {
+		unsigned s = init(as...);
 		allocate(s); // Creates enough space
-		copy(s,nullptr);   // Constructs the elements and increases size
+		//copy(s,nullptr);   // Constructs the elements and increases size
 	}
 	~table() {
 		deallocate();
@@ -87,15 +71,17 @@ public:
 	// Behave like an array. Zero indexed.
 	V & operator[] (const unsigned p) const {
 #if defined(DEBUG)
-		if (~inbounds(p))
+		if (!inbounds(p))
 			throw std::out_of_range("Index out of range!");
 #endif
 		return buffer[p];
 	}
 
 private:
-	A & x;                     // The axis for this table
-	unsigned len;              // The number of elements...
+	// The axes are stored in a tuple for ease of processing. 
+	std::tuple<const As &...> axes;
+	unsigned sizes[sizeof...(As)];
+	// 1D storage for the data
 	unsigned buflen;           // The allocated buffer size...
 	unsigned blklen;           // The minimum block size.
 	struct _V {                // Placement new wrapper
@@ -113,12 +99,52 @@ private:
 	};
 	V * buffer;                // The actual storage.
 
+	template<typename... Ks>
+	unsigned init(Ks &...) {
+		return 1;
+	}
+	template<typename K, typename... Ks>
+	unsigned init(K & ax, Ks &...ks) {
+		const unsigned d = sizeof...(Ks);
+		unsigned s = ax.length();
+		listen(ax,message<axis_message,unsigned>(
+			[this,d](axis_message e, unsigned p){
+				switch (e) {
+				case axis_message::add:
+					this->add(d,p);
+					break;
+				case axis_message::remove:
+					this->remove(d,p);
+					break;
+				case axis_message::deleting:
+					throw std::runtime_error("Out of order destructors!");
+				default:
+					break;
+				}
+		}));
+		sizes[d] = s;
+		return s*init(ks...);
+	}
+	// Return the size of array below dimension d.
+	unsigned length(const unsigned d = sizeof...(As)) const {
+		unsigned s = 1;
+		for (unsigned i = d; i > 0; i--)
+			s *= sizes[i-1];
+		return s;
+	}
+	// Return the step size for dimension d.
+	unsigned step(const unsigned d) const {
+		unsigned s = 1;
+		for (unsigned i = d+1; i < sizeof...(As); i++)
+			s *= sizes[i];
+		return s;
+	}
 	// Check if an index is within the set...
-	inline bool inbounds(const unsigned p) const {
-		return (p < len ? true : false);
+	bool inbounds(const unsigned p) const {
+		return (p < length() ? true : false);
 	}
 	// Calculate the buffer size.
-	inline unsigned bufsize(unsigned s) {
+	unsigned bufsize(unsigned s) {
 		while (s > 8*blklen)
 			blklen *= 8;
 		return blklen*(s/blklen+(s%blklen?1:0));
@@ -141,49 +167,57 @@ private:
 	}
 	void deallocate() {
 		if (buffer != nullptr) {
-			for (unsigned i = 0; i < len; i++)
+			for (unsigned i = 0; i < length(); i++)
 				buffer[i].~V();
 			free(buffer);
 			buffer = nullptr;
 		}
-		len = 0;
 		buflen = 0;
 	}
 	// POD constructor
 	template<typename T>
 	typename std::enable_if<std::is_pod<T>::value>::type
-	init(const unsigned i, const T * v) {
+	initelem(const unsigned i, const T * v) {
 		if (v)
 			buffer[i] = *v;
 	}
 	// not POD
 	template<typename T>
 	typename std::enable_if<!std::is_pod<T>::value>::type
-	init(const unsigned i, const T * v) {
+	initelem(const unsigned i, const T * v) {
 		if (v)
 			new(&buffer[i]) _V(*v);
 		else
 			new(&buffer[i]) _V();
 	}
-	void copy(const unsigned s, const V * v) {
-		for (unsigned i = 0; i < s; i++)
-			init(len++,(v ? &v[i] : nullptr));
-	}
+	//void copy(const unsigned s, const V * v) {
+	//	for (unsigned i = 0; i < s; i++)
+	//		initelem(len++,(v ? &v[i] : nullptr));
+	//}
 	// Add an element at position p.
-	void add(unsigned p, const V * v = nullptr) {
-		allocate(len+1);
-		if (p < len)
-			std::memmove(&buffer[p+1],&buffer[p],(len-p)*sizeof(V));
-		len++;
-		init(p,v);
+	void add(unsigned d, unsigned p, const V * v = nullptr) {
+		unsigned bs = length(d);
+		unsigned ss = step(d);
+		unsigned os = sizes[d];
+		sizes[d]++;
+		allocate(length());
+		unsigned nl = length()/sizes[d];
+		for (unsigned i = ss; i > 0; i--) {
+			unsigned ob = ((i-1)*os+p)*bs;
+			unsigned nb = ((i-1)*(os+1)+p+1)*bs;
+			unsigned ln = (i == ss ? os-p : os);
+			std::memmove(&buffer[nb],&buffer[ob],ln*bs*sizeof(V));
+			for (unsigned j = 0; v != nullptr && j < bs; j++)
+				initelem(nb-bs+j,&v[--nl]);
+		}
 	}
 	// Remove element position p.
-	void remove(unsigned p) {
+	void remove(unsigned d, unsigned p) {
 		buffer[p].~V();
-		if (p+1 < len)
-			std::memmove(&buffer[p],&buffer[p+1],(len-p-1)*sizeof(V));
-		len--;
-		allocate(len);
+		if (p+1 < length())
+			std::memmove(&buffer[p],&buffer[p+1],(length()-p-1)*sizeof(V));
+		sizes[d]--;
+		allocate(length());
 	}
 };
  

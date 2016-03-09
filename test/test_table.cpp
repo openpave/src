@@ -38,7 +38,7 @@ struct keyA {
 	int i;
 	keyA() : i(0) {}
 	explicit keyA(int s) : i(s) {}
-	int compare (const keyA & k) const { return (i==k.i ? 0 : SGN(i-k.i)); }
+	int compare (const keyA & k) const { printf("."); return (i==k.i ? 0 : SGN(i-k.i)); }
 	bool operator== (const keyA & k) const { return (i==k.i); }
 	bool operator<  (const keyA & k) const { return (i< k.i); }
 	bool operator<= (const keyA & k) const { return (i<=k.i); }
@@ -59,6 +59,26 @@ test_axis1()
 	for (unsigned i = 0; i < 4; i++)
 		ax2.add(keyA(d2[i]),keyA(1));
 	ax2.add(keyA(1),keyA(12));
+	keyA a, b;
+	std::tie(a) = ax[1];
+	std::tie(b,a) = ax2[1];
+}
+
+static void
+test_axis2()
+{
+	const int d[4] = {1,2,3,4};
+
+	axis<int> ax;
+	axis<int,int> ax2(ax);
+	for (unsigned i = 0; i < 4; i++)
+		ax.add(d[i]);
+	for (unsigned i = 0; i < 4; i++)
+		ax2.add(d[i],1);
+	ax2.add(1,4);
+	int a, b;
+	std::tie(a) = ax[1];
+	std::tie(b,a) = ax2[1];
 }
 
 static void
@@ -69,7 +89,7 @@ test_table1()
 	axis<keyA> ax;
 	for (unsigned i = 0; i < 4; i++)
 		ax.add(keyA(d1[i]));
-	table<axis<keyA>,double> tbl(ax);
+	table<double,axis<keyA>> tbl(ax);
 	ax.add(keyA(3));
 	for (unsigned i = 0; i < 5; i++)
 		tbl[i] = (double)(i);
@@ -80,6 +100,8 @@ main()
 {
 	std::printf("Test Axis 1:\n");
 	test_axis1();
+	std::printf("Test Axis 2:\n");
+	test_axis2();
 	std::printf("Test Table 1:\n");
 	test_table1();
 	return 0;
