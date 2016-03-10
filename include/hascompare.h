@@ -38,16 +38,14 @@
 #include <type_traits>
 
 template<typename T>
-struct has_compare
+class has_compare
 {
-private:
 	template<typename C>
 	static typename std::is_same<
 		decltype(std::declval<C>().compare(std::declval<C>())),int>::type
-	check(C *) { return std::true_type(); };
+		check(C *) { return std::true_type(); };
 	template<typename>
 	static std::false_type check(...) { return std::false_type(); };
-
 	typedef decltype(check<T>(0)) type;
 public:
 	static const bool value = type::value;
