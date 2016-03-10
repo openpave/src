@@ -27,8 +27,9 @@
 		document where the left-most column contains row headers in 'merged'
 		cells.  The prior columns must also be an axis.  As elements are
 		added and removed from the prior columns, the current axis listens
-		for these and adjusts accordingly.
-		
+		for these and adjusts accordingly.  All axes are sorted and must
+		be unique.
+
 		+---+---+------
 		| A | a | 1
 		+---+---+------
@@ -51,11 +52,14 @@
 		so should not be used much in practice - it is better for the prior
 		axis to be essentially constant.
 
+		The downside of variadic templates is that it means that the axes
+		are in reverse order to their natural order in all the calls...
+
 	Design:
 		These classes make use of many new C++11 features, including
 		variadic templates and SFINAE.  This makes them possible, but also
 		complex.
-		
+
 		The basic class is axis.  This contains a set which holds the keys
 		for this axis, and optionally a reference to the prior axis.  The
 		class listens for events on the prior axis, and sends events to any
@@ -65,7 +69,7 @@
 		The axis uses a tree internally to store the key and an array of
 		index positions for each prior.  These are used to make sure we
 		have a prior cell, and for sorting the current key.
-		
+
 	History:
 		2016/03/05 - Created a basic implementation.
 
@@ -106,20 +110,18 @@ public:
 			[this](axis_message e, unsigned p){
 				switch (e) {
 				case axis_message::add:
-					for (unsigned i = 0; i < internal.length(); i++) {
-						axis_key & a = internal[i];
+					for (unsigned i = 0; i < me.length(); i++) {
+						axis_key & a = me[i];
 						if (a.pi >= p)
 							a.pi++;
 					}
 					break;
 				case axis_message::remove:
-					// we remove in order
-					for (unsigned i = 0; i < internal.length(); i++) {
-						axis_key & a = internal.getatorder(i);
+					for (unsigned i = 0; i < me.length(); i++) {
+						axis_key & a = me.getatorder(i);
 						if (a.pi == p) {
-							dispatch(axis_message::remove,
-								internal.getorderof(a));
-							internal.remove(a);
+							dispatch(axis_message::remove,i);
+							me.remove(a);
 							i--;
 						} else if (a.pi > p)
 							a.pi--;
@@ -136,78 +138,83 @@ public:
 		dispatch(axis_message::deleting,UINT_MAX);
 	}
 	void add(const K & k, const Ks & ...ks) {
+		if (!prior.haskey(ks...))
+			throw std::runtime_error("attempting to insert key into axis without key in prior!");
+		if (haskey(k,ks...))
+			throw std::runtime_error("attempting to insert duplicate key into axis!");
 		axis_key a(prior,k,ks...);
-		unsigned p = internal.getorderof(a);
-		if (p != UINT_MAX)
-			return; // XXX throw?
-		internal.add(a);
-		p = internal.getorderof(a);
-		dispatch(axis_message::add,p);
+		me.add(a);
+		dispatch(axis_message::add,me.getorderof(a));
 	}
 	void remove(const K & k, const Ks & ...ks) {
+		if (!haskey(k,ks...))
+			throw std::runtime_error("removal key not found in axis!");
 		axis_key a(prior,k,ks...);
-		unsigned p = internal.getorderof(a);
-		if (p == UINT_MAX)
-			return; // XXX throw?
-		internal.remove(a);
-		dispatch(axis_message::remove,p);
+		dispatch(axis_message::remove,me.getorderof(a));
+		me.remove(a);
 	}
 	unsigned length() const {
-		return internal.length();
-	}
-	bool inbounds(const unsigned p) const {
-		return internal.inbounds(p);
+		return me.length();
 	}
 	// Do a key lookup, and return UINT_MAX if the key is not found.
 	bool haskey(const K & k, const Ks & ...ks) const {
-		return internal.haskey(axis_key(prior,k,ks...));
+		if (!prior.haskey(ks...))
+			return false;
+		return me.haskey(axis_key(prior,k,ks...));
 	}
-	std::tuple<const K &, const Ks &...>
+	// Get the full key as a tuple
+	template<unsigned N = sizeof...(Ks)>
+	typename std::enable_if<N!=1,std::tuple<const K &, const Ks &...>>::type
 	operator[] (const unsigned p) const {
-		if (!inbounds(p))
-			throw std::out_of_range("unordered index out of bounds!");
-		const axis_key & a = internal.getatorder(p);
+		if (!me.inbounds(p))
+			throw std::out_of_range("ordered index out of bounds!");
+		const axis_key & a = me.getatorder(p);
 		return std::tuple_cat(std::tuple<const K &>(a.key),prior[a.pi]);
+	}
+	// Special version for the second last since it does not get a tuple
+	// from the first axis.
+	template<unsigned N = sizeof...(Ks)>
+	typename std::enable_if<N==1,std::tuple<const K &, const Ks &...>>::type
+	operator[] (const unsigned p) const {
+		if (!me.inbounds(p))
+			throw std::out_of_range("ordered index out of bounds!");
+		const axis_key & a = me.getatorder(p);
+		return std::tuple<const K &, const Ks &...>(a.key,prior[a.pi]);
 	}
 	// Get the ordered position of an element in the sort.
 	unsigned getorderof(const K & k, const Ks & ...ks) const {
-		return internal.getorderof(axis_key(prior,k,ks...));
+		if (!haskey(k,ks...))
+			throw std::runtime_error("key not found in axis!");
+		return me.getorderof(axis_key(prior,k,ks...));
 	}
 
 private:
 	struct axis_key {
 		unsigned pi;
 		K key;
-
 		axis_key(const axis<Ks...> & pr, const K & k, const Ks &...ks)
 		  : key(k) {
 			pi = pr.getorderof(ks...);
 		}
+		// use the compare function if it has one
 		template<typename T = K>
 		typename std::enable_if<has_compare<T>::value,int>::type
 		compare(const axis_key & k) const {
-			if (pi < k.pi)
-				return -1;
-			if (pi > k.pi)
-				return 1;
-			return key.compare(k.key);
+			if (pi == k.pi)
+				return key.compare(k.key);
+			return (pi < k.pi ? -1 : 1);
 		}
+		// else resort to operators
 		template<typename T = K>
 		typename std::enable_if<!has_compare<T>::value,int>::type
 		compare(const axis_key & k) const {
-			if (pi < k.pi)
-				return -1;
-			if (pi > k.pi)
-				return 1;
-			if (key < k.key)
-				return -1;
-			if (key > k.key)
-				return 1;
-			return 0;
+			if (pi == k.pi)
+				return (key < k.key ? -1 : key == k.key ? 0 : 1);
+			return (pi < k.pi ? -1 : 1);
 		}
 	};
-	ktree_avl<axis_key> internal;     // internal index
-	const axis<Ks...> & prior;
+	ktree_avl<axis_key> me;    // internal index
+	const axis<Ks...> & prior; // the next axis up/to the left
 };
 
 /*
@@ -228,63 +235,58 @@ public:
 		dispatch(axis_message::deleting,UINT_MAX);
 	}
 	void add(const K & k) {
+		if (haskey(k))
+			throw std::runtime_error("attempting to insert duplicate key into axis!");
 		axis_key a(k);
-		unsigned p = internal.getorderof(a);
-		if (p != UINT_MAX)
-			return;
-		internal.add(a);
-		p = internal.getorderof(a);
-		dispatch(axis_message::add,p);
+		me.add(a);
+		dispatch(axis_message::add,me.getorderof(a));
 	}
 	void remove(const K & k) {
+		if (!haskey(k))
+			throw std::runtime_error("removal key not found in axis!");
 		axis_key a(k);
-		unsigned p = internal.getorderof(a);
-		if (p == UINT_MAX)
-			return;
-		internal.remove(a);
-		dispatch(axis_message::remove,p);
+		dispatch(axis_message::remove,me.getorderof(a));
+		me.remove(a);
 	}
 	unsigned length() const {
-		return internal.length();
-	}
-	bool inbounds(const unsigned p) const {
-		return internal.inbounds(p);
+		return me.length();
 	}
 	// Do a key lookup, and return UINT_MAX if the key is not found.
 	bool haskey(const K & k) const {
-		return internal.haskey(axis_key(k));
+		return me.haskey(axis_key(k));
 	}
-	std::tuple<const K &> operator[] (const unsigned p) const {
-		if (!inbounds(p))
-			throw std::out_of_range("unordered index out of bounds!");
-		const axis_key & k = internal.getatorder(p);
-		return std::tuple<const K &>(k.key);
+	// Get the key at some position in the sort order
+	// This does not return a tuple to avoid making life complex.
+	const K & operator[] (const unsigned p) const {
+		if (!me.inbounds(p))
+			throw std::out_of_range("ordered index out of bounds!");
+		return me.getatorder(p).key;
 	}
 	// Get the ordered position of an element in the sort.
 	unsigned getorderof(const K & k) const {
-		return internal.getorderof(axis_key(k));
+		if (!haskey(k))
+			throw std::runtime_error("key not found in axis!");
+		return me.getorderof(axis_key(k));
 	}
 
 private:
 	struct axis_key {
 		K key;
 		axis_key(const K & k) : key(k) {}
+		// use the compare function if it has one
 		template<typename T = K>
 		typename std::enable_if<has_compare<T>::value,int>::type
 		compare(const axis_key & k) const {
 			return key.compare(k.key);
 		}
+		// else resort to operators
 		template<typename T = K>
 		typename std::enable_if<!has_compare<T>::value,int>::type
 		compare(const axis_key & k) const {
-			if (key < k.key)
-				return -1;
-			if (key > k.key)
-				return 1;
-			return 0;
+			return (key < k.key ? -1 : key == k.key ? 0 : 1);
 		}
 	};
-	ktree_avl<axis_key> internal;     // internal index
+	ktree_avl<axis_key> me;    // internal index
 };
 
 #endif // AXIS_H

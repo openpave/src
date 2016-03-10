@@ -49,18 +49,18 @@ struct keyA {
 static void
 test_axis1()
 {
-	const int d1[14] = {1,2,2,3,4,4,5,6,7,8,9,10,11,12};
+	const int d1[12] = {1,2,3,4,5,6,7,8,9,10,11,12};
 	const int d2[4] = {1,2,3,4};
 	
 	axis<keyA> ax;
 	axis<keyA,keyA> ax2(ax);
-	for (unsigned i = 0; i < 14; i++)
+	for (unsigned i = 0; i < 12; i++)
 		ax.add(keyA(d1[i]));
 	for (unsigned i = 0; i < 4; i++)
 		ax2.add(keyA(d2[i]),keyA(1));
 	ax2.add(keyA(1),keyA(12));
 	keyA a, b;
-	std::tie(a) = ax[1];
+	a = ax[1];
 	std::tie(b,a) = ax2[1];
 }
 
@@ -71,14 +71,17 @@ test_axis2()
 
 	axis<int> ax;
 	axis<int,int> ax2(ax);
+	axis<int,int,int> ax3(ax2);
 	for (unsigned i = 0; i < 4; i++)
 		ax.add(d[i]);
 	for (unsigned i = 0; i < 4; i++)
 		ax2.add(d[i],1);
 	ax2.add(1,4);
-	int a, b;
-	std::tie(a) = ax[1];
+	ax3.add(1,1,1);
+	int a, b, c;
+	a = ax[1];
 	std::tie(b,a) = ax2[1];
+	std::tie(c,b,a) = ax3[0];
 }
 
 static void
