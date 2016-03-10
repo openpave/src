@@ -38,6 +38,7 @@
 #ifdef TEST_TREES
 #include <cstdio>
 #endif
+#include "mathplus.h"
 
 /*
  * struct BST
