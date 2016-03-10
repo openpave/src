@@ -42,16 +42,15 @@ struct has_compare
 {
 private:
 	template<typename C>
-	static constexpr typename std::is_same<
+	static typename std::is_same<
 		decltype(std::declval<C>().compare(std::declval<C>())),int>::type
 	check(C *) { return std::true_type(); };
 	template<typename>
-	static constexpr std::false_type
-	check(...) { return std::false_type(); };
+	static std::false_type check(...) { return std::false_type(); };
 
 	typedef decltype(check<T>(0)) type;
 public:
-	static constexpr bool value = type::value;
+	static const bool value = type::value;
 };
 
 #endif // HASCOMPARE_H
