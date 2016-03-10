@@ -50,7 +50,7 @@ template<typename M> class dispatcher;
 /*
  * class message
  */
-template<typename ...Ts>
+template<typename...Ts>
 struct message {
 	message(std::function<void(Ts...)> && f)
 	  : handler(std::move(f)) {
@@ -69,7 +69,7 @@ private:
 /*
  * class dispatcher
  */
-template<typename ...Ts>
+template<typename...Ts>
 class dispatcher<message<Ts...>> {
 public:
 	std::function<void(void)> attach(message<Ts...> && m) {
