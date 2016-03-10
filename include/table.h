@@ -239,16 +239,24 @@ private:
 			unsigned nb = ((i-1)*(os+1)+p+1)*bs;
 			unsigned ln = (i == ss ? os-p : os);
 			std::memmove(&buffer[nb],&buffer[ob],ln*bs*sizeof(V));
-			for (unsigned j = 0; v != nullptr && j < bs; j++)
-				initelem(nb-bs+j,&v[--nl]);
+			for (unsigned j = 0; j < bs; j++)
+				initelem(nb-bs+j,v ? &v[--nl] : nullptr);
 		}
 	}
 	// Remove element position p.
 	void remove(unsigned d, unsigned p) {
-		buffer[p].~V();
-		if (p+1 < length())
-			std::memmove(&buffer[p],&buffer[p+1],(length()-p-1)*sizeof(V));
+		unsigned bs = length(d);
+		unsigned ss = step(d);
+		unsigned os = sizes[d];
 		sizes[d]--;
+		for (unsigned i = 0; i < ss; i++) {
+			unsigned ob = (i*os+p+1)*bs;
+			unsigned nb = (i*(os-1)+p)*bs;
+			unsigned ln = (i == ss-1 ? os-p-1 : os);
+			for (unsigned j = 0; j < bs; j++)
+				buffer[nb+j].~V();
+			std::memmove(&buffer[nb],&buffer[ob],ln*bs*sizeof(V));
+		}
 		allocate(length());
 	}
 };

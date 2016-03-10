@@ -209,6 +209,8 @@ private:
 		axis_key(const axis<Ks...> & pr, const K & k, const Ks &...ks)
 		  : key(k) {
 			pi = pr.getorderof(ks...);
+			if (pi == UINT_MAX)
+				throw std::runtime_error("key not found in prior axis!");
 		}
 		// use the compare function if it has one
 		template<typename T = K>
