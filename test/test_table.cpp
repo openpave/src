@@ -96,6 +96,12 @@ test_table1()
 	ax.add(keyA(3));
 	for (unsigned i = 0; i < 5; i++)
 		tbl[i] = (double)(i);
+	axis<unsigned,keyA> ax2(ax);
+	for (unsigned i = 0; i < 4; i++)
+		ax2.add(i,keyA(2));
+	table<double,axis<keyA>,axis<unsigned,keyA>> tbl2(ax,ax2);
+	(void)tbl2(1,1);
+	(void)tbl2(keyA(2),ax2[2]);
 }
 
 int

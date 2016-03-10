@@ -55,11 +55,11 @@
  * Class table
  *
  */
-template<typename V, typename ...As>
+template<typename V, typename...As>
 class table : protected listener
 {
 public:
-	table(As &... as)
+	table(As &...as)
 	  : axes(as...), buflen(0), blklen(64), buffer(nullptr) {
 		unsigned s = init(as...);
 		allocate(s); // Creates enough space
@@ -75,6 +75,20 @@ public:
 			throw std::out_of_range("Index out of range!");
 #endif
 		return buffer[p];
+	}
+	// Behave like an array. Zero indexed.
+	const V & operator() (const typename As::index_t...ps) const {
+		return buffer[make_index(0,ps...)];
+	}
+	V & operator() (const typename As::index_t...ps) {
+		return buffer[make_index(0,ps...)];
+	}
+	// Behave like an array using the axis keys
+	const V & operator() (const typename As::key_t &...ks) const {
+		return buffer[make_fromkey(0,ks...)];
+	}
+	V & operator() (const typename As::key_t &...ks) {
+		return buffer[make_fromkey(0,ks...)];
 	}
 
 private:
@@ -99,11 +113,11 @@ private:
 	};
 	V * buffer;                // The actual storage.
 
-	template<typename... Ks>
+	template<typename...Ks>
 	unsigned init(Ks &...) {
 		return 1;
 	}
-	template<typename K, typename... Ks>
+	template<typename K, typename...Ks>
 	unsigned init(K & ax, Ks &...ks) {
 		const unsigned d = sizeof...(Ks);
 		unsigned s = ax.length();
@@ -124,6 +138,24 @@ private:
 		}));
 		sizes[d] = s;
 		return s*init(ks...);
+	}
+	template<typename...Is>
+	unsigned make_index(unsigned p, Is...) const {
+		return p;
+	}
+	template<typename I, typename...Is>
+	unsigned make_index(unsigned p, I i, Is...is) const {
+		return make_index(p*sizes[sizeof...(Is)]+i,is...);
+	}
+	template<typename...Ks>
+	unsigned make_fromkey(unsigned p, Ks...) const {
+		return p;
+	}
+	template<typename K, typename...Ks>
+	unsigned make_fromkey(unsigned p, K k, Ks...ks) const {
+		auto a = std::get<sizeof...(As)-sizeof...(Ks)-1>(axes);
+		unsigned i = a.getorderof(k);
+		return make_fromkey(p*sizes[sizeof...(Ks)]+i,ks...);
 	}
 	// Return the size of array below dimension d.
 	unsigned length(const unsigned d = sizeof...(As)) const {

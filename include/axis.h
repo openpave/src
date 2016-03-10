@@ -91,7 +91,7 @@ enum class axis_message {
 };
 
 // Forward declare class axis as a variadic template
-template<typename ...Ks> class axis {};
+template<typename...Ks> class axis {};
 
 /*
  * Class axis - a multi-level set (for use as an "axis")
@@ -99,11 +99,14 @@ template<typename ...Ks> class axis {};
  * This defines an "axis" which can have an number of prior axes.  This
  * level has key type K, and the parameter pack Ks has the prior levels.
  */
-template<typename K, typename ...Ks>
+template<typename K, typename...Ks>
 class axis<K,Ks...>
   : public dispatcher<message<axis_message,unsigned>>, public listener
 {
 public:
+	typedef unsigned index_t;
+	typedef std::tuple<const K &, const Ks &...> key_t;
+
 	axis(axis<Ks...> & pr)
 	  : prior(pr) {
 		listen(pr,message<axis_message,unsigned>(
@@ -137,7 +140,7 @@ public:
 	~axis() {
 		dispatch(axis_message::deleting,UINT_MAX);
 	}
-	void add(const K & k, const Ks & ...ks) {
+	void add(const K & k, const Ks &...ks) {
 		if (!prior.haskey(ks...))
 			throw std::runtime_error("attempting to insert key into axis without key in prior!");
 		if (haskey(k,ks...))
@@ -146,7 +149,7 @@ public:
 		me.add(a);
 		dispatch(axis_message::add,me.getorderof(a));
 	}
-	void remove(const K & k, const Ks & ...ks) {
+	void remove(const K & k, const Ks &...ks) {
 		if (!haskey(k,ks...))
 			throw std::runtime_error("removal key not found in axis!");
 		axis_key a(prior,k,ks...);
@@ -157,14 +160,14 @@ public:
 		return me.length();
 	}
 	// Do a key lookup, and return UINT_MAX if the key is not found.
-	bool haskey(const K & k, const Ks & ...ks) const {
+	bool haskey(const K & k, const Ks &...ks) const {
 		if (!prior.haskey(ks...))
 			return false;
 		return me.haskey(axis_key(prior,k,ks...));
 	}
 	// Get the full key as a tuple
 	template<unsigned N = sizeof...(Ks)>
-	typename std::enable_if<N!=1,std::tuple<const K &, const Ks &...>>::type
+	typename std::enable_if<N!=1,key_t>::type
 	operator[] (const unsigned p) const {
 		if (!me.inbounds(p))
 			throw std::out_of_range("ordered index out of bounds!");
@@ -174,21 +177,32 @@ public:
 	// Special version for the second last since it does not get a tuple
 	// from the first axis.
 	template<unsigned N = sizeof...(Ks)>
-	typename std::enable_if<N==1,std::tuple<const K &, const Ks &...>>::type
+	typename std::enable_if<N==1,key_t>::type
 	operator[] (const unsigned p) const {
 		if (!me.inbounds(p))
 			throw std::out_of_range("ordered index out of bounds!");
 		const axis_key & a = me.getatorder(p);
-		return std::tuple<const K &, const Ks &...>(a.key,prior[a.pi]);
+		return key_t(a.key,prior[a.pi]);
 	}
 	// Get the ordered position of an element in the sort.
-	unsigned getorderof(const K & k, const Ks & ...ks) const {
+	unsigned getorderof(const K & k, const Ks &...ks) const {
 		if (!haskey(k,ks...))
 			throw std::runtime_error("key not found in axis!");
 		return me.getorderof(axis_key(prior,k,ks...));
 	}
+	unsigned getorderof(const key_t & t) const {
+		return unpack_getorderof(t,typename idx<sizeof...(Ks)+1>::type());
+	}
 
 private:
+	// Tuple unpacker
+	template<int...> struct seq {};
+	template<int N, int...S> struct idx : idx<N-1,N-1,S...> {};
+	template<int...S> struct idx<0,S...>{ typedef seq<S...> type; };
+	template<int...S>
+	unsigned unpack_getorderof(const key_t & t, seq<S...>) const {
+		return getorderof(std::get<S>(t)...);
+	}
 	struct axis_key {
 		unsigned pi;
 		K key;
@@ -229,6 +243,9 @@ class axis<K>
   : public dispatcher<message<axis_message,unsigned>>
 {
 public:
+	typedef unsigned index_t;
+	typedef const K & key_t;
+
 	axis() {
 	}
 	~axis() {
