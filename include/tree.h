@@ -345,12 +345,6 @@ protected:
 	inline explicit tree(const unsigned b = DFLT_BLK)
 	  : block(b > 1 ? b : 1) {
 	}
-	inline explicit tree(const tree & t)
-	  : block(t.block) {
-		for (unsigned i = 0; i < t.length(); i++) {
-			add(t[i]);
-		}
-	}
 	inline ~tree() {
 		free(value);
 	}
