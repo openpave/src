@@ -248,34 +248,35 @@ private:
  * K must implement compare().
  */
 template<typename K, typename V, template<typename,typename> class N>
-class tree {
+class tree
+{
 public:
 	// The length. Nice for lots of things...
-	inline unsigned length() const {
+	unsigned length() const {
 		return size;
 	}
 	// Check if an index is within the set...
-	inline bool inbounds(const unsigned p) const {
+	bool inbounds(unsigned p) const {
 		return (p < size ? true : false);
 	}
 	// Do a key lookup, and return UINT_MAX if the key is not found.
-	inline bool haskey(const K & k) const {
+	bool haskey(const K & k) const {
 		return (getposition(k) != UINT_MAX);
 	}
 	// We can use node numbers to find our nodes...
-	inline V & operator[] (const unsigned p) const {
+	V & operator[] (unsigned p) const {
 		return getatposition(p);
 	}
-	inline V & getatposition(const unsigned p) const {
+	V & getatposition(unsigned p) const {
 		if (!inbounds(p))
 			throw std::out_of_range("unordered index out of bounds!");
 		return value[p]._v;
 	}
 	// Do a key lookup, and return UINT_MAX if the key is not found.
-	inline unsigned getposition(const K & k) const {
+	unsigned getposition(const K & k) const {
 		unsigned x = root;
 		while (x != UINT_MAX) {
-			int cmp = k.compare(static_cast<const K &>(value[x]._v));
+			int cmp = k.compare(static_cast<K &>(value[x]._v));
 			if (cmp == 0)
 				break;
 			else if (cmp < 0)
@@ -286,7 +287,7 @@ public:
 		return x;
 	}
 	// Allow sorted access by returning the in-order position in the tree.
-	inline V & getatorder(const unsigned i) const {
+	V & getatorder(unsigned i) const {
 		unsigned x = root, o = 0;
 		while (x != UINT_MAX) {
 			if (i == o + order(x))
@@ -303,7 +304,7 @@ public:
 		return value[x]._v;
 	}
 	// Get the ordered position of an element in the sort.
-	inline unsigned getorderof(const K & k) const {
+	unsigned getorderof(const K & k) const {
 		unsigned x = root, o = 0;
 		while (x != UINT_MAX) {
 			int cmp = k.compare(value[x]._v);
@@ -321,6 +322,9 @@ public:
 			o = UINT_MAX;
 		return o;
 	}
+	void empty() {
+		allocate(0);
+	}
 
 protected:
 	unsigned size = 0;         // The size of the tree...
@@ -328,7 +332,7 @@ protected:
 	unsigned root = UINT_MAX;  // Root of the tree.
 	struct _V : N<K,V>::node_base {
 		V _v;
-		unsigned weight = 1;   // Number of nodes on left
+		unsigned weight = 1;   // Number of nodes below (including this)
 		unsigned left, right;  // Left and right node numbers
 		explicit _V(const V & v)
 		  : N<K,V>::node_base(), _v(v), left(UINT_MAX), right(UINT_MAX) {
@@ -342,25 +346,29 @@ protected:
 	} * value = nullptr;       // Take a guess...
 
 	// Simple constructor...
-	inline explicit tree(const unsigned b = DFLT_BLK)
+	explicit tree(unsigned b = DFLT_BLK)
 	  : block(b > 1 ? b : 1) {
 	}
-	inline ~tree() {
-		free(value);
+	~tree() {
+		allocate(0);
 	}
-	// The basic add method, that returns the position of the new element
+	// The basic add method
 	virtual void add(const V & v) = 0;
-	// The basic remove method, that returns the old position of the element
+	// The basic remove method
 	virtual void remove(const K & k) = 0;
 	// Make some space...
-	void allocate(const unsigned s) {
+	void allocate(unsigned s) {
 		unsigned b = bufsize(s);
 		if (b == buffer)
 			return;
 		if (b == 0) {
+			for (unsigned i = 0; i < size; i++)
+				value[b].~_V();
 			free(value);
 			value = nullptr;
 			buffer = 0;
+			size = 0;
+			root = UINT_MAX;
 			return;
 		}
 		_V * temp = static_cast<_V *>(realloc(value,b*sizeof(_V)));
@@ -374,10 +382,11 @@ protected:
 		new(&value[size]) _V(v);
 		return size++;
 	}
-	void expunge(const unsigned p) {
-		// Do the ugly work of removing the element and adjusting the offsets
-		// into value[].  This would be better if deferred to a compact()
-		// function of some form and used the nodes to make a free list.
+	void expunge(unsigned p) {
+		// Do the ugly work of removing the element and adjusting the
+		// offsets into value[].  This would be better if deferred to a
+		// compact() function of some form and used the nodes to make a
+		// free list.
 		value[p].~_V();
 		if (--size > p)
 			memmove(&value[p],&value[p+1],(size-p)*sizeof(_V));
@@ -391,22 +400,22 @@ protected:
 		}
 	}
 	// This is the number of nodes in this sub-tree including the root
-	inline unsigned weight(const unsigned r) const {
+	unsigned weight(unsigned r) const {
 		return (r != UINT_MAX ? value[r].weight : 0);
 	}
 	// This is the number of nodes in the left sub-tree
-	inline unsigned order(const unsigned r) const {
+	unsigned order(unsigned r) const {
 		return (r != UINT_MAX ? weight(value[r].left) : 0);
 	}
 	// Get the new weight if we have disturbed the tree
-	inline unsigned new_weight(const unsigned r) const {
+	unsigned new_weight(unsigned r) const {
 		return weight(value[r].left)+weight(value[r].right)+1;
 	}
 
 private:
 	unsigned block;            // The minimum block size.
 	// Calculate the buffer size.
-	inline unsigned bufsize(unsigned s) {
+	unsigned bufsize(unsigned s) {
 		while (s > 8*block)
 			block *= 8;
 		//while (64*s < block)
@@ -424,27 +433,32 @@ private:
  * See https://en.wikipedia.org/wiki/AVL_tree 
  */
 template <typename K, typename V = K>
-class ktree_avl : public tree<K,V,ktree_avl> {
-public:
+class ktree_avl : public tree<K,V,ktree_avl>
+{
+protected:
 	using tree<K,V,::ktree_avl>::value;
 	using tree<K,V,::ktree_avl>::root;
 	using tree<K,V,::ktree_avl>::size;
+	using tree<K,V,::ktree_avl>::allocate;
+	using tree<K,V,::ktree_avl>::insert;
+	using tree<K,V,::ktree_avl>::expunge;
 	using tree<K,V,::ktree_avl>::weight;
 	using tree<K,V,::ktree_avl>::new_weight;
 
+public:
 	// Make one...
-	inline explicit ktree_avl()
-	  : tree<K,V,::ktree_avl>() {
+	ktree_avl(unsigned b = DFLT_BLK)
+	  : tree<K,V,::ktree_avl>(b) {
 	}
 	// Clean up
-	inline ~ktree_avl() {
+	~ktree_avl() {
 	}
 	// Add a node.  Returns the new position in value (usually == size)
 	virtual void add(const V & v) override {
 		unsigned p = UINT_MAX;
-		this->allocate(size+1);
+		allocate(size+1);
 		append(root,v,&p);
-		this->allocate(size);
+		allocate(size);
 #ifdef TEST_TREES
 		assert_avl();
 #endif
@@ -455,8 +469,8 @@ public:
 		remove(root,k,&p);
 		if (p == UINT_MAX)
 			return;
-		this->expunge(p);
-		this->allocate(size);
+		expunge(p);
+		allocate(size);
 #ifdef TEST_TREES
 		assert_avl();
 #endif
@@ -480,25 +494,24 @@ public:
 private:
 	friend class tree<K,V,::ktree_avl>;
 
-	// For AVL trees the only additional node information is the height,
-	// which is the number of nodes under this one (including it).
+	// For AVL trees the only additional node information is the height
 	struct node_base {
 		int height = 1;
 	};
 
-	inline int height(const unsigned r) const {
+	int height(unsigned r) const {
 		return (r != UINT_MAX ? value[r].height : 0);
 	}
-	inline int balance(const unsigned r) const {
+	int balance(unsigned r) const {
 		return height(value[r].right)-height(value[r].left);
 	}
-	inline int new_height(const unsigned r) const {
+	int new_height(unsigned r) const {
 		return MAX(height(value[r].left),height(value[r].right))+1;
 	}
 	void append(unsigned & r, const V & v, unsigned * p) {
 		// If we're UINT_MAX that means we need to make a new node...
 		if (r == UINT_MAX) {
-			*p = r = this->insert(v);
+			*p = r = insert(v);
 			return;
 		}
 #ifdef TEST_TREES
@@ -514,7 +527,7 @@ private:
 		else
 			append(value[r].right,v,p);
 		if (*p != UINT_MAX) {
-			value[r].weight = weight(value[r].left)+weight(value[r].right)+1;
+			value[r].weight = new_weight(r);
 			value[r].height = new_height(r);
 		}
 		rebalance(r);
@@ -606,7 +619,7 @@ private:
 		r = x;
 	}
 #ifdef TEST_TREES
-	void assert_avl(const unsigned r, int * h, unsigned * s) {
+	void assert_avl(unsigned r, int * h, unsigned * s) {
 		int lh, rh;
 		unsigned ls = 0, rs = 0;
 		if (r == UINT_MAX) {
@@ -660,20 +673,20 @@ template <class K, class V>
 class ktree_llrb {
 public:
 	// Make one...
-	inline explicit ktree_llrb()
+	ktree_llrb()
 	  : size(0), buffer(0), block(DFLT_BLK), root(UINT_MAX), value(nullptr) {
 	}
 	// Clean up.
-	inline ~ktree_llrb() {
+	~ktree_llrb() {
 		if (value)
 			free(value);
 	}
 	// The length. Nice for lots of things...
-	inline unsigned length() const {
+	unsigned length() const {
 		return size;
 	}
 	// Do a key lookup, and return UINT_MAX if the key is not found.
-	inline unsigned haskey(const K & k) const {
+	unsigned haskey(const K & k) const {
 		unsigned x = root;
 		while (x != UINT_MAX) {
 			int cmp = k.compare(value[x]._v);
@@ -687,11 +700,11 @@ public:
 		return x;
 	}
 	// We can use node numbers to find our nodes...
-	inline V & operator[] (const unsigned p) const {
+	V & operator[] (const unsigned p) const {
 		return value[p]._v;
 	}
 	// Allow sorted access.
-	inline V & getindex(const unsigned i) const {
+	V & getindex(const unsigned i) const {
 		unsigned x = root, order = 0;
 		while (x != UINT_MAX) {
 			if (i == order + value[x].order)
@@ -707,8 +720,8 @@ public:
 		return value[x]._v;
 	}
 	// Get the position of an element in the sort.
-	inline unsigned getorder(const unsigned i) const {
-		const K & k = static_cast<K &>(value[i]._v);
+	unsigned getorder(const unsigned i) const {
+		K & k = static_cast<K &>(value[i]._v);
 		unsigned x = root, order = 0;
 		while (x != UINT_MAX) {
 			int cmp = k.compare(value[x]._v);
@@ -725,7 +738,7 @@ public:
 		return order;
 	}
 	// Add node.
-	inline void add(const V & v) {
+	void add(const V & v) {
 		bool grew = false;
 		
 		allocate(size+1);
@@ -748,15 +761,10 @@ protected:
 	unsigned block;            // The minimum block size.
 	unsigned root;             // Root of red-black tree.
 	struct _V {
-	private:
 		V _v;
-		
-		friend class ktree_llrb;
-
 		unsigned order;        // Number of nodes on left
 		unsigned left, right;  // Left and right node numbers
 		bool red;              // Colour of link to parent
-
 		explicit _V(const V & v)
 		  : _v(v), 
 		    order(0), left(UINT_MAX), right(UINT_MAX), red(true) {

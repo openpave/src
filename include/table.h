@@ -66,10 +66,10 @@ public:
 		//copy(s,nullptr);   // Constructs the elements and increases size
 	}
 	~table() {
-		deallocate();
+		allocate(0);
 	}
 	// Behave like an array. Zero indexed.
-	V & operator[] (const unsigned p) const {
+	V & operator[] (unsigned p) const {
 #if defined(DEBUG)
 		if (!inbounds(p))
 			throw std::out_of_range("Index out of range!");
@@ -130,6 +130,9 @@ private:
 				case axis_message::remove:
 					this->remove(d,p);
 					break;
+				case axis_message::empty:
+					this->empty();
+					break;
 				case axis_message::deleting:
 					throw std::runtime_error("Out of order destructors!");
 				default:
@@ -153,7 +156,7 @@ private:
 	}
 	template<typename K, typename...Ks>
 	unsigned make_fromkey(unsigned p, K k, Ks...ks) const {
-		auto a = std::get<sizeof...(As)-sizeof...(Ks)-1>(axes);
+		const auto & a = std::get<sizeof...(As)-sizeof...(Ks)-1>(axes);
 		unsigned i = a.getorderof(k);
 		return make_fromkey(p*sizes[sizeof...(Ks)]+i,ks...);
 	}
@@ -165,14 +168,14 @@ private:
 		return s;
 	}
 	// Return the step size for dimension d.
-	unsigned step(const unsigned d) const {
+	unsigned step(unsigned d) const {
 		unsigned s = 1;
 		for (unsigned i = d+1; i < sizeof...(As); i++)
 			s *= sizes[i];
 		return s;
 	}
 	// Check if an index is within the set...
-	bool inbounds(const unsigned p) const {
+	bool inbounds(unsigned p) const {
 		return (p < length() ? true : false);
 	}
 	// Calculate the buffer size.
@@ -181,11 +184,13 @@ private:
 			blklen *= 8;
 		return blklen*(s/blklen+(s%blklen?1:0));
 	}
-	void allocate(const unsigned s) {
+	void allocate(unsigned s) {
 		unsigned b = bufsize(s);
 		if (b == buflen)
 			return;
 		if (b == 0) {
+			for (unsigned i = 0; i < length(); i++)
+				buffer[i].~V();
 			free(buffer);
 			buffer = nullptr;
 			buflen = 0;
@@ -197,26 +202,22 @@ private:
 		buffer = temp;
 		buflen = b;
 	}
-	void deallocate() {
-		if (buffer != nullptr) {
-			for (unsigned i = 0; i < length(); i++)
-				buffer[i].~V();
-			free(buffer);
-			buffer = nullptr;
-		}
-		buflen = 0;
+	void empty() {
+		allocate(0);
+		for (unsigned i = 0; i < sizeof...(As); i++)
+			sizes[i] = 0;
 	}
 	// POD constructor
 	template<typename T>
 	typename std::enable_if<std::is_pod<T>::value>::type
-	initelem(const unsigned i, const T * v) {
+	initelem(unsigned i, const T * v) {
 		if (v)
 			buffer[i] = *v;
 	}
 	// not POD
 	template<typename T>
 	typename std::enable_if<!std::is_pod<T>::value>::type
-	initelem(const unsigned i, const T * v) {
+	initelem(unsigned i, const T * v) {
 		if (v)
 			new(&buffer[i]) _V(*v);
 		else

@@ -87,7 +87,7 @@
 #include "hascompare.h"
 
 enum class axis_message {
-	add, remove, deleting
+	add, remove, empty, deleting
 };
 
 // Forward declare class axis as a variadic template
@@ -130,6 +130,10 @@ public:
 							a.pi--;
 					}
 					break;
+				case axis_message::empty:
+					dispatch(axis_message::empty,p);
+					me.empty();
+					break;
 				case axis_message::deleting:
 					throw std::runtime_error("Out of order destructors!");
 				default:
@@ -168,7 +172,7 @@ public:
 	// Get the full key as a tuple
 	template<unsigned N = sizeof...(Ks)>
 	typename std::enable_if<N!=1,key_t>::type
-	operator[] (const unsigned p) const {
+	operator[] (unsigned p) const {
 		if (!me.inbounds(p))
 			throw std::out_of_range("ordered index out of bounds!");
 		const axis_key & a = me.getatorder(p);
@@ -178,7 +182,7 @@ public:
 	// from the first axis.
 	template<unsigned N = sizeof...(Ks)>
 	typename std::enable_if<N==1,key_t>::type
-	operator[] (const unsigned p) const {
+	operator[] (unsigned p) const {
 		if (!me.inbounds(p))
 			throw std::out_of_range("ordered index out of bounds!");
 		const axis_key & a = me.getatorder(p);
@@ -192,6 +196,11 @@ public:
 	}
 	unsigned getorderof(const key_t & t) const {
 		return unpack_getorderof(t,typename idx<sizeof...(Ks)+1>::type());
+	}
+	// Remove all elements
+	void empty() {
+		dispatch(axis_message::empty,UINT_MAX);
+		me.empty();
 	}
 
 private:
@@ -276,7 +285,7 @@ public:
 	}
 	// Get the key at some position in the sort order
 	// This does not return a tuple to avoid making life complex.
-	const K & operator[] (const unsigned p) const {
+	const K & operator[] (unsigned p) const {
 		if (!me.inbounds(p))
 			throw std::out_of_range("ordered index out of bounds!");
 		return me.getatorder(p).key;
@@ -286,6 +295,11 @@ public:
 		if (!haskey(k))
 			throw std::runtime_error("key not found in axis!");
 		return me.getorderof(axis_key(k));
+	}
+	// Remove all elements
+	void empty() {
+		dispatch(axis_message::empty,UINT_MAX);
+		me.empty();
 	}
 
 private:
