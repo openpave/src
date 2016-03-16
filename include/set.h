@@ -149,7 +149,7 @@ public:
 	// Behave like an array. Zero indexed.
 	V & operator[] (const unsigned p) const {
 #if defined(DEBUG)
-		if (~inbounds(p))
+		if (!inbounds(p))
 			throw std::out_of_range("Index out of range!");
 #endif
 		return value[p];
@@ -296,8 +296,6 @@ public:
 		unsigned i;
 		if (s == 0)
 			throw std::invalid_argument("Cannot add zero elements into a set!");
-		if (v == nullptr)
-			throw std::invalid_argument("Cannot add a null into a set!");
 		if (p >= this->size) {
 			this->allocate(p+s);
 			for (i = this->size; p > 0 && i < p-1; i++)
@@ -310,7 +308,7 @@ public:
 			this->size += s;
 		}
 		for (i = 0; i < s; i++)
-			this->init(p+i,&v[i]);
+			this->init(p+i,v ? &v[i] : nullptr);
 	}
 	// Remove the last element.
 	inline void remove() {
@@ -570,7 +568,7 @@ public:
 	// Only integer keys make sense.
 	inline const V & operator[] (const unsigned p) const {
 #if defined(DEBUG)
-		if (~inbounds(p))
+		if (!inbounds(p))
 			throw std::out_of_range("Index out of range!");
 #endif
 		return value[p];
@@ -578,7 +576,7 @@ public:
 	// Allow sorted access.
 	inline const V & getindex(const unsigned i) const {
 #if defined(DEBUG)
-		if (~inbounds(i))
+		if (!inbounds(i))
 			throw std::out_of_range("Index out of range!");
 #endif
 		return value[idx[i]];
@@ -586,7 +584,7 @@ public:
 	// Get the position of an element in the sort.
 	inline unsigned getorder(const unsigned i) const {
 #if defined(DEBUG)
-		if (~inbounds(i))
+		if (!inbounds(i))
 			throw std::out_of_range("Index out of range!");
 #endif
 		return idx[i];
@@ -779,7 +777,7 @@ public:
 	inline V & operator[] (const K & k) const {
 		unsigned p = haskey(k);
 #if defined(DEBUG)
-		if (~inbounds(p))
+		if (!inbounds(p))
 			throw std::out_of_range("Key out of range!");
 #endif
 		return value[p];
@@ -787,7 +785,7 @@ public:
 	// Allow integer keys.
 	inline V & operator[] (const unsigned p) const {
 #if defined(DEBUG)
-		if (~inbounds(p))
+		if (!inbounds(p))
 			throw std::out_of_range("Index out of range!");
 #endif
 		return value[p];
@@ -1074,7 +1072,7 @@ public:
 	inline const V & operator[] (const K & k) const {
 		unsigned p = haskey(k);
 #if defined(DEBUG)
-		if (~inbounds(p))
+		if (!inbounds(p))
 			throw std::out_of_range("Key out of range!");
 #endif
 		return value[p];
@@ -1082,7 +1080,7 @@ public:
 	// Allow integer keys.
 	inline const V & operator[] (const unsigned p) const {
 #if defined(DEBUG)
-		if (~inbounds(p))
+		if (!inbounds(p))
 			throw std::out_of_range("Index out of range!");
 #endif
 		return value[p];
@@ -1090,7 +1088,7 @@ public:
 	// Allow sorted access.
 	inline const V & getindex(const unsigned i) const {
 #if defined(DEBUG)
-		if (~inbounds(i))
+		if (!inbounds(i))
 			throw std::out_of_range("Index out of range!");
 #endif
 		return value[idx[i]];
@@ -1098,7 +1096,7 @@ public:
 	// Get the position of an element in the sort.
 	inline unsigned getorder(const unsigned i) const {
 #if defined(DEBUG)
-		if (~inbounds(i))
+		if (!inbounds(i))
 			throw std::out_of_range("Index out of range!");
 #endif
 		return findkey(value[i]);
@@ -1293,7 +1291,7 @@ public:
 	inline V & operator[] (const K & k) const {
 		unsigned p = haskey(k);
 #if defined(DEBUG)
-		if (~inbounds(p))
+		if (!inbounds(p))
 			throw std::out_of_range("Key out of range!");
 #endif
 		return value[p];
@@ -1301,7 +1299,7 @@ public:
 	// Linear access.
 	inline K & getkey(const unsigned p) const {
 #if defined(DEBUG)
-		if (~inbounds(p))
+		if (!inbounds(p))
 			throw std::out_of_range("Index out of range!");
 #endif
 		return key[p];
@@ -1309,7 +1307,7 @@ public:
 	// More linear access.
 	inline V & getvalue(const unsigned p) const {
 #if defined(DEBUG)
-		if (~inbounds(p))
+		if (!inbounds(p))
 			throw std::out_of_range("Index out of range!");
 #endif
 		return value[p];
