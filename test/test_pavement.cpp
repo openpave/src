@@ -33,6 +33,31 @@
 #include <stdio.h>
 
 static void
+test0()
+{
+	LEsystem Pavement;
+
+	Pavement.addlayer(0.0,1.0,0.5);
+	Pavement.addload(point2d(0,0),0,1.0,1.0);
+	Pavement.addpoint(point3d(0,0,0));
+	Pavement.calculate();
+	const pavedata & d1 = Pavement.result(point3d(0,0,0));
+	printf("First result: %f\n",d1.result(pavedata::deflct, pavedata::zz));
+	Pavement.calculate();
+	const pavedata & d2 = Pavement.result(point3d(0,0,0));
+	printf("Second result: %f\n",d2.result(pavedata::deflct, pavedata::zz));
+	Pavement.layer(0).emod(1.0);
+	Pavement.calculate();
+	const pavedata & d3 = Pavement.result(point3d(0,0,0));
+	printf("Third result: %f\n",d3.result(pavedata::deflct, pavedata::zz));
+	Pavement.removelayer(0);
+	Pavement.addlayer(0.0,1.0,0.5);
+	Pavement.calculate();
+	const pavedata & d4 = Pavement.result(point3d(0,0,0));
+	printf("Fourth result: %f\n",d4.result(pavedata::deflct, pavedata::zz));
+}
+
+static void
 test1()
 {
 	LEsystem Pavement;
@@ -611,6 +636,8 @@ test11()
 int
 main()
 {
+	printf("Test 0:\n");
+	test0();
 	printf("Test 1:\n");
 	test1();
 	printf("Test 2:\n");

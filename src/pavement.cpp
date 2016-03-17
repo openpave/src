@@ -29,11 +29,19 @@
 *************************************************************************/
 
 #include <assert.h>
-#include "pavement.h"
-#include "linalg.h"
+#include <cstddef>
 #include <time.h>
 #include <stdio.h>
-#include <cstddef>
+#if defined(_MSC_VER)
+#include <stddef.h>
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
+#else
+#include <stdint.h>
+#endif
+#include "pavement.h"
+#include "event.h"
+#include "linalg.h"
 
 /*
  * Calculate the principle stresses, and the strains.
@@ -129,7 +137,7 @@ pavedata::principle(double v, double E)
  * Find a value in a sorted array.
  */
 template<class T>
-inline unsigned
+static inline unsigned
 findvalue(const T * a, const unsigned n, const T & v) {
 	unsigned l = 0, r = n;
 
@@ -150,10 +158,10 @@ findvalue(const T * a, const unsigned n, const T & v) {
  * class LEsystem_cache - A hackish slab allocator.
  *
  * The result cache is a very hackish slab allocator which stores
- * intermediate calculation values.  It is implemented via a single pointer. 
+ * intermediate calculation values.  It is implemented via a single pointer.
  * That is the head of a linked list of malloc()'ed pages where memory is
  * handed out from.  The pointer to the next page is stored in the first
- * slot in the slab, and the second slot stores the fill level of the slab. 
+ * slot in the slab, and the second slot stores the fill level of the slab.
  * If this points to the same address as the cache pointer then we are in a
  * reset state and will not allocate memory but will give back pointers to
  * already allocated space.  The LEsystem class knows if it can just reuse
@@ -166,32 +174,33 @@ class LEsystem_cache {
 	friend class LEsystem;
 	// always under allocate a little to help malloc()
 	// 6*sizeof(void *) ~= 32+sizeof(this);
-	static const size_t page_size = 0x400000 - 6*sizeof(void *);
+	static const size_t page_size = 0x400000-6*sizeof(void *);
 
 	LEsystem_cache * next;              // the next slab
 	void * mark;                        // the fill level for this slab
-	
+
 	LEsystem_cache()
 	  : next(nullptr), mark(nullptr) {
 	}
 	~LEsystem_cache() {
 	}
 	void * allocate(const size_t len) {
-		size_t s = align(MAX(len,page_size)) + align(sizeof(LEsystem_cache));
+		size_t s = align(MAX(len,page_size))+align(sizeof(LEsystem_cache));
 		LEsystem_cache * c = this;
 		void * p = this, * q = this->mark;
 		ptrdiff_t l;
-		
+
 		assert(this->mark != nullptr);
 		while (p != nullptr) {
 			// now get the new mark
 			c = static_cast<LEsystem_cache *>(p);
 			if (c->mark == c)
 				// The cache is empty or has been reset
-				c->mark = align(c + sizeof(LEsystem_cache));
+				c->mark = align(static_cast<char *>(static_cast<void *>(c))
+					+ sizeof(LEsystem_cache));
 			q = c->mark;
 		    // get the amount of space left in this slab.
-			l = static_cast<char *>(p) + s - static_cast<char *>(q);
+			l = static_cast<char *>(p)+s-static_cast<char *>(q);
 			// check if there is enough space for this request
 			if (l-static_cast<ssize_t>(align(len)) >= 0)
 				break;
@@ -201,7 +210,7 @@ class LEsystem_cache {
 		// Allocate a new slab
 		if (p == nullptr) {
 			// First mark the current slab as full.
-			c->mark = align(static_cast<char *>(static_cast<void *>(c)) + s);
+			c->mark = align(static_cast<char *>(static_cast<void *>(c))+s);
 			p = malloc(s);
 			if (p == nullptr)
 				throw std::bad_alloc();
@@ -210,10 +219,11 @@ class LEsystem_cache {
 			// Create the new entry at the start of the slab
 			c = new(p) LEsystem_cache();
 			// set the new mark
-			q = c->mark = align(c + sizeof(LEsystem_cache));
+			q = c->mark = align(static_cast<char *>(static_cast<void *>(c))
+				+sizeof(LEsystem_cache));
 		}
 		// Finally increment the mark to cover the space
-		c->mark = align(static_cast<char *>(q) + len);
+		c->mark = align(static_cast<char *>(q)+len);
 		// Return the original mark to the caller
 		return q;
 	}
@@ -228,7 +238,7 @@ class LEsystem_cache {
 	static LEsystem_cache * create() {
 		void * p;
 		LEsystem_cache * c;
-		
+
 		p = malloc(page_size);
 		if (p == nullptr)
 			throw std::bad_alloc();
@@ -239,7 +249,7 @@ class LEsystem_cache {
 	static void destroy(LEsystem_cache * cache) {
 		void * p;
 		LEsystem_cache * c = cache;
-		
+
 		if (c == nullptr)
 			return;
 		p = c->next;
@@ -253,7 +263,7 @@ class LEsystem_cache {
 		free(cache);
 	}
 	static uintptr_t align(const uintptr_t s) {
-		return s + (16 - s%16)%16;
+		return s+(16-s%16)%16;
 	}
 	static void * align(const void * p) {
 		uintptr_t s = reinterpret_cast<uintptr_t>(p);
@@ -285,8 +295,37 @@ LEsystem::cache_reset()
 void
 LEsystem::cache_free()
 {
+	cached_state(cachestate::empty);
 	LEsystem_cache::destroy(cache);
 	cache = nullptr;
+}
+
+double
+LElayer::thickness(double th)
+{
+	owner->cached_state(LEsystem::cachestate::empty);
+	return h = th;
+}
+
+double
+LElayer::emod(double te)
+{
+	owner->cached_state(LEsystem::cachestate::emod);
+	return E = te;
+}
+
+double
+LElayer::poissons(double tv)
+{
+	owner->cached_state(LEsystem::cachestate::emod);
+	return v = tv;
+}
+
+double
+LElayer::slip(double ts)
+{
+	owner->cached_state(LEsystem::cachestate::emod);
+	return s = ts;
 }
 
 void
@@ -296,7 +335,7 @@ LEsystem::addlayer(double h, double e, const double v, const double s,
 	LElayer * pl = first;
 	unsigned i = 0;
 
-	cache_state &= ~geom;
+	cached_state(cachestate::empty);
 	if (p == UINT_MAX)
 		pl = last;
 	else
@@ -311,7 +350,7 @@ LEsystem::removelayer(const unsigned l)
 	LElayer * pl = first;
 	unsigned i = 0;
 
-	cache_state &= ~geom;
+	cached_state(cachestate::empty);
 	while (i++ < l && pl != 0)
 		pl = pl->next;
 	delete pl;
@@ -320,7 +359,7 @@ LEsystem::removelayer(const unsigned l)
 void
 LEsystem::removelayers()
 {
-	cache_state &= ~geom;
+	cached_state(cachestate::empty);
 	empty();
 }
 
@@ -336,38 +375,41 @@ LEsystem::layer(const unsigned l) const
 }
 
 void
-LEsystem::addload(const point2d & l, double f, double p, double r)
+LEsystem::addload(const unsigned g, const paveload & l)
 {
-	cache_state &= ~geom;
-	return load.add(paveload(l,f,p,r));
+	cached_state(cachestate::empty);
+	if (!lg.inbounds(g))
+		lg.add(g,nullptr);
+	lg[g].add(l);
 }
 
 void
-LEsystem::addload(const paveload & l)
+LEsystem::removeload(const unsigned g, const unsigned i)
 {
-	cache_state &= ~geom;
-	load.add(l);
+	cached_state(cachestate::empty);
+	if (!lg.inbounds(g))
+		throw std::out_of_range("Load group out of range!");
+	if (!lg[g].inbounds(i))
+		throw std::out_of_range("Load out of range!");
+	lg[g].remove(i);
 }
 
 void
-LEsystem::removeload(const unsigned i)
+LEsystem::removeloads(const unsigned g)
 {
-	cache_state &= ~geom;
-	load.remove(i);
-}
-
-void
-LEsystem::removeloads()
-{
-	cache_state &= ~geom;
-	load.empty();
+	cached_state(cachestate::empty);
+	if (lg.length() == 0 && g == clg)
+		return;
+	if (!lg.inbounds(g))
+		throw std::out_of_range("Load group out of range!");
+	lg.remove(g);
 }
 
 void
 LEsystem::addpoint(const point3d & p, unsigned l)
 {
-	cache_state &= ~geom;
-	data.add(pavedata(p,l));
+	cached_state(cachestate::empty);
+	points.add(pavepoint(p,l));
 }
 
 void
@@ -375,11 +417,11 @@ LEsystem::addgrid(const unsigned nx, const double * xp,
                   const unsigned ny, const double * yp,
                   const unsigned nz, const double * zp)
 {
-	cache_state &= ~geom;
+	cached_state(cachestate::empty);
 	for (unsigned ix = 0; ix < nx; ix++) {
 		for (unsigned iy = 0; iy < ny; iy++) {
 			for (unsigned iz = 0; iz < nz; iz++)
-				data.add(pavedata(point3d(xp[ix],yp[iy],zp[iz])));
+				points.add(pavepoint(point3d(xp[ix],yp[iy],zp[iz])));
 		}
 	}
 }
@@ -387,15 +429,15 @@ LEsystem::addgrid(const unsigned nx, const double * xp,
 void
 LEsystem::removepoint(const point3d & p, unsigned l)
 {
-	cache_state &= ~geom;
-	data.remove(pavepoint(p,l));
+	cached_state(cachestate::empty);
+	points.remove(pavepoint(p,l));
 }
 
 void
 LEsystem::removepoints()
 {
-	cache_state &= ~geom;
-	data.empty();
+	cached_state(cachestate::empty);
+	points.empty();
 }
 
 /*
@@ -407,22 +449,33 @@ LEsystem::check()
 {
 	unsigned il, nl = layers();
 	const LElayer * pl;
-	
+
+	if (cached_state() == cachestate::all)
+		return true;
 	bool ischecked = true;
-	if (nl == 0) {
-		event_msg(EVENT_WARN,
-			"Cannot calculate a pavement without any layers!");
-		ischecked = false;
-	}
-	if (load.length() == 0) {
-		event_msg(EVENT_WARN,
-			"Cannot calculate a pavement without any loads!");
-		ischecked = false;
-	}
-	if (data.length() == 0) {
-		event_msg(EVENT_WARN,
-			"Cannot calculate a pavement without any evaluation points!");
-		ischecked = false;
+	if (cached_state() == cachestate::empty) {
+		if (nl == 0) {
+			event_msg(EVENT_WARN,
+				"Cannot calculate a pavement without any layers!");
+			ischecked = false;
+		}
+		if (lg.length() == 0) {
+			event_msg(EVENT_WARN,
+				"Cannot calculate a pavement without any loads!");
+			ischecked = false;
+		}
+		for (il = 0; il < lg.length(); il++) {
+			if (lg[il].length() == 0) {
+				event_msg(EVENT_WARN,
+					"Cannot calculate a pavement without any loads!");
+				ischecked = false;
+			}
+		}
+		if (points.length() == 0) {
+			event_msg(EVENT_WARN,
+				"Cannot calculate a pavement without any evaluation points!");
+			ischecked = false;
+		}
 	}
 	for (il = 1, pl = first; pl != 0; il++, pl = pl->next) {
 		if (pl->emod() <= 0.0) {
@@ -431,25 +484,9 @@ LEsystem::check()
 				" than zero not %f!", il, pl->emod());
 			ischecked = false;
 		}
-		if (pl->poissons() <= 0.0 || pl->poissons() > 0.5) {
-			event_msg(EVENT_WARN,
-				"Error: Poisson's ratio of layer %d must be between"
-				" zero and one half not %f!", il, pl->poissons());
-			ischecked = false;
-		}
-		if (pl->thickness() < 0.0) {
-			event_msg(EVENT_WARN,
-				"Error: Layer %d cannot have negative thickness!", il);
-			ischecked = false;
-		}
 		if (pl->slip() < 0.0 || pl->slip() > 1.0 ) {
 			event_msg(EVENT_WARN,
 				"Error: Layer %d has an invalid bonding coefficent!", il);
-			ischecked = false;
-		}
-		if (pl->thickness() == 0.0 && pl->next != 0) {
-			event_msg(EVENT_WARN,
-				"Error: Layer %d cannot have zero thickness!", il);
 			ischecked = false;
 		}
 		if (pl->thickness() == 0.0 && pl->next == 0 && pl->slip() != 1.0) {
@@ -457,28 +494,44 @@ LEsystem::check()
 				"Error: Infinite layer %d cannot have imperfect bonding!", il);
 			ischecked = false;
 		}
+		if (pl->poissons() <= 0.0 || pl->poissons() > 0.5) {
+			event_msg(EVENT_WARN,
+				"Error: Poisson's ratio of layer %d must be between"
+				" zero and one half not %f!", il, pl->poissons());
+			ischecked = false;
+		}
+		if (cached_state() > cachestate::empty)
+			continue;
+		if (pl->thickness() < 0.0) {
+			event_msg(EVENT_WARN,
+				"Error: Layer %d cannot have negative thickness!", il);
+			ischecked = false;
+		}
+		if (pl->thickness() == 0.0 && pl->next != 0) {
+			event_msg(EVENT_WARN,
+				"Error: Layer %d cannot have zero thickness!", il);
+			ischecked = false;
+		}
 	}
 	if (last && last->bottom() > 0.0 && last->poissons() == 0.75) {
- 		event_msg(EVENT_WARN,
+		event_msg(EVENT_WARN,
 			"Error: Last layer cannot have a Poisson's ratio of 0.75!");
 		ischecked = false;
 	}
-	if (ischecked == false)
+	if (cached_state() > cachestate::empty || ischecked == false)
 		return ischecked;
-	for (unsigned ixy = 0; ixy < data.length(); ixy++) {
-		pavedata & d = data[ixy];
-		// Clear the data.
-		memset(d.data,0,sizeof(d.data));
+	for (unsigned ixy = 0; ixy < points.length(); ixy++) {
+		pavepoint & d = points[ixy];
 		// Set the il variables correctly.
 		double z = first->top(), h = 0.0;
 		if (d.z < z) {
- 			event_msg(EVENT_WARN,
+			event_msg(EVENT_WARN,
 				"Error: evaluation point %d (%f,%f,%f) not within pavement!",
 				ixy+1,d.x,d.y,d.z);
 			ischecked = false;
 			continue;
 		}
-		for (pl = first, il = 0; pl != 0; pl = pl->next, il++) {
+		for (pl = first, il = 0; pl != nullptr; pl = pl->next, il++) {
 			h = pl->thickness();
 			if (d.il != UINT_MAX && d.il == il) {
 				break;
@@ -489,14 +542,21 @@ LEsystem::check()
 			}
 			z += h;
 		}
-		assert(pl == 0 || d.il != UINT_MAX);
 		// Points must be within the layer or on the boundary.
-		if (pl == 0 || d.z < z || (h > 0.0 && d.z > (z+h))) {
- 			event_msg(EVENT_WARN,
+		if (pl == nullptr || d.z < z || (h > 0.0 && d.z > (z+h))) {
+			event_msg(EVENT_WARN,
 				"Error: evaluation point %d (%f,%f,%f) not within layer %d!",
 				ixy+1,d.x,d.y,d.z,d.il+1);
 			ischecked = false;
 		}
+	}
+	if (data.length() != lg.length())
+		data.resize(lg.length());
+	for (il = 0; il < lg.length(); il++) {
+		if (data[il].length() != points.length())
+			data[il].resize(points.length());
+		for (unsigned ixy = 0; ixy < points.length(); ixy++)
+			data[il][ixy] = pavedata(points[ixy]);
 	}
 	return ischecked;
 }
@@ -518,14 +578,14 @@ struct axialdata {
 	double sse2;
 	double rdp2;
 	double vdp2;
-	bool   active;
-	
+
 	// This function takes the results from the xxx2 variables, and adds
 	// them to the main varaibles, reseting them, and then deactivating
 	// the point if none changed by more than epsilon.
-	void accumulate(LEsystem::resulttype res, const double & eps) {
+	void accumulate(LEsystem::resulttype res, bool & active,
+			const double & eps) {
 		bool isactive = false;
-		
+
 		if (!active)
 			return;
 		if (!(res & LEsystem::disp)) {
@@ -547,16 +607,17 @@ struct axialdata {
 		vdp2 = 0.0;
 		if (!isactive && eps > 0.0)
 			active = false;
-	} 
+	}
 	// This function does the final step of the axial data calculations,
 	// which is to multiply each result by a constant and fixup the radial
 	// and tangential shear stresses.
 	void finalize(LEsystem::resulttype res, const double & r,
 			const double & a, const double & v, const double & E) {
 		double t1 = a*(v+1)/E, t2;
- 
+		bool active = true;
+
 		// Always make sure we accumulate the results.
-		accumulate(res,0.0);
+		accumulate(res,active,0.0);
 		vdp *= t1;
 		if (res & LEsystem::disp)
 			return;
@@ -571,7 +632,7 @@ struct axialdata {
 			const paveload & l, const double & r,
 			unsigned gl = UINT_MAX) const {
 		double p = l.pressure();
-		
+
 		assert(fabs(r-l.distance(*d)) < DBL_MIN);
 		if (gl != UINT_MAX) {
 			d->deflgrad[gl] += p*vdp;
@@ -617,7 +678,7 @@ struct axialdata {
 struct zpoint {
 	double z;
 	unsigned il;
-	
+
 	zpoint() {
 	}
 	zpoint(double d, unsigned l)
@@ -657,17 +718,17 @@ struct zpoint {
 
 #define GRADSTEP 1e-8
 
-#define NBZ		8192						// Number of zeros in bessels.
+#define NBZ		8192                    // Number of zeros in bessels.
 static double j0r[NBZ+1], j1r[NBZ+1], j0p[NBZ+1], j0m[NBZ+1], j1max;
 #define j0pj1(x)	(j0(x)+j1(x))
 #define j0mj1(x)	(j0(x)-j1(x))
 #define j1d(x)		(j0(x)-j1(x)/x)
 
-#define NGQP	16						// Max number of Gauss points
+#define NGQP	16                      // Max number of Gauss points
 static double gu[NGQP+1][NGQP];
 static double gf[NGQP+1][NGQP];
 
-//#define NLQP	16						// Max number of Lobatto points
+//#define NLQP	16                      // Max number of Lobatto points
 //static double lu[NLQP+1][NLQP];
 //static double lf[NLQP+1][NLQP];
 
@@ -1010,21 +1071,29 @@ buildT(const double m, const double z, const double (&ABCD)[4],
 bool
 LEsystem::calc_accurate()
 {
-	unsigned ixy, ild, ib, igp, il;
+	unsigned ig, ixy, ild, ib, igp, il;
 	const LElayer * pl;
-	
+
 	initarrays();
+	if (cache_res == accurate && cached_state() > cachestate::empty) {
+		if (cached_state() == cachestate::all)
+			return true;
+		// This procedure never uses the cache
+		cache_free();
+	} else
+		cache_free();
+	cache_res = failure;
 	if (!check())
 		return false;
 	unsigned nl = layers();
 
 	// The integration constants, per layer.
-	double (* R)[4][2] = new double[nl][4][2];
-	double (* ABCD)[4] = new double[nl][4];
-	double * h = new double[nl];
-	double * f = new double[nl];
-	double * v = new double[nl];
-	double * E = new double[nl];
+	double (* R)[4][2] = cache_alloc<double[4][2]>(nl);
+	double (* ABCD)[4] = cache_alloc<double[4]>(nl);
+	double * h = cache_alloc<double>(nl);
+	double * f = cache_alloc<double>(nl);
+	double * v = cache_alloc<double>(nl);
+	double * E = cache_alloc<double>(nl);
 	// We allocate these as big as we ever make them,
 	// so we never have to worry about the add()'s failing.
 	cset<double> bm0(0, 2*NBZ+2);
@@ -1037,88 +1106,88 @@ LEsystem::calc_accurate()
 	}
 
 	// We loop through all of the evaluation points
-	for (ixy = 0; ixy < data.length(); ixy++) {
-		pavedata & d = data[ixy];
-		il = d.il;
-		// Now loop through the list of loads...
-		for (ild = 0; ild < load.length(); ild++) {
-			double a = load[ild].radius();
-			double r = load[ild].distance(d);
-			double m0, m1;
-			axialdata s;
-			memset(&s,0,sizeof(axialdata));
-			s.active = true;
+	for (ig = 0; ig < lg.length(); ig++) {
+		for (ixy = 0; ixy < data[ig].length(); ixy++) {
+			pavedata & d = data[ig][ixy];
+			il = d.il;
+			memset(d.data,0,sizeof(d.data));
+			// Now loop through the list of loads...
+			for (ild = 0; ild < lg[ig].length(); ild++) {
+				double a = lg[ig][ild].radius();
+				double r = lg[ig][ild].distance(d);
+				double m0, m1;
+				axialdata s;
+				memset(&s,0,sizeof(axialdata));
+				bool active = true;
 
-			// Now gerenate a list of integration intervals, then sort them.
-			bm0.empty(), bm1.empty();
-			bm0.add(0.0), bm1.add(0.0);
-			stoppingpoints(NBZ,a,r,&m0,&m1);
-			// Account for big z's.
-			for (ib = 1; ib <= 5; ib++) {
-				if (ib*7*a/d.z < j0r[0])
-					bm0.add(ib*7*a/d.z);
-				if (ib*7*a/d.z < j1r[0])
-					bm1.add(ib*7*a/d.z);
-			}
-			for (ib = 0; r > 0 && ib <= NBZ && j0r[ib]/r < m0; ib++)
-				bm0.add(j0r[ib]/r);
-			for (ib = 0; r > 0 && ib <= NBZ && j1r[ib]/r < m1; ib++)
-				bm1.add(j1r[ib]/r);
-			for (ib = 0; ib <= NBZ && j1r[ib]/a < m0; ib++)
-				bm0.add(j1r[ib]/a);
-			for (ib = 0; ib <= NBZ && j1r[ib]/a < m1; ib++)
-				bm1.add(j1r[ib]/a);
-			bm0.add(m0), bm1.add(m1);
-			bm0.sort(), bm1.sort();
+				// Now gerenate a list of integration intervals, then
+				// sort them.
+				bm0.empty(), bm1.empty();
+				bm0.add(0.0), bm1.add(0.0);
+				stoppingpoints(NBZ,a,r,&m0,&m1);
+				// Account for big z's.
+				for (ib = 1; ib <= 5; ib++) {
+					if (ib*7*a/d.z < j0r[0])
+						bm0.add(ib*7*a/d.z);
+					if (ib*7*a/d.z < j1r[0])
+						bm1.add(ib*7*a/d.z);
+				}
+				for (ib = 0; r > 0 && ib <= NBZ && j0r[ib]/r < m0; ib++)
+					bm0.add(j0r[ib]/r);
+				for (ib = 0; r > 0 && ib <= NBZ && j1r[ib]/r < m1; ib++)
+					bm1.add(j1r[ib]/r);
+				for (ib = 0; ib <= NBZ && j1r[ib]/a < m0; ib++)
+					bm0.add(j1r[ib]/a);
+				for (ib = 0; ib <= NBZ && j1r[ib]/a < m1; ib++)
+					bm1.add(j1r[ib]/a);
+				bm0.add(m0), bm1.add(m1);
+				bm0.sort(), bm1.sort();
 
-			// We loop through all of our roots and gauss points.
-			// In this version we do this in two parts, one for the
-			// J1(ma)*J0(mr) integrals and one for the J1(ma)*J1(mr).
-			for (ib = bm0.length()-1; ib > 0; ib--) {
-				for (igp = 0; igp < NGQP; igp++) {
-					// Calculate the gauss point and weight.
-					double m = (bm0[ib]+bm0[ib-1])/2
-							 + gu[NGQP][igp]*(bm0[ib]-bm0[ib-1])/2;
-					double w = gf[NGQP][igp]*(bm0[ib]-bm0[ib-1])/2;
-					// First build a new ABCD matrix.
-					buildabcd(m,nl,h,v,E,f,R,ABCD);
-					double t = m*j1(m*a)*w*j0(m*r), T[4];
-					buildT(m,d.z,ABCD[il],T);
-					s.vse2 += t*m*((1-2*v[il])*(T[1]+T[3])+(T[0]-T[2]));
-					s.rse2 += t*m*((1+2*v[il])*(T[1]+T[3])-(T[0]-T[2]));
-					s.tse2 += t*m*(2*v[il])*(T[1]+T[3]);
-					s.vdp2 += t*((2-4*v[il])*(T[3]-T[1])-(T[0]+T[2]));
+				// We loop through all of our roots and gauss points.
+				// In this version we do this in two parts, one for the
+				// J1(ma)*J0(mr) integrals and one for the J1(ma)*J1(mr).
+				for (ib = bm0.length()-1; ib > 0; ib--) {
+					for (igp = 0; igp < NGQP; igp++) {
+						// Calculate the gauss point and weight.
+						double m = (bm0[ib]+bm0[ib-1])/2
+								 + gu[NGQP][igp]*(bm0[ib]-bm0[ib-1])/2;
+						double w = gf[NGQP][igp]*(bm0[ib]-bm0[ib-1])/2;
+						// First build a new ABCD matrix.
+						buildabcd(m,nl,h,v,E,f,R,ABCD);
+						double t = m*j1(m*a)*w*j0(m*r), T[4];
+						buildT(m,d.z,ABCD[il],T);
+						s.vse2 += t*m*((1-2*v[il])*(T[1]+T[3])+(T[0]-T[2]));
+						s.rse2 += t*m*((1+2*v[il])*(T[1]+T[3])-(T[0]-T[2]));
+						s.tse2 += t*m*(2*v[il])*(T[1]+T[3]);
+						s.vdp2 += t*((2-4*v[il])*(T[3]-T[1])-(T[0]+T[2]));
+					}
+					s.accumulate(accurate,active,0.0);
 				}
-				s.accumulate(accurate,0.0);
-			}
-			for (ib = 1; ib < bm1.length(); ib++) {
-				for (igp = 0; igp < NGQP; igp++) {
-					// Calculate the gauss point and weight.
-					double m = (bm1[ib]+bm1[ib-1])/2
-							 + gu[NGQP][igp]*(bm1[ib]-bm1[ib-1])/2;
-					double w = gf[NGQP][igp]*(bm1[ib]-bm1[ib-1])/2;
-					// First build a new ABCD matrix.
-					buildabcd(m,nl,h,v,E,f,R,ABCD);
-					double t = m*j1(m*a)*j1(m*r)*w, T[4];
-					buildT(m,d.z,ABCD[il],T);
-					s.sse2 += t*m*((2*v[il])*(T[3]-T[1]) + (T[0]+T[2]));
-					s.rdp2 += t*((T[1]+T[3])-(T[0]-T[2]));
+				for (ib = 1; ib < bm1.length(); ib++) {
+					for (igp = 0; igp < NGQP; igp++) {
+						// Calculate the gauss point and weight.
+						double m = (bm1[ib]+bm1[ib-1])/2
+								 + gu[NGQP][igp]*(bm1[ib]-bm1[ib-1])/2;
+						double w = gf[NGQP][igp]*(bm1[ib]-bm1[ib-1])/2;
+						// First build a new ABCD matrix.
+						buildabcd(m,nl,h,v,E,f,R,ABCD);
+						double t = m*j1(m*a)*j1(m*r)*w, T[4];
+						buildT(m,d.z,ABCD[il],T);
+						s.sse2 += t*m*((2*v[il])*(T[3]-T[1]) + (T[0]+T[2]));
+						s.rdp2 += t*((T[1]+T[3])-(T[0]-T[2]));
+					}
+					s.accumulate(accurate,active,0.0);
 				}
-				s.accumulate(accurate,0.0);
+				s.finalize(accurate,r,a,v[il],E[il]);
+				// Now add this load's axial data into the point's data
+				s.addtodata(accurate,&d,lg[ig][ild],r);
 			}
-			s.finalize(accurate,r,a,v[il],E[il]);
-			// Now add this load's axial data into the point's data
-			s.addtodata(accurate,&d,load[ild],r);
+			// Calculate the derived results (principal stresses and strains)
+			d.principle(v[il],E[il]);
 		}
-		// Calculate the derived results (principal stresses and strains).
-		d.principle(v[il],E[il]);
 	}
-	delete [] R;
-	delete [] ABCD;
-	delete [] h;
-	delete [] f;
-	delete [] v;
-	delete [] E;
+	cache_res = accurate;
+	cache_state = cachestate::all;
 	return true;
 }
 
@@ -1128,40 +1197,43 @@ LEsystem::calc_accurate()
 bool
 LEsystem::calculate(resulttype res, const double * Q)
 {
-	unsigned ixy, ir, iz, ild, ia, im, igp, il;
+	unsigned ig, ixy, ir, iz, ild, ia, im, igp, il, gl = UINT_MAX;
 	const LElayer * pl;
 	double x1, x2;
 	bool interpolate = false;
-	
+
 	initarrays();
+	if (cache_res == res && cached_state() > cachestate::empty) {
+		if (cached_state() == cachestate::all)
+			return true;
+		cache_reset();
+	} else
+		cache_free();
+	cache_res = failure;
 	if (!check())
 		return false;
-	if (cache_res != res)
-		cache_free();
-	else
-		cache_reset();
-	cache_res = res;
-	unsigned * c_counts = cache_alloc<unsigned>(8);
+	unsigned * c_counts = cache_alloc<unsigned>(7);
 	unsigned &ngqp = c_counts[0], &nbz = c_counts[1];
-	unsigned &gl = c_counts[2], &nl = c_counts[3];
-	unsigned &nz = c_counts[4], &na = c_counts[5];
-	unsigned &nr = c_counts[6], &nm = c_counts[7];
-	ngqp = NGQP, nbz = NBZ, gl = UINT_MAX, nl = layers();
-	if ((res & mask) == dirty) {
-		ngqp = MIN(NGQP,8);
-		nbz = MIN(NBZ,64);
-		interpolate = true;
-	} else if ((res & mask) == fast) {
-		ngqp = MIN(NGQP,8);
-		nbz = MIN(NBZ,64);
-		//interpolate = true;
-	} else {
-		ngqp = MIN(NGQP,12);
-		nbz = MIN(NBZ,256);
+	unsigned &nl = c_counts[2], &nz = c_counts[3], &na = c_counts[4];
+	unsigned &nr = c_counts[5], &nm = c_counts[6];
+	if (cached_state() == cachestate::empty) {
+		ngqp = NGQP, nbz = NBZ, gl = UINT_MAX, nl = layers();
+		if ((res & mask) == dirty) {
+			ngqp = MIN(NGQP,8);
+			nbz = MIN(NBZ,64);
+			interpolate = true;
+		} else if ((res & mask) == fast) {
+			ngqp = MIN(NGQP,8);
+			nbz = MIN(NBZ,64);
+			//interpolate = true;
+		} else {
+			ngqp = MIN(NGQP,12);
+			nbz = MIN(NBZ,256);
+		}
 	}
-	const double eps = ((res & mask) == dirty ? 1e-6 : 
+	LEsystem::resulttype orig = res;
+	const double eps = ((res & mask) == dirty ? 1e-6 :
 			((res & mask) == fast ? 1e-8 : 0.0));
-
 	// The integration constants, per layer.
 	double (* R)[4][2] = cache_alloc<double[4][2]>(nl);
 	double (* ABCD)[4] = cache_alloc<double[4]>(nl);
@@ -1171,131 +1243,161 @@ LEsystem::calculate(resulttype res, const double * Q)
 	double * f = cache_alloc<double>(nl);
 	double * v = cache_alloc<double>(nl);
 	double * E = cache_alloc<double>(nl);
-	double * g = nullptr;
-	if (res & grad)
-		g = cache_alloc<double>(nl);
+	double * g = (res & grad ? cache_alloc<double>(nl) : nullptr);
 	for (pl = first, il = 0; pl != nullptr; pl = pl->next, il++) {
-		h[il] = pl->bottom();
+		E[il] = pl->emod();
 		f[il] = MAX(0.0,pl->slip());
 		v[il] = pl->poissons();
-		E[il] = pl->emod();
+		if (cached_state() > cachestate::empty)
+			continue;
+		h[il] = pl->bottom();
 	}
-
 	// Collect and sort the z positions.
-	cset<zpoint> sz;
-	for (ixy = 0; ixy < data.length(); ixy++) {
-		pavedata & d = data[ixy];
-		// If we're collecting displacement gradient results
-		// resize the array as needed then zero it.
-		if (res & grad) {
-			d.deflgrad.resize(nl);
-			memset(&(d.deflgrad[0]),0,nl*sizeof(double));
+	zpoint * z = nullptr;
+	if (cached_state() == cachestate::empty) {
+		cset<zpoint> sz;
+		for (ixy = 0; ixy < points.length(); ixy++) {
+			pavepoint & d = points[ixy];
+			sz.add(zpoint(d.z,d.il));
 		}
-		sz.add(zpoint(d.z,d.il));
-	}
-	sz.sort();
-	nz = sz.length();
-	zpoint * z = cache_alloc<zpoint>(nz);
-	sz.copyout(z);
-
+		sz.sort();
+		nz = sz.length();
+		z = cache_alloc<zpoint>(nz);
+		sz.copyout(z);
+	} else
+		z = cache_alloc<zpoint>(nz);
 	if (interpolate)
 		iT = cache_alloc<double[2][4]>(nz);
-
+	// Zero out the data
+	for (ig = 0; ig < lg.length(); ig++) {
+		for (ixy = 0; ixy < points.length(); ixy++) {
+			pavedata & d = data[ig][ixy];
+			memset(d.data,0,sizeof(d.data));
+			// If we're collecting displacement gradient results
+			// resize the array as needed then zero it.
+			if (res & grad) {
+				d.deflgrad.resize(nl);
+				memset(&(d.deflgrad[0]),0,nl*sizeof(double));
+			}
+		}
+	}
 	// Generate a list of load radii, then sort them and map from loads.
-	cset<double> sa;
-	for (ild = 0; ild < load.length(); ild++)
-		sa.add(load[ild].radius());
-	sa.sort();
-	na = sa.length();
-	double * a = cache_alloc<double>(na);
-	sa.copyout(a);
+	double * a = nullptr;
+	if (cached_state() == cachestate::empty) {
+		cset<double> sa;
+		for (ig = 0; ig < lg.length(); ig++) {
+			for (ild = 0; ild < lg[ig].length(); ild++)
+				sa.add(lg[ig][ild].radius());
+		}
+		sa.sort();
+		na = sa.length();
+		a = cache_alloc<double>(na);
+		sa.copyout(a);
+	} else
+		a = cache_alloc<double>(na);
 
 	// Now loop through the list of load radii, calculating only for
-	// the applicable loads... (load[ild].radius() == a[ia])
+	// the applicable loads... (lg[ig][ild].radius() == a[ia])
 	for (ia = 0; ia < na; ia++) {
 		// Generate a list of radii, then sort them.
-		cset<double> sr;
-		for (ild = 0; ild < load.length(); ild++) {
-			if (fabs(load[ild].radius()-a[ia]) > DBL_MIN)
-				continue;
-			for (ixy = 0; ixy < data.length(); ixy++)
-				sr.add(load[ild].distance(data[ixy]));
-		}
-		sr.sort();
-		nr = sr.length();
-		double * r = cache_alloc<double>(nr);
-		sr.copyout(r);
+		double * r = nullptr, * bm = nullptr;
+		if (cached_state() == cachestate::empty) {
+			cset<double> sr;
+			for (ig = 0; ig < lg.length(); ig++) {
+				for (ild = 0; ild < lg[ig].length(); ild++) {
+					if (fabs(lg[ig][ild].radius()-a[ia]) > DBL_MIN)
+						continue;
+					for (ixy = 0; ixy < points.length(); ixy++)
+						sr.add(lg[ig][ild].distance(points[ixy]));
+				}
+			}
+			sr.sort();
+			nr = sr.length();
+			r = cache_alloc<double>(nr);
+			sr.copyout(r);
+		} else
+			r = cache_alloc<double>(nr);
 		double * m0 = cache_alloc<double>(nr);
 		double * m1 = cache_alloc<double>(nr);
 		// Some place to store our data...
 		axialdata * ax = cache_alloc<axialdata>(nz*nr);
+		bool * ao = cache_alloc<bool>(nz*nr);
+		bool * as = cache_alloc<bool>(nz*nr);
 
 		// Now generate a list of integration intervals, then sort them.
-		cset<double> sm;
-		sm.empty();
-		sm.add(0.0);
-		for (im = 0; im < (nbz+1); im++)
-			sm.add(j1r[im]/a[ia]);
-		// The correct stopping points for each radius.
-		for (ir = 0; ir < nr; ir++) {
-			stoppingpoints(nbz,a[ia],r[ir],&m0[ir],&m1[ir]);
-			sm.add(m0[ir]), sm.add(m1[ir]);
-		}
-		sm.sort();
+		if (cached_state() == cachestate::empty) {
+			cset<double> sm;
+			sm.empty();
+			sm.add(0.0);
+			for (im = 0; im < (nbz+1); im++)
+				sm.add(j1r[im]/a[ia]);
+			// The correct stopping points for each radius.
+			for (ir = 0; ir < nr; ir++) {
+				stoppingpoints(nbz,a[ia],r[ir],&m0[ir],&m1[ir]);
+				sm.add(m0[ir]), sm.add(m1[ir]);
+			}
+			sm.sort();
+			// Account for big r's by adding extra integration intervals...
+			x1 = 0.0, x2 = 0.0;
+			for (ir = nr; ir > 0 && r[ir-1] > a[ia]*MAX(4,ngqp-6); ir--) {
+				for (unsigned i = MAX(4,ngqp-6);
+						i <= nbz; i += MAX(4,ngqp-6)) {
+					if ((x1 = j1r[i]/r[ir-1]) < x2)
+						continue;
+					for (im = 1; im < sm.length() && sm[im] < x1; im++)
+						;
+					if (im == sm.length() ||
+							MIN(x1-sm[im-1],sm[im]-x1)*r[ir-1]
+								 < MAX(4,ngqp-6)*M_PI_4)
+						continue;
+					sm.add(im,x2 = x1);
+				}
+			}
+			// Account for big z's.  We drop approximately three orders of
+			// magnitude for exp(-7).  Add 5 intervals, so we drop 15 orders
+			// of magnitude.
+			x1 = 0.0, x2 = 0.0;
+			for (iz = nz; iz > 0 && z[iz-1].z > 0.0; iz--) {
+				for (unsigned i = 1; i <= 5
+						&& i*7*a[ia] < j0r[0]*z[iz-1].z; i++) {
+					if ((x1 = i*7*a[ia]/z[iz-1].z) < x2)
+						continue;
+					for (im = 1; im < sm.length() && sm[im] < x1; im++)
+						;
+					if (im == sm.length() ||
+							MIN(x1-sm[im-1],sm[im]-x1)*z[iz-1].z < 5*a[ia])
+						continue;
+					sm.add(im,x2 = x1);
+				}
+			}
+			sm.sort();
+			nm = sm.length();
+			bm = cache_alloc<double>(nm);
+			sm.copyout(bm);
+		} else
+			bm = cache_alloc<double>(nm);
 
-		// Account for big r's by adding extra integration intervals...
-		x1 = 0.0, x2 = 0.0;
-		for (ir = nr; ir > 0 && r[ir-1] > a[ia]*MAX(4,ngqp-6); ir--) {
-			for (unsigned i = MAX(4,ngqp-6);
-					i <= nbz; i += MAX(4,ngqp-6)) {
-				if ((x1 = j1r[i]/r[ir-1]) < x2)
-					continue;
-				for (im = 1; im < sm.length() && sm[im] < x1; im++)
-					;
-				if (im == sm.length() ||
-						MIN(x1-sm[im-1],sm[im]-x1)*r[ir-1]
-							 < MAX(4,ngqp-6)*M_PI_4)
-					continue;
-				sm.add(im,x2 = x1);
-			}
-		}
-		// Account for big z's.  We drop approximately three orders of
-		// magnitude for exp(-7).  Add 5 intervals, so we drop 15 orders
-		// of magnitude.
-		x1 = 0.0, x2 = 0.0;
-		for (iz = nz; iz > 0 && z[iz-1].z > 0.0; iz--) {
-			for (unsigned i = 1; i <= 5
-					&& i*7*a[ia] < j0r[0]*z[iz-1].z; i++) {
-				if ((x1 = i*7*a[ia]/z[iz-1].z) < x2)
-					continue;
-				for (im = 1; im < sm.length() && sm[im] < x1; im++)
-					;
-				if (im == sm.length() ||
-						MIN(x1-sm[im-1],sm[im]-x1)*z[iz-1].z < 5*a[ia])
-					continue;
-				sm.add(im,x2 = x1);
-			}
-		}
-		sm.sort();
-		nm = sm.length();
-		double * bm = cache_alloc<double>(nm);
-		sm.copyout(bm);
-		
 gradloop:
 		// And finally, somewhere to stick the radial data...
 		memset(&ax[0],0,sizeof(axialdata)*nz*nr);
 		// Compute the active set.
-		for (ixy = 0; ixy < data.length(); ixy++) {
-			pavedata & d = data[ixy];
-			iz = findvalue(z,nz,zpoint(d.z,d.il));
-			for (ild = 0; ild < load.length(); ild++) {
-				if (fabs(load[ild].radius()-a[ia]) > DBL_MIN)
-					continue;
-				ir = findvalue(r,nr,load[ild].distance(d));
-				ax[iz*nr+ir].active = true;
+		if (cached_state() == cachestate::empty && gl == UINT_MAX) {
+			memset(&ao[0],0,sizeof(bool)*nz*nr);
+			for (ig = 0; ig < lg.length(); ig++) {
+				for (ixy = 0; ixy < points.length(); ixy++) {
+					pavepoint & d = points[ixy];
+					iz = findvalue(z,nz,zpoint(d.z,d.il));
+					for (ild = 0; ild < lg[ig].length(); ild++) {
+						if (fabs(lg[ig][ild].radius()-a[ia]) > DBL_MIN)
+							continue;
+						ir = findvalue(r,nr,lg[ig][ild].distance(d));
+						ao[iz*nr+ir] = true;
+					}
+				}
 			}
 		}
-		
+		memcpy(as,ao,sizeof(bool)*nz*nr);
+
 		// Now that we know the radii, get down to work.
 		// We loop through all of our roots and gauss points.
 		for (im = 1; im < nm; im++) {
@@ -1336,7 +1438,7 @@ gradloop:
 					}
 					for (ir = 0; ir < nr; ir++) {
 						axialdata & s = ax[iz*nr+ir];
-						if (!s.active)
+						if (!as[iz*nr+ir])
 							continue;
 						alldone = false;
 						if (m < m0[ir]) {
@@ -1365,7 +1467,7 @@ gradloop:
 				continue;
 			for (iz = 0; iz < nz; iz++) {
 				for (ir = 0; ir < nr; ir++)
-					ax[iz*nr+ir].accumulate(res,eps);
+					ax[iz*nr+ir].accumulate(res,as[iz*nr+ir],eps);
 			}
 		}
 
@@ -1377,17 +1479,19 @@ gradloop:
 		}
 
 		// After doing everything in radial coords, translate to cartesian.
-		for (ixy = 0; ixy < data.length(); ixy++) {
-			pavedata & d = data[ixy];
-			iz = findvalue(z,nz,zpoint(d.z,d.il));
-			for (ild = 0; ild < load.length(); ild++) {
-				if (fabs(load[ild].radius()-a[ia]) > DBL_MIN)
-					continue;
-				ir = findvalue(r,nr,load[ild].distance(d));
-				ax[iz*nr+ir].addtodata(res,&d,load[ild],r[ir],gl);
+		for (ig = 0; ig < lg.length(); ig++) {
+			for (ixy = 0; ixy < data[ig].length(); ixy++) {
+				pavedata & d = data[ig][ixy];
+				iz = findvalue(z,nz,zpoint(d.z,d.il));
+				for (ild = 0; ild < lg[ig].length(); ild++) {
+					if (fabs(lg[ig][ild].radius()-a[ia]) > DBL_MIN)
+						continue;
+					ir = findvalue(r,nr,lg[ig][ild].distance(d));
+					ax[iz*nr+ir].addtodata(res,&d,lg[ig][ild],r[ir],gl);
+				}
 			}
 		}
-		
+
 		// Take care of the deflection gradient calculation.
 		if (res & grad) {
 			res = LEsystem::resulttype(res | disp);
@@ -1403,30 +1507,34 @@ gradloop:
 				}
 				goto gradloop;
 			}
-			gl = UINT_MAX;
+			res = orig, gl = UINT_MAX;
 		}
 	}
 	// After everything, loop through the answers, and calculate the
 	// derived results (principal stresses and strains).
-	for (ixy = 0; ixy < data.length(); ixy++) {
-		pavedata & d = data[ixy];
-		if (!(res & disp))
-			d.principle(v[d.il],E[d.il]);
-		if (res & grad) {
-			if (Q == 0) {
-				for (il = 0; il < nl; il++)
-					d.deflgrad[il] = (d.deflgrad[il]-d.data[4][2])/GRADSTEP;
-			} else {
-				for (il = 0; il < nl; il++)
-					g[il] = (d.deflgrad[il]-d.data[4][2])/GRADSTEP;
-				for (gl = 0; gl < nl; gl++) {
-					d.deflgrad[gl] = 0.0;
+	for (ig = 0; ig < lg.length(); ig++) {
+		for (ixy = 0; ixy < data[ig].length(); ixy++) {
+			pavedata & d = data[ig][ixy];
+			if (!(res & disp))
+				d.principle(v[d.il],E[d.il]);
+			if (res & grad) {
+				if (Q == 0) {
 					for (il = 0; il < nl; il++)
-						d.deflgrad[gl] += g[il]*Q[gl*nl+il];
+						d.deflgrad[il] = (d.deflgrad[il]-d.data[4][2])/GRADSTEP;
+				} else {
+					for (il = 0; il < nl; il++)
+						g[il] = (d.deflgrad[il]-d.data[4][2])/GRADSTEP;
+					for (gl = 0; gl < nl; gl++) {
+						d.deflgrad[gl] = 0.0;
+						for (il = 0; il < nl; il++)
+							d.deflgrad[gl] += g[il]*Q[gl*nl+il];
+					}
 				}
 			}
 		}
 	}
+	cache_res = res;
+	cache_state = cachestate::all;
 	return true;
 }
 
@@ -1498,78 +1606,88 @@ boussinesq_vdp(double z, double r, double a, double v, double E,
 bool
 LEsystem::calc_odemark()
 {
-	unsigned ixy, ild, il;
+	unsigned ig, ixy, ild, il;
 	LElayer * pl;
 
+	if (cache_res == odemark && cached_state() > cachestate::empty) {
+		if (cached_state() == cachestate::all)
+			return true;
+		// This procedure never uses the cache
+		cache_free();
+	} else
+		cache_free();
+	cache_res = failure;
 	if (!check())
 		return false;
 	unsigned nl = layers();
-	double * h = new double[nl];
-	double * v = new double[nl];
-	double * E = new double[nl];
+	double * h = cache_alloc<double>(nl);
+	double * v = cache_alloc<double>(nl);
+	double * E = cache_alloc<double>(nl);
 	for (pl = first, il = 0; pl != 0; pl = pl->next, il++)
 		h[il] = pl->bottom(), v[il] = pl->poissons(), E[il] = pl->emod();
 
-	for (ixy = 0; ixy < data.length(); ixy++) {
-		pavedata & d = data[ixy];
-		for (ild = 0; ild < load.length(); ild++) {
-			double a = load[ild].radius();
-			double r = load[ild].distance(d);
-			double z = 0.0, he = 0.0, hc = 1.0, R, A;
-			axialdata s;
-			memset(&s,0,sizeof(axialdata));
-			for (il = 0; il < nl; il++) {
-				if (il > 0) {
-					z = h[il-1]-(il > 1 ? h[il-2] : 0.0);
-					he = (he+z)*pow(E[il-1]/E[il]*
-						(1+v[il]*v[il])/(1+v[il-1]*v[il-1]),1.0/3.0);
-					if (nl > 2 && il > 1) // Per's fudge factors...
-						hc = 0.8;
-					else if (nl > 2)
-						hc = 1.0;
-					else
-						hc = 0.9;
-				}
-				if (il < d.il)
-					continue;
-				if (il > d.il) {
-					// We're below, but we still need the vertical
-					// deflection contributions from this layer...
-					z = hc*he;
+	for (ig = 0; ig < lg.length(); ig++) {
+		for (ixy = 0; ixy < data[ig].length(); ixy++) {
+			pavedata & d = data[ig][ixy];
+			memset(d.data,0,sizeof(d.data));
+			for (ild = 0; ild < lg[ig].length(); ild++) {
+				double a = lg[ig][ild].radius();
+				double r = lg[ig][ild].distance(d);
+				double z = 0.0, he = 0.0, hc = 1.0, R, A;
+				axialdata s;
+				memset(&s,0,sizeof(axialdata));
+				for (il = 0; il < nl; il++) {
+					if (il > 0) {
+						z = h[il-1]-(il > 1 ? h[il-2] : 0.0);
+						he = (he+z)*pow(E[il-1]/E[il]*
+							(1+v[il]*v[il])/(1+v[il-1]*v[il-1]),1.0/3.0);
+						if (nl > 2 && il > 1) // Per's fudge factors...
+							hc = 0.8;
+						else if (nl > 2)
+							hc = 1.0;
+						else
+							hc = 0.9;
+					}
+					if (il < d.il)
+						continue;
+					if (il > d.il) {
+						// We're below, but we still need the vertical
+						// deflection contributions from this layer...
+						z = hc*he;
+						R = hypot(r,z); A = (r > 0.0 ? 0.0 : hypot(z,a));
+						s.vdp += boussinesq_vdp(z,r,a,v[il],E[il],R,A);
+						if (h[il] == 0.0)
+							continue;
+						z = hc*he+h[il]-h[il-1];
+						R = hypot(r,z); A = (r > 0.0 ? 0.0 : hypot(z,a));
+						s.vdp -= boussinesq_vdp(z,r,a,v[il],E[il],R,A);
+						continue;
+					}
+					z = hc*he+d.z-(il > 0 ? h[il-1] : 0.0);
 					R = hypot(r,z); A = (r > 0.0 ? 0.0 : hypot(z,a));
-					s.vdp += boussinesq_vdp(z,r,a,v[il],E[il],R,A);
+					double tv = v[d.il];
+					double tE = E[d.il];
+					s.vse = boussinesq_vse(z,r,a,R,A);
+					s.rse = boussinesq_rse(z,r,a,tv,R,A);
+					s.tse = boussinesq_tse(z,r,a,tv,R);
+					s.sse = boussinesq_sse(z,r,a,R);
+					s.rdp = boussinesq_rdp(z,r,a,tv,tE,R);
+					s.vdp = boussinesq_vdp(z,r,a,tv,tE,R,A);
 					if (h[il] == 0.0)
 						continue;
-					z = hc*he+h[il]-h[il-1];
+					z = hc*he+h[il]-(il > 0 ? h[il-1] : 0.0);
 					R = hypot(r,z); A = (r > 0.0 ? 0.0 : hypot(z,a));
-					s.vdp -= boussinesq_vdp(z,r,a,v[il],E[il],R,A);
-					continue;
+					s.vdp -= boussinesq_vdp(z,r,a,tv,tE,R,A);
 				}
-				z = hc*he+d.z-(il > 0 ? h[il-1] : 0.0);
-				R = hypot(r,z); A = (r > 0.0 ? 0.0 : hypot(z,a));
-				double tv = v[d.il];
-				double tE = E[d.il];
-				s.vse = boussinesq_vse(z,r,a,R,A);
-				s.rse = boussinesq_rse(z,r,a,tv,R,A);
-				s.tse = boussinesq_tse(z,r,a,tv,R);
-				s.sse = boussinesq_sse(z,r,a,R);
-				s.rdp = boussinesq_rdp(z,r,a,tv,tE,R);
-				s.vdp = boussinesq_vdp(z,r,a,tv,tE,R,A);
-				if (h[il] == 0.0)
-					continue;
-				z = hc*he+h[il]-(il > 0 ? h[il-1] : 0.0);
-				R = hypot(r,z); A = (r > 0.0 ? 0.0 : hypot(z,a));
-				s.vdp -= boussinesq_vdp(z,r,a,tv,tE,R,A);
+				// After doing everything in radial coords, translate
+				// to cartesian.
+				s.addtodata(odemark,&d,lg[ig][ild],r);
 			}
-			// After doing everything in radial coords, translate
-			// to cartesian.
-			s.addtodata(odemark,&d,load[ild],r);
+			d.principle(v[d.il],E[d.il]);
 		}
-		d.principle(v[d.il],E[d.il]);
 	}
-	delete [] h;
-	delete [] v;
-	delete [] E;
+	cache_res = odemark;
+	cache_state = cachestate::all;
 	return true;
 }
 
@@ -1716,65 +1834,75 @@ quad8_vse(double r, double z, double a, double A = 0.0,
 bool
 LEsystem::calc_fastnum()
 {
-	unsigned ixy, ild, il;
+	unsigned ig, ixy, ild, il;
 	LElayer * pl;
 
+	if (cache_res == fastnum && cached_state() > cachestate::empty) {
+		if (cached_state() == cachestate::all)
+			return true;
+		// This procedure never uses the cache
+		cache_free();
+	} else
+		cache_free();
+	cache_res = failure;
 	if (!check())
 		return false;
 	unsigned nl = layers();
-	double * h = new double[nl];
-	double * v = new double[nl];
-	double * E = new double[nl];
+	double * h = cache_alloc<double>(nl);
+	double * v = cache_alloc<double>(nl);
+	double * E = cache_alloc<double>(nl);
 	for (pl = first, il = 0; pl != 0; pl = pl->next, il++)
 		h[il] = pl->bottom(), v[il] = pl->poissons(), E[il] = pl->emod();
 
-	for (ixy = 0; ixy < data.length(); ixy++) {
-		pavedata & d = data[ixy];
-		for (ild = 0; ild < load.length(); ild++) {
-			double a = load[ild].radius();
-			double z, r = load[ild].distance(d);
-			double he = 0.0, hc = 1.0;
-			double vdp = 0.0, vse = 0.0;
-			for (il = 0; il < nl; il++) {
-				if (il > 0) {
-					z = h[il-1]-(il > 1 ? h[il-2] : 0.0);
-					he = (he+z)*pow(E[il-1]/E[il]*
-						(1+v[il]*v[il])/(1+v[il-1]*v[il-1]),1.0/3.0);
-					if (nl > 2 && il > 1) // Per's fudge factors...
-						hc = 0.8;
-					else if (nl > 2)
-						hc = 1.0;
-					else
-						hc = 0.9;
-				}
-				if (h[il] != 0.0 && d.z >= h[il])
-					continue;
-				if (il > 0 && h[il-1] > d.z) {
-					// We're below, but we still need the vertical
-					// deflection contributions from this layer...
-					z = hc*he;
+	for (ig = 0; ig < lg.length(); ig++) {
+		for (ixy = 0; ixy < data[ig].length(); ixy++) {
+			pavedata & d = data[ig][ixy];
+			memset(d.data,0,sizeof(d.data));
+			for (ild = 0; ild < lg[ig].length(); ild++) {
+				double a = lg[ig][ild].radius();
+				double r = lg[ig][ild].distance(d);
+				double z, he = 0.0, hc = 1.0;
+				double vdp = 0.0, vse = 0.0;
+				for (il = 0; il < nl; il++) {
+					if (il > 0) {
+						z = h[il-1]-(il > 1 ? h[il-2] : 0.0);
+						he = (he+z)*pow(E[il-1]/E[il]*
+							(1+v[il]*v[il])/(1+v[il-1]*v[il-1]),1.0/3.0);
+						if (nl > 2 && il > 1) // Per's fudge factors...
+							hc = 0.8;
+						else if (nl > 2)
+							hc = 1.0;
+						else
+							hc = 0.9;
+					}
+					if (h[il] != 0.0 && d.z >= h[il])
+						continue;
+					if (il > 0 && h[il-1] > d.z) {
+						// We're below, but we still need the vertical
+						// deflection contributions from this layer...
+						z = hc*he;
+						vdp += quad8_vdp(r,z,a,v[il])/E[il];
+						if (h[il] != 0.0) {
+							z = hc*he+h[il]-h[il-1];
+							vdp -= quad8_vdp(r,z,a,v[il])/E[il];
+						}
+						continue;
+					}
+					z = hc*he+d.z-(il > 0 ? h[il-1] : 0.0);
+					vse = quad8_vse(r,z,a);
 					vdp += quad8_vdp(r,z,a,v[il])/E[il];
 					if (h[il] != 0.0) {
-						z = hc*he+h[il]-h[il-1];
+						z = hc*he+h[il]-(il > 0 ? h[il-1] : 0.0);
 						vdp -= quad8_vdp(r,z,a,v[il])/E[il];
 					}
-					continue;
 				}
-				z = hc*he+d.z-(il > 0 ? h[il-1] : 0.0);
-				vse = quad8_vse(r,z,a);
-				vdp += quad8_vdp(r,z,a,v[il])/E[il];
-				if (h[il] != 0.0) {
-					z = hc*he+h[il]-(il > 0 ? h[il-1] : 0.0);
-					vdp -= quad8_vdp(r,z,a,v[il])/E[il];
-				}
+				d.data[0][2] += lg[ig][ild].pressure()*vse;
+				d.data[4][2] += lg[ig][ild].pressure()*vdp;
 			}
-			d.data[0][2] += load[ild].pressure()*vse;
-			d.data[4][2] += load[ild].pressure()*vdp;
 		}
 	}
-	delete [] h;
-	delete [] v;
-	delete [] E;
+	cache_res = fastnum;
+	cache_state = cachestate::all;
 	return true;
 }
 
@@ -1791,7 +1919,7 @@ LEbackcalc::backcalc()
 	bool seeded = true;
 	//bool badstep = false;
 	calctype speed = (precision >= 1e-4 ? fast : slow);
-	ksset<pavepoint,pavedata> orig(data);
+	ksset<pavepoint,pavepoint> orig(points);
 
 	if (nl == 0) {
 		event_msg(EVENT_ERROR,"LEbackcalc::backcalc() called without layers!");
@@ -1934,7 +2062,7 @@ LEbackcalc::backcalc()
 		d.calculated = result(d).result(pavedata::deflct, pavedata::zz);
 	}
 	// Restore original evaluation points...
-	data = orig;
+	points = orig;
 	delete [] Q;
 	delete [] O;
 	delete [] T;
@@ -1958,9 +2086,9 @@ LEbackcalc::seed(unsigned nl, double * P)
 		if (d.measured <= 0.0) {
 			negdefl = true;
 		} else {
-			for (j = 0; j < load.length(); j++) {
-				E += load[j].pressure()*quad8_vdp(load[j].distance(d),
-					d.z,load[j].radius(),v)/MAX(d.measured,1e-4);
+			for (j = 0; j < lg[clg].length(); j++) {
+				E += lg[clg][j].pressure()*quad8_vdp(lg[clg][j].distance(d),
+					d.z,lg[clg][j].radius(),v)/MAX(d.measured,1e-4);
 			}
 		}
 	}
@@ -2203,7 +2331,7 @@ LEbackcalc::bowlerror(unsigned nl, const double * P, const double s,
 {
 	unsigned i;
 	double err;
-	
+
 	for (i = 0; P != 0 && i < nl; i++)
 		layer(i).emod(pow(10,P[i]+(D != 0 ? s*D[i] : 0.0)));
 	if (P != 0)
@@ -2239,7 +2367,7 @@ LEbackcalc::brent(unsigned nl, double * P, double * D)
 	double A, B, C, X, Y, Z, a, b, c, x, y, z;
 	double r, q;
 	unsigned i;
-	
+
 	b = 0.0, B = bowlerror(nl,P,b,D);
 	// To start with we only have one modulus.  We need three,
 	// so dream up two more...  We think that D is a descent
@@ -2358,7 +2486,7 @@ LEbackcalc::conjgrad(unsigned nl, double * P)
 			dgg += D[i]*D[i];
 		}
 		oerr = derr, derr = bowlerror();
-		if (dgg == 0.0 || log10(oerr)-log10(derr) < 0.001 || step < tolerance) 
+		if (dgg == 0.0 || log10(oerr)-log10(derr) < 0.001 || step < tolerance)
 			break;
 		for (i = 0; gg != 0.0 && i < nl; i++)
 			D[i] += dgg*G[i]/gg;

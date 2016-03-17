@@ -47,15 +47,8 @@
 #define __PAVEMENT_H
 
 #include <memory.h>
-#if defined(_MSC_VER)
-#include <stddef.h>
-#include <BaseTsd.h>
-typedef SSIZE_T ssize_t;
-#else
-#include <stdint.h>
-#endif
+#include <stdexcept>
 #include "mathplus.h"
-#include "event.h"
 #include "set.h"
 #include "list.h"
 
@@ -179,27 +172,19 @@ public:
 	double thickness() const {
 		return h;
 	}
-	double thickness(double th) {
-		return h = th;
-	}
 	double emod() const {
 		return E;
-	}
-	double emod(double te) {
-		return E = te;
 	}
 	double poissons() const {
 		return v;
 	}
-	double poissons(double tv) {
-		return v = tv;
-	}
 	double slip() const {
 		return s;
 	}
-	double slip(double ts) {
-		return s = ts;
-	}
+	double thickness(double th);
+	double emod(double te);
+	double poissons(double tv);
+	double slip(double ts);
 	LElayer(LEsystem * o, LElayer * p)
 	  : listelement_o<LEsystem,LElayer>(o,p), h(0.0), E(0.0), v(0.0),
 			s(1.0) {
@@ -217,10 +202,10 @@ public:
 private:
 	friend class LEsystem;
 
-	double h;                           // The thickness of the layer.
-	double E;                           // The elastic modulus.
-	double v;                           // Poisson's ratio.
-	double s;                           // Layer slip (on bottom boundary).
+	double h;                  // The thickness of the layer.
+	double E;                  // The elastic modulus.
+	double v;                  // Poisson's ratio.
+	double s;                  // Layer slip (on bottom boundary).
 };
 
 /*
@@ -256,8 +241,8 @@ public:
 	}
 
 private:
-	double f;                          // Force
-	double r;                          // Load radius
+	double f;                  // Force
+	double r;                  // Load radius
 };
 
 /*
@@ -369,6 +354,9 @@ struct pavedata : public pavepoint {
 	pavedata(const point3d & p, unsigned l = UINT_MAX)
 	  : pavepoint(p,l), deflgrad(0) {
 	}
+	pavedata(const pavepoint & p)
+	  : pavepoint(p), deflgrad(0) {
+	}
 	pavedata(const pavedata & pd)
 	  : pavepoint(pd), deflgrad(pd.deflgrad) {
 		memcpy(data,pd.data,sizeof(data));
@@ -386,15 +374,14 @@ struct pavedata : public pavepoint {
  */
 class LEsystem : private list_owned<LEsystem, LElayer> {
 public:
-	explicit inline LEsystem()
-	  : list_owned<LEsystem,LElayer>(), data(), load(),
-	    cache_res(all), cache_state(reset), cache(0) {
-	    cache_reset();
+	LEsystem()
+	  : list_owned<LEsystem,LElayer>(), points(), data(), lg(), clg(0),
+			cache_res(failure), cache_state(cachestate::empty), cache(0) {
 	}
-	explicit inline LEsystem(const LEsystem & p)
-	  : list_owned<LEsystem,LElayer>(p), data(p.data), load(p.load),
-	    cache_res(all), cache_state(reset), cache(0) {
-	    cache_reset();
+	LEsystem(const LEsystem & p)
+	  : list_owned<LEsystem,LElayer>(p), points(p.points), data(p.data),
+			lg(p.lg), clg(p.clg), cache_res(failure),
+			cache_state(cachestate::empty), cache(0) {
 	}
 	~LEsystem() {
 		cache_free();
@@ -403,20 +390,53 @@ public:
 	              const double s = 1.0, const unsigned p = UINT_MAX);
 	void removelayer(const unsigned l);
 	void removelayers();
-	inline unsigned layers() const {
+	unsigned layers() const {
 		return length();
 	}
 	LElayer & layer(const unsigned l) const;
 
-	void addload(const point2d & l, double f, double p, double r = 0);
-	void addload(const paveload & l);
-	void removeload(const unsigned i);
-	void removeloads();
-	inline unsigned loads() const {
-		return load.length();
+	unsigned defaultgroup() const {
+		return clg;
+	}
+	unsigned defaultgroup(unsigned g) {
+		return clg = g;
+	}
+	void addload(const point2d & l, double f, double p, double r = 0) {
+		addload(clg,l,f,p,r);
+	}
+	void addload(const paveload & l) {
+		addload(clg,l);
+	}
+	void removeload(const unsigned i) {
+		removeload(clg,i);
+	}
+	void removeloads() {
+		removeloads(clg);
+	}
+	unsigned loads() const {
+		return loads(clg);
 	}
 	const paveload & getload(const unsigned i) {
-		return load[i];
+		return getload(clg,i);
+	}
+	void addload(const unsigned g, const point2d & l, double f, double p,
+			double r = 0) {
+		addload(g,paveload(l,f,p,r));
+	}
+	void addload(const unsigned g, const paveload & l);
+	void removeload(const unsigned g, const unsigned i);
+	void removeloads(const unsigned g);
+	unsigned loads(const unsigned g) const
+	{
+		if (!lg.inbounds(g))
+			throw std::out_of_range("Load group out of range!");
+		return lg[g].length();
+	}
+	const paveload & getload(const unsigned g, const unsigned i)
+	{
+		if (!lg.inbounds(g))
+			throw std::out_of_range("Load group out of range!");
+		return lg[g][i];
 	}
 
 	void addpoint(const point3d & p, unsigned l = UINT_MAX);
@@ -425,17 +445,28 @@ public:
 				 const unsigned nz, const double * zp);
 	void removepoint(const point3d & p, unsigned l = UINT_MAX);
 	void removepoints();
-	inline unsigned results() const {
-		return data.length();
+	unsigned results() const {
+		return points.length();
 	}
-	const pavedata & result(const point3d & p, unsigned l = UINT_MAX) const {
-		return data[pavepoint(p,l)];
+	const pavedata & result(const point3d & p, unsigned l = UINT_MAX)
+		const {
+		return result(clg,p,l);
 	}
 	const pavedata & result(const unsigned i) const {
-		return data[i];
+		return result(clg,i);
+	}
+	const pavedata & result(const unsigned g, const point3d & p,
+		unsigned l = UINT_MAX) const {
+		if (cached_state() < cachestate::all)
+			throw std::runtime_error("No results available!");
+		return result(g,points.haskey(pavepoint(p,l)));
+	}
+	const pavedata & result(const unsigned g, const unsigned i) const {
+		if (cached_state() < cachestate::all)
+			throw std::runtime_error("No results available!");
+		return data[g][i];
 	}
 
-	bool check();
 	enum resulttype {
 		all       = 0x0000,
 		fast      = 0x0001,
@@ -449,7 +480,8 @@ public:
 		dispgrad  = 0x0300,
 		fastdisp  = 0x0101,
 		dirtydisp = 0x0102,
-		fastgrad  = 0x0301
+		fastgrad  = 0x0301,
+		failure   = 0xFFFF
 	};
 	bool calc_accurate();
 	bool calculate(resulttype result = all, const double * Q = 0);
@@ -457,42 +489,33 @@ public:
 	bool calc_fastnum();
 
 protected:
+	bool check();
 	template<typename T> T * cache_alloc(unsigned count);
 	void cache_reset();
 	void cache_free();
-	enum cachestate {
-	    reset    = 0x0000,
-		geom     = 0x0001,
-		pressure = 0x0002,
-		emod     = 0x0004,
-		checked  = 0x0008
-	};
-	friend cachestate & operator&= (cachestate & l, const cachestate r);
-	friend cachestate operator~ (const cachestate l);
 
 private:
-	friend class listelement_o<LEsystem, LElayer>;
-	friend class list_owned<LEsystem, LElayer>;
+	friend class listelement_o<LEsystem,LElayer>;
+	friend class LElayer;
 	friend class LEbackcalc;
 
-	ksset<pavepoint,pavedata> data;
-	sset<paveload> load;
+	ksset<pavepoint,pavepoint> points;
+	sset<sset<pavedata>> data;
+	sset<sset<paveload>> lg;
+	unsigned clg;
 	
 	resulttype cache_res;
-	cachestate cache_state;
+	enum class cachestate {
+	    empty, emod, all
+	} cache_state;
+	void cached_state(cachestate s) {
+		cache_state = MIN(cache_state,s);
+	}
+	cachestate cached_state() const {
+		return cache_state; 
+	}
 	LEsystem_cache * cache;
 };
-
-inline LEsystem::cachestate &
-operator&= (LEsystem::cachestate & l, const LEsystem::cachestate r)
-{
-	return l = static_cast<LEsystem::cachestate>(unsigned(l) & unsigned(r));
-}
-inline LEsystem::cachestate
-operator~ (const LEsystem::cachestate l)
-{
-	return static_cast<LEsystem::cachestate>(~unsigned(l));
-}
 
 /*
  * class defldata - A measured point within the pavement structure.
@@ -522,13 +545,13 @@ struct defldata : public point3d {
  */
 class LEbackcalc : public LEsystem {
 public:
-	inline void adddefl(const point3d & p, double d) {
+	void adddefl(const point3d & p, double d) {
 		defl.add(defldata(p,d));
 	}
-	inline void adddefl(const defldata & d) {
+	void adddefl(const defldata & d) {
 		defl.add(d);
 	}
-	inline unsigned deflections() {
+	unsigned deflections() {
 		return defl.length();
 	}
 	const defldata & getdefl(const unsigned i) {
