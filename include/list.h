@@ -315,7 +315,7 @@ protected:
 	// Also manage our owner's pointers.
 	~listelement_o() {
 		if (owner == nullptr)
-			throw std::invalid_argument("Owner cannot be null!");
+			return;
 		if (this->prev == nullptr)
 			owner->first = this->next;
 		if (this->next == nullptr)
