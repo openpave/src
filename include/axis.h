@@ -123,7 +123,7 @@ public:
 					for (unsigned i = 0; i < me.length(); i++) {
 						axis_key & a = me.getatorder(i);
 						if (a.pi == p) {
-							dispatch(axis_message::remove,i);
+							this->dispatch(axis_message::remove,i);
 							me.remove(a);
 							i--;
 						} else if (a.pi > p)
@@ -131,7 +131,7 @@ public:
 					}
 					break;
 				case axis_message::empty:
-					dispatch(axis_message::empty,p);
+					this->dispatch(axis_message::empty,p);
 					me.empty();
 					break;
 				case axis_message::deleting:
@@ -142,7 +142,7 @@ public:
 		}));
 	}
 	~axis() {
-		dispatch(axis_message::deleting,UINT_MAX);
+		this->dispatch(axis_message::deleting,UINT_MAX);
 	}
 	void add(const K & k, const Ks &...ks) {
 		if (!prior.haskey(ks...))
@@ -151,13 +151,13 @@ public:
 			throw std::runtime_error("attempting to insert duplicate key into axis!");
 		axis_key a(prior,k,ks...);
 		me.add(a);
-		dispatch(axis_message::add,me.getorderof(a));
+		this->dispatch(axis_message::add,me.getorderof(a));
 	}
 	void remove(const K & k, const Ks &...ks) {
 		if (!haskey(k,ks...))
 			throw std::runtime_error("removal key not found in axis!");
 		axis_key a(prior,k,ks...);
-		dispatch(axis_message::remove,me.getorderof(a));
+		this->dispatch(axis_message::remove,me.getorderof(a));
 		me.remove(a);
 	}
 	unsigned length() const {
@@ -199,7 +199,7 @@ public:
 	}
 	// Remove all elements
 	void empty() {
-		dispatch(axis_message::empty,UINT_MAX);
+		this->dispatch(axis_message::empty,UINT_MAX);
 		me.empty();
 	}
 
@@ -260,20 +260,20 @@ public:
 	axis() {
 	}
 	~axis() {
-		dispatch(axis_message::deleting,UINT_MAX);
+		this->dispatch(axis_message::deleting,UINT_MAX);
 	}
 	void add(const K & k) {
 		if (haskey(k))
 			throw std::runtime_error("attempting to insert duplicate key into axis!");
 		axis_key a(k);
 		me.add(a);
-		dispatch(axis_message::add,me.getorderof(a));
+		this->dispatch(axis_message::add,me.getorderof(a));
 	}
 	void remove(const K & k) {
 		if (!haskey(k))
 			throw std::runtime_error("removal key not found in axis!");
 		axis_key a(k);
-		dispatch(axis_message::remove,me.getorderof(a));
+		this->dispatch(axis_message::remove,me.getorderof(a));
 		me.remove(a);
 	}
 	unsigned length() const {
@@ -298,7 +298,7 @@ public:
 	}
 	// Remove all elements
 	void empty() {
-		dispatch(axis_message::empty,UINT_MAX);
+		this->dispatch(axis_message::empty,UINT_MAX);
 		me.empty();
 	}
 
