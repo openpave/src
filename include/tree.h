@@ -349,7 +349,7 @@ protected:
 	explicit tree(unsigned b = DFLT_BLK)
 	  : block(b > 1 ? b : 1) {
 	}
-	~tree() {
+	virtual ~tree() {
 		allocate(0);
 	}
 	// The basic add method
@@ -451,7 +451,7 @@ public:
 	  : tree<K,V,::ktree_avl>(b) {
 	}
 	// Clean up
-	~ktree_avl() {
+	virtual ~ktree_avl() {
 	}
 	// Add a node.  Returns the new position in value (usually == size)
 	virtual void add(const V & v) override {
