@@ -90,6 +90,13 @@ public:
 	V & operator() (const typename As::key_t &...ks) {
 		return buffer[make_fromkey(0,ks...)];
 	}
+	// Return the size of array below dimension d.
+	unsigned length(const unsigned d = sizeof...(As)) const {
+		unsigned s = 1;
+		for (unsigned i = d; i > 0; i--)
+			s *= sizes[i-1];
+		return s;
+	}
 
 private:
 	// The axes are stored in a tuple for ease of processing. 
@@ -159,13 +166,6 @@ private:
 		const auto & a = std::get<sizeof...(As)-sizeof...(Ks)-1>(axes);
 		unsigned i = a.getorderof(k);
 		return make_fromkey(p*sizes[sizeof...(Ks)]+i,ks...);
-	}
-	// Return the size of array below dimension d.
-	unsigned length(const unsigned d = sizeof...(As)) const {
-		unsigned s = 1;
-		for (unsigned i = d; i > 0; i--)
-			s *= sizes[i-1];
-		return s;
 	}
 	// Return the step size for dimension d.
 	unsigned step(unsigned d) const {
