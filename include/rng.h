@@ -79,6 +79,8 @@ typedef unsigned __int64 uint64_t;
 #include <inttypes.h>
 #endif
 
+namespace OP {
+
 #define DSFMT_MEXP        19937
 #define DSFMT_N           ((DSFMT_MEXP - 128) / 104 + 1)
 
@@ -186,5 +188,7 @@ private:
 		}
 	}
 };
+
+} // namespace OP
 
 #endif // RNG_H

@@ -31,6 +31,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+using namespace OP;
+
 #ifdef NOBUILD
 int
 main()

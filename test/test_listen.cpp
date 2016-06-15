@@ -32,6 +32,8 @@
 #include <stdlib.h>
 #include "listen.h"
 
+using namespace OP;
+
 enum class test_event { test };
 
 class test_source : public dispatcher<message<test_event>> {

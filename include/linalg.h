@@ -39,6 +39,8 @@
 #ifndef __LINALG_H
 #define __LINALG_H
 
+namespace OP {
+
 /*
  * The minimum condition number for SVD and eigenvalue decompositions.
  * NOTE: This is recorded here to show the default.  It cannot be changed
@@ -115,5 +117,7 @@ void bksub_eig(const unsigned n, const double * Q, const double * d, double * b,
 	const unsigned p = 1, const unsigned c = 0);
 void equ_eig(const unsigned n, const double * A, const double * b, double * x);
 void inv_eig(const unsigned n, double * A);
+
+} // namespace OP
 
 #endif // LINALG_H

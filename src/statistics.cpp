@@ -34,6 +34,8 @@
 #include "mathplus.h"
 #include "statistics.h"
 
+namespace OP {
+
 /*
  * A normally distributed random number generator.  We avoid
  * the uniform rv's being 0.0 since this will result in infinte
@@ -233,3 +235,5 @@ double stdnormal_inv(double p)
 	u -= t/(1+u*t/2);					// Halley's method
 	return (p > 0.5 ? -u : u);
 }
+
+} // namespace OP

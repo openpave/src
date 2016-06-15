@@ -35,6 +35,8 @@
 #include "linalg.h"
 #include "thermal.h"
 
+namespace OP {
+
 /*
  * Thermal element matrices.
  */
@@ -238,3 +240,5 @@ FEMthermal::interpolate(const unsigned np, const double * pd, double * pt)
 		}
 	}
 }
+
+} // namespace OP

@@ -42,6 +42,8 @@
 #ifndef __FIXED_H
 #define __FIXED_H
 
+namespace OP {
+
 /*
  * class fixed - A fixed point type.
  *
@@ -194,5 +196,7 @@ inline fixed<P> fabs(const fixed<P> & f) {
 	t.value = abs(f.value);
 	return t;
 }
+
+} // namespace OP
 
 #endif // FIXED_H

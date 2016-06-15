@@ -43,6 +43,8 @@ typedef SSIZE_T ssize_t;
 #include "event.h"
 #include "linalg.h"
 
+namespace OP {
+
 /*
  * Calculate the principle stresses, and the strains.
  */
@@ -2639,3 +2641,5 @@ LEbackcalc::swarm(unsigned nl, double * P)
 	delete [] R2;
 	return sqrt(gg);
 }
+
+} // namespace OP

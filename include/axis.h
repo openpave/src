@@ -86,6 +86,8 @@
 #include "tree.h"
 #include "hascompare.h"
 
+namespace OP {
+
 enum class axis_message {
 	add, remove, empty, deleting
 };
@@ -321,5 +323,7 @@ private:
 	};
 	ktree_avl<axis_key> me;    // internal index
 };
+
+} // namespace OP
 
 #endif // AXIS_H

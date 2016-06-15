@@ -33,6 +33,8 @@
 #include <stdlib.h>
 #include <time.h>
 
+using namespace OP;
+
 #ifdef NOBUILD
 /* Bessel J_0(x) function in double precision */
 double dbesj0(double x)

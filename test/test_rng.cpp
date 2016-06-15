@@ -32,16 +32,18 @@
 #include <stdlib.h>
 #include "rng.h"
 
-#ifdef NOBUILD
+using namespace OP;
+
 int
 main(int argc, char * argv[])
 {
-	int i, cnt, seed;
+	int i, cnt;
+	unsigned seed;
 	double x, y, pi;
 	const int NUM = 1000000;
 
 	if (argc >= 2)
-		seed = strtol(argv[1],NULL,10);
+		seed = (unsigned)(strtol(argv[1],NULL,10));
 	else
 		seed = 12345;
 	cnt = 0;
@@ -56,4 +58,3 @@ main(int argc, char * argv[])
 	printf("%f\n", pi);
 	return 0;
 }
-#endif

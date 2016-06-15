@@ -50,6 +50,8 @@
 
 #include <stdexcept>
 
+namespace OP {
+
 // Forward declare some classes...
 template <typename T>
 class list_single;
@@ -341,5 +343,7 @@ protected:
 
 	friend class listelement_o<O,T>;
 };
+
+} // namespace OP
 
 #endif // LIST_H

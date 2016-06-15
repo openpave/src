@@ -56,6 +56,8 @@ DllMain(HANDLE, DWORD fdwReason, LPVOID)
 #include "thermal.h"
 #include "libop.h"
 
+using namespace OP;
+
 #if defined(XP_PC)
 /*
  * Windows error event handler.

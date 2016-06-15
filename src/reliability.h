@@ -58,6 +58,8 @@
 #ifndef __RELIABILITY_H
 #define __RELIABILITY_H
 
+namespace OP {
+
 class reliability;
 
 struct randomvar  
@@ -140,5 +142,7 @@ public:
 	reliability();
 	~reliability();
 };
+
+} // namespace OP
 
 #endif // RELIABILITY_H

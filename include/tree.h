@@ -40,6 +40,8 @@
 #endif
 #include "mathplus.h"
 
+namespace OP {
+
 /*
  * struct BST
  *
@@ -436,19 +438,19 @@ template <typename K, typename V = K>
 class ktree_avl : public tree<K,V,ktree_avl>
 {
 protected:
-	using tree<K,V,::ktree_avl>::value;
-	using tree<K,V,::ktree_avl>::root;
-	using tree<K,V,::ktree_avl>::size;
-	using tree<K,V,::ktree_avl>::allocate;
-	using tree<K,V,::ktree_avl>::insert;
-	using tree<K,V,::ktree_avl>::expunge;
-	using tree<K,V,::ktree_avl>::weight;
-	using tree<K,V,::ktree_avl>::new_weight;
+	using tree<K,V,OP::ktree_avl>::value;
+	using tree<K,V,OP::ktree_avl>::root;
+	using tree<K,V,OP::ktree_avl>::size;
+	using tree<K,V,OP::ktree_avl>::allocate;
+	using tree<K,V,OP::ktree_avl>::insert;
+	using tree<K,V,OP::ktree_avl>::expunge;
+	using tree<K,V,OP::ktree_avl>::weight;
+	using tree<K,V,OP::ktree_avl>::new_weight;
 
 public:
 	// Make one...
 	ktree_avl(unsigned b = DFLT_BLK)
-	  : tree<K,V,::ktree_avl>(b) {
+	  : tree<K,V,OP::ktree_avl>(b) {
 	}
 	// Clean up
 	virtual ~ktree_avl() {
@@ -492,7 +494,7 @@ public:
 #endif
 
 private:
-	friend class tree<K,V,::ktree_avl>;
+	friend class tree<K,V,OP::ktree_avl>;
 
 	// For AVL trees the only additional node information is the height
 	struct node_base {
@@ -934,5 +936,7 @@ protected:
 	}
 #endif
 };
+
+} // namespace OP
 
 #endif // TREE_H

@@ -30,7 +30,7 @@
 #include "mathplus.h"
 #include <stdio.h>
 
-#ifdef NOBUILD
+using namespace OP;
 
 #define NT 800
 #define TB 15.0
@@ -72,5 +72,3 @@ main()
 	}
 	delete system;
 }
-
-#endif

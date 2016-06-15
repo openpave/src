@@ -31,6 +31,8 @@
 #include "matrix.h"
 #include "linalg.h"
 
+using namespace OP;
+
 static void
 print_matlab(const char * c, unsigned m, unsigned n, double * A)
 {

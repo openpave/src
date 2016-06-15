@@ -57,6 +57,8 @@
 #include <memory.h>
 #include <assert.h>
 
+namespace OP {
+
 class matrix_storage_ptr;
 class matrix_dense;
 class matrix;
@@ -685,5 +687,7 @@ operator- (const matrix & b) {
 	matrix_storage * d = new matrix_operator(matrix_operator::neg,b.data);
 	return matrix(d);
 }
+
+} // namespace OP
 
 #endif // MATRIX_H

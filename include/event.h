@@ -41,9 +41,21 @@
 #ifndef __EVENT_H
 #define __EVENT_H
 
+#if defined(_EVENT_IMP) || defined(_PROGRESS_IMP)
+#include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
+#if defined(DARWIN)
+#include <sys/time.h>
+#else
+#include <time.h>
+#endif
+#endif
 #include <exception>
 #include <stdexcept>
 #include <new>
+
+namespace OP {
 
 /* Error levels */
 #define EVENT_FATAL             0       /* Fatal error condition */
@@ -67,10 +79,6 @@ extern void timeme(const char * msg = nullptr);
 
 #ifdef _EVENT_IMP
 
-#include <stdarg.h>
-#include <stdio.h>
-#include <string.h>
-
 /*
  * Default error event handler.
  */
@@ -86,12 +94,6 @@ event_msg(const int level, const char * fmt, ...)
 	}
 	va_end(args);
 }
-
-#if defined(DARWIN)
-#include <sys/time.h>
-#else
-#include <time.h>
-#endif
 
 void
 timeme(const char * msg)
@@ -137,10 +139,6 @@ timeme(const char * msg)
 #endif
 
 #ifdef _PROGRESS_IMP
-
-#include <stdarg.h>
-#include <stdio.h>
-#include <string.h>
 
 /*
  * Default progress bar handler.
@@ -212,5 +210,7 @@ event_progress(const int type, const int marker, const char * fmt, ...)
 
 #undef _PROGRESS_IMP
 #endif
+
+} // namespace OP
 
 #endif // EVENT_H

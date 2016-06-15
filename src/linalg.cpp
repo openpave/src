@@ -35,6 +35,8 @@
 #include "mathplus.h"
 #include "linalg.h"
 
+namespace OP {
+
 /*
  * In-place transpose a rectangular matrix.
  */
@@ -1253,3 +1255,5 @@ inv_eig(const unsigned n, double * A)
 		}
 	}
 }
+
+} // namespace OP

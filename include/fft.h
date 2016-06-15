@@ -42,6 +42,8 @@
 
 #include <mathplus.h>
 
+namespace OP {
+
 typedef struct {
 	double re;
 	double im;
@@ -319,5 +321,7 @@ fftr_mul<2>(double * a, double * b)
 	a[0] *= b[0];
 	a[1] *= b[1];
 }
+
+} // namespace OP
 
 #endif // FFT_H

@@ -35,6 +35,8 @@
 #ifndef __AUTODELETE_H
 #define __AUTODELETE_H
 
+namespace OP {
+
 template<typename T>
 class autodelete
 {
@@ -67,5 +69,7 @@ public:
 private:
 	T * ptr;
 };
+
+} // namespace OP
 
 #endif // AUTODELETE_H

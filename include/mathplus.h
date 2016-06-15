@@ -47,6 +47,11 @@
 #include <ymath.h>
 #endif
 #include <stdlib.h>
+#if defined(HAVE_STD_SWAP)
+#include <utility>
+#endif
+
+namespace OP {
 
 #if !defined(M_E)
 #define M_E         2.71828182845904523536      // e
@@ -164,7 +169,6 @@ fma(const double a, const double b, const double c)
 #endif
 
 #if defined(HAVE_STD_SWAP)
-#include <utility>
 using std::swap;
 #else
 /*
@@ -196,5 +200,7 @@ choose(const int n, const int k)
 		c = c*++j/i;
 	return c;
 }
+
+} // namespace OP
 
 #endif // MATHPLUS_H

@@ -32,6 +32,8 @@
 #include "pavement.h"
 #include <stdio.h>
 
+using namespace OP;
+
 static void
 test0()
 {

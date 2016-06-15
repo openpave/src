@@ -34,6 +34,8 @@
 #include <time.h>
 #include "fft.h"
 
+using namespace OP;
+
 static double
 myrand()
 {

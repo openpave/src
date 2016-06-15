@@ -13,14 +13,14 @@ PROGRAMS =                             \
     test_pavement                      \
     test_fft                           \
     test_listen                        \
+    test_rng                           \
     test_table                         \
+    test_thermal                       \
     $(NULL)
 
 CXXSRCS_test =                         \
     test.cpp                           \
     test_backcalc.cpp                  \
-    test_rng.cpp                       \
-    test_thermal.cpp                   \
     $(NULL)
 
 CXXSRCS_test_set =                     \
@@ -43,8 +43,16 @@ CXXSRCS_test_listen =                  \
     test_listen.cpp                    \
     $(NULL)
 
+CXXSRCS_test_rng =                     \
+    test_rng.cpp                       \
+    $(NULL)
+
 CXXSRCS_test_table =                   \
     test_table.cpp                     \
+    $(NULL)
+
+CXXSRCS_test_thermal =                 \
+    test_thermal.cpp                   \
     $(NULL)
 
 include $(topsrcdir)/build/rules.mk

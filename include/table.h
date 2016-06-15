@@ -51,6 +51,8 @@
 #include <type_traits>
 #include "axis.h"
 
+namespace OP {
+
 /*
  * Class table
  *
@@ -261,5 +263,7 @@ private:
 		allocate(length());
 	}
 };
+
+} // namespace OP
  
 #endif // TABLE_H

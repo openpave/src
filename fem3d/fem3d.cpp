@@ -79,6 +79,8 @@ const char * _malloc_options = "ajz";
 }
 #endif
 
+using namespace OP;
+
 #define NDOF 3
 #define NDIM 3
 

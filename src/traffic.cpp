@@ -49,6 +49,8 @@
 #include "set.h"
 #include "traffic.h"
 
+namespace OP {
+
 /*
  * Make an integer from a fixed width string.
  */
@@ -403,3 +405,4 @@ bool WIMsurvey::ProcessRSADir(const char * dir, const char * bname)
 	return true;
 }
 
+} // namespace OP

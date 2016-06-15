@@ -52,6 +52,8 @@
 #include "set.h"
 #include "list.h"
 
+namespace OP {
+
 class LEsystem;
 class LEsystem_cache;
 class LEbackcalc;
@@ -596,5 +598,7 @@ private:
 	double conjgrad(unsigned nl, double * P);
 	double swarm(unsigned nl, double * P);
 };
+
+} // namespace OP
 
 #endif // PAVEMENT_H

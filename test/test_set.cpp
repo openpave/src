@@ -32,6 +32,8 @@
 #include "tree.h"
 #include <stdio.h>
 
+using namespace OP;
+
 #define N 10
 
 struct key {

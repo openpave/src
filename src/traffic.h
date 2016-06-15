@@ -45,6 +45,8 @@
 #include <string.h>
 #include <time.h>
 
+namespace OP {
+
 // Known axle types.
 #define STEER		0
 #define DUAL		1
@@ -167,5 +169,6 @@ time_t str2time(const char * s, struct tm * date);
 int fexists(const char * fname);
 void fgetln(char * b, int l, FILE * fp);
 
-#endif // TRAFFIC_H
+} // namespace OP
 
+#endif // TRAFFIC_H

@@ -39,10 +39,14 @@
 #ifndef __STATISTICS_H
 #define __STATISTICS_H
 
+namespace OP {
+
 double stdnormal_rnd();
 double stdnormal_pdf(double);
 double quad8_stdnormal_pdf(double, double, double);
 double stdnormal_cdf(double);
 double stdnormal_inv(double);
+
+} // namespace OP
 
 #endif // STATISTICS_H

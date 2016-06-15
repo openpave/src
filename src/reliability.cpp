@@ -33,6 +33,8 @@
 #include "statistics.h"
 #include "reliability.h"
 
+namespace OP {
+
 /*
  *	Simple constructor.  We always have an owner, and optionally a previous list member.
  */
@@ -211,3 +213,5 @@ reliability::NewRV(randomvar::distribution t, double m, double s) {
 
 	return rv;
 }
+
+} // namespace OP

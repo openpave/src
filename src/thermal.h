@@ -45,6 +45,8 @@
 #ifndef __THERMAL_H
 #define __THERMAL_H
 
+namespace OP {
+
 class FEMthermal
 {
 public:
@@ -79,5 +81,7 @@ private:
 	double * Kt;				// Saved first col.
 	double * Kb;				// Saved last col.
 };
+
+} // namespace OP
 
 #endif // THERMAL_H

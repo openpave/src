@@ -57,6 +57,8 @@
 #include <stdexcept>
 #include <cstring>
 
+namespace OP {
+
 #define DFLT_BLK    64
 
 /*
@@ -1622,5 +1624,7 @@ protected:
 		}
 	}
 };
+
+} // namespace OP
 
 #endif // SET_H

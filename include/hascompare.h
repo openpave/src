@@ -37,6 +37,8 @@
 
 #include <type_traits>
 
+namespace OP {
+
 template<typename T>
 class has_compare
 {
@@ -50,5 +52,7 @@ class has_compare
 public:
 	static const bool value = type::value;
 };
+
+} // namespace OP
 
 #endif // HASCOMPARE_H

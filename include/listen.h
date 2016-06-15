@@ -45,6 +45,8 @@
 #include <memory>
 #include <functional>
 
+namespace OP {
+
 template<typename M> class dispatcher;
 
 /*
@@ -154,5 +156,7 @@ private:
 		source * next;         // The next source
 	} * head;                  // The head of the list
 };
+
+} // namespace OP
 
 #endif // LISTEN_H

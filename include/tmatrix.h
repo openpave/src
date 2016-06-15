@@ -47,6 +47,8 @@
 #include <stdio.h>
 #include <string.h>
 
+namespace OP {
+
 #if !defined(NO_METAPROGS)
 /*
  * struct meta_assign - template meta class to assign one matrix to another
@@ -767,5 +769,7 @@ diag(const tmatrix_expr<T,E,N,N> & e) {
 	typedef tmatrix_expr_diag<T,tmatrix_expr<T,E,N,N> > expr_t;
 	return tmatrix_expr<T,expr_t,N,1>(expr_t(e));
 }
+
+} // namespace OP
 
 #endif // TMATRIX_H

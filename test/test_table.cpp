@@ -32,6 +32,8 @@
 #include "axis.h"
 #include "table.h"
 
+using namespace OP;
+
 #define N 10
 
 struct keyA {
