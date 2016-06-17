@@ -87,11 +87,11 @@ protected:
 template <typename T>
 class list_single {
 protected:
-	T * head;                   // The head of the list.
+	T * next;                   // The head of the list.
 
 	// All lists start empty...
 	list_single()
-	  : head(nullptr) {
+	  : next(nullptr) {
 	}
 	~list_single() {
 		empty();
@@ -101,7 +101,7 @@ protected:
 	T * insert(T * e) {
 		if (e == nullptr)
 			return e;          // Pass-through allocation failure
-		T ** t = &head, ** l = &head;
+		T ** t = &next, ** l = &next;
 		while (*t != nullptr) {
 			if (e->next != nullptr && e->next == *t) {
 				(*l)->next = e;
@@ -113,7 +113,7 @@ protected:
 	}
 	// Remove an element from the list (but don't delete it)
 	T * remove(T * e = nullptr) {
-		T ** t = &head, ** l = &head;
+		T ** t = &next, ** l = &next;
 		while (*t != nullptr) {
 			if (e != nullptr && *t == e) {
 				*l = e->next;
@@ -131,23 +131,23 @@ protected:
 		T ** t = &(e->next);
 		while (*t != nullptr)
 			t = &((*t)->next);
-		*t = head, head = e;
+		*t = next, next = e;
 		return e;
 	}
 	// Remove the head element (but don't delete it)
 	T * pop() {
-		T * e = head;
-		head = e->next;
+		T * e = next;
+		next = e->next;
 		return e;
 	}
 	// Check in the list is empty.
 	bool inline isempty() const {
-		return (head == nullptr ? true : false);
+		return (next == nullptr ? true : false);
 	}
 	// Figure out the length of the list.
 	unsigned length() const {
 		unsigned s = 0;
-		T * t = head;
+		T * t = next;
 		while (t != nullptr)
 			s++, t = t->next;
 		return s;
