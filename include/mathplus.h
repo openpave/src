@@ -40,6 +40,7 @@
 #if defined(_MSC_VER) && _MSC_VER >= 1800
 #define _USE_MATH_DEFINES
 #include <cmath>
+#include <math.h>
 #else
 #include <math.h>
 #endif
@@ -50,6 +51,7 @@
 #if defined(HAVE_STD_SWAP)
 #include <utility>
 #endif
+#include <algorithm>
 
 namespace OP {
 
