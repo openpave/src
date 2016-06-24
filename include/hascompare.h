@@ -39,19 +39,36 @@
 
 namespace OP {
 
-template<typename T>
-class has_compare
-{
-	template<typename C>
-	static typename std::is_same<
-		decltype(std::declval<C>().compare(std::declval<C>())),int>::type
-		check(C *) { return std::true_type(); };
-	template<typename>
-	static std::false_type check(...) { return std::false_type(); };
-	typedef decltype(check<T>(0)) type;
-public:
-	static const bool value = type::value;
+#define HAS_MEMBER_FUNCTION(NAME,RET,...)                                 \
+template<typename T>                                                      \
+class has_##NAME                                                          \
+{                                                                         \
+	template<typename C>                                                  \
+	static typename std::is_same<                                         \
+		decltype(std::declval<C>().NAME(__VA_ARGS__)),RET>::type          \
+		check(C *) { return std::true_type(); };                          \
+	template<typename>                                                    \
+	static std::false_type check(...) { return std::false_type(); };      \
+	typedef decltype(check<T>(0)) type;                                   \
+public:                                                                   \
+	static const bool value = type::value;                                \
 };
+
+#define HAS_NESTED_CLASS(NAME)                                            \
+template<typename T>                                                      \
+class has_##NAME                                                          \
+{                                                                         \
+	template<typename C>                                                  \
+	static typename std::is_class<typename C::NAME>::type                 \
+		check(C *) { return std::true_type(); };                          \
+	template<typename>                                                    \
+	static std::false_type check(...) { return std::false_type(); };      \
+	typedef decltype(check<T>(0)) type;                                   \
+public:                                                                   \
+	static const bool value = type::value;                                \
+};
+
+HAS_MEMBER_FUNCTION(compare,int,std::declval<C>())
 
 } // namespace OP
 
