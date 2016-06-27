@@ -58,6 +58,8 @@ struct BST
 	BST()
 	  : root(nullptr) {
 	}
+	BST(const BST &) = delete;
+	BST & operator= (const BST &) = delete;
 	~BST() {
 		delete root;
 	}

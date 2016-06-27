@@ -138,8 +138,6 @@ public:
 					break;
 				case axis_message::deleting:
 					throw std::runtime_error("Out of order destructors!");
-				default:
-					break;
 				}
 		}));
 	}
