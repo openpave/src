@@ -34,6 +34,7 @@
 #ifndef __TREE_H
 #define __TREE_H
 
+#include <cstring>
 #include <stdexcept>
 #ifdef TEST_TREES
 #include <cstdio>
@@ -391,7 +392,7 @@ protected:
 		// free list.
 		value[p].~_V();
 		if (--size > p)
-			memmove(&value[p],&value[p+1],(size-p)*sizeof(_V));
+			std::memmove(&value[p],&value[p+1],(size-p)*sizeof(_V));
 		if (root != UINT_MAX && root > p)
 			root--;
 		for (unsigned i = 0; i < size; i++) {
