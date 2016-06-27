@@ -73,8 +73,8 @@ protected:
 	listelement_s(T * n = nullptr)
 	  : next(n) {
 	}
-	~listelement_s() {
-	}
+	listelement_s(const listelement_s &) = delete;
+	listelement_s & operator= (const listelement_s &) = delete;
 
 	friend class list_single<T>;
 };
@@ -93,6 +93,8 @@ protected:
 	list_single()
 	  : next(nullptr) {
 	}
+	list_single(const list_single &) = delete;
+	list_single & operator= (const list_single &) = delete;
 	~list_single() {
 		empty();
 	}
@@ -191,6 +193,8 @@ protected:
 			prev->next = static_cast<T *>(this);
 		}
 	}
+	listelement_d(const listelement_d &) = delete;
+	listelement_d & operator= (const listelement_d &) = delete;
 	// Unlink ourselves from the list before we die...
 	~listelement_d() {
 		if (prev != nullptr)
@@ -218,6 +222,8 @@ protected:
 	list_double()
 	  : first(nullptr), last(nullptr) {
 	}
+	list_double(const list_double &) = delete;
+	list_double & operator= (const list_double &) = delete;
 	~list_double() {
 		empty();
 	}
@@ -314,6 +320,8 @@ protected:
 		if (this->next == nullptr)
 			owner->last = static_cast<T *>(this);
 	}
+	listelement_o(const listelement_o &) = delete;
+	listelement_o & operator= (const listelement_o &) = delete;
 	// Also manage our owner's pointers.
 	~listelement_o() {
 		if (owner == nullptr)
@@ -338,6 +346,8 @@ protected:
 	list_owned()
 	  : list_double<T>() {
 	}
+	list_owned(const list_owned &) = delete;
+	list_owned & operator= (const list_owned &) = delete;
 	~list_owned() {
 	}
 

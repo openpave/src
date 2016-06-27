@@ -69,9 +69,8 @@ struct point2d {
 	point2d(double px, double py)
 	  : x(px), y(py) {
 	}
-	point2d(const point2d & p)
-	  : x(p.x), y(p.y) {
-	}
+	point2d(const point2d &) = default;
+	point2d & operator = (const point2d &) = default;
 	double r() const {
 		return hypot(x,y);
 	}
@@ -126,9 +125,8 @@ struct point3d : public point2d {
 	point3d(double px, double py, double pz)
 	  : point2d(px,py), z(pz) {
 	}
-	point3d(const point3d & p)
-	  : point2d(p), z(p.z) {
-	}
+	point3d(const point3d &) = default;
+	point3d & operator = (const point3d &) = default;
 	int compare(const point3d & p) const {
 		if (x == p.x && y == p.y && z == p.z)
 			return 0;
@@ -345,8 +343,6 @@ struct pavedata : public pavepoint {
 			case s1: case s2: case s3:
 				return data[8][d-s1];
 			}
-		default:
-			return 0.0;
 		}
 	}
 
@@ -362,6 +358,12 @@ struct pavedata : public pavepoint {
 	pavedata(const pavedata & pd)
 	  : pavepoint(pd), deflgrad(pd.deflgrad) {
 		memcpy(data,pd.data,sizeof(data));
+	}
+	pavedata & operator = (const pavedata & pd) {
+		pavepoint::operator=(pd);
+		deflgrad = pd.deflgrad;
+		memcpy(data,pd.data,sizeof(data));
+		return *this;
 	}
 	~pavedata() {
 	}
@@ -380,11 +382,8 @@ public:
 	  : list_owned<LEsystem,LElayer>(), points(), data(), lg(), clg(0),
 			cache_res(failure), cache_state(cachestate::empty), cache(0) {
 	}
-	LEsystem(const LEsystem & p)
-	  : list_owned<LEsystem,LElayer>(p), points(p.points), data(p.data),
-			lg(p.lg), clg(p.clg), cache_res(failure),
-			cache_state(cachestate::empty), cache(0) {
-	}
+	LEsystem(const LEsystem &) = delete;
+	LEsystem & operator= (const LEsystem &) = delete;
 	~LEsystem() {
 		cache_free();
 	}
@@ -573,10 +572,8 @@ public:
 	LEbackcalc() {
 		setup(0.0,0.0,1e-6,5);
 	}
-	LEbackcalc(LEbackcalc & b)
-	  : LEsystem(b), defl(b.defl) {
-		setup(b.precision,b.noise,b.tolerance,b.maxsteps);
-	}
+	LEbackcalc(const LEbackcalc &) = delete;
+	LEbackcalc & operator= (const LEbackcalc &) = delete;
 	~LEbackcalc() {
 	}
 private:

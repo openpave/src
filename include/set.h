@@ -83,13 +83,19 @@ protected:
 	unsigned buffer;           // The allocated buffer size...
 
 	// Simple constructor...
-	inline explicit set(const unsigned b = DFLT_BLK)
+	explicit set(const unsigned b = DFLT_BLK)
 	  : size(0), buffer(0), block(b > 1 ? b : 1) {
 	}
-	inline explicit set(const set & s)
+	explicit set(const set & s)
 	  : size(0), buffer(0), block(s.block) {
 	}
-	inline ~set() {
+	set & operator= (const set & s) {
+		size = 0;
+		buffer = 0;
+		block = s.block;
+		return *this;
+	}
+	~set() {
 	}
 	// Calculate the buffer size.
 	inline unsigned bufsize(unsigned s) {
@@ -269,8 +275,18 @@ public:
 	inline explicit sset(const fset<V> & v)
 	  : fset<V>(v) {
 	}
+	// Copy constructor.
+	inline explicit sset(const sset<V> & v)
+	  : fset<V>(v) {
+	}
 	// We let someone else clean up...
 	inline ~sset() {
+	}
+
+	// Assignment operator.
+	sset<V> & operator= (const sset<V> & v) {
+		fset<V>::operator=(v);
+		return *this;
 	}
 
 	// Add one element, at the end.
@@ -880,6 +896,13 @@ public:
 	}
 	inline explicit ksset(const kfset<K,V> & v)
 	  : kfset<K,V>(v) {
+	}
+	inline explicit ksset(const ksset<K,V> & v)
+	  : kfset<K,V>(v) {
+	}
+	ksset<K,V> & operator= (const ksset<K,V> & v) {
+		kfset<K,V>::operator=(v);
+		return *this;
 	}
 	inline ~ksset() {
 	}
