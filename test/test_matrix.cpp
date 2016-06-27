@@ -243,7 +243,7 @@ test4()
 	for (i = 0; i < N*N; i++)
 		A[i] = RAND(0.0,1.0);
 
-		matrix_dense *s = new matrix_dense(N,N,A);
+	matrix_dense *s = new matrix_dense(N,N,A);
 	matrix a(s);
 	matrix b;
 
