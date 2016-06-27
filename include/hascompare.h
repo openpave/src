@@ -46,9 +46,9 @@ class has_##NAME                                                          \
 	template<typename C>                                                  \
 	static typename std::is_same<                                         \
 		decltype(std::declval<C>().NAME(__VA_ARGS__)),RET>::type          \
-		check(C *) { return std::true_type(); };                          \
+		check(C *) { return std::true_type(); }                           \
 	template<typename>                                                    \
-	static std::false_type check(...) { return std::false_type(); };      \
+	static std::false_type check(...) { return std::false_type(); }       \
 	typedef decltype(check<T>(0)) type;                                   \
 public:                                                                   \
 	static const bool value = type::value;                                \
@@ -60,9 +60,9 @@ class has_##NAME                                                          \
 {                                                                         \
 	template<typename C>                                                  \
 	static typename std::is_class<typename C::NAME>::type                 \
-		check(C *) { return std::true_type(); };                          \
+		check(C *) { return std::true_type(); }                           \
 	template<typename>                                                    \
-	static std::false_type check(...) { return std::false_type(); };      \
+	static std::false_type check(...) { return std::false_type(); }       \
 	typedef decltype(check<T>(0)) type;                                   \
 public:                                                                   \
 	static const bool value = type::value;                                \
