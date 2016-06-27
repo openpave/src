@@ -47,6 +47,17 @@ public:
 	~autodelete() {
 		delete [] ptr;
 	}
+	autodelete(const autodelete &) = delete;
+	autodelete(autodelete && a)
+		: ptr(a.ptr) {
+		a.ptr = nullptr;
+	}
+	autodelete & operator= (const autodelete &) = delete;
+	autodelete & operator= (autodelete && a) {
+		ptr = a.ptr;
+		a.ptr = nullptr;
+		return *this;
+	}
 	T & operator[] (const int i) {
 		return ptr[i];
 	}
