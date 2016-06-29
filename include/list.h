@@ -53,11 +53,11 @@
 namespace OP {
 
 // Forward declare some classes...
-template <typename T>
+template<typename T>
 class list_single;
-template <typename T>
+template<typename T>
 class list_double;
-template <typename O, typename T>
+template<typename O, typename T>
 class list_owned;
 
 /*
@@ -65,7 +65,7 @@ class list_owned;
  *
  * Use this as a base class for the data you want to store in the list.
  */
-template <typename T>
+template<typename T>
 class listelement_s {
 protected:
 	T * next;                   // The next element.
@@ -75,6 +75,10 @@ protected:
 	}
 	listelement_s(const listelement_s &) = delete;
 	listelement_s & operator= (const listelement_s &) = delete;
+	listelement_s(listelement_s &&) = delete;
+	listelement_s & operator= (listelement_s &&) = delete;
+	~listelement_s() {
+	}
 
 	friend class list_single<T>;
 };
@@ -84,7 +88,7 @@ protected:
  *
  * This class manages a singally linked list of type listelement_s<T>.
  */
-template <typename T>
+template<typename T>
 class list_single {
 protected:
 	T * next;                   // The head of the list.
@@ -95,6 +99,16 @@ protected:
 	}
 	list_single(const list_single &) = delete;
 	list_single & operator= (const list_single &) = delete;
+	// We just need to move the head to steal the chain.
+	list_single(list_single && e)
+	  : next(e.next) {
+		e.next = nullptr;
+	}
+	list_single & operator= (list_single && e) {
+		next = e.next;
+		e.next = nullptr;
+		return *this;
+	}
 	~list_single() {
 		empty();
 	}
@@ -140,6 +154,7 @@ protected:
 	T * pop() {
 		T * e = next;
 		next = e->next;
+		e->next = nullptr;
 		return e;
 	}
 	// Check in the list is empty.
@@ -167,7 +182,7 @@ protected:
  * Use this class as a base class for the data you want to store in the
  * list.
  */
-template <typename T>
+template<typename T>
 class listelement_d {
 protected:
 	T * next;                   // The next element.
@@ -193,8 +208,11 @@ protected:
 			prev->next = static_cast<T *>(this);
 		}
 	}
+	// Copying or moving list elements is inherently unsafe.
 	listelement_d(const listelement_d &) = delete;
 	listelement_d & operator= (const listelement_d &) = delete;
+	listelement_d(listelement_d && e) = delete;
+	listelement_d & operator= (listelement_d && e) = delete;
 	// Unlink ourselves from the list before we die...
 	~listelement_d() {
 		if (prev != nullptr)
@@ -212,7 +230,7 @@ protected:
  * This class manages a doubly linked list of type listelement_d<T>.
  * It has both a head and a tail pointer.
  */
-template <typename T>
+template<typename T>
 class list_double {
 protected:
 	T * first;                  // The head of the list.
@@ -224,11 +242,20 @@ protected:
 	}
 	list_double(const list_double &) = delete;
 	list_double & operator= (const list_double &) = delete;
+	list_double(list_double && e)
+	  : first(e.first), last(e.last) {
+		e.first = e.last = nullptr;
+	}
+	list_double & operator= (list_double && e) {
+		first = e.first, last = e.last;
+		e.first = e.last = nullptr;
+		return *this;
+	}
 	~list_double() {
 		empty();
 	}
 
-	// Insert an element.  If the element is not already part of the list
+	// Insert an element.  If the element is not already part of a list
 	// it is inserted at the end.
 	T * insert(T * e) {
 		if (e == nullptr)
@@ -300,7 +327,7 @@ protected:
  * List is like listelemt_d, but requires an owner of type O.
  * The owner class must be derived from class list_double.
  */
-template <typename O, typename T>
+template<typename O, typename T>
 class listelement_o : public listelement_d<T> {
 protected:
 	O * owner;                  // Our owner.
@@ -320,8 +347,11 @@ protected:
 		if (this->next == nullptr)
 			owner->last = static_cast<T *>(this);
 	}
+	// Copying or moving list elements is inherently unsafe.
 	listelement_o(const listelement_o &) = delete;
 	listelement_o & operator= (const listelement_o &) = delete;
+	listelement_o(listelement_o &&) = delete;
+	listelement_o & operator= (listelement_o &&) = delete;
 	// Also manage our owner's pointers.
 	~listelement_o() {
 		if (owner == nullptr)
@@ -340,14 +370,32 @@ protected:
  *
  * This is the base class for the list owner.
  */
-template <typename O, typename T>
+template<typename O, typename T>
 class list_owned : public list_double<T> {
 protected:
+	using list_double<T>::first;
+
 	list_owned()
 	  : list_double<T>() {
 	}
 	list_owned(const list_owned &) = delete;
 	list_owned & operator= (const list_owned &) = delete;
+	list_owned(list_owned && l)
+	  : list_double<T>(std::move(l)) {
+		listelement_o<O,T> * t = first;
+		while (t != nullptr) {
+			t->owner = static_cast<O *>(this);
+			t = t->next;
+		}
+	}
+	list_owned & operator= (list_owned && l) {
+		list_double<T>::operator=(std::move(l));
+		listelement_o<O,T> * t = first;
+		while (t != nullptr) {
+			t->owner = static_cast<O *>(this);
+			t = t->next;
+		}
+	}
 	~list_owned() {
 	}
 

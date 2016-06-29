@@ -310,6 +310,7 @@ struct pavedata : public pavepoint {
 	// Return the results based on a more rational system...
 	enum type {deflct, stress, strain};
 	enum direction {xx, yy, zz, xy, xz, yz, p1, p2, p3, s1, s2, s3};
+#pragma warning(suppress: 4715) // all control paths do return...
 	double result(type t, direction d) const {
 		switch (t) {
 		case stress:
@@ -330,7 +331,7 @@ struct pavedata : public pavepoint {
 			case xy: case xz: case yz:
 			case p1: case p2: case p3:
 			case s1: case s2: case s3:
-				return 0.0;
+				return 0.0; // XXX: throw?
 			}
 		case strain:
 			switch (d) {
@@ -384,6 +385,11 @@ public:
 	}
 	LEsystem(const LEsystem &) = delete;
 	LEsystem & operator= (const LEsystem &) = delete;
+	LEsystem(LEsystem && s)
+	  : list_owned<LEsystem,LElayer>(std::move(s)), points(std::move(s.points)),
+		data(std::move(s.data)), lg(std::move(lg)), clg(s.clg),
+			cache_res(failure), cache_state(cachestate::empty), cache(0) {
+	}
 	~LEsystem() {
 		cache_free();
 	}
