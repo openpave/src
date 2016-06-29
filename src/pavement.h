@@ -310,7 +310,9 @@ struct pavedata : public pavepoint {
 	// Return the results based on a more rational system...
 	enum type {deflct, stress, strain};
 	enum direction {xx, yy, zz, xy, xz, yz, p1, p2, p3, s1, s2, s3};
+#ifdef _MSC_VER
 #pragma warning(suppress: 4715) // all control paths do return...
+#endif
 	double result(type t, direction d) const {
 		switch (t) {
 		case stress:
@@ -464,12 +466,12 @@ public:
 	}
 	const pavedata & result(const unsigned g, const point3d & p,
 		unsigned l = UINT_MAX) const {
-		if (cached_state() < cachestate::all)
+		if (cache_state < cachestate::all)
 			throw std::runtime_error("No results available!");
 		return result(g,points.haskey(pavepoint(p,l)));
 	}
 	const pavedata & result(const unsigned g, const unsigned i) const {
-		if (cached_state() < cachestate::all)
+		if (cache_state < cachestate::all)
 			throw std::runtime_error("No results available!");
 		return data[g][i];
 	}
@@ -503,6 +505,7 @@ protected:
 
 private:
 	friend class listelement_o<LEsystem,LElayer>;
+	friend class list_owned<LEsystem,LElayer>;
 	friend class LElayer;
 	friend class LEbackcalc;
 
@@ -517,9 +520,6 @@ private:
 	} cache_state;
 	void cached_state(cachestate s) {
 		cache_state = MIN(cache_state,s);
-	}
-	cachestate cached_state() const {
-		return cache_state; 
 	}
 	LEsystem_cache * cache;
 };

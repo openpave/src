@@ -452,10 +452,10 @@ LEsystem::check()
 	unsigned il, nl = layers();
 	const LElayer * pl;
 
-	if (cached_state() == cachestate::all)
+	if (cache_state == cachestate::all)
 		return true;
 	bool ischecked = true;
-	if (cached_state() == cachestate::empty) {
+	if (cache_state == cachestate::empty) {
 		if (nl == 0) {
 			event_msg(EVENT_WARN,
 				"Cannot calculate a pavement without any layers!");
@@ -502,7 +502,7 @@ LEsystem::check()
 				" zero and one half not %f!", il, pl->poissons());
 			ischecked = false;
 		}
-		if (cached_state() > cachestate::empty)
+		if (cache_state > cachestate::empty)
 			continue;
 		if (pl->thickness() < 0.0) {
 			event_msg(EVENT_WARN,
@@ -520,7 +520,7 @@ LEsystem::check()
 			"Error: Last layer cannot have a Poisson's ratio of 0.75!");
 		ischecked = false;
 	}
-	if (cached_state() > cachestate::empty || ischecked == false)
+	if (cache_state > cachestate::empty || ischecked == false)
 		return ischecked;
 	for (unsigned ixy = 0; ixy < points.length(); ixy++) {
 		pavepoint & d = points[ixy];
@@ -1077,8 +1077,8 @@ LEsystem::calc_accurate()
 	const LElayer * pl;
 
 	initarrays();
-	if (cache_res == accurate && cached_state() > cachestate::empty) {
-		if (cached_state() == cachestate::all)
+	if (cache_res == accurate && cache_state > cachestate::empty) {
+		if (cache_state == cachestate::all)
 			return true;
 		// This procedure never uses the cache
 		cache_free();
@@ -1205,8 +1205,8 @@ LEsystem::calculate(resulttype res, const double * Q)
 	bool interpolate = false;
 
 	initarrays();
-	if (cache_res == res && cached_state() > cachestate::empty) {
-		if (cached_state() == cachestate::all)
+	if (cache_res == res && cache_state > cachestate::empty) {
+		if (cache_state == cachestate::all)
 			return true;
 		cache_reset();
 	} else
@@ -1218,7 +1218,7 @@ LEsystem::calculate(resulttype res, const double * Q)
 	unsigned &ngqp = c_counts[0], &nbz = c_counts[1];
 	unsigned &nl = c_counts[2], &nz = c_counts[3], &na = c_counts[4];
 	unsigned &nr = c_counts[5], &nm = c_counts[6];
-	if (cached_state() == cachestate::empty) {
+	if (cache_state == cachestate::empty) {
 		ngqp = NGQP, nbz = NBZ, gl = UINT_MAX, nl = layers();
 		if ((res & mask) == dirty) {
 			ngqp = MIN(NGQP,8);
@@ -1250,13 +1250,13 @@ LEsystem::calculate(resulttype res, const double * Q)
 		E[il] = pl->emod();
 		f[il] = MAX(0.0,pl->slip());
 		v[il] = pl->poissons();
-		if (cached_state() > cachestate::empty)
+		if (cache_state > cachestate::empty)
 			continue;
 		h[il] = pl->bottom();
 	}
 	// Collect and sort the z positions.
 	zpoint * z = nullptr;
-	if (cached_state() == cachestate::empty) {
+	if (cache_state == cachestate::empty) {
 		cset<zpoint> sz;
 		for (ixy = 0; ixy < points.length(); ixy++) {
 			pavepoint & d = points[ixy];
@@ -1285,7 +1285,7 @@ LEsystem::calculate(resulttype res, const double * Q)
 	}
 	// Generate a list of load radii, then sort them and map from loads.
 	double * a = nullptr;
-	if (cached_state() == cachestate::empty) {
+	if (cache_state == cachestate::empty) {
 		cset<double> sa;
 		for (ig = 0; ig < lg.length(); ig++) {
 			for (ild = 0; ild < lg[ig].length(); ild++)
@@ -1303,7 +1303,7 @@ LEsystem::calculate(resulttype res, const double * Q)
 	for (ia = 0; ia < na; ia++) {
 		// Generate a list of radii, then sort them.
 		double * r = nullptr, * bm = nullptr;
-		if (cached_state() == cachestate::empty) {
+		if (cache_state == cachestate::empty) {
 			cset<double> sr;
 			for (ig = 0; ig < lg.length(); ig++) {
 				for (ild = 0; ild < lg[ig].length(); ild++) {
@@ -1327,7 +1327,7 @@ LEsystem::calculate(resulttype res, const double * Q)
 		bool * as = cache_alloc<bool>(nz*nr);
 
 		// Now generate a list of integration intervals, then sort them.
-		if (cached_state() == cachestate::empty) {
+		if (cache_state == cachestate::empty) {
 			cset<double> sm;
 			sm.empty();
 			sm.add(0.0);
@@ -1383,7 +1383,7 @@ gradloop:
 		// And finally, somewhere to stick the radial data...
 		memset(&ax[0],0,sizeof(axialdata)*nz*nr);
 		// Compute the active set.
-		if (cached_state() == cachestate::empty && gl == UINT_MAX) {
+		if (cache_state == cachestate::empty && gl == UINT_MAX) {
 			memset(&ao[0],0,sizeof(bool)*nz*nr);
 			for (ig = 0; ig < lg.length(); ig++) {
 				for (ixy = 0; ixy < points.length(); ixy++) {
@@ -1611,8 +1611,8 @@ LEsystem::calc_odemark()
 	unsigned ig, ixy, ild, il;
 	LElayer * pl;
 
-	if (cache_res == odemark && cached_state() > cachestate::empty) {
-		if (cached_state() == cachestate::all)
+	if (cache_res == odemark && cache_state > cachestate::empty) {
+		if (cache_state == cachestate::all)
 			return true;
 		// This procedure never uses the cache
 		cache_free();
@@ -1839,8 +1839,8 @@ LEsystem::calc_fastnum()
 	unsigned ig, ixy, ild, il;
 	LElayer * pl;
 
-	if (cache_res == fastnum && cached_state() > cachestate::empty) {
-		if (cached_state() == cachestate::all)
+	if (cache_res == fastnum && cache_state > cachestate::empty) {
+		if (cache_state == cachestate::all)
 			return true;
 		// This procedure never uses the cache
 		cache_free();
