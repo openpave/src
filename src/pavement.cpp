@@ -174,6 +174,7 @@ findvalue(const T * a, const unsigned n, const T & v) {
  */
 class LEsystem_cache {
 	friend class LEsystem;
+
 	// always under allocate a little to help malloc()
 	// 6*sizeof(void *) ~= 32+sizeof(this);
 	static const size_t page_size = 0x400000-6*sizeof(void *);
