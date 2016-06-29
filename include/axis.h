@@ -107,7 +107,8 @@ class axis<K,Ks...>
 {
 public:
 	typedef unsigned index_t;
-	typedef std::tuple<const K &, const Ks &...> key_t;
+	typedef std::tuple<const K, const Ks...> key_t;
+	typedef std::tuple<const K &, const Ks &...> ref_t;
 
 	axis(axis<Ks...> & pr)
 	  : prior(pr) {
@@ -171,7 +172,7 @@ public:
 	}
 	// Get the full key as a tuple
 	template<unsigned N = sizeof...(Ks)>
-	typename std::enable_if<N!=1,key_t>::type
+	typename std::enable_if<N!=1,ref_t>::type
 	operator[] (unsigned p) const {
 		if (!me.inbounds(p))
 			throw std::out_of_range("ordered index out of bounds!");
@@ -181,12 +182,12 @@ public:
 	// Special version for the second last since it does not get a tuple
 	// from the first axis.
 	template<unsigned N = sizeof...(Ks)>
-	typename std::enable_if<N==1,key_t>::type
+	typename std::enable_if<N==1,ref_t>::type
 	operator[] (unsigned p) const {
 		if (!me.inbounds(p))
 			throw std::out_of_range("ordered index out of bounds!");
 		const axis_key & a = me.getatorder(p);
-		return key_t(a.key,prior[a.pi]);
+		return ref_t(a.key,prior[a.pi]);
 	}
 	// Get the ordered position of an element in the sort.
 	unsigned getorderof(const K & k, const Ks &...ks) const {
@@ -194,7 +195,7 @@ public:
 			throw std::runtime_error("key not found in axis!");
 		return me.getorderof(axis_key(prior,k,ks...));
 	}
-	unsigned getorderof(const key_t & t) const {
+	unsigned getorderof(const ref_t & t) const {
 		return unpack_getorderof(t,typename idx<sizeof...(Ks)+1>::type());
 	}
 	// Remove all elements
@@ -209,7 +210,7 @@ private:
 	template<int N, int...S> struct idx : idx<N-1,N-1,S...> {};
 	template<int...S> struct idx<0,S...>{ typedef seq<S...> type; };
 	template<int...S>
-	unsigned unpack_getorderof(const key_t & t, seq<S...>) const {
+	unsigned unpack_getorderof(const ref_t & t, seq<S...>) const {
 		return getorderof(std::get<S>(t)...);
 	}
 	struct axis_key {
@@ -255,7 +256,8 @@ class axis<K>
 {
 public:
 	typedef unsigned index_t;
-	typedef const K & key_t;
+	typedef const K key_t;
+	typedef const K & ref_t;
 
 	axis() {
 	}
