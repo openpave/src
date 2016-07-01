@@ -361,6 +361,14 @@ protected:
 		if (this->next == nullptr)
 			owner->last = this->prev;
 	}
+	// Figure out the length of the list.
+	unsigned position() const {
+		unsigned s = 0;
+		T * t = owner->first;
+		while (static_cast<listelement_o *>(t) != this)
+			s++, t = t->next;
+		return s;
+	}
 
 	friend class list_owned<O,T>;
 };
