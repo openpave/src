@@ -67,7 +67,8 @@ double stdnormal_rnd() {
 /*
  * The standard normal PDF, for one random variable.
  */
-double stdnormal_pdf(const double u)
+double
+stdnormal_pdf(double u)
 {
 	return exp(-u*u/2)/M_SQRT2PI;
 }
@@ -80,7 +81,8 @@ double stdnormal_pdf(const double u)
  * here to check the error function approximations.
  */
 #define LEVMAX	10
-double quad8_stdnormal_pdf(const double a, const double b, const double Q = 1.0)
+double
+quad8_stdnormal_pdf(double a, double b, double Q = 1.0)
 {
 	// The magic Newton-Cotes weights
 	const int w[9] = {3956, 23552, -3712, 41984, -18160, 41984, -3712, 23552, 3956};
@@ -116,7 +118,8 @@ double quad8_stdnormal_pdf(const double a, const double b, const double Q = 1.0)
  * This is the erfc() routine only, adapted by the
  * transform stdnormal_cdf(u)=(erfc(-u/sqrt(2))/2;
  */
-double stdnormal_cdf(const double u)
+double
+stdnormal_cdf(double u)
 {
 	const double a[5] = {
 		1.161110663653770e-002,3.951404679838207e-001,2.846603853776254e+001,
@@ -184,7 +187,8 @@ double stdnormal_cdf(const double u)
  * This function is based on the Matlab code from the address above,
  * translated to C, and adapted for our purposes.
  */
-double stdnormal_inv(double p)
+double
+stdnormal_inv(double p)
 {
 	const double a[6] = {
 		-3.969683028665376e+01,  2.209460984245205e+02,

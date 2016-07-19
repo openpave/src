@@ -51,7 +51,7 @@ class has_##NAME                                                          \
 	static std::false_type check(...) { return std::false_type(); }       \
 	typedef decltype(check<T>(0)) type;                                   \
 public:                                                                   \
-	static const bool value = type::value;                                \
+	static constexpr bool value = type::value;                            \
 };
 
 #define HAS_NESTED_CLASS(NAME)                                            \
@@ -65,7 +65,7 @@ class has_##NAME                                                          \
 	static std::false_type check(...) { return std::false_type(); }       \
 	typedef decltype(check<T>(0)) type;                                   \
 public:                                                                   \
-	static const bool value = type::value;                                \
+	static constexpr bool value = type::value;                            \
 };
 
 HAS_MEMBER_FUNCTION(compare,int,std::declval<C>())

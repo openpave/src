@@ -674,7 +674,7 @@ private:
  *
  * http://www.cs.princeton.edu/~rs/talks/LLRB/RedBlack.pdf
  */
-template <class K, class V>
+template<class K, class V>
 class ktree_llrb {
 public:
 	// Make one...
@@ -705,11 +705,11 @@ public:
 		return x;
 	}
 	// We can use node numbers to find our nodes...
-	V & operator[] (const unsigned p) const {
+	V & operator[] (unsigned p) const {
 		return value[p]._v;
 	}
 	// Allow sorted access.
-	V & getindex(const unsigned i) const {
+	V & getindex(unsigned i) const {
 		unsigned x = root, order = 0;
 		while (x != UINT_MAX) {
 			if (i == order + value[x].order)
@@ -725,7 +725,7 @@ public:
 		return value[x]._v;
 	}
 	// Get the position of an element in the sort.
-	unsigned getorder(const unsigned i) const {
+	unsigned getorder(unsigned i) const {
 		K & k = static_cast<K &>(value[i]._v);
 		unsigned x = root, order = 0;
 		while (x != UINT_MAX) {
@@ -783,7 +783,7 @@ protected:
 	} * value;            // Take a guess...
 
 	// Make some space...
-	void allocate(const unsigned s) {
+	void allocate(unsigned s) {
 		while (s > 8*block)
 			block *= 8;
 		unsigned b = block*(s/block+(s%block?1:0));

@@ -54,130 +54,130 @@ template <unsigned int P>
 class fixed {
 public:
 	// Some constructors for common cases...
-	inline fixed() {
+	fixed() {
 	}
-	inline fixed(const fixed & f) {
+	fixed(const fixed & f) {
 		value = f.value;
 	}
-	inline fixed(const int i) {
+	fixed(int i) {
 		value = i << P;
 	}
-	inline fixed(const unsigned i) {
+	fixed(unsigned i) {
 		value = i << P;
 	}
-	inline fixed(const float f) {
+	fixed(float f) {
 		value = (f >= 0 ? int(f*(1 << P) + 0.5)
 			 : -int(0.5 - f*(1 << P)) );
 	}
-	inline fixed(const double d) {
+	fixed(double d) {
 		value = (d >= 0 ? int(d*(1 << P) + 0.5)
 			 : -int(0.5 - d*(1 << P)) );
 	}
-	inline ~fixed() {
+	~fixed() {
 	}
 
 	// Some assignment operators...
-	inline fixed & operator = (const fixed & f) {
+	fixed & operator = (const fixed & f) {
 		value = f.value;
 		return *this;
 	}
-	inline fixed & operator += (const fixed & f) {
+	fixed & operator += (const fixed & f) {
 		value += f.value;
 		return *this;
 	}
-	inline fixed & operator -= (const fixed & f) {
+	fixed & operator -= (const fixed & f) {
 		value -= f.value;
 		return *this;
 	}
-	inline fixed & operator *= (const fixed & f) {
+	fixed & operator *= (const fixed & f) {
 		*this = double(*this) * double(f);
 		return *this;
 	}
-	inline fixed & operator /= (const fixed & f) {
+	fixed & operator /= (const fixed & f) {
 		*this = double(*this) / double(f);
 		return *this;
 	}
 
 	// Some conversion operators...
-	inline fixed<P> & operator = (const int i) {
+	fixed<P> & operator = (int i) {
 		value = i << P;
 		return *this;
 	}
-	inline fixed<P> & operator = (const double d) {
+	fixed<P> & operator = (double d) {
 		value = (d >= 0 ? int(d*(1 << P) + 0.5)
 			 : -int(0.5 - d*(1 << P)) );
 		return *this;
 	}
-	inline operator int () const {
+	operator int () const {
 		return value >> P;
 	}
-	inline operator float () const {
+	operator float () const {
 		return (float(value))/(1 << P);
 	}
-	inline operator double () const {
+	operator double () const {
 		return (double(value))/(1 << P);
 	}
 
 	// Comparison operators...
-	inline bool operator == (const fixed & f) const {
+	bool operator == (const fixed & f) const {
 		return (value == f.value);
 	}
-	inline bool operator != (const fixed & f) const {
+	bool operator != (const fixed & f) const {
 		return (value != f.value);
 	}
-	inline bool operator  < (const fixed & f) const {
+	bool operator  < (const fixed & f) const {
 		return (value < f.value);
 	}
-	inline bool operator <= (const fixed & f) const {
+	bool operator <= (const fixed & f) const {
 		return (value <= f.value);
 	}
-	inline bool operator  > (const fixed & f) const {
+	bool operator  > (const fixed & f) const {
 		return (value > f.value);
 	}
-	inline bool operator >= (const fixed & f) const {
+	bool operator >= (const fixed & f) const {
 		return (value >= f.value);
 	}
 
 	// Some math operators...
-	inline fixed operator - () const {
+	fixed operator - () const {
 		fixed t;
 		t.value = -value;
 		return t;
 	}
-	inline fixed operator + (const fixed<P> & f) const {
+	fixed operator + (const fixed<P> & f) const {
 		fixed t;
 		t.value = value + f.value;
 		return t;
 	}
-	inline fixed operator - (const fixed<P> & f) const {
+	fixed operator - (const fixed<P> & f) const {
 		fixed t;
 		t.value = value - f.value;
 		return t;
 	}
-	inline fixed operator * (const fixed<P> & f) const {
+	fixed operator * (const fixed<P> & f) const {
 		fixed t = double(*this) * double(f);
 		return t;
 	}
-	inline fixed operator / (const fixed<P> & f) const {
+	fixed operator / (const fixed<P> & f) const {
 		fixed t = double(*this) / double(f);
 		return t;
 	}
 
 	// The prefix and postfix operators, for convenience.
-	inline fixed & operator ++ () {
+	fixed & operator ++ () {
 		value += (1 << P);
 		return *this;
 	}
-	inline fixed & operator -- () {
+	fixed & operator -- () {
 		value -= (1 << P);
 		return *this;
 	}
-	inline fixed operator ++ (int) {
+	fixed operator ++ (int) {
 		fixed t(*this);
 		value += (1 << P);
 		return t;
 	}
-	inline fixed operator -- (int) {
+	fixed operator -- (int) {
 		fixed t(*this);
 		value -= (1 << P);
 		return t;
@@ -191,7 +191,8 @@ private:
 };
 
 template<unsigned int P>
-inline fixed<P> fabs(const fixed<P> & f) {
+inline fixed<P>
+fabs(const fixed<P> & f) {
 	fixed<P> t;
 	t.value = abs(f.value);
 	return t;

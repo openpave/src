@@ -51,17 +51,17 @@ typedef struct {
 
 template<unsigned A, unsigned B, unsigned N = 34, unsigned M = 2>
 struct SIN {
-	static inline double series() {
+	static double series() {
 		return 1-(A*M_PI/B)*(A*M_PI/B)/M/(M+1)
 		       *SIN<A,B,N,M+2>::series();
 	}
-	static inline double sin() {
+	static double sin() {
 		return (A*M_PI/B)*SIN<A,B>::series();
 	}
 };
 template<unsigned A, unsigned B, unsigned N>
 struct SIN<A,B,N,N> {
-	static inline double series() { return 1.0f; }
+	static double series() { return 1.0f; }
 };
 
 inline void

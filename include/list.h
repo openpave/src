@@ -158,7 +158,7 @@ protected:
 		return e;
 	}
 	// Check in the list is empty.
-	bool inline isempty() const {
+	bool isempty() const {
 		return (next == nullptr ? true : false);
 	}
 	// Figure out the length of the list.
@@ -303,7 +303,7 @@ protected:
 		return remove(first);
 	}
 	// Check in the list is empty.
-	bool inline isempty() const {
+	bool isempty() const {
 		return (first == nullptr ? true : false);
 	}
 	// Figure out the length of the list.

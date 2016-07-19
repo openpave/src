@@ -75,9 +75,9 @@ const double Fe4[5][5] = {
 	{ -29.0/2835.0,   8.0/ 405.0, -58.0/945.0, 296.0/2835.0, 292.0/2835.0 }
 };
 
-FEMthermal::FEMthermal(const unsigned nl, const double * lh, const double * ld,
-		const unsigned _n, const double * _nd, const double * _nt,
-		const double _dt, const unsigned _w)
+FEMthermal::FEMthermal(unsigned nl, const double * lh, const double * ld,
+		unsigned _n, const double * _nd, const double * _nt,
+		double _dt, unsigned _w)
   : n(_n), w(_w), dt(_dt), nd(0), nt(0), ng(0),
 		KK(0), FF(0), Kt(0), Kb(0)
 {
@@ -196,7 +196,7 @@ FEMthermal::step(double tt, double tb)
 }
 
 void
-FEMthermal::interpolate(const unsigned np, const double * pd, double * pt)
+FEMthermal::interpolate(unsigned np, const double * pd, double * pt)
 {
 	unsigned i, j;
 	

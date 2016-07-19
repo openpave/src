@@ -26,7 +26,6 @@
 
 **************************************************************************/
 
-#define TEST_TABLE
 #include <cstdio>
 #include "mathplus.h"
 #include "axis.h"

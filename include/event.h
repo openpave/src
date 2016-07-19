@@ -70,10 +70,10 @@ namespace OP {
 #define EVENT_PROGRESS_UPDATE   1   /* Update progress */
 #define EVENT_PROGRESS_STOP     2   /* Finish a progress bar */
 
-extern void event_msg(const int level, const char *fmt,...) OP_PRINTF(2,3);
-extern void event_progress_bar(const int level, const double p,
+extern void event_msg(int level, const char *fmt,...) OP_PRINTF(2,3);
+extern void event_progress_bar(int level, double p,
                                const char *fmt,...) OP_PRINTF(3,4);
-extern void event_progress(const int type, const int marker,
+extern void event_progress(int type, int marker,
                            const char *fmt,...) OP_PRINTF(3,4);
 extern void timeme(const char * msg = nullptr);
 
@@ -83,7 +83,7 @@ extern void timeme(const char * msg = nullptr);
  * Default error event handler.
  */
 void
-event_msg(const int level, const char * fmt, ...)
+event_msg(int level, const char * fmt, ...)
 {
 	va_list args;
 
@@ -144,7 +144,7 @@ timeme(const char * msg)
  * Default progress bar handler.
  */
 void
-event_progress_bar(const int level, const double p, const char * fmt, ...)
+event_progress_bar(int level, double p, const char * fmt, ...)
 {
 	va_list args;
 	static char buf[7] = "";
@@ -166,7 +166,7 @@ event_progress_bar(const int level, const double p, const char * fmt, ...)
  * Default error event handler.
  */
 void
-event_progress(const int type, const int marker, const char * fmt, ...)
+event_progress(int type, int marker, const char * fmt, ...)
 {
 	va_list args;
 	static int level = -1;

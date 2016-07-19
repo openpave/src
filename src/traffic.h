@@ -75,20 +75,20 @@ struct WIMday {
 	double AAS[AXLE_TYPES];					// Average axle spacing
 
 	// Your basic constructor...
-	inline WIMday(time_t d = -1) {
+	WIMday(time_t d = -1) {
 		Clear(d);
 	}
 	// Clear the strucuture
-	inline void Clear(time_t d = -1) {
+	void Clear(time_t d = -1) {
 		memset(this,0,sizeof(*this));
 		day = d;
 	}
 	// Write binary file...
-	inline bool Write(FILE * bp) {
+	bool Write(FILE * bp) {
 		return (fwrite(this,sizeof(*this),1,bp) == 1);
 	}
 	// Read binary file...
-	inline bool Read(FILE * bp) {
+	bool Read(FILE * bp) {
 		return (fread(this,sizeof(*this),1,bp) == 1);
 	}
 	static time_t GetRSADate(const char * fname);
@@ -96,43 +96,43 @@ struct WIMday {
 	WIMday & operator += (const WIMday & daily);
 	
 	// The total vehicle count.
-	inline int TV() const {
+	int TV() const {
 		return TLV()+THV();
 	}
 	// The total light vehicle count.
-	inline int TLV() const {
+	int TLV() const {
 		int l, rv;
 		for (l = 0, rv = 0; l < MAX_LANES; l++)
 			rv += LVPL[l];
 		return rv;
 	}
 	// The total heavy vehicle count.
-	inline int THV() const {
+	int THV() const {
 		int l, rv;
 		for (l = 0, rv = 0; l < MAX_LANES; l++)
 			rv += HVPL[l];
 		return rv;
 	}
 	// The total vehicle count in lane L.
-	inline int VPL(const int l) const {
+	int VPL(int l) const {
 		return LVPL[l]+HVPL[l];
 	}
 	// The total axle count in lane L.
-	inline int TAC(const int l) const {
+	int TAC(int l) const {
 		int t, rv;
 		for (t = 0, rv = 0; t < AXLE_TYPES; t++)
 			rv += AC(l,t);
 		return rv;
 	}
 	// The total axle count for axle type T.
-	inline int AxC(const int t) const {
+	int AxC(int t) const {
 		int l, rv;
 		for (l = 0, rv = 0; l < MAX_LANES; l++)
 			rv += AC(l,t);
 		return rv;
 	}
 	// The axle count in lane L for axle type T.
-	inline int AC(const int l, const int t) const {
+	int AC(int l, int t) const {
 		int i, rv;
 		for (i = 0, rv = 0; i < LOADS; i++)
 			rv += WG[l][t][i];
@@ -146,7 +146,7 @@ struct WIMday {
 class WIMsurvey : public WIMday {
 public:
 	// Your basic constructor...
-	inline WIMsurvey(time_t s = -1, time_t e = -1,const char * fname = 0) {
+	WIMsurvey(time_t s = -1, time_t e = -1, const char * fname = 0) {
 		memset(this,0,sizeof(*this));
 		if (s != -1)
 			start = s;

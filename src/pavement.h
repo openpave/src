@@ -310,7 +310,6 @@ struct pavedata : public pavepoint {
 	// Return the results based on a more rational system...
 	enum type {deflct, stress, strain};
 	enum direction {xx, yy, zz, xy, xz, yz, p1, p2, p3, s1, s2, s3};
-#pragma warning(suppress: 4715) // all control paths do return...
 	double result(type t, direction d) const {
 		switch (t) {
 		case stress:
@@ -344,6 +343,10 @@ struct pavedata : public pavepoint {
 			case s1: case s2: case s3:
 				return data[8][d-s1];
 			}
+#ifdef _MSVC_VER
+		default:
+			return 0.0;
+#endif
 		}
 	}
 

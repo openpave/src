@@ -164,7 +164,7 @@ namespace OP {
 
 #if defined(NEED_FMA)
 inline double
-fma(const double a, const double b, const double c)
+fma(double a, double b, double c)
 {
 	return (a*b)+c;
 }
@@ -178,7 +178,7 @@ using std::swap;
  * someone will make these part of the language...
  */
 template <class T>
-void inline
+inline void
 swap(T & a, T & b)
 {
 	T temp = b;
@@ -191,7 +191,7 @@ swap(T & a, T & b)
  * Computes n choose k
  */
 inline int
-choose(const int n, const int k)
+choose(int n, int k)
 {
 	int i, j = n-k+1, c = j;
 	if (k < 0 || k > n)

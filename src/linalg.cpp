@@ -41,7 +41,7 @@ namespace OP {
  * In-place transpose a rectangular matrix.
  */
 void
-transpose(const unsigned m, const unsigned n, double * A)
+transpose(unsigned m, unsigned n, double * A)
 {
 	for (unsigned s = 0, j = 0, i = 0; s < m * n; j = ++s, i = 0) {
 		do {
@@ -63,7 +63,7 @@ transpose(const unsigned m, const unsigned n, double * A)
  * Orthonormalize the nxn matrix Q, using the Gramm-Schmidt algorithm.
  */
 void
-orth_gs(const unsigned n, double * Q)
+orth_gs(unsigned n, double * Q)
 {
 	double r;
 	unsigned i, j, k;
@@ -90,7 +90,7 @@ orth_gs(const unsigned n, double * Q)
  * This function employs Gaussian elimination with full pivoting.
  */
 void
-equ_gauss(const unsigned n, const double * A, const double * b,
+equ_gauss(unsigned n, const double * A, const double * b,
           double * x)
 {
 	unsigned i, j, k;
@@ -135,7 +135,7 @@ equ_gauss(const unsigned n, const double * A, const double * b,
  * This function employs Gaussian elimination with full pivoting.
  */
 double
-inv_mul_gauss(const unsigned n, const unsigned m, double * A,
+inv_mul_gauss(unsigned n, unsigned m, double * A,
               double * B)
 {
 	double det = 1.0;
@@ -184,7 +184,7 @@ inv_mul_gauss(const unsigned n, const unsigned m, double * A,
  * of interchanges have been performed (this is for the determinant calc).
  */
 void
-decmp_lu(const unsigned n, double * A, unsigned * idx,
+decmp_lu(unsigned n, double * A, unsigned * idx,
          int & d)
 {
 	unsigned i, j, k;
@@ -241,8 +241,8 @@ decmp_lu(const unsigned n, double * A, unsigned * idx,
  * m is the number of columns in b, and c is the column index.
  */
 void
-bksub_lu(const unsigned n, const double * A, const unsigned * idx,
-         double * b, const unsigned m, const unsigned c)
+bksub_lu(unsigned n, const double * A, const unsigned * idx,
+         double * b, unsigned m, unsigned c)
 {
 	unsigned i, j, k;
 
@@ -271,7 +271,7 @@ bksub_lu(const unsigned n, const double * A, const unsigned * idx,
  * substitution, with a single step refinement.
  */
 void
-equ_lu(const unsigned n, const double * A, const double * b, double * x)
+equ_lu(unsigned n, const double * A, const double * b, double * x)
 {
 	unsigned i, j;
 	int d;
@@ -300,7 +300,7 @@ equ_lu(const unsigned n, const double * A, const double * b, double * x)
  * The result is returned in B, and the determinant in the return value.
  */
 double
-inv_mul_lu(const unsigned n, const unsigned m, double * A,
+inv_mul_lu(unsigned n, unsigned m, double * A,
            double * B)
 {
 	double det = 0.0;
@@ -322,7 +322,7 @@ inv_mul_lu(const unsigned n, const unsigned m, double * A,
  * Matrix inverse of the real nxn matrix A using LU decomposition.  
  */
 void
-inv_lu(const unsigned n, double * A)
+inv_lu(unsigned n, double * A)
 {
 	unsigned i;
 	int d;
@@ -346,7 +346,7 @@ inv_lu(const unsigned n, double * A)
  * Returns L in the lower triangle of A.
  */
 void
-decmp_chol(const unsigned n, double * A)
+decmp_chol(unsigned n, double * A)
 {
 	unsigned i, j, k;
 	double sum;
@@ -372,7 +372,7 @@ decmp_chol(const unsigned n, double * A)
  * Returns U in the trianglar matrix.
  */
 void
-decmp_chol_tri(const unsigned n, double * A)
+decmp_chol_tri(unsigned n, double * A)
 {
 	unsigned i, j, k;
 	double sum;
@@ -399,7 +399,7 @@ decmp_chol_tri(const unsigned n, double * A)
  * Returns U in the upper triangle of A.
  */
 void
-decmp_chol(const unsigned n, const unsigned w, double * A)
+decmp_chol(unsigned n, unsigned w, double * A)
 {
 	unsigned i, j, k;
 	
@@ -425,8 +425,8 @@ decmp_chol(const unsigned n, const unsigned w, double * A)
  * m is the number of columns in b, and c is the column index.
  */
 void
-bksub_chol(const unsigned n, const double * A,
-           double * b, const unsigned m, const unsigned c)
+bksub_chol(unsigned n, const double * A,
+           double * b, unsigned m, unsigned c)
 {
 	unsigned i, k;
 
@@ -447,8 +447,8 @@ bksub_chol(const unsigned n, const double * A,
  * matrix, to solve a particular system.
  */
 void
-bksub_chol(const unsigned n, const unsigned w, const double * A,
-           double * b, const unsigned m, const unsigned c)
+bksub_chol(unsigned n, unsigned w, const double * A,
+           double * b, unsigned m, unsigned c)
 {
 	unsigned i, k;
 	
@@ -469,7 +469,7 @@ bksub_chol(const unsigned n, const unsigned w, const double * A,
  * substitution.
  */
 void
-equ_chol(const unsigned n, const double * A, const double * b, double * x)
+equ_chol(unsigned n, const double * A, const double * b, double * x)
 {
 	//unsigned i, j;
 
@@ -503,7 +503,7 @@ equ_chol(const unsigned n, const double * A, const double * b, double * x)
  * substitution, with a single step refinement.
  */
 void
-equ_chol(const unsigned n, const unsigned w, const double * A,
+equ_chol(unsigned n, unsigned w, const double * A,
          const double * b, double * x)
         
 {
@@ -581,7 +581,7 @@ inv_chol(unsigned n, double * A)
  * with D in the diagonal.
  */
 void
-decmp_ldl(const unsigned n, double * A)
+decmp_ldl(unsigned n, double * A)
 {
 	unsigned i, j, k;
 	double sum;
@@ -608,8 +608,8 @@ decmp_ldl(const unsigned n, double * A)
  * m is the number of columns in b, and c is the column index.
  */
 void
-bksub_ldl(const unsigned n, const double * A,
-          double * b, const unsigned m, const unsigned c)
+bksub_ldl(unsigned n, const double * A,
+          double * b, unsigned m, unsigned c)
 {
 	unsigned i, k;
 	double sum;
@@ -634,7 +634,7 @@ bksub_ldl(const unsigned n, const double * A,
  * substitution, (with a single step refinement).
  */
 void
-equ_ldl(const unsigned n, const double * A, const double * b, double * x)
+equ_ldl(unsigned n, const double * A, const double * b, double * x)
 {
 	unsigned i, j;
 
@@ -663,7 +663,7 @@ equ_ldl(const unsigned n, const double * A, const double * b, double * x)
  * The matrix V (not the transpose of V) is output as V.
  */
 void
-decmp_svd(const unsigned m, const unsigned n, double * A,
+decmp_svd(unsigned m, unsigned n, double * A,
           double * W, double * V)
 {
 	double F, G = 0.0, H;
@@ -834,9 +834,9 @@ decmp_svd(const unsigned m, const unsigned n, double * A,
 }
 
 void
-bksub_svd(const unsigned m, const unsigned n, const double * U,
+bksub_svd(unsigned m, unsigned n, const double * U,
           const double * W, const double * V,
-          double * b, const unsigned p, const unsigned c)
+          double * b, unsigned p, unsigned c)
 {
 	unsigned i, j;
 
@@ -866,7 +866,7 @@ bksub_svd(const unsigned m, const unsigned n, const double * U,
  * substitution, with refinement.
  */
 void
-equ_svd(const unsigned n, const double * A, const double * b, double * x)
+equ_svd(unsigned n, const double * A, const double * b, double * x)
 {
 	double max;
 	unsigned i, j;
@@ -901,7 +901,7 @@ equ_svd(const unsigned n, const double * A, const double * b, double * x)
  * Matrix inverse of the real nxn matrix A using SVD decomposition.
  */
 void
-inv_svd(const unsigned n, double * A)
+inv_svd(unsigned n, double * A)
 {
 	double max;
 	unsigned i, j, k;
@@ -933,7 +933,7 @@ inv_svd(const unsigned n, double * A)
  * Orthonormalize the nxn matrix Q, using the SVD decomposition.
  */
 void
-orth_svd(const unsigned n, double * Q)
+orth_svd(unsigned n, double * Q)
 {
 	if (n == 0)
 		return;
@@ -948,7 +948,7 @@ orth_svd(const unsigned n, double * Q)
  * XXX: this routine is using a stupid access scheme.
  */
 bool
-decmp_qr(const unsigned n, double * A, double * s,
+decmp_qr(unsigned n, double * A, double * s,
          double * d)
 {
 	bool rv = true;
@@ -994,9 +994,9 @@ decmp_qr(const unsigned n, double * A, double * s,
  * Ax = b. 
  */
 void
-bksub_qr(const unsigned n, const double * A,
+bksub_qr(unsigned n, const double * A,
          const double * s, const double * d, 
-         double * b, const unsigned m, const unsigned c)
+         double * b, unsigned m, unsigned c)
 {
 	unsigned i, j;
 	double sum;
@@ -1019,7 +1019,7 @@ bksub_qr(const unsigned n, const double * A,
  * Householder reduction of a nxn matrix A to tridiagonal form.
  */
 void
-tridiag_hh(const unsigned n, double * A, double * d,
+tridiag_hh(unsigned n, double * A, double * d,
            double * e)
 {
 	unsigned i, j, k;
@@ -1080,7 +1080,7 @@ tridiag_hh(const unsigned n, double * A, double * d,
  * eigenvectors of a real symmetric tridiagonal matrix.
  */
 void
-eig_tri_ql(const unsigned n, double * d, double * e,
+eig_tri_ql(unsigned n, double * d, double * e,
            double * A)
 {
 	unsigned i, j, k, m;
@@ -1130,7 +1130,7 @@ eig_tri_ql(const unsigned n, double * d, double * e,
  * QL transform.
  */
 void
-eig_ql(const unsigned n, double * A, double * d, bool sorted)
+eig_ql(unsigned n, double * A, double * d, bool sorted)
 {
 	double t;
 	unsigned i, j, k;
@@ -1159,8 +1159,8 @@ eig_ql(const unsigned n, double * A, double * d, bool sorted)
 }
 
 void
-bksub_eig(const unsigned n, const double * Q, const double * d,
-          double * b, const unsigned p, const unsigned c)
+bksub_eig(unsigned n, const double * Q, const double * d,
+          double * b, unsigned p, unsigned c)
 {
 	unsigned i, j;
 
@@ -1188,7 +1188,7 @@ bksub_eig(const unsigned n, const double * Q, const double * d,
  * substitution, with refinement.
  */
 void
-equ_eig(const unsigned n, const double * A, const double * b, double * x)
+equ_eig(unsigned n, const double * A, const double * b, double * x)
 {
 	double max;
 	unsigned i, j;
@@ -1225,7 +1225,7 @@ equ_eig(const unsigned n, const double * A, const double * b, double * x)
  * Matrix inverse of the real symmetric nxn matrix A using eigenvalue decomposition.
  */
 void
-inv_eig(const unsigned n, double * A)
+inv_eig(unsigned n, double * A)
 {
 	double max;
 	unsigned i, j, k;

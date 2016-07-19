@@ -50,9 +50,9 @@ namespace OP {
 class FEMthermal
 {
 public:
-	FEMthermal(const unsigned nl, const double * lh, const double * ld,
-			const unsigned _n, const double * _nd, const double * _nt,
-			const double _dt = 1, const unsigned _w = 1);
+	FEMthermal(unsigned nl, const double * lh, const double * ld,
+			unsigned _n, const double * _nd, const double * _nt,
+			double _dt = 1, unsigned _w = 1);
 	~FEMthermal() {
 		delete [] nd;
 		delete [] nt;
@@ -67,7 +67,7 @@ public:
 	// repeatedly to obtain temperatures at sucessive time steps.
 	void step(double tt, double tb);
 	// Interpolate temperatures at abitrary depths. pd must be sorted.
-	void interpolate(const unsigned np, const double * pd, double * pt);
+	void interpolate(unsigned np, const double * pd, double * pt);
 
 private:
 	const unsigned n;  			// Number of nodes

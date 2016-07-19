@@ -93,7 +93,7 @@ public:
 		return buffer[make_fromkey(0,ks...)];
 	}
 	// Return the size of array below dimension d.
-	unsigned length(const unsigned d = sizeof...(As)) const {
+	unsigned length(unsigned d = sizeof...(As)) const {
 		unsigned s = 1;
 		for (unsigned i = d; i > 0; i--)
 			s *= sizes[i-1];
@@ -109,7 +109,7 @@ private:
 	unsigned blklen;           // The minimum block size.
 	struct _V {                // Placement new wrapper
 		V _v;
-		explicit _V() : _v() {}
+		_V() : _v() {}
 		explicit _V(const V & v) : _v(v) {}
 		operator V () const {
 			return _v;
@@ -223,7 +223,7 @@ private:
 		else
 			new(&buffer[i]) _V();
 	}
-	//void copy(const unsigned s, const V * v) {
+	//void copy(unsigned s, const V * v) {
 	//	for (unsigned i = 0; i < s; i++)
 	//		initelem(len++,(v ? &v[i] : nullptr));
 	//}

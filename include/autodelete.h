@@ -58,10 +58,10 @@ public:
 		a.ptr = nullptr;
 		return *this;
 	}
-	T & operator[] (const int i) {
+	T & operator[] (int i) {
 		return ptr[i];
 	}
-	T & operator[] (const unsigned i) {
+	T & operator[] (unsigned i) {
 		return ptr[i];
 	}
 	T & operator* () {

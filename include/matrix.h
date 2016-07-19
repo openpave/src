@@ -85,20 +85,19 @@ public:
 		op     = 0x0200,
 		error  = 0x8000
 	};
-	inline is_t getflags() const {
+	is_t getflags() const {
 		return flags;
 	}
-	inline is_t setflags(const is_t f) {
+	is_t setflags(is_t f) {
 		return flags = f;
 	}
 	virtual unsigned rows() const = 0;
 	virtual unsigned cols() const = 0;
-	virtual double operator() (const unsigned i,
-		const unsigned j) const = 0;
+	virtual double operator() (unsigned i, unsigned j) const = 0;
 	virtual matrix_dense getdense() const = 0;
 
 protected:
-	explicit matrix_storage(const is_t f)
+	explicit matrix_storage(is_t f)
 	  : count(0), flags(f) {
 		flags = f;
 	}
@@ -109,13 +108,13 @@ protected:
 private:
 	friend class matrix_storage_ptr;
 
-	inline int addref() {
+	int addref() {
 		return ++count;
 	}
-	inline int refcount() const {
+	int refcount() const {
 		return count;
 	}
-	inline int release() {
+	int release() {
 		assert(count > 0);
 		return --count;
 	}
@@ -131,29 +130,29 @@ private:
  */
 class matrix_storage_ptr {
 public:
-	inline matrix_storage_ptr(matrix_storage * p = nullptr)
+	matrix_storage_ptr(matrix_storage * p = nullptr)
 	  : ptr(p) {
 		addref();
 	}
-	inline matrix_storage_ptr(const matrix_storage_ptr & p)
+	matrix_storage_ptr(const matrix_storage_ptr & p)
 	  : ptr(p.ptr) {
 		addref();
 	}
-	inline ~matrix_storage_ptr() {
+	~matrix_storage_ptr() {
 		release();
 		ptr = nullptr;
 	}
-	inline int addref() const {
+	int addref() const {
 		if (ptr == nullptr)
 			return 0;
 		return ptr->addref();
 	}
-	inline int refcount() const {
+	int refcount() const {
 		if (ptr == nullptr)
 			return 0;
 		return ptr->refcount();
 	}
-	inline int release() {
+	int release() {
 		if (ptr == nullptr)
 			return 0;
 		int count = ptr->release();
@@ -193,12 +192,12 @@ private:
 class matrix_dense : public matrix_storage {
 public:
 	// A few constructors, for various uses...
-	inline matrix_dense(const unsigned m, const unsigned n)
+	matrix_dense(unsigned m, unsigned n)
 	  : matrix_storage(none), data(nullptr) {
 		resize(m,n);
 	}
-	inline matrix_dense(const unsigned m, const unsigned n,
-		const double d, bool mkdiag = true)
+	matrix_dense(unsigned m, unsigned n,
+		double d, bool mkdiag = true)
 	  : matrix_storage(none), data(nullptr) {
 		resize(m,n);
 		if (mkdiag) {
@@ -217,13 +216,13 @@ public:
 			for (unsigned j = 0; j < N; j++)
 				data[i*N+j] = (!mkdiag || i == j ? d : 0.0);
 	}
-	inline matrix_dense(const unsigned m, const unsigned n,
+	matrix_dense(unsigned m, unsigned n,
 		const double * v)
 	  : matrix_storage(none), data(nullptr) {
 		resize(m,n);
 		memcpy(data,v,M*N*sizeof(double));
 	}
-	inline matrix_dense(const matrix_dense & A)
+	matrix_dense(const matrix_dense & A)
 	  : matrix_storage(A.getflags()), data(nullptr) {
 		resize(A.M,A.N);
 		memcpy(data,A.data,M*N*sizeof(double));
@@ -235,30 +234,30 @@ public:
 	}
 
 	// Assignment operator...
-	inline matrix_dense & operator= (const matrix_dense & m) {
+	matrix_dense & operator= (const matrix_dense & m) {
 		if (M != m.M || N != m.N)
 			resize(m.M,m.N);
 		memcpy(data,m.data,M*N*sizeof(double));
 		return *this;
 	}
-	inline matrix_dense & operator+= (const double & d) {
+	matrix_dense & operator+= (const double & d) {
 		for (unsigned i = 0; d != 0.0 && i < M*N; i++)
 			data[i] += d;
 		return *this;
 	}
-	inline matrix_dense & operator+= (const matrix_dense & m) {
+	matrix_dense & operator+= (const matrix_dense & m) {
 		assert(rows() == m.rows() && cols() == m.cols());
 		for (unsigned i = 0; i < M*N; i++)
 			data[i] += m.data[i];
 		return *this;
 	}
-	inline matrix_dense & operator-= (const matrix_dense & m) {
+	matrix_dense & operator-= (const matrix_dense & m) {
 		assert(rows() == m.rows() && cols() == m.cols());
 		for (unsigned i = 0; i < M*N; i++)
 			data[i] -= m.data[i];
 		return *this;
 	}
-	inline matrix_dense & operator*= (const double & d) {
+	matrix_dense & operator*= (const double & d) {
 		if (d == 0.0)
 			memset(data,0,M*N*sizeof(double));
 		else {
@@ -273,16 +272,16 @@ public:
 	virtual unsigned cols() const {
 		return N;
 	}
-	virtual double operator() (const unsigned i, const unsigned j) const {
+	virtual double operator() (unsigned i, unsigned j) const {
 		return data[i*N+j];
 	}
-	inline double & operator() (const unsigned i, const unsigned j) {
+	double & operator() (unsigned i, unsigned j) {
 		return data[i*N+j];
 	}
-	virtual double operator() (const unsigned i) const {
+	virtual double operator() (unsigned i) const {
 		return data[i];
 	}
-	inline double & operator() (const unsigned i) {
+	double & operator() (unsigned i) {
 		return data[i];
 	}
 	virtual matrix_dense getdense() const {
@@ -293,7 +292,7 @@ protected:
 	unsigned M;         // The rows
 	unsigned N;         // The cols
 	double * data;      // The data
-	void resize(const unsigned m, const unsigned n) {
+	void resize(unsigned m, unsigned n) {
 		if (data != nullptr)
 			delete [] data;
 		M = m, N = n;
@@ -401,7 +400,7 @@ operator* (const matrix_dense & a, const matrix_dense & b) {
 class matrix_zero : public matrix_storage {
 public:
 	// A few constructors, for various uses...
-	inline matrix_zero(const unsigned m, const unsigned n)
+	matrix_zero(unsigned m, unsigned n)
 	  : matrix_storage(zero) {
 		M = m, N = n;
 	}
@@ -413,7 +412,7 @@ public:
 	virtual unsigned cols() const {
 		return N;
 	}
-	virtual double operator() (const unsigned , const unsigned ) const {
+	virtual double operator() (unsigned, unsigned) const {
 		return 0.0;
 	}
 	virtual matrix_dense getdense() const {
@@ -423,7 +422,7 @@ public:
 protected:
 	unsigned M;         // The rows
 	unsigned N;         // The cols
-	void resize(const unsigned m, const unsigned n) {
+	void resize(unsigned m, unsigned n) {
 		M = m, N = n;
 	}
 };
@@ -434,7 +433,7 @@ protected:
 class matrix_eye : public matrix_storage {
 public:
 	// A few constructors, for various uses...
-	inline matrix_eye(const unsigned n)
+	matrix_eye(unsigned n)
 	  : matrix_storage(eye) {
 		N = n;
 	}
@@ -446,7 +445,7 @@ public:
 	virtual unsigned cols() const {
 		return N;
 	}
-	virtual double operator() (const unsigned i, const unsigned j) const {
+	virtual double operator() (unsigned i, unsigned j) const {
 		return (i == j ? 1.0 : 0.0);
 	}
 	virtual matrix_dense getdense() const {
@@ -455,7 +454,7 @@ public:
 
 protected:
 	unsigned N;                     // The rows and cols
-	void resize(const unsigned n) {
+	void resize(unsigned n) {
 		N = n;
 	}
 };
@@ -467,15 +466,15 @@ public:
 	};
 
 public:
-	inline matrix_operator(const op_t op_,
+	matrix_operator(op_t op_,
 		matrix_storage * op1_ = nullptr, matrix_storage * op2_ = nullptr)
 	  : matrix_storage(none), op1(op1_), op2(op2_), op(op_) {
 	}
-	inline matrix_operator(const op_t op_,
+	matrix_operator(op_t op_,
 		const matrix_storage_ptr & op1_)
 	  : matrix_storage(none), op1(op1_), op2(nullptr), op(op_) {
 	}
-	inline matrix_operator(const op_t op_,
+	matrix_operator(op_t op_,
 		const matrix_storage_ptr & op1_,
 		const matrix_storage_ptr & op2_)
 	  : matrix_storage(none), op1(op1_), op2(op2_), op(op_) {
@@ -532,7 +531,7 @@ public:
 			return 0; // XXX
 		}
 	}
-	virtual double operator() (const unsigned i, const unsigned j) const {
+	virtual double operator() (unsigned i, unsigned j) const {
 		switch (op) {
 		case ref:
 		case unref:
@@ -569,7 +568,7 @@ protected:
 	matrix_storage_ptr op2;
 	op_t op;
 
-	inline void evaluate() {
+	void evaluate() {
 		switch (op) {
 		case ref:
 		case unref:
@@ -597,48 +596,48 @@ protected:
  */
 class matrix {
 public:
-	inline matrix()
+	matrix()
 		: data(nullptr) {
 	}
-	inline matrix(const unsigned m, const unsigned n)
+	matrix(unsigned m, unsigned n)
 		: data(nullptr) {
 		matrix_storage * d = new matrix_zero(m,n);
 		data = matrix_storage_ptr(d);
 	}
-	inline matrix(const matrix & m)
+	matrix(const matrix & m)
 		: data(m.data) {
 	}
-	inline matrix(matrix_storage * d)
+	matrix(matrix_storage * d)
 		: data(matrix_storage_ptr(d)) {
 	}
 
-	inline unsigned rows() const {
+	unsigned rows() const {
 		return data->rows();
 	}
-	inline unsigned cols() const {
+	unsigned cols() const {
 		return data->cols();
 	}
-	inline double operator() (const unsigned i, const unsigned j) const {
+	double operator() (unsigned i, unsigned j) const {
 		return (*data)(i,j);
 	}
 
-	inline bool iszero() const {
+	bool iszero() const {
 		return ((data->getflags() & matrix_storage::zero) != 0);
 	}
-	inline bool iseye() const {
+	bool iseye() const {
 		return ((data->getflags() & matrix_storage::eye) != 0);
 	}
-	inline bool isscalar() const {
+	bool isscalar() const {
 		return ((data->getflags() & matrix_storage::scalar) != 0);
 	}
 
 	// Assignment operator
-	inline matrix & operator= (const matrix & m) {
+	matrix & operator= (const matrix & m) {
 		data = m.data;
 		return *this;
 	}
 	// Comparison operators...
-	inline bool operator== (const matrix & a) const {
+	bool operator== (const matrix & a) const {
 		unsigned m = rows(), n = cols(), i, j;
 		if (m != a.rows() || n != a.cols())
 			return false;
@@ -651,7 +650,7 @@ public:
 		return true;
 	}
 	// Comparison operators...
-	inline bool operator!= (const matrix & a) const {
+	bool operator!= (const matrix & a) const {
 		return !(*this == a);
 	}
 

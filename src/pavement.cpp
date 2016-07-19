@@ -140,7 +140,7 @@ pavedata::principle(double v, double E)
  */
 template<class T>
 static inline unsigned
-findvalue(const T * a, const unsigned n, const T & v) {
+findvalue(const T * a, unsigned n, const T & v) {
 	unsigned l = 0, r = n;
 
 	while (l < r) {
@@ -187,7 +187,7 @@ class LEsystem_cache {
 	}
 	~LEsystem_cache() {
 	}
-	void * allocate(const size_t len) {
+	void * allocate(size_t len) {
 		size_t s = align(MAX(len,page_size))+align(sizeof(LEsystem_cache));
 		LEsystem_cache * c = this;
 		void * p = this, * q = this->mark;
@@ -265,7 +265,7 @@ class LEsystem_cache {
 		cache->~LEsystem_cache();
 		free(cache);
 	}
-	static uintptr_t align(const uintptr_t s) {
+	static uintptr_t align(uintptr_t s) {
 		return s+(16-s%16)%16;
 	}
 	static void * align(const void * p) {
@@ -332,8 +332,7 @@ LElayer::slip(double ts)
 }
 
 void
-LEsystem::addlayer(double h, double e, const double v, const double s,
-		const unsigned p)
+LEsystem::addlayer(double h, double e, double v, double s, unsigned p)
 {
 	LElayer * pl = first;
 	unsigned i = 0;
@@ -348,7 +347,7 @@ LEsystem::addlayer(double h, double e, const double v, const double s,
 }
 
 void
-LEsystem::removelayer(const unsigned l)
+LEsystem::removelayer(unsigned l)
 {
 	LElayer * pl = first;
 	unsigned i = 0;
@@ -367,7 +366,7 @@ LEsystem::removelayers()
 }
 
 LElayer &
-LEsystem::layer(const unsigned l) const
+LEsystem::layer(unsigned l) const
 {
 	LElayer * pl = first;
 	unsigned i = 0;
@@ -378,7 +377,7 @@ LEsystem::layer(const unsigned l) const
 }
 
 void
-LEsystem::addload(const unsigned g, const paveload & l)
+LEsystem::addload(unsigned g, const paveload & l)
 {
 	cached_state(cachestate::empty);
 	if (!lg.inbounds(g))
@@ -387,7 +386,7 @@ LEsystem::addload(const unsigned g, const paveload & l)
 }
 
 void
-LEsystem::removeload(const unsigned g, const unsigned i)
+LEsystem::removeload(unsigned g, unsigned i)
 {
 	cached_state(cachestate::empty);
 	if (!lg.inbounds(g))
@@ -398,7 +397,7 @@ LEsystem::removeload(const unsigned g, const unsigned i)
 }
 
 void
-LEsystem::removeloads(const unsigned g)
+LEsystem::removeloads(unsigned g)
 {
 	cached_state(cachestate::empty);
 	if (lg.length() == 0 && g == clg)
@@ -416,9 +415,9 @@ LEsystem::addpoint(const point3d & p, unsigned l)
 }
 
 void
-LEsystem::addgrid(const unsigned nx, const double * xp,
-                  const unsigned ny, const double * yp,
-                  const unsigned nz, const double * zp)
+LEsystem::addgrid(unsigned nx, const double * xp,
+                  unsigned ny, const double * yp,
+                  unsigned nz, const double * zp)
 {
 	cached_state(cachestate::empty);
 	for (unsigned ix = 0; ix < nx; ix++) {
@@ -864,7 +863,7 @@ refine_m1(double ma, double mb, double a, double r)
  * values where the integrals are exact.
  */
 static void
-stoppingpoints(const unsigned nbz, const double a, const double r,
+stoppingpoints(unsigned nbz, double a, double r,
                double * m0, double * m1)
 {
 	unsigned ib;
@@ -926,7 +925,7 @@ stoppingpoints(const unsigned nbz, const double a, const double r,
  * This build the ABCD matrix, based on the structure.
  */
 static void
-buildabcd(const double m, const unsigned nl, const double * h,
+buildabcd(double m, unsigned nl, const double * h,
           const double * v, const double * E,
           const double * f, double (* __restrict R)[4][2],
           double (* __restrict ABCD)[4])
@@ -1054,7 +1053,7 @@ buildabcd(const double m, const unsigned nl, const double * h,
  * This function builds the common variables for the various integrations.
  */
 static void
-buildT(const double m, const double z, const double (&ABCD)[4],
+buildT(double m, double z, const double (&ABCD)[4],
 		double (&T)[4])
 {
 	T[1] = exp(-m*z);
