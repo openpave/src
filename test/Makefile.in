@@ -16,6 +16,7 @@ PROGRAMS =                             \
     test_rng                           \
     test_table                         \
     test_thermal                       \
+    test_variant                       \
     $(NULL)
 
 CXXSRCS_test =                         \
@@ -53,6 +54,10 @@ CXXSRCS_test_table =                   \
 
 CXXSRCS_test_thermal =                 \
     test_thermal.cpp                   \
+    $(NULL)
+
+CXXSRCS_test_variant =                 \
+    test_variant.cpp                   \
     $(NULL)
 
 include $(topsrcdir)/build/rules.mk
