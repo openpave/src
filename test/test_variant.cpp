@@ -37,8 +37,8 @@ using namespace OP;
 double f1() { return 0.4; };
 int f2() { return 5; };
 
-int
-main()
+void
+test1()
 {
 	printf("Test 1:\n");
 	variant<int,double> v1(1.0);
@@ -49,6 +49,21 @@ main()
 	int i = v2;
 	//double e = v2;
 	//double * p = v1;
+	printf("v1:%f, v2: %i\n",d,i);
+	v1 = 0.5;
+	v2 = 3;
+	printf("v1:%f, v2: %i\n",(double)(v1),(int)(v2));
+}
+
+void
+test2()
+{
+	printf("Test 2:\n");
+	vunctor<int,double> v1(1.0);
+	vunctor<int,double> v2(2);
+
+	double d = v1;
+	int i = v2;
 	printf("v1:%f, v2: %i\n",d,i);
 	v1 = 0.5;
 	v2 = 3;
@@ -64,5 +79,34 @@ main()
 	v1 = s1;
 	v2 = s2;
 	printf("v1:%f, v2: %i\n",(double)(v1),(int)(v2));
+}
+
+double t1(const double & d) { return d == 0.3; };
+int t2(const int & i) { return i == 2; };
+
+void
+test3()
+{
+	printf("Test 3:\n");
+	variant<int,double> v1(1.0);
+	variant<int,double> v2(2);
+	validator<int,double> f1([](const double & d) -> bool {
+		return d == 0.3;
+	});
+	validator<int,double> f2([](const int & i) -> bool {
+		return i == 2;
+	});
+
+	bool b1 = f1.validate(v1);
+	bool b2 = f2.validate((int)(v2));
+	printf("v1:%s, v2: %s\n",b1 ? "T" : "F",b2 ? "T" : "F");
+}
+
+int
+main()
+{
+	test1();
+	test2();
+	test3();
 	return 0;
 }
