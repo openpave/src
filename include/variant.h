@@ -181,14 +181,14 @@ public:
 	variant & operator = (const V & v) {
 		if (k != std::type_index(typeid(V)))
 			throw std::runtime_error("Trying to set incorrect type into variant!");
-		s.template set_t(v);
+		s.set_t(v);
 		return *this;
 	}
 	template<typename V>
 	variant & operator = (V && v) {
 		if (k != std::type_index(typeid(V)))
 			throw std::runtime_error("Trying to set incorrect type into variant!");
-		s.template set_t(std::move(v));
+		s.set_t(std::move(v));
 		return *this;
 	}
 	// Return the contained value.
@@ -300,14 +300,14 @@ class vunctor<T,Ts...> {
     void copy_f(std::function<V()> && v) {
 		if (k != std::type_index(typeid(V)))
 			throw std::runtime_error("Trying to set incorrect type into vunctor!");
-		s.template set_f(std::move(v));
+		s.set_f(std::move(v));
     }
 	template<typename V>
 	typename std::enable_if<!is_callable<V>::value,void>::type
 	copy_v(V && v) {
 		if (k != std::type_index(typeid(V)))
 			throw std::runtime_error("Trying to set incorrect type into vunctor!");
-		s.template set_t(std::move(v));
+		s.set_t(std::move(v));
     }
 	template<typename V>
 	typename std::enable_if<is_callable<V>::value,void>::type
@@ -319,7 +319,7 @@ class vunctor<T,Ts...> {
 	copy_c(const V & v) {
 		if (k != std::type_index(typeid(V)))
 			throw std::runtime_error("Trying to set incorrect type into vunctor!");
-		s.template set_t(v);
+		s.set_t(v);
     }
 	template<typename V>
 	typename std::enable_if<is_callable<V>::value,void>::type
@@ -451,7 +451,7 @@ class validator<T,Ts...> {
     void copy_f(std::function<bool(const V &)> && v) {
 		if (k != std::type_index(typeid(V)))
 			throw std::runtime_error("Trying to set incorrect type into validator!");
-		s.template set_f(std::move(v));
+		s.set_f(std::move(v));
     }
 
 public:
@@ -489,7 +489,7 @@ public:
 		return s.template check<V>(v);
 	}
 	bool validate(const variant<T,Ts...> & t) const {
-		return s.template check(k,t);
+		return s.check(k,t);
 	}
 };
 
