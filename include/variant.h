@@ -59,28 +59,70 @@ template<typename T>
 class is_callable
 {
 	template<typename C>
-	static auto check(C * c) -> decltype((*c)(),void(),std::true_type());
+	static auto check(C * c) -> decltype((*c)(),void(),std::true_type())
+	{ return std::true_type(); }
 	template<typename>
-	static auto check(...) -> decltype(std::false_type());
+	static auto check(...) -> decltype(std::false_type())
+	{ return std::false_type(); }
 public:
 	static constexpr bool value = decltype(check<T>(nullptr))::value;
 };
 
 // We really only need arg<0> from this...
-template <typename T>
+template<class F>
+struct function_traits;
+template<class F>
 struct function_traits :
-	public function_traits<decltype(&T::operator())>
+	public function_traits<decltype(&F::operator())>
 {};
-template <typename C, typename R, typename ...Ts>
+template<typename C, typename R, typename ...Ts>
 struct function_traits<R(C::*)(Ts...) const>
 {
-	enum { arg_count = sizeof...(Ts) };
-	typedef R result_type;
-	template <size_t i>
+	static constexpr std::size_t arg_count = sizeof...(Ts);
+	using result_type = R;
+	template <std::size_t N>
 	struct arg {
-		typedef typename std::tuple_element<i,std::tuple<Ts...>>::type type;
+		static_assert(N < arg_count,"error: index exceeds arguement count");
+		using type = typename std::tuple_element<N,std::tuple<Ts...>>::type;
 	};
 };
+/*
+template<typename R, typename ...Ts>
+struct function_traits<R(*)(Ts...)> :
+	public function_traits<R(Ts...)>
+{};
+// member function pointer
+template<class C, class R, class ...Ts>
+struct function_traits<R(C::*)(Ts...)> :
+	public function_traits<R(C&,Ts...)>
+{};
+// const member function pointer
+template<class C, class R, class ...Ts>
+struct function_traits<R(C::*)(Ts...) const> :
+	public function_traits<R(C&,Ts...)>
+{};
+template<typename F>
+struct function_traits<std::function<F>> :
+	public function_traits<F>
+{};
+// member object pointer
+template<class C, class R>
+struct function_traits<R(C::*)> :
+	public function_traits<R(C&)>
+{};
+*/
+template<class F>
+struct function_traits<F&> :
+	public function_traits<F>
+{};
+template<class F>
+struct function_traits<const F&> :
+	public function_traits<F>
+{};
+template<class F>
+struct function_traits<F&&> :
+	public function_traits<F>
+{};
 
 }
 
@@ -106,6 +148,9 @@ class variant<T,Ts...> {
 	union store {
 		typedef std::function<T()> callback;
 
+		store() :
+			t() {
+		}
 		// U templates are conditioned on the union type for this slot.
 		template<typename U>
 		store(U u, typename std::enable_if<std::is_same<U,T>::value>::type * = 0) :
@@ -168,6 +213,9 @@ class variant<T,Ts...> {
 
 public:
 	// Create a variant, fixing the type.
+	variant() :
+		k(std::type_index(typeid(T))), s() {
+	}
 	template<typename V>
 	variant(V v) :
 		k(std::type_index(typeid(V))), s(v) {
@@ -193,13 +241,7 @@ public:
 	}
 	// Return the contained value.
 	template<typename V>
-	operator V () {
-		if (k != std::type_index(typeid(V)))
-			throw std::runtime_error("Trying to get incorrect type from variant!");
-		return s.template get<V>();
-	}
-	template<typename V>
-	operator const V & () const {
+	operator V () const {
 		if (k != std::type_index(typeid(V)))
 			throw std::runtime_error("Trying to get incorrect type from variant!");
 		return s.template get<V>();
@@ -214,6 +256,7 @@ template<typename ...Ts>
 class vunctor {
 	struct store {
 		void clear(std::type_index) {};
+		void set(std::type_index, store &&) {};
 	};
 	template<typename ...S>
 	friend class vunctor;
@@ -228,6 +271,12 @@ class vunctor<T,Ts...> {
 	union store {
 		typedef std::function<T()> callback;
 
+		store() :
+			t(), f() {
+		}
+		store(std::type_index d, store && v) {
+			set(d,std::move(v));
+		}
 		// U templates are conditioned on the union type for this slot.
 		template<typename U>
 		store(U u, typename std::enable_if<std::is_same<U,T>::value>::type * = 0) :
@@ -243,12 +292,12 @@ class vunctor<T,Ts...> {
 		// Get the function or value
 		template<typename U>
 		typename std::enable_if<std::is_same<U,T>::value,U>::type
-		get() {
+		get() const {
 			return (f ? f() : t);
 		}
 		template<typename U>
 		typename std::enable_if<!std::is_same<U,T>::value,U>::type
-		get() {
+		get() const {
 			return b.template get<U>();
 		}
 		// Set from a value
@@ -282,6 +331,13 @@ class vunctor<T,Ts...> {
 					f.~callback();
 			} else
 				b.clear(d);
+		}
+		void set(std::type_index d, store && v) {
+			if (d == std::type_index(typeid(T))) {
+				t = std::move(v.t);
+				f = std::move(v.f);
+			} else
+				b.set(d,std::move(v.b));
 		}
 		// The rest of the union is in b
 		typename base_t::store b;
@@ -329,6 +385,12 @@ class vunctor<T,Ts...> {
 
 public:
 	// Create a variant, fixing the type.
+	vunctor() :
+		k(std::type_index(typeid(T))), s() {
+	}
+	vunctor(vunctor && v) :
+		k(std::move(v.k)), s(k,std::move(v.s)) {
+	}
 	template<typename V>
 	vunctor(V v) :
 		k(std::type_index(typeid(V))), s(v) {
@@ -348,9 +410,13 @@ public:
 		copy_v(std::move(v));
 		return *this;
 	}
+	vunctor & operator = (vunctor && v) {
+		s.set(k,std::move(v.s));
+		return *this;
+	}
 	// Return the contained value.
 	template<typename V>
-	operator V () {
+	operator V () const {
 		if (k != std::type_index(typeid(V)))
 			throw std::runtime_error("Trying to get incorrect type from variant!");
 		return s.template get<V>();
@@ -369,6 +435,7 @@ template<typename ...Ts>
 class validator {
 	struct store {
 		void clear(std::type_index) {}
+		void set(std::type_index, store &&) {}
 		template<typename U>
 		bool check(std::type_index, const U &) const {
 			throw std::runtime_error("Trying to validate incorrect type from variant!");
@@ -387,6 +454,9 @@ class validator<T,Ts...> {
 	union store {
 		typedef std::function<bool(const T &)> callback;
 
+		store() :
+			f() {
+		}
 		// U templates are conditioned on the union type for this slot.
 		template<typename U>
 		store(std::function<bool(const U &)> && u,
@@ -430,6 +500,12 @@ class validator<T,Ts...> {
 		set_f(std::function<bool(const U &)> && u) {
 			b.template set_f<U>(std::move(u));
 		}
+		void set(std::type_index d, store && v) {
+			if (d == std::type_index(typeid(T))) {
+				f = std::move(v.f);
+			} else
+				b.set(d,std::move(v.b));
+		}
 		// Clear if we are the tagged type, else pass
 		void clear(std::type_index d) {
 			if (d == std::type_index(typeid(T)))
@@ -456,11 +532,13 @@ class validator<T,Ts...> {
 
 public:
 	// Create a variant, fixing the type.
-	template<typename V>
-	validator(std::function<bool(const V &)> && v) :
-		k(std::type_index(typeid(V))), s(std::move(v)) {
+	validator() :
+		k(std::type_index(typeid(T))), s() {
 	}
-	// Create a variant, fixing the type.
+	validator(validator && v) :
+		k(std::move(v.k)) {
+		s.set(k,std::move(v.s));
+	}
 	template<typename F,
 		typename V = typename function_traits<F>::template arg<0>::type>
 	validator(F && v) :
