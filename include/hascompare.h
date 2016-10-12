@@ -52,6 +52,7 @@ class has_##NAME                                                          \
 	typedef decltype(check<T>(0)) type;                                   \
 public:                                                                   \
 	static constexpr bool value = type::value;                            \
+	~has_##NAME() {}  /* Keep GCC happy */                                \
 };
 
 #define HAS_NESTED_CLASS(NAME)                                            \
@@ -66,6 +67,7 @@ class has_##NAME                                                          \
 	typedef decltype(check<T>(0)) type;                                   \
 public:                                                                   \
 	static constexpr bool value = type::value;                            \
+	~has_##NAME() {}  /* Keep GCC happy */                                \
 };
 
 HAS_MEMBER_FUNCTION(compare,int,std::declval<C>())
