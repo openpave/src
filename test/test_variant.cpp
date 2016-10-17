@@ -59,8 +59,8 @@ void
 test2()
 {
 	printf("Test 2:\n");
-	vunctor<int,double> v1(1.0);
-	vunctor<int,double> v2(2);
+	variant<int,double> v1(1.0);
+	variant<int,double> v2(2);
 
 	double d = v1;
 	int i = v2;
