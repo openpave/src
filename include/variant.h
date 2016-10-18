@@ -65,8 +65,12 @@ class variant {
 		store(store &&) = delete;
 		store & operator= (const store &) = delete;
 		store & operator= (store &&) = delete;
-		void set(std::type_index, const store &) {};
-		void set(std::type_index, store &&) {};
+		void set(std::type_index, const store &) {
+			throw std::runtime_error("Attempting to store invalid type in variant!");
+		};
+		void set(std::type_index, store &&) {
+			throw std::runtime_error("Attempting to store invalid type in variant!");
+		};
 		void clear(std::type_index) {};
 	};
 	template<typename ...S>
@@ -87,16 +91,18 @@ class variant<T,Ts...> {
 		store(store &&) = delete;
 		store & operator= (const store &) = delete;
 		store & operator= (store &&) = delete;
-		store(std::type_index d, const store & v) {
+		store(std::type_index d, const store & v) :
+			f() {
 			set(d,v);
 		}
-		store(std::type_index d, store && v) {
+		store(std::type_index d, store && v)  :
+			f() {
 			set(d,std::move(v));
 		}
 		// U templates are conditioned on the union type for this slot.
 		template<typename U>
 		store(U u, typename std::enable_if<std::is_same<U,T>::value>::type * = 0) :
-			t(u), f() {
+			f(nullptr), t(u) {
 		}
 		template<typename U>
 		store(U u, typename std::enable_if<!std::is_same<U,T>::value>::type * = 0) :
@@ -177,8 +183,8 @@ class variant<T,Ts...> {
 #pragma warning(disable: 4201)
 #endif
 		struct {
-			T t;
 			callback f;
+			T t;
 		};
 #if defined(_MSC_VER)
 #pragma warning(pop)
@@ -193,14 +199,14 @@ class variant<T,Ts...> {
     void copy_f(std::function<V()> && v) {
 		if (k != std::type_index(typeid(V)))
 			throw std::runtime_error("Trying to set incorrect type into variant!");
-		s.set_f(std::move(v));
+		s.template set_f<V>(std::move(v));
     }
 	template<typename V>
 	typename std::enable_if<!is_callable<V>::value,void>::type
 	copy_v(V && v) {
 		if (k != std::type_index(typeid(V)))
 			throw std::runtime_error("Trying to set incorrect type into variant!");
-		s.set_t(std::move(v));
+		s.template set_t<V>(std::forward<V>(v));
     }
 	template<typename V>
 	typename std::enable_if<is_callable<V>::value,void>::type
@@ -212,7 +218,7 @@ class variant<T,Ts...> {
 	copy_c(const V & v) {
 		if (k != std::type_index(typeid(V)))
 			throw std::runtime_error("Trying to set incorrect type into variant!");
-		s.set_t(v);
+		s.template set_t<V>(v);
     }
 	template<typename V>
 	typename std::enable_if<is_callable<V>::value,void>::type
@@ -257,7 +263,7 @@ public:
 	}
 	template<typename V>
 	variant & operator = (V && v) {
-		copy_v(std::move(v));
+		copy_v(std::forward<V>(v));
 		return *this;
 	}
 	// Return the contained value.
@@ -290,8 +296,12 @@ class validator {
 		store(store &&) = delete;
 		store & operator= (const store &) = delete;
 		store & operator= (store &&) = delete;
-		void set(std::type_index, const store &) {}
-		void set(std::type_index, store &&) {}
+		void set(std::type_index, const store &) {
+			throw std::runtime_error("Attempting to store invalid type in validator!");
+		}
+		void set(std::type_index, store &&) {
+			throw std::runtime_error("Attempting to store invalid type in validator!");
+		}
 		void clear(std::type_index) {}
 		template<typename U>
 		bool check(std::type_index, const U &) const {
@@ -415,7 +425,7 @@ public:
 		typename V = typename function_traits<F>::template arg<0>::type>
 	validator(F && v) :
 		k(std::type_index(typeid(V))),
-		s(std::function<bool(const V &)>(std::move(v))) {
+		s(std::function<bool(const V &)>(std::forward<F>(v))) {
 	}
 	// Destruct depending on type
 	~validator() {
@@ -440,7 +450,7 @@ public:
 	}
 	template<typename V>
 	validator & operator = (V && v) {
-		copy_f<V>(std::move(v));
+		copy_f<V>(std::forward<V>(v));
 		return *this;
 	}
 	// Return the contained value.
