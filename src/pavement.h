@@ -343,7 +343,7 @@ struct pavedata : public pavepoint {
 			case s1: case s2: case s3:
 				return data[8][d-s1];
 			}
-#ifdef _MSVC_VER
+#if defined(_MSC_VER)
 		default:
 			return 0.0;
 #endif
