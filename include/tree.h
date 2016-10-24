@@ -40,6 +40,7 @@
 #include <cstdio>
 #endif
 #include "mathplus.h"
+#include "hascompare.h"
 
 namespace OP {
 
@@ -348,6 +349,18 @@ protected:
 		}
 		void operator delete(void *, void *) {
 		}
+		// use the compare function if it has one
+		template<typename T = K>
+		typename std::enable_if<has_compare<T>::value,int>::type
+		compare(const K & k) const {
+			return -_v.compare(k);
+		}
+		// else resort to operators
+		template<typename T = K>
+		typename std::enable_if<!has_compare<T>::value,int>::type
+		compare(const K & k) const {
+			return -(_v < k ? -1 : _v == k ? 0 : 1);
+		}
 	} * value = nullptr;       // Take a guess...
 
 	// Simple constructor...
@@ -523,7 +536,7 @@ private:
 		printf("Append @%d before:\n",r);
 		print();
 #endif
-		int cmp = static_cast<const K &>(v).compare(value[r]._v);
+		int cmp = value[r].compare(v);
 		if (cmp == 0) {
 			value[*p = r]._v = v;
 			return;
@@ -548,7 +561,7 @@ private:
 		printf("Remove @%d before:\n",r);
 		print();
 #endif
-		int cmp = k.compare(value[r]._v);
+		int cmp = value[r].compare(k);
 		if (cmp == 0) {
 			// We've found our node, and it's a leaf.
 			if (value[r].right == UINT_MAX) {
