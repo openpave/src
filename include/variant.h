@@ -53,6 +53,78 @@
 
 namespace OP {
 
+namespace {
+// Check if the types being stored in the variant have a magic nested typedef
+// for a realization type, in which case define a new variant type for the
+// actual realizations of the variant.
+template<typename ...Ts> struct make_void { typedef void type;};
+template<typename ...Ts> using void_t = typename make_void<Ts...>::type;
+template<typename T, typename = void_t<>>
+struct real_type
+{
+	using real_t = typename std::remove_pointer<T>::type;
+	template<typename U = T>
+	static typename std::enable_if<std::is_pointer<U>::value,real_t>::type
+	expected(const U & t) {
+		return *t;
+	}
+	template<typename U = T>
+	static typename std::enable_if<!std::is_pointer<U>::value,real_t>::type
+	expected(const U & t) {
+		return t;
+	}
+};
+template<typename T>
+struct real_type<T, void_t<typename std::remove_pointer<T>::type::real>>
+{
+	using real_t = typename std::remove_pointer<T>::type::real;
+	template<typename U = T>
+	static typename std::enable_if<std::is_pointer<U>::value,real_t>::type
+	expected(const U & t) {
+		return t->expected();
+	}
+	template<typename U = T>
+	static typename std::enable_if<!std::is_pointer<U>::value,real_t>::type
+	expected(const U & t) {
+		return t.expected();
+	}
+};
+template<typename T>
+struct real_type<T, void_t<typename std::remove_pointer<T>::type::type>>
+{
+	using unwrapped_t = typename std::remove_pointer<T>::type::type;
+	using real_t = typename real_type<unwrapped_t>::real_t;
+	static real_t expected(const T & t) {
+		return real_type<unwrapped_t>::expected(t);
+	}
+};
+
+template<typename T, typename = void_t<>>
+struct unwrap_type
+{
+	using type = typename std::remove_reference<T>::type;
+};
+template<typename T>
+struct unwrap_type<T, void_t<typename T::type>>
+{
+	using type = typename std::remove_reference<typename T::type>::type;
+};
+template<typename U, typename T>
+struct compare_v
+{
+	using type = typename std::conditional<
+	std::is_same<U,T>::value
+	|| std::is_same<typename std::remove_cv<U>::type,
+		            typename unwrap_type<T>::type>::value
+	|| (std::is_base_of<typename unwrap_type<T>::type,
+			            typename std::remove_cv<U>::type>::value)
+	,std::true_type,std::false_type>::type;
+public:
+	static constexpr bool value = type::value;
+};
+
+}
+
 /*
  * class variant - A variant type.
  */
@@ -60,7 +132,7 @@ namespace OP {
 template<typename ...Ts>
 class variant {
 	struct store {
-		store() = delete;
+		store() {}
 		store(const store &) = delete;
 		store(store &&) = delete;
 		store & operator= (const store &) = delete;
@@ -72,21 +144,56 @@ class variant {
 			throw std::runtime_error("Attempting to store invalid type in variant!");
 		};
 		void clear(std::type_index) {};
+		// Set expected value from a different type of store
+		template<typename ...Vs>
+		std::type_index set_e(const std::type_index, const typename variant<Vs...>::store &) const {
+			throw std::runtime_error("Attempting to store invalid expected type in variant!");
+		}
 	};
 	template<typename ...S>
 	friend class variant;
 };
 
+/*
+ * class validator - A variant functor to validate a variant value.
+ */
+// Tail for the recursion.
+template<typename ...Ts>
+class validator {
+	struct store {
+		store() = delete;
+		store(const store &) = delete;
+		store(store &&) = delete;
+		store & operator= (const store &) = delete;
+		store & operator= (store &&) = delete;
+		void set(std::type_index, const store &) {
+			throw std::runtime_error("Attempting to store invalid type in validator!");
+		}
+		void set(std::type_index, store &&) {
+			throw std::runtime_error("Attempting to store invalid type in validator!");
+		}
+		void clear(std::type_index) {}
+		template<typename U>
+		bool check(std::type_index, const U &) const {
+			throw std::runtime_error("Trying to validate incorrect type from variant!");
+		}
+	};
+	template<typename ...S>
+	friend class validator;
+};
+
 // Actual variant for type T
 template<typename T, typename ...Ts>
 class variant<T,Ts...> {
-	typedef variant<Ts...> base_t;
+	using base_t = variant<Ts...>;
 
 	std::type_index k;
 	union store {
 		typedef std::function<T()> callback;
 
-		store() = delete;
+		store() :
+			f() {
+		};
 		store(const store &) = delete;
 		store(store &&) = delete;
 		store & operator= (const store &) = delete;
@@ -101,11 +208,11 @@ class variant<T,Ts...> {
 		}
 		// U templates are conditioned on the union type for this slot.
 		template<typename U>
-		store(U u, typename std::enable_if<std::is_same<U,T>::value>::type * = 0) :
-			f(nullptr), t(u) {
+		store(U u, typename std::enable_if<compare_v<U,T>::value>::type * = 0) :
+			f(), t(u) {
 		}
 		template<typename U>
-		store(U u, typename std::enable_if<!std::is_same<U,T>::value>::type * = 0) :
+		store(U u, typename std::enable_if<!compare_v<U,T>::value>::type * = 0) :
 			b(u) {
 		}
 		~store() {
@@ -113,35 +220,35 @@ class variant<T,Ts...> {
 		}
 		// Get the function or value
 		template<typename U>
-		typename std::enable_if<std::is_same<U,T>::value,U>::type
+		typename std::enable_if<compare_v<U,T>::value,typename real_type<U>::real_t>::type
 		get() const {
-			return (f ? f() : t);
+			return real_type<U>::expected(f ? t = f() : t);
 		}
 		template<typename U>
-		typename std::enable_if<!std::is_same<U,T>::value,U>::type
+		typename std::enable_if<!compare_v<U,T>::value,typename real_type<U>::real_t>::type
 		get() const {
 			return b.template get<U>();
 		}
 		// Set from a value
 		template<typename U>
-		typename std::enable_if<std::is_same<U,T>::value,void>::type
+		typename std::enable_if<compare_v<U,T>::value,void>::type
 		set_t(const U & u) {
 			t = u;
 			f = nullptr;
 		}
 		template<typename U>
-		typename std::enable_if<!std::is_same<U,T>::value,void>::type
+		typename std::enable_if<!compare_v<U,T>::value,void>::type
 		set_t(const U & u) {
 			b.template set_t<U>(u);
 		}
 		// Set from a functional
 		template<typename U>
-		typename std::enable_if<std::is_same<U,T>::value,void>::type
+		typename std::enable_if<compare_v<U,T>::value,void>::type
 		set_f(std::function<U()> && u) {
 			f = std::move(u);
 		}
 		template<typename U>
-		typename std::enable_if<!std::is_same<U,T>::value,void>::type
+		typename std::enable_if<!compare_v<U,T>::value,void>::type
 		set_f(std::function<U()> && u) {
 			b.template set_f<U>(std::move(u));
 		}
@@ -175,6 +282,16 @@ class variant<T,Ts...> {
 			} else
 				b.clear(d);
 		}
+		// Set expected value from a different type of store
+		template<typename V, typename ...Vs>
+		std::type_index set_e(const std::type_index d, const typename variant<V,Vs...>::store & v) {
+			if (d == std::type_index(typeid(V))) {
+				this->template set_t<typename real_type<V>::real_t>(
+					real_type<V>::expected(v.t));
+				return std::type_index(typeid(typename real_type<V>::real_t));
+			} else
+				return b.template set_e<Vs...>(d,v.b);
+		}
 		// The rest of the union is in b
 		typename base_t::store b;
 		// Anonymous struct for value and functional
@@ -184,7 +301,7 @@ class variant<T,Ts...> {
 #endif
 		struct {
 			callback f;
-			T t;
+			mutable T t;
 		};
 #if defined(_MSC_VER)
 #pragma warning(pop)
@@ -194,6 +311,10 @@ class variant<T,Ts...> {
 	template<typename ...S>
 	friend class variant;
 
+	// Allow only private access to create an empty variant
+	variant(const std::type_index d) :
+		k(d), s() {
+	}
 	// Convoluted templates to handle assignments from lambda functions.
 	template<typename V>
     void copy_f(std::function<V()> && v) {
@@ -225,8 +346,16 @@ class variant<T,Ts...> {
 	copy_c(const V & v) {
 		copy_f<decltype(v())>(v);
     }
+	// Set expected value from a different type of store
+	template<typename ...Vs>
+	void set_e(const std::type_index d, const variant<Vs...> & v) {
+		 k = s.template set_e<Vs...>(d,v.s);
+	}
 
 public:
+	using real_t = variant<typename real_type<T>::real_t,typename real_type<Ts>::real_t...>;
+	using validator_t = validator<T,Ts...>;
+
 	variant() = delete;
 	variant(const variant & v) :
 		k(v.k), s(k,v.s) {
@@ -279,37 +408,14 @@ public:
 		s.chain(k,v.s);
 		return *this;
 	}
+	real_t expected() const {
+		real_t rv(k);
+		rv.template set_e<T,Ts...>(k,*this);
+		return rv;
+	}
 	std::type_index get_type() const {
 		return k;
 	}
-};
-
-/*
- * class validator - A variant functor to validate a variant value.
- */
-// Tail for the recursion.
-template<typename ...Ts>
-class validator {
-	struct store {
-		store() = delete;
-		store(const store &) = delete;
-		store(store &&) = delete;
-		store & operator= (const store &) = delete;
-		store & operator= (store &&) = delete;
-		void set(std::type_index, const store &) {
-			throw std::runtime_error("Attempting to store invalid type in validator!");
-		}
-		void set(std::type_index, store &&) {
-			throw std::runtime_error("Attempting to store invalid type in validator!");
-		}
-		void clear(std::type_index) {}
-		template<typename U>
-		bool check(std::type_index, const U &) const {
-			throw std::runtime_error("Trying to validate incorrect type from variant!");
-		}
-	};
-	template<typename ...S>
-	friend class validator;
 };
 
 // Actual validator for type T
@@ -335,12 +441,12 @@ class validator<T,Ts...> {
 		// U templates are conditioned on the union type for this slot.
 		template<typename U>
 		store(std::function<bool(const U &)> && u,
-			  typename std::enable_if<std::is_same<U,T>::value>::type * = 0) :
+			  typename std::enable_if<compare_v<U,T>::value>::type * = 0) :
 			f(u) {
 		}
 		template<typename U>
 		store(std::function<bool(const U &)> && u,
-			  typename std::enable_if<!std::is_same<U,T>::value>::type * = 0) :
+			  typename std::enable_if<!compare_v<U,T>::value>::type * = 0) :
 			b(std::move(u)) {
 		}
 		~store() {
@@ -348,12 +454,12 @@ class validator<T,Ts...> {
 		}
 		// Get the function or value
 		template<typename U>
-		typename std::enable_if<std::is_same<U,T>::value,bool>::type
+		typename std::enable_if<compare_v<U,T>::value,bool>::type
 		check(const U & u) const {
 			return f(u);
 		}
 		template<typename U>
-		typename std::enable_if<!std::is_same<U,T>::value,bool>::type
+		typename std::enable_if<!compare_v<U,T>::value,bool>::type
 		check(const U & u) const {
 			return b.template check<U>(u);
 		}
@@ -366,12 +472,12 @@ class validator<T,Ts...> {
 		}
 		// Set from a functional
 		template<typename U>
-		typename std::enable_if<std::is_same<U,T>::value,void>::type
+		typename std::enable_if<compare_v<U,T>::value,void>::type
 		set_f(std::function<bool(const U &)> && u) {
 			f = std::move(u);
 		}
 		template<typename U>
-		typename std::enable_if<!std::is_same<U,T>::value,void>::type
+		typename std::enable_if<!compare_v<U,T>::value,void>::type
 		set_f(std::function<bool(const U &)> && u) {
 			b.template set_f<U>(std::move(u));
 		}

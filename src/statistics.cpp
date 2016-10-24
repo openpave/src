@@ -29,10 +29,11 @@
 
 **************************************************************************/
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <cmath>
 #include "mathplus.h"
 #include "statistics.h"
+#include "randomvar.h"
 
 namespace OP {
 
@@ -47,13 +48,8 @@ double stdnormal_rnd() {
 	double r[2];
 
 	if (i == 1) {
-#if defined(HAVE_RANDOM)
-		r[0] = sqrt(-2*log((double(random())+1)/(double(RAND_MAX)+1)));
-		r[1] = M_2PI*(double(random())+1)/(double(RAND_MAX)+1);
-#else
-		r[0] = sqrt(-2*log((double(rand())+1)/(double(RAND_MAX)+1)));
-		r[1] = M_2PI*(double(rand())+1)/(double(RAND_MAX)+1);
-#endif
+		r[0] = sqrt(-2*log((double(std::rand())+1)/(double(RAND_MAX)+1)));
+		r[1] = M_2PI*(double(std::rand())+1)/(double(RAND_MAX)+1);
 		u[0] = r[0]*sin(r[1]);
 		u[1] = r[0]*cos(r[1]);
 		i = 0;
@@ -238,6 +234,31 @@ stdnormal_inv(double p)
 	t *= M_SQRT2PI*exp(u*u/2);			// f(u)/df(u)
 	u -= t/(1+u*t/2);					// Halley's method
 	return (p > 0.5 ? -u : u);
+}
+
+// Creates a new random variable of the type specified.
+random *
+random::make_rv(distribution d, double m, double s, house * h) {
+	switch (d) {
+	case distribution::normal:
+		return new rv_normal(m,s,h);
+	case distribution::lognormal:
+		return new rv_lognormal(m,s,h);
+	default:
+		throw std::runtime_error("Trying to create an unknown rv type!");
+	}
+}
+
+random *
+random::make_rv(const random & r, house * h) {
+	switch (r.type()) {
+	case distribution::normal:
+		return new rv_normal(r,h);
+	case distribution::lognormal:
+		return new rv_lognormal(r,h);
+	default:
+		throw std::runtime_error("Trying to create an unknown rv type!");
+	}
 }
 
 } // namespace OP
