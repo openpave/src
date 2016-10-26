@@ -270,7 +270,7 @@ class variant<T,Ts...> {
 		// Chain our value to that of another variant
 		void chain(std::type_index d, const store & v) {
 			if (d == std::type_index(typeid(T))) {
-				f = [&]() { return v.f(); };
+				f = [&]() { return v.get<T>(); };
 			} else
 				b.set(d,v.b);
 		}
