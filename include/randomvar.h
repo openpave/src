@@ -50,6 +50,7 @@
 #ifndef __RANDOMVAR_H
 #define __RANDOMVAR_H
 
+#include <cmath>
 #include <stdexcept>
 #include <typeindex>
 #include <tuple>
