@@ -252,16 +252,20 @@ struct rv_lognormal :
 	public random_var<distribution::lognormal>
 {
 	virtual double mean() const override final {
-		return exp(d[0] + d[1]*d[1]/2);
+		return std::isinf(d[0]) ? INFINITY :
+			   std::isnan(d[0]) ? NAN : exp(d[0] + d[1]*d[1]/2);
 	}
 	virtual double stddev() const override final {
-		return mean()*sqrt(exp(d[1]*d[1])-1);
+		return std::isinf(d[0]) ? INFINITY :
+			   std::isnan(d[0]) ? NAN : mean()*sqrt(exp(d[1]*d[1])-1);
 	}
 
 	rv_lognormal(double m, double s, house * h = nullptr) :
 		random_var(h) {
-		param(1,sqrt(log(1+s*s/m/m)));
-		param(0,log(m) - d[1]*d[1]/2);
+		param(1,std::isinf(m) ? NAN :
+			    m <= 0 ? NAN : sqrt(log(1+s*s/m/m)));
+		param(0,std::isinf(m) ? INFINITY :
+			    m <= 0 ? NAN : log(m) - d[1]*d[1]/2);
 	}
 protected:
 	friend struct random;
