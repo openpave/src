@@ -99,7 +99,7 @@ void
 timeme(const char * msg)
 {
 #if !defined(_MSC_VER) && !defined(DARWIN)
-#if defined(linux)
+#if !defined(__FreeBSD__)
 #define CLOCK_PROF CLOCK_PROCESS_CPUTIME_ID
 #endif
 	static struct timespec start;
