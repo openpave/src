@@ -25,6 +25,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define _CRT_NONSTDC_NO_WARNINGS
 #define HAVE_STD_SWAP
+#define NO_FMA
 
 #if !defined(__GNUC__)
 #define __attribute__(x)

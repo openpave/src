@@ -462,7 +462,7 @@ case "$target" in
             CXXFLAGS="$CXXFLAGS -Zc:wchar_t-"
             DEFINES="$DEFINES _CRT_SECURE_NO_WARNINGS"
             DEFINES="$DEFINES _CRT_NONSTDC_NO_WARNINGS"
-        elif test "$_CC_MAJOR_VERSION" = "18"; then
+        elif test "$_CC_MAJOR_VERSION" = "18" -o "$_CC_MAJOR_VERSION" = "19"; then
             CXXFLAGS="$CXXFLAGS -Zc:wchar_t-"
             DEFINES="$DEFINES _CRT_SECURE_NO_WARNINGS"
             DEFINES="$DEFINES _CRT_NONSTDC_NO_WARNINGS"
@@ -480,7 +480,7 @@ case "$target" in
         OBJ_SUFFIX=obj
         LIB_SUFFIX=lib
         CPPFLAGS="$CPPFLAGS -W3 -GF -Gy -GR- -EHsc"
-        if test "$_CC_MAJOR_VERSION" = "18"; then
+        if test "$_CC_MAJOR_VERSION" = "18" -o "$_CC_MAJOR_VERSION" = "19"; then
 			_OPTIMIZE_FLAGS="-Ox -Ob2 -Oi -Ot -fp:fast -GS-"
 		else
 			_OPTIMIZE_FLAGS="-Ox -Ob2 -Oi -Ot -arch:SSE2 -fp:fast -GS-"
@@ -582,9 +582,9 @@ case "$host" in
     ;;
 esac
 
-if test "$USING_CC" = "intel"; then
+if test "$USING_CC" = "intel" -o "$USING_CC" = "ms"; then
     dnl Intel auto optimises fma(), so we must avoid it.
-    DEFINES="$DEFINES NEED_FMA"
+    DEFINES="$DEFINES NO_FMA"
 else
 AC_CACHE_CHECK(
     [for fma()],
