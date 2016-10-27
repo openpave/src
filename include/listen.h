@@ -92,8 +92,9 @@ public:
 			sink ** c = &head, ** l = &head;
 			while (*c != nullptr) {
 				if (*c == *s) {
+					sink * t = *c;
 					*l = (*c)->next;
-					delete *c;
+					delete t;
 					break;
 				} else
 					l = c, c = &((*c)->next);
@@ -124,6 +125,8 @@ private:
 	struct sink : message<Ts...> {
 		sink(message<Ts...> && m)
 		  : message<Ts...>(std::move(m)), next(nullptr) {
+		}
+		~sink() {
 		}
 		sink * next;           // The next listener
 	} * head;                  // The list head
