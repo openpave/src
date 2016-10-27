@@ -62,7 +62,7 @@ using namespace OP;
 /*
  * Windows error event handler.
  */
-void event_msg(const int level, const char * fmt, ...)
+void OP::event_msg(const int level, const char * fmt, ...)
 {
 	va_list args;
 	char * buf;
