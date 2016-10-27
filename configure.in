@@ -440,12 +440,6 @@ case "$target" in
     DSO_LDFLAGS='-shared -Wl,-soname -Wl,$(notdir $@)'
     _OPTIMIZE_FLAGS=-O2
     _DEBUG_FLAGS="-g -fno-inline"
-    case "${target_cpu}" in
-    x86_64)
-        CC="$CC -m32"
-        CXX="$CXX -m32"
-        ;;
-    esac    
     ;;
 
 *-mingw*|*-cygwin*|*-msvc*|*-mks*)
