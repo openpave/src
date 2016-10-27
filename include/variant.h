@@ -119,7 +119,6 @@ struct compare_v
 	|| (std::is_base_of<typename unwrap_type<T>::type,
 			            typename std::remove_cv<U>::type>::value)
 	,std::true_type,std::false_type>::type;
-public:
 	static constexpr bool value = type::value;
 };
 
@@ -255,8 +254,8 @@ class variant<T,Ts...> {
 		// Set directly based on another store
 		void set(std::type_index d, const store & v) {
 			if (d == std::type_index(typeid(T))) {
-				t = v.t;
-				f = v.f;
+				t = v.get<T>();
+				f = nullptr;
 			} else
 				b.set(d,v.b);
 		}
@@ -395,18 +394,18 @@ public:
 		copy_v(std::forward<V>(v));
 		return *this;
 	}
+	variant & chain(const variant & v) {
+		if (k != v.k)
+			throw std::runtime_error("Trying to chain incorrect type with variant!");
+		s.chain(k,v.s);
+		return *this;
+	}
 	// Return the contained value.
 	template<typename V>
 	operator V () const {
 		if (k != std::type_index(typeid(V)))
 			throw std::runtime_error("Trying to get incorrect type from variant!");
 		return s.template get<V>();
-	}
-	variant & chain(const variant & v) {
-		if (k != v.k)
-			throw std::runtime_error("Trying to chain incorrect type with variant!");
-		s.chain(k,v.s);
-		return *this;
 	}
 	real_t expected() const {
 		real_t rv(k);
