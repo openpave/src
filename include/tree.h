@@ -256,6 +256,16 @@ private:
 template<typename K, typename V, template<typename,typename> class N>
 class tree
 {
+protected:
+	template<typename KK, typename VV>
+	struct merged_v
+	{
+		using type = typename std::conditional<
+		std::is_base_of<KK,VV>::value || std::is_same<KK,VV>::value
+			,std::true_type,std::false_type>::type;
+		static constexpr bool value = type::value;
+	};
+
 public:
 	// The length. Nice for lots of things...
 	unsigned length() const {
@@ -276,13 +286,13 @@ public:
 	V & getatposition(unsigned p) const {
 		if (!inbounds(p))
 			throw std::out_of_range("unordered index out of bounds!");
-		return value[p]._v;
+		return value[p];
 	}
 	// Do a key lookup, and return UINT_MAX if the key is not found.
 	unsigned getposition(const K & k) const {
 		unsigned x = root;
 		while (x != UINT_MAX) {
-			int cmp = k.compare(static_cast<K &>(value[x]._v));
+			int cmp = value[x].compare(k);
 			if (cmp == 0)
 				break;
 			else if (cmp < 0)
@@ -291,6 +301,9 @@ public:
 				x = value[x].right;
 		}
 		return x;
+	}
+	V & get(const K & k) const {
+		return getatposition(getposition(k));
 	}
 	// Allow sorted access by returning the in-order position in the tree.
 	V & getatorder(unsigned i) const {
@@ -307,13 +320,13 @@ public:
 		}
 		if (x == UINT_MAX)
 			throw std::out_of_range("ordered index out of bounds!");
-		return value[x]._v;
+		return value[x];
 	}
 	// Get the ordered position of an element in the sort.
 	unsigned getorderof(const K & k) const {
 		unsigned x = root, o = 0;
 		while (x != UINT_MAX) {
-			int cmp = k.compare(value[x]._v);
+			int cmp = value[x].compare(k);
 			if (cmp == 0) {
 				o += order(x);
 				break;
@@ -336,12 +349,68 @@ protected:
 	unsigned size = 0;         // The size of the tree...
 	unsigned buffer = 0;       // The allocated buffer size...
 	unsigned root = UINT_MAX;  // Root of the tree.
-	struct _V : N<K,V>::node_base {
-		V _v;
+	struct _node_base : N<K,V>::node_base {
+		_node_base()
+		  : N<K,V>::node_base(), left(UINT_MAX), right(UINT_MAX) {
+		}
 		unsigned weight = 1;   // Number of nodes below (including this)
 		unsigned left, right;  // Left and right node numbers
-		explicit _V(const V & v)
-		  : N<K,V>::node_base(), _v(v), left(UINT_MAX), right(UINT_MAX) {
+	};
+	template<typename KK, typename VV, typename = void>
+	struct _node_val {
+		V _v;
+		explicit _node_val(const V & v)
+		  : _v(v) {
+		}
+		operator const V & () const {
+			return _v;
+		}
+		operator V & () {
+			return _v;
+		}
+	};
+	template<typename KK, typename VV>
+	struct _node_val<KK,VV,typename std::enable_if<merged_v<KK,VV>::value
+			&& !std::is_same<KK,VV>::value>::type> {
+		V _v;
+		explicit _node_val(const V & v)
+		  : _v(v) {
+		}
+		operator const K & () const {
+			return _v;
+		}
+		operator const V & () const {
+			return _v;
+		}
+		operator V & () {
+			return _v;
+		}
+	};
+	template<typename KK, typename VV>
+	struct _node_val<KK,VV,typename std::enable_if<!merged_v<KK,VV>::value>::type> {
+		K _k;
+		V _v;
+		explicit _node_val(const K & k, const V & v)
+		  : _k(k), _v(v) {
+		}
+		operator const K & () const {
+			return _k;
+		}
+		operator const V & () const {
+			return _v;
+		}
+		operator V & () {
+			return _v;
+		}
+	};
+	struct _V : _node_base, _node_val<K,V> {
+		template<typename KK = K, typename VV = V>
+		_V(const V & v, typename std::enable_if<merged_v<KK,VV>::value>::type * = nullptr) :
+			_node_base(), _node_val<K,V>(v) {
+		}
+		template<typename KK = K, typename VV = V>
+		_V(const K & k, const V & v, typename std::enable_if<!merged_v<KK,VV>::value>::type * = nullptr) :
+			_node_base(), _node_val<K,V>(k,v) {
 		}
 		// Placement new to support in-place initialization in the list.
 		void * operator new(size_t, void * p) {
@@ -353,27 +422,24 @@ protected:
 		template<typename T = K>
 		typename std::enable_if<has_compare<T>::value,int>::type
 		compare(const K & k) const {
-			return -_v.compare(k);
+			return k.compare(*this);
 		}
 		// else resort to operators
 		template<typename T = K>
 		typename std::enable_if<!has_compare<T>::value,int>::type
 		compare(const K & k) const {
-			return -(_v < k ? -1 : _v == k ? 0 : 1);
+			return (*this < k ? 1 :	*this == k ? 0 : -1);
 		}
-	} * value = nullptr;       // Take a guess...
+	};
+	struct _V * value = nullptr;       // Take a guess...
 
 	// Simple constructor...
 	explicit tree(unsigned b = DFLT_BLK)
 	  : block(b > 1 ? b : 1) {
 	}
-	virtual ~tree() {
+	~tree() {
 		allocate(0);
 	}
-	// The basic add method
-	virtual void add(const V & v) = 0;
-	// The basic remove method
-	virtual void remove(const K & k) = 0;
 	// Make some space...
 	void allocate(unsigned s) {
 		unsigned b = bufsize(s);
@@ -396,8 +462,8 @@ protected:
 		buffer = b;
 	}
 	// Insert an element
-	unsigned insert(const V & v) {
-		new(&value[size]) _V(v);
+	unsigned insert(_V && v) {
+		new(&value[size]) _V(std::move(v));
 		return size++;
 	}
 	void expunge(unsigned p) {
@@ -454,6 +520,9 @@ template <typename K, typename V = K>
 class ktree_avl : public tree<K,V,ktree_avl>
 {
 protected:
+	template<typename KK, typename VV>
+	using merged_v = typename tree<K,V,OP::ktree_avl>::template merged_v<KK,VV>;
+	using _V = typename tree<K,V,OP::ktree_avl>::_V;
 	using tree<K,V,OP::ktree_avl>::value;
 	using tree<K,V,OP::ktree_avl>::root;
 	using tree<K,V,OP::ktree_avl>::size;
@@ -469,20 +538,33 @@ public:
 	  : tree<K,V,OP::ktree_avl>(b) {
 	}
 	// Clean up
-	virtual ~ktree_avl() {
+	~ktree_avl() {
 	}
 	// Add a node.  Returns the new position in value (usually == size)
-	virtual void add(const V & v) override {
+	template<typename KK = K, typename VV = V,
+		typename = typename std::enable_if<merged_v<KK,VV>::value>::type>
+	void add(const V & v) {
 		unsigned p = UINT_MAX;
 		allocate(size+1);
-		append(root,v,&p);
+		append(root,_V(v),&p);
+		allocate(size);
+#ifdef TEST_TREES
+		assert_avl();
+#endif
+	}
+	template<typename KK = K, typename VV = V,
+		typename = typename std::enable_if<!merged_v<KK,VV>::value>::type>
+	void add(const K & k, const V & v) {
+		unsigned p = UINT_MAX;
+		allocate(size+1);
+		append(root,_V(k,v),&p);
 		allocate(size);
 #ifdef TEST_TREES
 		assert_avl();
 #endif
 	}
 	// Remove a node.  Returns the old position in value
-	virtual void remove(const K & k) override {
+	void remove(const K & k) {
 		unsigned p = UINT_MAX;
 		remove(root,k,&p);
 		if (p == UINT_MAX)
@@ -526,10 +608,10 @@ private:
 	int new_height(unsigned r) const {
 		return MAX(height(value[r].left),height(value[r].right))+1;
 	}
-	void append(unsigned & r, const V & v, unsigned * p) {
+	void append(unsigned & r, _V && v, unsigned * p) {
 		// If we're UINT_MAX that means we need to make a new node...
 		if (r == UINT_MAX) {
-			*p = r = insert(v);
+			*p = r = insert(std::move(v));
 			return;
 		}
 #ifdef TEST_TREES
@@ -538,12 +620,12 @@ private:
 #endif
 		int cmp = value[r].compare(v);
 		if (cmp == 0) {
-			value[*p = r]._v = v;
+			value[*p = r]._v = std::move(v._v);
 			return;
 		} else if (cmp < 0)
-			append(value[r].left,v,p);
+			append(value[r].left,std::move(v),p);
 		else
-			append(value[r].right,v,p);
+			append(value[r].right,std::move(v),p);
 		if (*p != UINT_MAX) {
 			value[r].weight = new_weight(r);
 			value[r].height = new_height(r);
