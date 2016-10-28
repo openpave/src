@@ -42,8 +42,9 @@
 #ifndef __LISTEN_H
 #define __LISTEN_H
 
-#include <memory>
+#include <cassert>
 #include <functional>
+#include <memory>
 
 namespace OP {
 
@@ -84,20 +85,20 @@ template<typename...Ts>
 class dispatcher<message<Ts...>> {
 public:
 	std::function<void(void)> attach(message<Ts...> && m) {
-		sink ** s = &head;
+		// Attach to end so they are dispatched in the order attached.
+		sink ** s = &head, * t;
 		while (*s != nullptr)
 			s = &((*s)->next);
-		*s = new sink(std::move(m));
-		return std::function<void(void)>([this,s](){
-			sink ** c = &head, ** l = &head;
+		t = *s = new sink(std::move(m));
+		return std::function<void(void)>([this,t](){
+			sink ** c = &head;
 			while (*c != nullptr) {
-				if (*c == *s) {
-					sink * t = *c;
-					*l = (*c)->next;
+				if (*c == t) {
+					*c = t->next;
 					delete t;
-					break;
-				} else
-					l = c, c = &((*c)->next);
+					return;
+				}
+				c = &(*c)->next;
 			}
 		});
 	}
@@ -107,11 +108,7 @@ protected:
 	  : head(nullptr) {
 	}
 	~dispatcher() {
-		sink * s;
-		while ((s = head) != nullptr) {
-			head = s->next;
-			delete s;
-		}
+		assert(head == nullptr);
 	}
 	void dispatch(const Ts &...args) {
 		sink * s = head;
@@ -144,7 +141,6 @@ protected:
 		source * s;
 		while ((s = head) != nullptr) {
 			head = s->next;
-			s->remover();
 			delete s;
 		}
 	}
@@ -163,6 +159,7 @@ private:
 		  : remover(r), next(nullptr) {
 		}
 		~source() {
+			remover();
 		}
 		std::function<void(void)> remover;
 		source * next;         // The next source
