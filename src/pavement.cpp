@@ -1202,7 +1202,6 @@ LEsystem::calculate(resulttype res, const double * Q)
 	unsigned ig, ixy, ir, iz, ild, ia, im, igp, il, gl = UINT_MAX;
 	const LElayer * pl;
 	double x1, x2;
-	bool interpolate = false;
 
 	initarrays();
 	if (cache_res == res && cache_state > cachestate::empty) {
@@ -1214,12 +1213,15 @@ LEsystem::calculate(resulttype res, const double * Q)
 	cache_res = failure;
 	if (!check())
 		return false;
-	unsigned * c_counts = cache_alloc<unsigned>(7);
-	unsigned &ngqp = c_counts[0], &nbz = c_counts[1];
-	unsigned &nl = c_counts[2], &nz = c_counts[3], &na = c_counts[4];
-	unsigned &nr = c_counts[5], &nm = c_counts[6];
+	unsigned * c_counts = cache_alloc<unsigned>(5);
+	unsigned & ngqp = c_counts[0], & nbz = c_counts[1];
+	unsigned & nl = c_counts[2], & nz = c_counts[3];
+	unsigned & na = c_counts[4];
+	bool * c_bools = cache_alloc<bool>(1);
+	bool & interpolate = c_bools[0];
 	if (cache_state == cachestate::empty) {
 		ngqp = NGQP, nbz = NBZ, gl = UINT_MAX, nl = layers();
+		interpolate = false;
 		if ((res & mask) == dirty) {
 			ngqp = MIN(NGQP,8);
 			nbz = MIN(NBZ,64);
@@ -1303,6 +1305,8 @@ LEsystem::calculate(resulttype res, const double * Q)
 	for (ia = 0; ia < na; ia++) {
 		// Generate a list of radii, then sort them.
 		double * r = nullptr, * bm = nullptr;
+		unsigned * a_counts = cache_alloc<unsigned>(2);
+		unsigned & nr = a_counts[0], & nm = a_counts[1];
 		if (cache_state == cachestate::empty) {
 			cset<double> sr;
 			for (ig = 0; ig < lg.length(); ig++) {
