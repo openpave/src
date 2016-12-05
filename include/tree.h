@@ -279,6 +279,12 @@ public:
 	bool haskey(const K & k) const {
 		return (getposition(k) != UINT_MAX);
 	}
+	// Allow acces to the keys.
+	const K & getkey(unsigned p) const {
+		if (!inbounds(p))
+			throw std::out_of_range("unordered index out of bounds!");
+		return value[p];
+	}
 	// We can use node numbers to find our nodes...
 	V & operator[] (unsigned p) const {
 		return getatposition(p);
