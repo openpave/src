@@ -57,48 +57,62 @@ namespace {
 // Check if the types being stored in the variant have a magic nested typedef
 // for a realization type, in which case define a new variant type for the
 // actual realizations of the variant.
+//
+// First fake std::void_t
 template<typename ...Ts> struct make_void { typedef void type;};
 template<typename ...Ts> using void_t = typename make_void<Ts...>::type;
+// First set up the cleaner...
+// This is the default case with no special types.
+template<typename>
+struct clear_type
+{
+	template<typename U = T>
+	static typename std::enable_if<std::is_pointer<U>::value,void>::type
+	clear(U & t) {
+		delete t;
+		t = nullptr;
+	}
+	template<typename U = T>
+	static typename std::enable_if<!std::is_pointer<U>::value,void>::type
+	clear(U & t) {
+		t.~U();
+	}
+};
+// This is the default case with no special types.
 template<typename T, typename = void_t<>>
 struct real_type
 {
 	using real_t = typename std::remove_pointer<T>::type;
 	template<typename U = T>
 	static typename std::enable_if<std::is_pointer<U>::value,real_t>::type
-	expected(const U & t) {
+	value(const U & t) {
 		return *t;
 	}
 	template<typename U = T>
 	static typename std::enable_if<!std::is_pointer<U>::value,real_t>::type
-	expected(const U & t) {
+	value(const U & t) {
 		return t;
 	}
 };
+// This is the case for types with a "real" member type.
 template<typename T>
 struct real_type<T, void_t<typename std::remove_pointer<T>::type::real>>
 {
 	using real_t = typename std::remove_pointer<T>::type::real;
 	template<typename U = T>
 	static typename std::enable_if<std::is_pointer<U>::value,real_t>::type
-	expected(const U & t) {
-		return t->expected();
+	value(const U & t) {
+		return t->realize();
 	}
 	template<typename U = T>
 	static typename std::enable_if<!std::is_pointer<U>::value,real_t>::type
-	expected(const U & t) {
-		return t.expected();
-	}
-};
-template<typename T>
-struct real_type<T, void_t<typename std::remove_pointer<T>::type::type>>
-{
-	using unwrapped_t = typename std::remove_pointer<T>::type::type;
-	using real_t = typename real_type<unwrapped_t>::real_t;
-	static real_t expected(const T & t) {
-		return real_type<unwrapped_t>::expected(t);
+	value(const U & t) {
+		return t.realize();
 	}
 };
 
+// Template meta-program to compare two types to see if they are the same
+// at a fundamental level (can be directly cast, etc.).
 template<typename T, typename = void_t<>>
 struct unwrap_type
 {
@@ -143,10 +157,10 @@ class variant {
 			throw std::runtime_error("Attempting to store invalid type in variant!");
 		};
 		void clear(std::type_index) {};
-		// Set expected value from a different type of store
+		// Set value from a different type of store
 		template<typename ...Vs>
 		std::type_index set_e(const std::type_index, const typename variant<Vs...>::store &) const {
-			throw std::runtime_error("Attempting to store invalid expected type in variant!");
+			throw std::runtime_error("Attempting to store invalid value type in variant!");
 		}
 	};
 	template<typename ...S>
@@ -221,7 +235,7 @@ class variant<T,Ts...> {
 		template<typename U>
 		typename std::enable_if<compare_v<U,T>::value,typename real_type<U>::real_t>::type
 		get() const {
-			return real_type<U>::expected(f ? t = f() : t);
+			return real_type<U>::value(f ? t = f() : t);
 		}
 		template<typename U>
 		typename std::enable_if<!compare_v<U,T>::value,typename real_type<U>::real_t>::type
@@ -276,17 +290,17 @@ class variant<T,Ts...> {
 		// Clear if we are the tagged type, else pass
 		void clear(std::type_index d) {
 			if (d == std::type_index(typeid(T))) {
-				t.~T();
+				clear_type<T>::clear(t);
 				f.~callback();
 			} else
 				b.clear(d);
 		}
-		// Set expected value from a different type of store
+		// Set value from a different type of store
 		template<typename V, typename ...Vs>
 		std::type_index set_e(const std::type_index d, const typename variant<V,Vs...>::store & v) {
 			if (d == std::type_index(typeid(V))) {
 				this->template set_t<typename real_type<V>::real_t>(
-					real_type<V>::expected(v.t));
+					real_type<V>::value(v.t));
 				return std::type_index(typeid(typename real_type<V>::real_t));
 			} else
 				return b.template set_e<Vs...>(d,v.b);
@@ -345,14 +359,16 @@ class variant<T,Ts...> {
 	copy_c(const V & v) {
 		copy_f<decltype(v())>(v);
     }
-	// Set expected value from a different type of store
+	// Set value from a different type of store
 	template<typename ...Vs>
 	void set_e(const std::type_index d, const variant<Vs...> & v) {
 		 k = s.template set_e<Vs...>(d,v.s);
 	}
 
 public:
+	// This is the type of variant we will be when realized.
 	using real_t = variant<typename real_type<T>::real_t,typename real_type<Ts>::real_t...>;
+	// This is the type of out validator.
 	using validator_t = validator<T,Ts...>;
 
 	variant() = delete;
@@ -402,12 +418,13 @@ public:
 	}
 	// Return the contained value.
 	template<typename V>
-	operator V () const {
+	explicit operator V () const {
 		if (k != std::type_index(typeid(V)))
 			throw std::runtime_error("Trying to get incorrect type from variant!");
 		return s.template get<V>();
 	}
-	real_t expected() const {
+	// Get a realized value for this variant.
+	real_t realize() const {
 		real_t rv(k);
 		rv.template set_e<T,Ts...>(k,*this);
 		return rv;
