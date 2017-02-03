@@ -78,17 +78,17 @@ struct house;
  */
 struct realization
 {
-	realization(house & h, const random & r, double d);
+	realization(house & h, const random & r, float d);
 	~realization();
-	operator const double & () const {
+	operator const float & () const {
 		return v;
 	}
-	operator double () {
+	operator float () {
 		return v;
 	}
 	house * dealer;
 	const random * rv;
-	double v;
+	float v;
 };
 
 /*
@@ -105,9 +105,9 @@ struct house
 	}
 	~house();
 	random * make_rv(const random & r);
-	random * make_rv(distribution d, double m, double s);
+	random * make_rv(distribution d, float m, float s);
 	template<typename T>
-	random * make_rv(double m, double s);
+	random * make_rv(float m, float s);
 
 private:
 	friend struct realization;
@@ -171,20 +171,20 @@ struct random
 	// Distribution type.
 	virtual distribution type() const = 0;
 	// Mean value.
-	virtual double mean() const = 0;
+	virtual float mean() const = 0;
 	// Standard Deviation.
-	virtual double stddev() const = 0;
+	virtual float stddev() const = 0;
 	// Get the expected value for use in variants
-	realization expected() const {
+	realization realize() const {
 		return realization(*dealer,*this,mean());
 	}
-	static random * make_rv(distribution d, double m, double s,
+	static random * make_rv(distribution d, float m, float s,
 		house * h = nullptr);
 	static random * make_rv(const random & r, house * h = nullptr);
 
 protected:
 	house * dealer;                     // The house - can be null.
-	double d[RV_DIST_PARAM];			// Four distribution parmeters.
+	float d[RV_DIST_PARAM];			// Four distribution parmeters.
 
 	// Create a random variable.
 	random(house * h = nullptr) :
@@ -203,13 +203,13 @@ protected:
 			dealer->add_variable(this);
 	}
 	// Get distribution parmater i
-	double param(size_t i) {
+	float param(size_t i) {
 		if (i > (RV_DIST_PARAM-1))
 			throw std::runtime_error("Invalid distribution parameter");
 		return d[i];
 	}
 	// Set distribution parmater i.
-	double param(size_t i, double dp) {
+	float param(size_t i, float dp) {
 		return d[i] = dp;
 	}
 };
@@ -230,14 +230,14 @@ protected:
 struct rv_normal :
 	public random_var<distribution::normal>
 {
-	virtual double mean() const override final {
+	virtual float mean() const override final {
 		return d[0];
 	}
-	virtual double stddev() const override final {
+	virtual float stddev() const override final {
 		return d[1];
 	}
 
-	rv_normal(double m, double s, house * h = nullptr) :
+	rv_normal(float m, float s, house * h = nullptr) :
 		random_var(h) {
 		param(0,m);
 		param(1,s);
@@ -252,16 +252,16 @@ protected:
 struct rv_lognormal :
 	public random_var<distribution::lognormal>
 {
-	virtual double mean() const override final {
+	virtual float mean() const override final {
 		return std::isinf(d[0]) ? INFINITY :
 			   std::isnan(d[0]) ? NAN : exp(d[0] + d[1]*d[1]/2);
 	}
-	virtual double stddev() const override final {
+	virtual float stddev() const override final {
 		return std::isinf(d[0]) ? INFINITY :
 			   std::isnan(d[0]) ? NAN : mean()*sqrt(exp(d[1]*d[1])-1);
 	}
 
-	rv_lognormal(double m, double s, house * h = nullptr) :
+	rv_lognormal(float m, float s, house * h = nullptr) :
 		random_var(h) {
 		param(1,std::isinf(m) ? NAN :
 			    m <= 0 ? NAN : sqrt(log(1+s*s/m/m)));
@@ -277,7 +277,7 @@ protected:
 
 // Out-of-line constructor to add ourselves to the house.
 inline
-realization::realization(house & h, const random & r, double d) :
+realization::realization(house & h, const random & r, float d) :
 	dealer(&h), rv(&r), v(d) {
 	if (dealer != nullptr)
 		dealer->add_realization(this);
@@ -305,14 +305,14 @@ house::make_rv(const random & r)
 }
 
 inline random *
-house::make_rv(distribution d, double m, double s)
+house::make_rv(distribution d, float m, float s)
 {
 	return random::make_rv(d,m,s,this);
 }
 
 template<typename T>
 inline random *
-house::make_rv(double m, double s)
+house::make_rv(float m, float s)
 {
 	return random::make_rv(T::distribution_t,m,s,this);
 }

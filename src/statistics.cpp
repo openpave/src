@@ -238,7 +238,7 @@ stdnormal_inv(double p)
 
 // Creates a new random variable of the type specified.
 random *
-random::make_rv(distribution d, double m, double s, house * h) {
+random::make_rv(distribution d, float m, float s, house * h) {
 	switch (d) {
 	case distribution::normal:
 		return new rv_normal(m,s,h);
