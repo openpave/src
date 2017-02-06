@@ -94,7 +94,7 @@ test_table1()
 	table<double,axis<keyA>> tbl(ax);
 	ax.add(keyA(3));
 	for (unsigned i = 0; i < 5; i++)
-		tbl[i] = (double)(i);
+		tbl[i] = double(i);
 	axis<unsigned,keyA> ax2(ax);
 	for (unsigned i = 0; i < 4; i++)
 		ax2.add(i,keyA(2));

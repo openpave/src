@@ -52,7 +52,7 @@ test1()
 	printf("v1:%f, v2: %i\n",d,i);
 	v1 = 0.5;
 	v2 = 3;
-	printf("v1:%f, v2: %i\n",(double)(v1),(int)(v2));
+	printf("v1:%f, v2: %i\n",double(v1),int(v2));
 }
 
 void
@@ -67,18 +67,18 @@ test2()
 	printf("v1:%f, v2: %i\n",d,i);
 	v1 = 0.5;
 	v2 = 3;
-	printf("v1:%f, v2: %i\n",(double)(v1),(int)(v2));
+	printf("v1:%f, v2: %i\n",double(v1),int(v2));
 	v1 = []() -> double { return 0.3; };
 	v2 = []() -> int { return 4; };
-	printf("v1:%f, v2: %i\n",(double)(v1),(int)(v2));
+	printf("v1:%f, v2: %i\n",double(v1),int(v2));
 	v1 = f1;
 	v2 = f2;
-	printf("v1:%f, v2: %i\n",(double)(v1),(int)(v2));
+	printf("v1:%f, v2: %i\n",double(v1),int(v2));
 	std::function<double()> s1(f1);
 	std::function<int()> s2(f2);
 	v1 = s1;
 	v2 = s2;
-	printf("v1:%f, v2: %i\n",(double)(v1),(int)(v2));
+	printf("v1:%f, v2: %i\n",double(v1),int(v2));
 }
 
 double t1(const double & d) { return d == 0.3; };
@@ -98,7 +98,7 @@ test3()
 	});
 
 	bool b1 = f1.validate(v1);
-	bool b2 = f2.validate((int)(v2));
+	bool b2 = f2.validate(int(v2));
 	printf("v1:%s, v2: %s\n",b1 ? "T" : "F",b2 ? "T" : "F");
 }
 

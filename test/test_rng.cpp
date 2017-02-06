@@ -43,7 +43,7 @@ main(int argc, char * argv[])
 	const int NUM = 1000000;
 
 	if (argc >= 2)
-		seed = (unsigned)(strtol(argv[1],NULL,10));
+		seed = unsigned(strtol(argv[1],NULL,10));
 	else
 		seed = 12345;
 	cnt = 0;
