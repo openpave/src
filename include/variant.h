@@ -63,7 +63,7 @@ template<typename ...Ts> struct make_void { typedef void type;};
 template<typename ...Ts> using void_t = typename make_void<Ts...>::type;
 // First set up the cleaner...
 // This is the default case with no special types.
-template<typename>
+template<typename T>
 struct clear_type
 {
 	template<typename U = T>
@@ -418,7 +418,7 @@ public:
 	}
 	// Return the contained value.
 	template<typename V>
-	explicit operator V () const {
+	operator V () const {
 		if (k != std::type_index(typeid(V)))
 			throw std::runtime_error("Trying to get incorrect type from variant!");
 		return s.template get<V>();

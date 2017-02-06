@@ -78,6 +78,10 @@ struct house;
  */
 struct realization
 {
+	// Magic typedef for the variant class to know that we are a cameleon that
+	// has a different realized type to the abstract variable.
+	using type = float;
+
 	realization(house & h, const random & r, float d);
 	~realization();
 	operator const float & () const {
