@@ -78,6 +78,10 @@
 #ifndef __AXIS_H
 #define __AXIS_H
 
+#if !defined(DFLT_BLK)
+#define DFLT_BLK    64
+#endif
+
 #include <functional>
 #include <stdexcept>
 #include <tuple>

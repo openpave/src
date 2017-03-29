@@ -53,6 +53,10 @@
 #ifndef __SET_H
 #define __SET_H
 
+#if !defined(DFLT_BLK)
+#define DFLT_BLK    64
+#endif
+
 #include <algorithm>
 #include <climits>
 #include <cstring>
@@ -60,8 +64,6 @@
 #include <stdexcept>
 
 namespace OP {
-
-#define DFLT_BLK    64
 
 /*
  * class set - Set base class

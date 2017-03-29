@@ -34,6 +34,10 @@
 #ifndef __TREE_H
 #define __TREE_H
 
+#if !defined(DFLT_BLK)
+#define DFLT_BLK    64
+#endif
+
 #include <cstring>
 #include <stdexcept>
 #ifdef TEST_TREES
@@ -240,8 +244,6 @@ private:
 	}
 #endif
 };
-
-#define DFLT_BLK    64
 
 /*
  * class tree - Tree base class

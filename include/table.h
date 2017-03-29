@@ -46,6 +46,10 @@
 #ifndef __TABLE_H
 #define __TABLE_H
 
+#if !defined(DFLT_BLK)
+#define DFLT_BLK    64
+#endif
+
 #include <cstring>
 #include <stdexcept>
 #include <type_traits>
@@ -62,7 +66,7 @@ class table : protected listener
 {
 public:
 	table(As &...as)
-	  : axes(as...), buflen(0), blklen(64), buffer(nullptr) {
+	  : axes(as...), buflen(0), blklen(DFLT_BLK), buffer(nullptr) {
 		unsigned s = init(as...);
 		allocate(s); // Creates enough space
 		//copy(s,nullptr);   // Constructs the elements and increases size
