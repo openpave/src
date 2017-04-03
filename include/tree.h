@@ -445,6 +445,29 @@ protected:
 	explicit tree(unsigned b = DFLT_BLK)
 	  : block(b > 1 ? b : 1) {
 	}
+	// Copy constructor.
+	explicit tree(const tree & t)
+	  : block(t.block) {
+		allocate(t.size);
+		// The other real tree is responsible for the copy.
+	}
+	// Move constructor.
+	explicit tree(tree && t)
+	  : size(t.size), buffer(t.buffer), root(t.root), value(t.value),
+		block(t.block) {
+		t.size = 0;
+		t.buffer = 0;
+		t.root = UINT_MAX;
+		t.value = nullptr;
+	}
+	tree & operator= (const tree &) = delete;
+	tree & operator= (tree && t) {
+		std::swap(size,t.size);
+		std::swap(buffer,t.buffer);
+		std::swap(root,t.root);
+		std::swap(value,t.value);
+		std::swap(block,t.block);
+	};
 	~tree() {
 		allocate(0);
 	}
@@ -455,7 +478,7 @@ protected:
 			return;
 		if (b == 0) {
 			for (unsigned i = 0; i < size; i++)
-				value[b].~_V();
+				value[i].~_V();
 			free(value);
 			value = nullptr;
 			buffer = 0;
@@ -470,6 +493,10 @@ protected:
 		buffer = b;
 	}
 	// Insert an element
+	unsigned insert(const _V & v) {
+		new(&value[size]) _V(v);
+		return size++;
+	}
 	unsigned insert(_V && v) {
 		new(&value[size]) _V(std::move(v));
 		return size++;
@@ -544,6 +571,28 @@ public:
 	// Make one...
 	ktree_avl(unsigned b = DFLT_BLK)
 	  : tree<K,V,OP::ktree_avl>(b) {
+	}
+	// Copy constructor.
+	explicit ktree_avl(const ktree_avl & t)
+	  : tree<K,V,OP::ktree_avl>(t) {
+		unsigned p = UINT_MAX;
+		for (unsigned i = 0; i < t.size; i++)
+			append(root,_V(t.value[i]),&p);
+	}
+	// Move constructor.
+	explicit ktree_avl(ktree_avl && t)
+	  : tree<K,V,OP::ktree_avl>(std::move(t)) {
+	}
+	ktree_avl & operator= (const ktree_avl & t) {
+		allocate(0);
+		allocate(t.size);
+		unsigned p = UINT_MAX;
+		for (unsigned i = 0; i < t.size; i++)
+			append(root,_V(t.value[i]),&p);
+	}
+	ktree_avl & operator= (ktree_avl && t) {
+		tree<K,V,OP::ktree_avl>::operator=(std::move(t));
+		return *this;
 	}
 	// Clean up
 	~ktree_avl() {
