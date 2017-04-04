@@ -61,8 +61,7 @@ namespace {
 // First fake std::void_t
 template<typename ...Ts> struct make_void { typedef void type;};
 template<typename ...Ts> using void_t = typename make_void<Ts...>::type;
-// First set up the cleaner...
-// This is the default case with no special types.
+// Then set up the cleaner...
 template<typename T>
 struct clear_type
 {

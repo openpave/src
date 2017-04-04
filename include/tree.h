@@ -370,6 +370,9 @@ protected:
 		explicit _node_val(const V & v)
 		  : _v(v) {
 		}
+		explicit _node_val(V && v)
+		  : _v(std::move(v)) {
+		}
 		operator const V & () const {
 			return _v;
 		}
@@ -383,6 +386,9 @@ protected:
 		V _v;
 		explicit _node_val(const V & v)
 		  : _v(v) {
+		}
+		explicit _node_val(V && v)
+		  : _v(std::move(v)) {
 		}
 		operator const K & () const {
 			return _v;
@@ -400,6 +406,9 @@ protected:
 		V _v;
 		explicit _node_val(const K & k, const V & v)
 		  : _k(k), _v(v) {
+		}
+		explicit _node_val(K && k, V && v)
+		  : _k(std::move(k)), _v(std::move(v)) {
 		}
 		operator const K & () const {
 			return _k;
@@ -420,12 +429,27 @@ protected:
 		_V(const K & k, const V & v, typename std::enable_if<!merged_v<KK,VV>::value>::type * = nullptr) :
 			_node_base(), _node_val<K,V>(k,v) {
 		}
+		template<typename KK = K, typename VV = V>
+		_V(V && v, typename std::enable_if<merged_v<KK,VV>::value>::type * = nullptr) :
+			_node_base(), _node_val<K,V>(std::move(v)) {
+		}
+		template<typename KK = K, typename VV = V>
+		_V(K && k, V && v, typename std::enable_if<!merged_v<KK,VV>::value>::type * = nullptr) :
+			_node_base(), _node_val<K,V>(std::move(k),std::move(v)) {
+		}
+		_V(const _V & v) :
+			_node_base(), _node_val<K,V>(v) {
+		}
+		_V(_V && v) :
+			_node_base(), _node_val<K,V>(std::move(v)) {
+		}
 		// Placement new to support in-place initialization in the list.
 		void * operator new(size_t, void * p) {
 			return p;
 		}
 		void operator delete(void *, void *) {
 		}
+		// note these are reversed for historical reasons.
 		// use the compare function if it has one
 		template<typename T = K>
 		typename std::enable_if<has_compare<T>::value,int>::type
@@ -467,6 +491,7 @@ protected:
 		std::swap(root,t.root);
 		std::swap(value,t.value);
 		std::swap(block,t.block);
+		return *this;
 	};
 	~tree() {
 		allocate(0);
@@ -615,6 +640,29 @@ public:
 		unsigned p = UINT_MAX;
 		allocate(size+1);
 		append(root,_V(k,v),&p);
+		allocate(size);
+#ifdef TEST_TREES
+		assert_avl();
+#endif
+	}
+	// Add a node.  Returns the new position in value (usually == size)
+	template<typename KK = K, typename VV = V,
+		typename = typename std::enable_if<merged_v<KK,VV>::value>::type>
+	void add(V && v) {
+		unsigned p = UINT_MAX;
+		allocate(size+1);
+		append(root,_V(std::move(v)),&p);
+		allocate(size);
+#ifdef TEST_TREES
+		assert_avl();
+#endif
+	}
+	template<typename KK = K, typename VV = V,
+		typename = typename std::enable_if<!merged_v<KK,VV>::value>::type>
+	void add(K && k, V && v) {
+		unsigned p = UINT_MAX;
+		allocate(size+1);
+		append(root,_V(std::move(k),std::move(v)),&p);
 		allocate(size);
 #ifdef TEST_TREES
 		assert_avl();
