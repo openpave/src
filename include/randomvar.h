@@ -50,6 +50,7 @@
 #ifndef __RANDOMVAR_H
 #define __RANDOMVAR_H
 
+#include <assert.h>
 #include <cmath>
 #include <stdexcept>
 #include <typeindex>
@@ -115,33 +116,13 @@ struct house
 
 private:
 	friend struct realization;
-	void add_realization(const realization * r) {
-		store.add(info(r));
+	void add_realization(realization * r) {
+		store.add(r);
 	}
-	void rem_realization(const realization * r) {
-		store.remove(key(r));
+	void rem_realization(realization * r) {
+		store.remove(r);
 	}
-	struct key {
-		key(const realization * r) :
-			x(r) {
-		}
-		int compare (const key & k) const {
-			return (x==k.x ? 0 : SGN(x-k.x));
-		}
-		const realization * x;
-	};
-	struct info : public key {
-		info(const realization * r) :
-			key(r), X(r->rv) {
-		}
-		info & operator = (const info & i) {
-			x = i.x;
-			X = i.X;
-			return *this;
-		}
-		const random * X;
-	};
-	ktree_avl<key,info> store;
+	ktree_avl<realization *> store;
 
 	friend struct random;
 	void add_variable(random * r) {
@@ -182,16 +163,15 @@ struct random
 	realization realize() const {
 		return realization(*dealer,*this,mean());
 	}
-	static random * make_rv(distribution d, float m, float s,
-		house * h = nullptr);
-	static random * make_rv(const random & r, house * h = nullptr);
+	static random * make_rv(distribution d, float m, float s, house * h);
+	static random * make_rv(const random & r, house * h);
 
 protected:
 	house * dealer;                     // The house - can be null.
 	float d[RV_DIST_PARAM];			// Four distribution parmeters.
 
 	// Create a random variable.
-	random(house * h = nullptr) :
+	random(house * h) :
 		dealer(h) {
 		for (size_t i = 0; i < RV_DIST_PARAM; i++)
 			d[i] = NAN;
@@ -199,7 +179,7 @@ protected:
 			dealer->add_variable(this);
 	}
 	// copy a random variable.
-	random(const random & r, house * h = nullptr) :
+	random(const random & r, house * h) :
 		dealer(h == nullptr ? r.dealer : h) {
 		for (size_t i = 0; i < RV_DIST_PARAM; i++)
 			d[i] = r.d[i];
@@ -241,14 +221,14 @@ struct rv_normal :
 		return d[1];
 	}
 
-	rv_normal(float m, float s, house * h = nullptr) :
+	rv_normal(float m, float s, house * h) :
 		random_var(h) {
 		param(0,m);
 		param(1,s);
 	}
 protected:
 	friend struct random;
-	rv_normal(const random & r, house * h = nullptr) :
+	rv_normal(const random & r, house * h) :
 		random_var(r,h) {
 	}
 };
@@ -265,7 +245,7 @@ struct rv_lognormal :
 			   std::isnan(d[0]) ? NAN : mean()*sqrt(exp(d[1]*d[1])-1);
 	}
 
-	rv_lognormal(float m, float s, house * h = nullptr) :
+	rv_lognormal(float m, float s, house * h) :
 		random_var(h) {
 		param(1,std::isinf(m) ? NAN :
 			    m <= 0 ? NAN : sqrt(log(1+s*s/m/m)));
@@ -274,7 +254,7 @@ struct rv_lognormal :
 	}
 protected:
 	friend struct random;
-	rv_lognormal(const random & r, house * h = nullptr) :
+	rv_lognormal(const random & r, house * h) :
 		random_var(r,h) {
 	}
 };
@@ -297,8 +277,7 @@ realization::~realization() {
 // Out-line-destructor to call ~random().
 inline
 house::~house() {
-	for (unsigned i = 0; i < vars.length(); i++)
-		delete vars[i];
+	assert(vars.length() == 0);
 }
 
 // Let the house make random variables too..
