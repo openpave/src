@@ -319,7 +319,7 @@ inv_mul_lu(unsigned n, unsigned m, double * A,
 }
 
 /*
- * Matrix inverse of the real nxn matrix A using LU decomposition.  
+ * Matrix inverse of the real nxn matrix A using LU decomposition.
  */
 void
 inv_lu(unsigned n, double * A)
@@ -402,7 +402,7 @@ void
 decmp_chol(unsigned n, unsigned w, double * A)
 {
 	unsigned i, j, k;
-	
+
 	for (i = 0; i < n; i++) {
 		for (j = i; j <= i+w && j < n; j++) {
 			double sum = A[B_IDX(n,w,i,j)];
@@ -451,7 +451,7 @@ bksub_chol(unsigned n, unsigned w, const double * A,
            double * b, unsigned m, unsigned c)
 {
 	unsigned i, k;
-	
+
 	for (i = 0; i < n; i++) {
 		for (k = (w>i?0:i-w); k < i; k++)
 			b[i*m+c] -= A[B_IDX(n,w,k,i)]*b[k*m+c];
@@ -505,7 +505,7 @@ equ_chol(unsigned n, const double * A, const double * b, double * x)
 void
 equ_chol(unsigned n, unsigned w, const double * A,
          const double * b, double * x)
-        
+
 {
 	unsigned i, j, iter = 0;
 	double dot, c1, y1, t1, c, y, t;
@@ -544,7 +544,7 @@ equ_chol(unsigned n, unsigned w, const double * A,
 
 /*
  * Matrix inverse of the real positive definite nxn matrix A using
- * Cholesky decomposition.  
+ * Cholesky decomposition.
  */
 void
 inv_chol(unsigned n, double * A)
@@ -671,7 +671,7 @@ decmp_svd(unsigned m, unsigned n, double * A,
 	double scale = 0.0;
 	double anorm = 0.0;
 	unsigned iter, i, j, k, q;
-	
+
 	if (m == 0 || n == 0)
 		return;
 	autodelete<double> rv1(new double[n]);
@@ -953,7 +953,7 @@ decmp_qr(unsigned n, double * A, double * s,
 {
 	bool rv = true;
 	unsigned i, j, k;
-	
+
 	if (n == 0)
 		return true;
 	for (k = 0; n > 1 && k < n-1; k++) {
@@ -991,11 +991,11 @@ decmp_qr(unsigned n, double * A, double * s,
 
 /*
  * Performs a backsubstitution for a QR decomposed matrix A, solving
- * Ax = b. 
+ * Ax = b.
  */
 void
 bksub_qr(unsigned n, const double * A,
-         const double * s, const double * d, 
+         const double * s, const double * d,
          double * b, unsigned m, unsigned c)
 {
 	unsigned i, j;
@@ -1024,7 +1024,7 @@ tridiag_hh(unsigned n, double * A, double * d,
 {
 	unsigned i, j, k;
 	double scale, f;
-	
+
 	if (n == 0)
 		return;
 	for (i = n-1; i > 0; i--)  {

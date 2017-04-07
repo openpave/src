@@ -2095,7 +2095,7 @@ struct mesh_part : public fixed<8> {
 		p.sort();
 		buildtree(p,0,p.length()-1,1,0,0);
 	}
-	
+
 private:
 	static void buildtree(koset<fixed<8>,mesh_part> & p, const unsigned l,
 			const unsigned r, unsigned v, unsigned o, unsigned f) {
@@ -2124,7 +2124,7 @@ struct mesh_part3d {
 	int compare(const mesh_part3d & p) const {
 		unsigned xo1, xo2, yo1, yo2, zo1, zo2;
 		unsigned m = 0, o1 = 0, o2 = 0;
-		
+
 		xo1 = ox; xo2 = p.ox;
 		yo1 = oy; yo2 = p.oy;
 		zo1 = oz; zo2 = p.oz;
@@ -2285,7 +2285,7 @@ private:
 		unsigned prev;
 		unsigned next;
 		cset<unsigned> adj;
-		
+
 		inline mesh_rcm_node(const unsigned p, const unsigned n)
 			: prev(p), next(n), adj() {
 		}
@@ -2950,7 +2950,7 @@ static double
 bessi0(const double x)
 {
 	double ax, y;
-	
+
 	if ((ax = fabs(x)) < 3.75) {
 		y = x/3.75;
 		y *= y;
@@ -2991,7 +2991,7 @@ static double
 bessk0(const double x)
 {
 	double y;
-	
+
 	if (x <= 2.0) {
 		y = x*x/4.0;
 		y = (-log(x/2.0)*bessi0(x))+(-0.57721566+y*(0.42278420
@@ -3048,7 +3048,7 @@ static double
 gamma(const int n)
 {
   double g = 1.0;
-  
+
   for (int c = 1; c < n; c++)
     g = g * c;
   return g;
@@ -4039,7 +4039,7 @@ main()
 		y[yi] = double(fixed<8>(-y[yi]));
 	for (unsigned zi = 0; zi < nz; zi++)
 		z[zi] = double(fixed<8>(z[zi]));
-		
+
 	for (unsigned zi = 1, i = 0; zi < nz; zi++) {
 		while (i < layer.length() && -double(z[zi]) > double(layer[i].bot))
 			i++;
@@ -4428,7 +4428,7 @@ main()
 	for (x = 0.0; x < 20.0; x+= 0.001) {
 		printf("%f: %f %f %f %f %f %f %f %f %f %f\n",x,bessi0(x),bessi1(x),bessk0(x),bessk1(x),fn_matern(2,x,1),fn_whittle(x,1),pow(2.0,1-2),gamma(2),pow(x,2),bessk(2,x));
 	}
-	
+
 	return 0;
 }
 #endif

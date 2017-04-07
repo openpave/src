@@ -1,6 +1,6 @@
 /**************************************************************************
 
-	TABLE.H - Types for data tables (1D, 2D and 3D) 
+	TABLE.H - Types for data tables (1D, 2D and 3D)
 
 	The contents of this file are subject to the Academic Development
 	and Distribution License Version 1.0 (the "License"); you may not
@@ -30,14 +30,14 @@
 		These classes make use of many new C++11 features, including
 		variadic templates and SFINAE.  This makes them possible, but also
 		complex.
-		
+
 		The basic class is table.  Because the issues with variadic
 		templates with multiple lists of classes in multiple axes is not
 		easily addressed, there are three verions with duplicate code.  If
 		you need more dimensions then you need to clone and add that...
 		But remember that the axes can have many layers of keys, which is
 		a much cleaner solution in many cases.
-		
+
 	History:
 		2016/03/05 - Created a basic implementation.
 
@@ -105,7 +105,7 @@ public:
 	}
 
 private:
-	// The axes are stored in a tuple for ease of processing. 
+	// The axes are stored in a tuple for ease of processing.
 	std::tuple<const As &...> axes;
 	unsigned sizes[sizeof...(As)];
 	// 1D storage for the data
@@ -267,5 +267,5 @@ private:
 };
 
 } // namespace OP
- 
+
 #endif // TABLE_H

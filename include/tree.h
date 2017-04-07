@@ -573,8 +573,8 @@ private:
  *
  * A key/value tree, like ksset<K,V>, using the AVL implementation since
  * it is relatively simple.
- * 
- * See https://en.wikipedia.org/wiki/AVL_tree 
+ *
+ * See https://en.wikipedia.org/wiki/AVL_tree
  */
 template <typename K, typename V = K>
 class ktree_avl : public tree<K,V,ktree_avl>
@@ -945,7 +945,7 @@ public:
 	// Add node.
 	void add(const V & v) {
 		bool grew = false;
-		
+
 		allocate(size+1);
 		append(root,v,&grew);
 		allocate(size);
@@ -971,7 +971,7 @@ protected:
 		unsigned left, right;  // Left and right node numbers
 		bool red;              // Colour of link to parent
 		explicit _V(const V & v)
-		  : _v(v), 
+		  : _v(v),
 		    order(0), left(UINT_MAX), right(UINT_MAX), red(true) {
 		}
 		// Placement new to support inplace init in the list.
@@ -998,7 +998,7 @@ protected:
 	}
 	void append(unsigned & r, const V & v, bool * grew) {
 		unsigned x;
-		
+
 		// If we're UINT_MAX that means we need to make a new node...
 		if (r == UINT_MAX) {
 			new(&value[size]) _V(v);

@@ -40,7 +40,7 @@ namespace OP {
 /*
  * A normally distributed random number generator.  We avoid
  * the uniform rv's being 0.0 since this will result in infinte
- * values, and double count the 0 == 2pi.   
+ * values, and double count the 0 == 2pi.
  */
 double stdnormal_rnd() {
 	static int i = 1;

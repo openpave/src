@@ -1025,7 +1025,7 @@ protected:
 	}
 	void isort(unsigned l, unsigned r) {
 		for (unsigned i = l; l < r && i < r-1; i++) {
-			for (unsigned j = i+1; j > l 
+			for (unsigned j = i+1; j > l
 					 && static_cast<K &>(this->value[j-1])
 					 > static_cast<K &>(this->value[j]); j--) {
 				std::swap(this->value[j-1],this->value[j]);

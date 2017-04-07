@@ -27,7 +27,7 @@
 		within a pavement.
 
 		The code is run by calling the constructor with all of the initial
-		parameters and then calling step to calculate at each new timestep. 
+		parameters and then calling step to calculate at each new timestep.
 		Step makes use of the first and last temperatures in the passed in
 		array (the surface and at-depth temperatures).
 

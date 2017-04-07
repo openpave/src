@@ -27,7 +27,7 @@
 
 	Design:
 		There are two sets of two classes: a listener item and dispatcher
-		that stores these, and a listener object with a list of dispatchers. 
+		that stores these, and a listener object with a list of dispatchers.
 		The dispatcher is created first, and listener's register with it.
 
 	Status:
@@ -144,7 +144,7 @@ protected:
 			delete s;
 		}
 	}
-	template<typename ...Ts>
+	template<typename...Ts>
 	void listen(dispatcher<message<Ts...>> & d, message<Ts...> && m) {
 		source ** s = &head;
 		while (*s != nullptr)

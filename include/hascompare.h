@@ -39,7 +39,7 @@
 
 namespace OP {
 
-#define HAS_MEMBER_FUNCTION(NAME,RET,...)                                 \
+#define HAS_MEMBER_FUNCTION(NAME,RET, ...)                                \
 template<typename T>                                                      \
 class has_##NAME                                                          \
 {                                                                         \
@@ -103,7 +103,7 @@ template<typename F>
 struct function_traits :
 	public function_traits<decltype(&F::operator())>
 {};
-template<typename C, typename R, typename ...Ts>
+template<typename C, typename R, typename...Ts>
 struct function_traits<R(C::*)(Ts...) const>
 {
 	static constexpr std::size_t arg_count = sizeof...(Ts);
@@ -115,17 +115,17 @@ struct function_traits<R(C::*)(Ts...) const>
 	};
 };
 /*
-template<typename R, typename ...Ts>
+template<typename R, typename...Ts>
 struct function_traits<R(*)(Ts...)> :
 	public function_traits<R(Ts...)>
 {};
 // member function pointer
-template<typename C, typename R, typename ...Ts>
+template<typename C, typename R, typename...Ts>
 struct function_traits<R(C::*)(Ts...)> :
 	public function_traits<R(C&,Ts...)>
 {};
 // const member function pointer
-template<typename C, typename R, typename ...Ts>
+template<typename C, typename R, typename...Ts>
 struct function_traits<R(C::*)(Ts...) const> :
 	public function_traits<R(C&,Ts...)>
 {};

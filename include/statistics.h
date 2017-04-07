@@ -26,10 +26,10 @@
 
 	Design:
 		These are close to pure C functions.
-	
+
 	Status:
 		Only the standard normal distribution is implemented.
-  
+
 	History:
 		2002/01/10 - Created by Jeremy Lea <reg@openpave.org>
 		2016/02/02 - Seperated from RELIABILITY.H

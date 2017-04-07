@@ -50,7 +50,7 @@ test_axis1()
 {
 	const int d1[12] = {1,2,3,4,5,6,7,8,9,10,11,12};
 	const int d2[4] = {1,2,3,4};
-	
+
 	axis<keyA> ax;
 	axis<keyA,keyA> ax2(ax);
 	for (unsigned i = 0; i < 12; i++)
@@ -87,7 +87,7 @@ static void
 test_table1()
 {
 	const int d1[4] = {1,2,4,5};
-	
+
 	axis<keyA> ax;
 	for (unsigned i = 0; i < 4; i++)
 		ax.add(keyA(d1[i]));

@@ -514,7 +514,7 @@ private:
 	sset<sset<pavedata>> data;
 	sset<sset<paveload>> lg;
 	unsigned clg;
-	
+
 	resulttype cache_res;
 	enum class cachestate {
 	    empty, emod, all

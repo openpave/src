@@ -29,7 +29,7 @@
 	Design:
 		The general procedure for performing reliability analysis is
 		to instantiate a number of random variables, within a
-		reliability problem, then set their distribution parameters. 
+		reliability problem, then set their distribution parameters.
 		Once these have been set, then any cross correllations
 		between the variables must be set.
 
@@ -44,12 +44,12 @@
 		Once this has been done, the reliability calculation is
 		performed, and the results can be accessed.  The type of
 		analysis depends on the type of reliability class created.
-	
+
 	Status:
 		The current design is limited to doing normal and log normal
 		variables, and to doing adaptive importance sampling.  The
 		analysis cannot be tuned.
-  
+
 	History:
 		2002/01/10 - Created by Jeremy Lea <reg@openpave.org>
 
@@ -62,7 +62,7 @@ namespace OP {
 
 class reliability;
 
-struct randomvar  
+struct randomvar
 {
 #define RV_DIST_PARAM		4			// # of distribution parameters
 public:
@@ -81,7 +81,7 @@ public:
 	double u() {				// Std uncorrellated value.
 		return ustdnormal;
 	}
-	double param(int i) {	 	// Get distribution parmater i. 
+	double param(int i) {	 	// Get distribution parmater i.
 		return (i < 0 || i > (RV_DIST_PARAM-1) ? 0.0 : d[i]);
 	}
 
@@ -93,7 +93,7 @@ protected:
 	double stdnormal;					// The current std normal value.
 	double ustdnormal;					// Uncorrelated std normal value.
 
-	double param(int i, double dp) { // Set distribution parmater i. 
+	double param(int i, double dp) { // Set distribution parmater i.
 		return (i < 0 || i >  (RV_DIST_PARAM-1) ? 0.0 : d[i] = dp);
 	}
 	randomvar(reliability * /* owner */, randomvar * /* prev */);
@@ -106,7 +106,7 @@ private:
 	randomvar * next;
 };
 
-struct gfunction  
+struct gfunction
 {
 	virtual double g() = 0;				// Current value.
 
@@ -128,7 +128,7 @@ private:
 /*
  * This is a class to perform a reliability calculation.
  */
-class reliability  
+class reliability
 {
 private:
 	randomvar * rv_head;		// The list of rv's.

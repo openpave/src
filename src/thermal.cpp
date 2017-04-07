@@ -171,7 +171,7 @@ void
 FEMthermal::step(double tt, double tb)
 {
 	unsigned i, j;
-	
+
 	// All of the information is already in the gradient.
 	memset(nt,0,n*sizeof(double));
 	nt[0] = tt;
@@ -199,7 +199,7 @@ void
 FEMthermal::interpolate(unsigned np, const double * pd, double * pt)
 {
 	unsigned i, j;
-	
+
 	for (i = 0, j = 0; i < np; i++) {
 		if (pd[i] <= nd[0]) {
 			pt[i] = nt[0];

@@ -94,7 +94,7 @@ struct WIMday {
 	static time_t GetRSADate(const char * fname);
 	bool AddRSAVehicle(const char * buf);
 	WIMday & operator += (const WIMday & daily);
-	
+
 	// The total vehicle count.
 	int TV() const {
 		return TLV()+THV();

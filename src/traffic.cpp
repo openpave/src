@@ -80,7 +80,7 @@ time_t str2time(const char * s, struct tm * date)
 {
 	static struct tm fake;
 	int d;
-	
+
 	d = str2int(s,6);
 	if (s == NULL || d == 0)
 		return -1;
@@ -198,7 +198,7 @@ bool WIMday::AddRSAVehicle(const char * buf)
 	if (na == 2 && AS[1] <= 2.9 && GVM >= 3.0)
 		AW[0] *= 2.5/GVM, AW[1] *= 2.5/GVM, GVM = 2.5;
 	// Sort Light and Heavy vehicles
-	if ((na == 0) 
+	if ((na == 0)
 	 || (na == 1 && GVM < 2.0 && L <  8.5)
 	 || (na == 2 && GVM < 3.5 && L < 10.8)
 	 || (na == 3 && GVM < 5.5)
@@ -209,7 +209,7 @@ bool WIMday::AddRSAVehicle(const char * buf)
 		HVPL[il]++;
 	}
 	// Determine axle combinations
-	ia = 0;								// First axle in bogey		
+	ia = 0;								// First axle in bogey
 	while (ia < na) {
 		ib = 1;							// No. of axles in bogey
 		while (ia+ib < na && AS[ia+ib] <= 1.7)
@@ -283,7 +283,7 @@ bool WIMsurvey::ProcessRSAFile(const char * fname, FILE * bp, WIMday * d)
 	char buf[256];
 	time_t current;
 	FILE * fp;
-	
+
 	if ((fp = fopen(fname, "r")) == NULL)
 		return false;
 	while (!feof(fp)) {
@@ -323,7 +323,7 @@ bool WIMsurvey::Read(const char * bname)
 {
 	FILE * bp;
 	WIMday d;
-	
+
 	if ((bp = fopen(bname, "rb")) == NULL)
 		return false;
 	while (!feof(bp)) {

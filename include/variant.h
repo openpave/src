@@ -59,8 +59,8 @@ namespace {
 // actual realizations of the variant.
 //
 // First fake std::void_t
-template<typename ...Ts> struct make_void { typedef void type;};
-template<typename ...Ts> using void_t = typename make_void<Ts...>::type;
+template<typename...Ts> struct make_void { typedef void type;};
+template<typename...Ts> using void_t = typename make_void<Ts...>::type;
 // Then set up the cleaner...
 template<typename T>
 struct clear_type
@@ -141,7 +141,7 @@ struct compare_v
  * class variant - A variant type.
  */
 // Tail for the recursion.
-template<typename ...Ts>
+template<typename...Ts>
 class variant {
 	struct store {
 		store() {}
@@ -157,12 +157,12 @@ class variant {
 		};
 		void clear(std::type_index) {};
 		// Set value from a different type of store
-		template<typename ...Vs>
+		template<typename...Vs>
 		std::type_index set_e(const std::type_index, const typename variant<Vs...>::store &) const {
 			throw std::runtime_error("Attempting to store invalid value type in variant!");
 		}
 	};
-	template<typename ...S>
+	template<typename...S>
 	friend class variant;
 };
 
@@ -170,7 +170,7 @@ class variant {
  * class validator - A variant functor to validate a variant value.
  */
 // Tail for the recursion.
-template<typename ...Ts>
+template<typename...Ts>
 class validator {
 	struct store {
 		store() = delete;
@@ -190,12 +190,12 @@ class validator {
 			throw std::runtime_error("Trying to validate incorrect type from variant!");
 		}
 	};
-	template<typename ...S>
+	template<typename...S>
 	friend class validator;
 };
 
 // Actual variant for type T
-template<typename T, typename ...Ts>
+template<typename T, typename...Ts>
 class variant<T,Ts...> {
 	using base_t = variant<Ts...>;
 
@@ -295,7 +295,7 @@ class variant<T,Ts...> {
 				b.clear(d);
 		}
 		// Set value from a different type of store
-		template<typename V, typename ...Vs>
+		template<typename V, typename...Vs>
 		std::type_index set_e(const std::type_index d, const typename variant<V,Vs...>::store & v) {
 			if (d == std::type_index(typeid(V))) {
 				this->template set_t<typename real_type<V>::real_t>(
@@ -320,7 +320,7 @@ class variant<T,Ts...> {
 #endif
 	} s;
 	// Allow all other variants to mess with us
-	template<typename ...S>
+	template<typename...S>
 	friend class variant;
 
 	// Allow only private access to create an empty variant
@@ -359,7 +359,7 @@ class variant<T,Ts...> {
 		copy_f<decltype(v())>(v);
     }
 	// Set value from a different type of store
-	template<typename ...Vs>
+	template<typename...Vs>
 	void set_e(const std::type_index d, const variant<Vs...> & v) {
 		 k = s.template set_e<Vs...>(d,v.s);
 	}
@@ -434,7 +434,7 @@ public:
 };
 
 // Actual validator for type T
-template<typename T, typename ...Ts>
+template<typename T, typename...Ts>
 class validator<T,Ts...> {
 	typedef validator<Ts...> base_t;
 
@@ -521,7 +521,7 @@ class validator<T,Ts...> {
 		callback f;
 	} s;
 	// Allow all other variants to mess with us
-	template<typename ...S>
+	template<typename...S>
 	friend class validator;
 
 	// Convoluted templates to handle assignments from lambda functions.
