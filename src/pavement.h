@@ -48,9 +48,9 @@
 
 #include <memory.h>
 #include <stdexcept>
-#include "mathplus.h"
-#include "set.h"
-#include "list.h"
+#include "../include/mathplus.h"
+#include "../include/set.h"
+#include "../include/list.h"
 
 namespace OP {
 

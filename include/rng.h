@@ -36,7 +36,7 @@
 #ifndef __RNG_H
 #define __RNG_H
 
-#include <mathplus.h>
+#include "mathplus.h"
 
 /*
 
