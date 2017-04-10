@@ -96,9 +96,10 @@ template<typename...Ts> using void_t = typename make_void<Ts...>::type;
 template<typename T>
 struct wrap_type
 {
+	wrap_type() : t() {
+	}
 	explicit wrap_type(T n) : t(n) {
 	}
-	wrap_type() = delete;
 	wrap_type(const wrap_type &) = delete;
 	wrap_type(wrap_type &&) = delete;
 	wrap_type & operator= (const wrap_type &) = delete;
@@ -246,6 +247,8 @@ class vunctor {
 	};
 	template<typename...S>
 	friend class vunctor;
+	template<typename...S>
+	friend class variant;
 };
 
 /*
@@ -321,18 +324,18 @@ class vunctor<T,Ts...> {
 		typedef std::function<T()> callback;
 
 		store() :
-			f() {
+			f(), t() {
 		};
 		store(const store &) = delete;
 		store(store &&) = delete;
 		store & operator= (const store &) = delete;
 		store & operator= (store &&) = delete;
 		store(std::type_index d, const store & v) :
-			f() {
+			f(), t() {
 			set(d,v);
 		}
-		store(std::type_index d, store && v)  :
-			f() {
+		store(std::type_index d, store && v) :
+			f(), t() {
 			set(d,std::move(v));
 		}
 		// U templates are conditioned on the union type for this slot.
