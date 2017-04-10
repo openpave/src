@@ -17,12 +17,6 @@ LOOP_OVER_DIRS = \
         $(MAKE) -C $$d $@; \
     done;
 
-# These are all the files needed for the makefile
-CONFIG_DEPS =                          \
-    $(topsrcdir)/build/rules.mk        \
-    $(MOD_DEPTH)/build/autoconf.mk     \
-    Makefile
-
 # Rebuild the makefile if it is out of date
 # gmake will magically restart if this is called
 Makefile: $(srcdir)/Makefile.in $(MOD_DEPTH)/config.status
