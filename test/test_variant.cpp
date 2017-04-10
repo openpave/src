@@ -41,9 +41,9 @@ void
 test1()
 {
 	printf("Test 1:\n");
-	variant<int,double> v1(1.0);
-	variant<int,double> v2(2);
-	//variant<int,double> v3(nullptr);
+	vunctor<int,double> v1(1.0);
+	vunctor<int,double> v2(2);
+	//vunctor<int,double> v3(nullptr);
 
 	double d = v1;
 	int i = v2;
@@ -59,8 +59,8 @@ void
 test2()
 {
 	printf("Test 2:\n");
-	variant<int,double> v1(1.0);
-	variant<int,double> v2(2);
+	vunctor<int,double> v1(1.0);
+	vunctor<int,double> v2(2);
 
 	double d = v1;
 	int i = v2;
@@ -88,8 +88,8 @@ void
 test3()
 {
 	printf("Test 3:\n");
-	variant<int,double> v1(1.0);
-	variant<int,double> v2(2);
+	vunctor<int,double> v1(1.0);
+	vunctor<int,double> v2(2);
 	validator<int,double> f1([](const double & d) -> bool {
 		return d == 0.3;
 	});

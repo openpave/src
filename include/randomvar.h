@@ -81,7 +81,7 @@ struct realization
 {
 	// Magic typedef for the variant class to know that we are a cameleon that
 	// has a different realized type to the abstract variable.
-	using type = float;
+	using cast_t = float;
 
 	realization(house & h, const random & r, float d);
 	~realization();
@@ -147,7 +147,7 @@ struct random
 {
 	// Magic typedef for the variant class to know that we are a cameleon that
 	// has a different realized type to the abstract variable.
-	using real = realization;
+	using real_t = realization;
 
 	virtual ~random() {
 		if (dealer != nullptr)
@@ -163,12 +163,22 @@ struct random
 	realization realize() const {
 		return realization(*dealer,*this,mean());
 	}
+	house * get_random() const {
+		return dealer;
+	}
+	void set_random(house * h) {
+		if (dealer != nullptr)
+			dealer->rem_variable(this);
+		dealer = h;
+		if (dealer != nullptr)
+			dealer->add_variable(this);
+	}
 	static random * make_rv(distribution d, float m, float s, house * h);
 	static random * make_rv(const random & r, house * h);
 
 protected:
 	house * dealer;                     // The house - can be null.
-	float d[RV_DIST_PARAM];			// Four distribution parmeters.
+	float d[RV_DIST_PARAM];			    // Four distribution parmeters.
 
 	// Create a random variable.
 	random(house * h) :
@@ -194,6 +204,8 @@ protected:
 	}
 	// Set distribution parmater i.
 	float param(size_t i, float dp) {
+		if (i > (RV_DIST_PARAM-1))
+			throw std::runtime_error("Invalid distribution parameter");
 		return d[i] = dp;
 	}
 };
@@ -248,9 +260,9 @@ struct rv_lognormal :
 	rv_lognormal(float m, float s, house * h) :
 		random_var(h) {
 		param(1,std::isinf(m) ? NAN :
-			    m <= 0 ? NAN : sqrt(log(1+s*s/m/m)));
+			    std::isnan(m) || m <= 0 ? NAN : sqrt(log(1+s*s/m/m)));
 		param(0,std::isinf(m) ? INFINITY :
-			    m <= 0 ? NAN : log(m) - d[1]*d[1]/2);
+			    std::isnan(m) || m <= 0 ? NAN : log(m) - d[1]*d[1]/2);
 	}
 protected:
 	friend struct random;
@@ -277,7 +289,7 @@ realization::~realization() {
 // Out-line-destructor to call ~random().
 inline
 house::~house() {
-	assert(vars.length() == 0);
+	//assert(vars.length() == 0);
 }
 
 // Let the house make random variables too..
