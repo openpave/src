@@ -265,10 +265,20 @@ protected:
 			if (e->prev != nullptr)
 				e->prev->next = e;
 		}
-		if (e->prev == nullptr)
+		if (e->prev == nullptr) {
+			if (this->first != e->next)
+				throw std::runtime_error("Linked list pointer mismatch!");
 			this->first = e;
-		if (e->next == nullptr)
+			if (e->next != nullptr)
+				e->next->prev = e;
+		}
+		if (e->next == nullptr) {
+			if (this->last != e->prev)
+				throw std::runtime_error("Linked list pointer mismatch!");
 			this->last = e;
+			if (e->prev != nullptr)
+				e->prev->next = e;
+		}
 		return e;
 	}
 	// Remove an element from the list (but don't delete it).
@@ -280,11 +290,13 @@ protected:
 		if (e->prev == nullptr)
 			this->first = e->next;
 		else
-			e->prev = nullptr;
+			e->prev->next = this->next;
 		if (e->next == nullptr)
 			this->last = e->prev;
 		else
-			e->next = nullptr;
+			e->next->prev = this->prev;
+		e->next = nullptr;
+		e->prev = nullptr;
 		return e;
 	}
 	// Push an element onto the head of the list (or just insert)
@@ -342,10 +354,16 @@ protected:
 			if (this->prev != nullptr)
 				this->prev->next = static_cast<T *>(this);
 		}
-		if (this->prev == nullptr)
+		if (this->prev == nullptr) {
+			if (owner->first != this->next)
+				throw std::runtime_error("Linked list pointer mismatch!");
 			owner->first = static_cast<T *>(this);
-		if (this->next == nullptr)
+		}
+		if (this->next == nullptr) {
+			if (owner->last != this->prev)
+				throw std::runtime_error("Linked list pointer mismatch!");
 			owner->last = static_cast<T *>(this);
+		}
 	}
 	// Copying or moving list elements is inherently unsafe.
 	listelement_o(const listelement_o &) = delete;
@@ -361,7 +379,7 @@ protected:
 		if (this->next == nullptr)
 			owner->last = this->prev;
 	}
-	// Figure out the length of the list.
+	// Figure out the position of this element in the list.
 	unsigned position() const {
 		unsigned s = 0;
 		T * t = owner->first;
