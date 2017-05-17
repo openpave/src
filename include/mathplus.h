@@ -42,6 +42,7 @@
 #include <cmath>
 #include <math.h>
 #else
+#include <cmath>
 #include <math.h>
 #endif
 #if defined(_MSC_VER)

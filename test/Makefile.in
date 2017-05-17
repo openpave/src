@@ -8,12 +8,13 @@ include @OBJDIR@/build/autoconf.mk
 
 PROGRAMS =                             \
     test                               \
-    test_set                           \
-    test_matrix                        \
-    test_pavement                      \
     test_fft                           \
     test_listen                        \
+    test_matrix                        \
+    test_numerics                      \
+    test_pavement                      \
     test_rng                           \
+    test_set                           \
     test_table                         \
     test_thermal                       \
     test_variant                       \
@@ -24,18 +25,6 @@ CXXSRCS_test =                         \
     test_backcalc.cpp                  \
     $(NULL)
 
-CXXSRCS_test_set =                     \
-    test_set.cpp                       \
-    $(NULL)
-
-CXXSRCS_test_matrix =                  \
-    test_matrix.cpp                    \
-    $(NULL)
-
-CXXSRCS_test_pavement =                \
-    test_pavement.cpp                  \
-    $(NULL)
-
 CXXSRCS_test_fft =                     \
     test_fft.cpp                       \
     $(NULL)
@@ -44,8 +33,24 @@ CXXSRCS_test_listen =                  \
     test_listen.cpp                    \
     $(NULL)
 
+CXXSRCS_test_matrix =                  \
+    test_matrix.cpp                    \
+    $(NULL)
+
+CXXSRCS_test_numerics =                \
+    test_numerics.cpp                  \
+    $(NULL)
+
+CXXSRCS_test_pavement =                \
+    test_pavement.cpp                  \
+    $(NULL)
+
 CXXSRCS_test_rng =                     \
     test_rng.cpp                       \
+    $(NULL)
+
+CXXSRCS_test_set =                     \
+    test_set.cpp                       \
     $(NULL)
 
 CXXSRCS_test_table =                   \

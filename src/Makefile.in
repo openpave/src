@@ -10,7 +10,8 @@ LIBRARY         = openpave
 ONLY_STATIC_LIB	= 1
 
 CXXSRCS = \
-	linalg.cpp   \
+	linalg.cpp          \
+	numerics.cpp        \
 	pavement.cpp        \
 	reliability.cpp     \
 	statistics.cpp      \
