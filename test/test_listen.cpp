@@ -36,41 +36,70 @@ using namespace OP;
 
 enum class test_event { test };
 
-class test_source : public dispatcher<message<test_event>> {
+class test_dispatcher : public dispatcher<message<test_event>> {
 public:
-	test_source() {
-		printf("Constructing source\n");
+	test_dispatcher() {
+		printf("Constructing test dispatcher\n");
 	}
-	~test_source() {
-		printf("Deleting source\n");
+	~test_dispatcher() {
+		printf("Deleting test dispatcher\n");
 	}
 	void event() {
 		dispatch(test_event::test);
 	}
 };
 
-class test_sink : public listener {
+class test_listener : public listener {
 public:
-	test_sink(test_source & d) {
-		printf("Constructing sink\n");
+	test_listener() {
+		printf("Constructing listener\n");
+	}
+	void test_listen(test_dispatcher & d) {
+		printf("Attaching listener\n");
 		listen(d,message<test_event>(
 			[this](test_event e){ this->onevent(e); }));
 	}
-	~test_sink() {
-		printf("Deleting sink\n");
+	~test_listener() {
+		printf("Deleting listener\n");
 	}
 	void onevent(test_event) {
 		printf("Got event!\n");
 	}
 };
 
+void
+test1()
+{
+	printf("Test 1:\n");
+	test_dispatcher dispatcher;
+	test_listener listener;
+	listener.test_listen(dispatcher);
+	printf("Sending event...\n");
+	dispatcher.event();
+}
+
+void
+test2()
+{
+	printf("Test 2:\n");
+	test_dispatcher * dispatcher1 = new test_dispatcher();
+	test_dispatcher * dispatcher2 = new test_dispatcher();
+	test_listener * listener1 = new test_listener();
+	listener1->test_listen(*dispatcher1);
+	test_listener * listener2 = new test_listener();
+	listener2->test_listen(*dispatcher2);
+	listener2->test_listen(*dispatcher1);
+	printf("Sending event...\n");
+	dispatcher1->event();
+	delete listener1;
+	delete listener2;
+	delete dispatcher1;
+}
+
 int
 main()
 {
-	printf("Test 1:\n");
-	test_source source;
-	test_sink sink(source);
-	printf("Sending event...\n");
-	source.event();
+	test1();
+	test2();
 	return 0;
 }
