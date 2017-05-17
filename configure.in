@@ -498,7 +498,7 @@ case "$target" in
             CPPFLAGS="$CPPFLAGS -MD"
         fi
         if test -n "$OP_DEBUG"; then
-            _DEBUG_DEFINES="$_DEBUG_DEFINES -D_DEBUG"
+            _DEBUG_DEFINES="$_DEBUG_DEFINES"
             DSO_LDFLAGS="$DSO_LDFLAGS -DEBUG"
             LDFLAGS="$LDFLAGS -DEBUG"
         else

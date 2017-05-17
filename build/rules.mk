@@ -201,7 +201,7 @@ endif
 $(1)$(EXE_SUFFIX): $$(OBJS_$(1)) $(_LIB_DEPS)
 ifdef WIN32
 	@sh $$(topsrcdir)/build/cygwin-wrapper \
-	    $$(CC) $$(OBJS_$(1)) -Fe$$@ -link -MANIFEST $$(OS_LDFLAGS) \
+	    $$(CC) $$(OBJS_$(1)) -Fe$$@ -link -MANIFEST -INCREMENTAL:NO $$(OS_LDFLAGS) \
 	    $$(patsubst -l%,lib%.$$(LIB_SUFFIX),$$(subst -L,/LIBPATH:,$$(_LIBS))) \
 	    $$(OS_LIBS)
 	@sh $$(topsrcdir)/build/cygwin-wrapper \
