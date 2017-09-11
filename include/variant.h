@@ -84,7 +84,6 @@
 
 namespace OP {
 
-namespace {
 // Check if the types being stored in the variant have a magic nested typedef
 // for a realization type, in which case define a new variant type for the
 // actual realizations of the variant.
@@ -207,7 +206,7 @@ struct compare_v
 	|| (std::is_base_of<typename clean_type<T>::type,
 			            typename clean_type<U>::type>::value)
 	,std::true_type,std::false_type>::type;
-	static constexpr bool setable = setable_t::value;
+	static constexpr const bool setable = setable_t::value;
 	using castable_t = typename std::conditional<
 	std::is_same<U,T>::value
 	|| std::is_same<typename clean_type<U>::type,
@@ -215,10 +214,8 @@ struct compare_v
 	|| (std::is_base_of<typename clean_type<U>::type,
 			            typename clean_type<T>::type>::value)
 	,std::true_type,std::false_type>::type;
-	static constexpr bool castable = castable_t::value;
+	static constexpr const bool castable = castable_t::value;
 };
-
-}
 
 /*
  * class vunctor - A variant functor type.
@@ -496,7 +493,7 @@ public:
 	// This is the type of variant we will be when realized.
 	using real_t = vunctor<typename real_type<T>::real_t,typename real_type<Ts>::real_t...>;
 	// This is the type of our validator.
-	using validator_t = validator<T,Ts...>;
+	using validator_t = validator<typename cast_type<T>::type,typename cast_type<Ts>::type...>;
 	// This is the type of our simple variant.
 	using variant_t = variant<typename cast_type<T>::type,typename cast_type<Ts>::type...>;
 
@@ -548,8 +545,13 @@ public:
 	}
 	// Return the contained value.
 	template<typename V>
-	operator V () const {
+	V get() const {
 		return s.template get<V>(k);
+	}
+	// Also allow casting in some applications.
+	template<typename V>
+	operator V () const {
+		return get<V>();
 	}
 	// Get a realized value for this variant.
 	real_t realize() const {
@@ -572,7 +574,7 @@ class validator<T,Ts...> {
 
 	std::type_index k;
 	union store {
-		typedef std::function<bool(const T &)> callback;
+		typedef std::function<bool(const typename cast_type<T>::type &)> callback;
 
 		store() = delete;
 		store(const store &) = delete;
@@ -604,14 +606,14 @@ class validator<T,Ts...> {
 		}
 		// Get the function or value
 		template<typename U>
-		typename std::enable_if<compare_v<U,T>::castable,bool>::type
+		typename std::enable_if<compare_v<T,U>::castable,bool>::type
 		check_v(std::type_index d, const U & u) const {
 			if (d != std::type_index(typeid(T)))
 				throw std::runtime_error("Attempting to check wrong type of variant!");
 			return f(u);
 		}
 		template<typename U>
-		typename std::enable_if<!compare_v<U,T>::castable,bool>::type
+		typename std::enable_if<!compare_v<T,U>::castable,bool>::type
 		check_v(std::type_index d, const U & u) const {
 			return b.template check_v<U>(d,u);
 		}
@@ -883,8 +885,12 @@ public:
 		return *this;
 	}
 	template<typename V>
-	operator V () const {
+	V get() const {
 		return s.template get<V>(k);
+	}
+	template<typename V>
+	operator V () const {
+		return get<V>();
 	}
 	std::type_index get_type() const {
 		return k;
