@@ -62,7 +62,7 @@
 
 namespace OP {
 
-#define RV_DIST_PARAM		3			// # of distribution parameters
+#define RV_DIST_PARAM 3                // # of distribution parameters
 
 // Possible types of distribution
 enum class distribution {
@@ -71,29 +71,84 @@ enum class distribution {
 };
 
 // forward declare
+struct realization;
 struct random;
 struct house;
 
 /*
- * struct realization - a store for a realization of a random variable.
+ * struct realized - a store for a realization of a random variable.
  */
-struct realization
+class realized
 {
-	// Magic typedef for the variant class to know that we are a cameleon that
-	// has a different realized type to the abstract variable.
-	using cast_t = float;
+	friend struct realization;
+	friend struct random;
+	friend struct house;
 
-	realization(house & h, const random & r, float d);
-	~realization();
-	operator const float & () const {
-		return v;
-	}
-	operator float () {
-		return v;
-	}
+	realized(const realized &) = delete;
+	realized(realized &&) = delete;
+	realized & operator = (const realized &) = delete;
+	realized & operator = (realized &&) = delete;
+	realized(house & h, const random & r, float d);
+	~realized();
+	void roll();
+
 	house * dealer;
 	const random * rv;
 	float v;
+	unsigned ref_cnt = 0;
+};
+
+/*
+ * struct realization - a handle to a realization of a random variable.
+ */
+struct realization
+{
+	// Magic typedef for the variant class to know that we are a cameleon
+	// that has a different realized type to the abstract variable.
+	using cast_t = float;
+
+	realization()
+	  : me(nullptr) {
+	}
+	realization(const realization & r)
+	  : me(r.me) {
+		me->ref_cnt++;
+	}
+	realization(realization && r)
+	  : me(std::move(r.me)) {
+		r.me = nullptr;
+	}
+	explicit realization(realized * r)
+	  : me(r) {
+		me->ref_cnt++;
+	}
+	realization & operator = (const realization & r) {
+		if (me && --me->ref_cnt == 0)
+			delete me;
+		me = r.me;
+		me->ref_cnt++;
+		return *this;
+	}
+	realization & operator = (realization && r) {
+		std::swap(me, r.me);
+		return *this;
+	}
+	~realization() {
+		if (me && --me->ref_cnt == 0)
+			delete me;
+	}
+	operator const float & () const {
+		return me->v;
+	}
+	operator float () {
+		return me->v;
+	}
+	void overwrite(float f) {
+		me->v = f;
+	}
+
+private:
+	realized * me;
 };
 
 /*
@@ -105,50 +160,56 @@ struct realization
  */
 struct house
 {
-	house() :
-		store(), vars(), dice() {
+	house()
+	  : store(), vars(), dice() {
 	}
 	~house();
 	random * make_rv(const random & r);
 	random * make_rv(distribution d, float m, float s);
 	template<typename T>
 	random * make_rv(float m, float s);
+	void rolldice();
 
 private:
-	friend struct realization;
-	void add_realization(realization * r) {
+	friend class realized;
+	friend struct random;
+
+	void add_realization(realized * r) {
 		store.add(r);
 	}
-	void rem_realization(realization * r) {
+	void rem_realization(realized * r) {
 		store.remove(r);
 	}
-	ktree_avl<realization *> store;
-
-	friend struct random;
 	void add_variable(random * r) {
 		vars.add(r);
 	}
 	void rem_variable(random * r) {
 		vars.remove(r);
 	}
-	ktree_avl<random *> vars;
 
+	ktree_avl<realized *> store;
+	ktree_avl<random *> vars;
 	rng dice;
 };
 
 /*
  * struct random - a generic random variable
  *
- * This wraps the specific distribution types below, and provides an interface
- * that can be used to interact with the variable, including getting
- * realizations.
+ * This wraps the specific distribution types below, and provides an
+ * interface that can be used to interact with the variable, including
+ * getting realizations.
  */
 struct random
 {
-	// Magic typedef for the variant class to know that we are a cameleon that
-	// has a different realized type to the abstract variable.
+	// Magic typedef for the variant class to know that we are a cameleon
+	// that has a different realized type to the abstract variable.
 	using real_t = realization;
 
+	random() = delete;
+	random(const random &) = delete;
+	random(random &&) = delete;
+	random & operator = (const random &) = delete;
+	random & operator = (random &&) = delete;
 	virtual ~random() {
 		if (dealer != nullptr)
 			dealer->rem_variable(this);
@@ -161,8 +222,11 @@ struct random
 	virtual float stddev() const = 0;
 	// Get the expected value for use in variants
 	realization realize() const {
-		return realization(*dealer,*this,mean());
+		realized * r = new realized(*dealer,*this,mean());
+		return realization(r);
 	}
+	// Get a new random number. XXX need covariance matrix.
+	virtual float roll() const = 0;
 	house * get_random() const {
 		return dealer;
 	}
@@ -178,19 +242,19 @@ struct random
 
 protected:
 	house * dealer;                     // The house - can be null.
-	float d[RV_DIST_PARAM];			    // Four distribution parmeters.
+	float d[RV_DIST_PARAM];             // Four distribution parmeters.
 
 	// Create a random variable.
-	random(house * h) :
-		dealer(h) {
+	random(house * h)
+	  : dealer(h) {
 		for (size_t i = 0; i < RV_DIST_PARAM; i++)
 			d[i] = NAN;
 		if (dealer != nullptr)
 			dealer->add_variable(this);
 	}
 	// copy a random variable.
-	random(const random & r, house * h) :
-		dealer(h == nullptr ? r.dealer : h) {
+	random(const random & r, house * h)
+	  : dealer(h == nullptr ? r.dealer : h) {
 		for (size_t i = 0; i < RV_DIST_PARAM; i++)
 			d[i] = r.d[i];
 		if (dealer != nullptr)
@@ -208,11 +272,13 @@ protected:
 			throw std::runtime_error("Invalid distribution parameter");
 		return d[i] = dp;
 	}
+	double stdnormal() const {
+		return dealer->dice.stdnormal();
+	}
 };
 
 template<distribution D>
-struct random_var :
-	public random
+struct random_var : public random
 {
 	static constexpr const distribution distribution_t = D;
 
@@ -223,73 +289,98 @@ protected:
 	using random::random;
 };
 
-struct rv_normal :
-	public random_var<distribution::normal>
+struct rv_normal : public random_var<distribution::normal>
 {
+	rv_normal(float m, float s, house * h)
+	  : random_var(h) {
+		param(0,m);
+		param(1,s);
+	}
 	virtual float mean() const override final {
 		return d[0];
 	}
 	virtual float stddev() const override final {
 		return d[1];
 	}
-
-	rv_normal(float m, float s, house * h) :
-		random_var(h) {
-		param(0,m);
-		param(1,s);
+	virtual float roll() const override final {
+		return static_cast<float>(d[0]+d[1]*stdnormal());
 	}
+
 protected:
 	friend struct random;
-	rv_normal(const random & r, house * h) :
-		random_var(r,h) {
+
+	rv_normal(const random & r, house * h)
+	  : random_var(r,h) {
 	}
 };
 
-struct rv_lognormal :
-	public random_var<distribution::lognormal>
+struct rv_lognormal : public random_var<distribution::lognormal>
 {
+	rv_lognormal(float m, float s, house * h)
+		: random_var(h)
+	{
+		param(1, std::isinf(m) ? NAN :
+		         std::isnan(m) || m <= 0 ? NAN : sqrt(log(1 + s*s / m / m)));
+		param(0, std::isinf(m) ? INFINITY :
+		         std::isnan(m) || m <= 0 ? NAN : log(m) - d[1] * d[1] / 2);
+	}
+
 	virtual float mean() const override final {
 		return std::isinf(d[0]) ? INFINITY :
-			   std::isnan(d[0]) ? NAN : exp(d[0] + d[1]*d[1]/2);
+		       std::isnan(d[0]) ? NAN : exp(d[0] + d[1]*d[1]/2);
 	}
 	virtual float stddev() const override final {
 		return std::isinf(d[0]) ? INFINITY :
-			   std::isnan(d[0]) ? NAN : mean()*sqrt(exp(d[1]*d[1])-1);
+		       std::isnan(d[0]) ? NAN : mean()*sqrt(exp(d[1]*d[1])-1);
+	}
+	virtual float roll() const override final {
+		return static_cast<float>(exp(d[0]+d[1]*stdnormal()));
 	}
 
-	rv_lognormal(float m, float s, house * h) :
-		random_var(h) {
-		param(1,std::isinf(m) ? NAN :
-			    std::isnan(m) || m <= 0 ? NAN : sqrt(log(1+s*s/m/m)));
-		param(0,std::isinf(m) ? INFINITY :
-			    std::isnan(m) || m <= 0 ? NAN : log(m) - d[1]*d[1]/2);
-	}
 protected:
 	friend struct random;
-	rv_lognormal(const random & r, house * h) :
-		random_var(r,h) {
+
+	rv_lognormal(const random & r, house * h)
+	  : random_var(r,h) {
 	}
 };
 
 // Out-of-line constructor to add ourselves to the house.
 inline
-realization::realization(house & h, const random & r, float d) :
-	dealer(&h), rv(&r), v(d) {
+realized::realized(house & h, const random & r, float d)
+  : dealer(&h), rv(&r), v(d)
+{
 	if (dealer != nullptr)
 		dealer->add_realization(this);
 }
 
 // Out-of-line constructor to add ourselves to the house.
 inline
-realization::~realization() {
+realized::~realized()
+{
 	if (dealer != nullptr)
 		dealer->rem_realization(this);
 }
 
+inline void
+realized::roll()
+{
+	v = rv->roll();
+}
+
 // Out-line-destructor to call ~random().
 inline
-house::~house() {
+house::~house()
+{
 	//assert(vars.length() == 0);
+}
+
+inline void
+house::rolldice()
+{
+	for (unsigned i = 0; i < store.length(); i++) {
+		store[i]->roll();
+	}
 }
 
 // Let the house make random variables too..
