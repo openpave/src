@@ -135,7 +135,7 @@ private:
 		const unsigned d = sizeof...(Ks);
 		unsigned s = ax.length();
 		listen(ax,message<axis_message,unsigned>(
-			[this,d](axis_message e, unsigned p){
+			[=](axis_message e, unsigned p){
 				switch (e) {
 				case axis_message::add:
 					this->add(d,p);
