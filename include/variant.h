@@ -229,6 +229,10 @@ class vunctor {
 		store(store &&) = delete;
 		store & operator= (const store &) = delete;
 		store & operator= (store &&) = delete;
+		template<typename U>
+		U get(std::type_index) const {
+			throw std::runtime_error("Attempting to get invalid type from variant!");
+		};
 		void set(std::type_index, const store &) {
 			throw std::runtime_error("Attempting to store invalid type in variant!");
 		};
