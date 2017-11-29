@@ -52,6 +52,7 @@ DllMain(HANDLE, DWORD fdwReason, LPVOID)
 
 #define _PROGRESS_IMP
 #include "event.h"
+#include "tree.h"
 #include "pavement.h"
 #include "thermal.h"
 #include "libop.h"
@@ -232,12 +233,15 @@ OP_LE_Calc_CalME(const unsigned flags,
 	return rv;
 }
 
+ktree_avl<long, FEMthermal *> tokens;
+
 long OP_EXPORT
 OP_HT_Init(const unsigned nl, const double * h, const double * D,
            const unsigned nn, const double * nd, const double * nt,
            const unsigned nw, const double dt)
 {
 	unsigned i;
+	long token = 0;
 
 	if (!(nw == 1 || nw == 2 || nw == 4)) {
 		event_msg(EVENT_WARN, "Invalid bandwidth!");
@@ -255,18 +259,25 @@ OP_HT_Init(const unsigned nl, const double * h, const double * D,
 		}
 	}
 	FEMthermal * rv = new FEMthermal(nl,h,D,nn,nd,nt,dt,nw);
+	while (tokens.haskey(token))
+		token++;
+	tokens.add(token, rv);
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
 	_clearfp();
 #endif
-	return reinterpret_cast<long>(rv);
+	return token;
 }
 
 void OP_EXPORT
 OP_HT_Step(const long token, const unsigned nt,
            const double * tt, const double tb)
 {
-	FEMthermal * system = reinterpret_cast<FEMthermal *>(token);
+	if (!tokens.haskey(token)) {
+		event_msg(EVENT_ERROR, "Invalid token!");
+		return;
+	}
+	FEMthermal * system = tokens.get(token);
 
 	for (unsigned i = 0; i < nt; i++)
 		system->step(tt[i],tb);
@@ -279,7 +290,11 @@ void OP_EXPORT
 OP_HT_Interpolate(const long token, const unsigned np, const double * pd,
                   double * pt)
 {
-	FEMthermal * system = reinterpret_cast<FEMthermal *>(token);
+	if (!tokens.haskey(token)) {
+		event_msg(EVENT_ERROR, "Invalid token!");
+		return;
+	}
+	FEMthermal * system = tokens.get(token);
 
 	system->interpolate(np,pd,pt);
 #if defined(_MSC_VER) || defined(__MINGW32__)
@@ -290,6 +305,11 @@ OP_HT_Interpolate(const long token, const unsigned np, const double * pd,
 void OP_EXPORT
 OP_HT_Reset(const long token)
 {
-	FEMthermal * system = reinterpret_cast<FEMthermal *>(token);
+	if (!tokens.haskey(token)) {
+		event_msg(EVENT_ERROR, "Invalid token!");
+		return;
+	}
+	FEMthermal * system = tokens.get(token);
+	tokens.remove(token);
 	delete system;
 }
