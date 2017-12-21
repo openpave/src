@@ -33,10 +33,14 @@
 		caller, and the associated locking primitives to make sure we
 		don't get in a tangle.
 
-		Tasks cannot take any arguments, but can return values or throw.
+		Tasks cannot take any arguments, but can return values or throw. If
+		a task throws, then thread processing is aborted.  Tasks will
+		be processed in the order they are enqueued and the callbacks are
+		likely to also be ordered.
 
 		The class makes use of the standard C++ threading tools as much as
-		possible.
+		possible.  A helper class takes care of the special processing
+		needed for void return values.
 
 	History:
 		2017/12/20 - Created a basic implementation.
@@ -61,22 +65,23 @@ struct task_helper {
 	using task_t = std::tuple<function_t,callback_t>;
 	using result_t = std::tuple<std::future<T>,callback_t>;
 	// Do the callback with the result
-	static void callback(std::future<T> & f, callback_t & c) {
-		c(f.get());
+	static void callback(result_t & r) {
+		std::get<1>(r)(std::get<0>(r).get());
 	}
 	// Fallback for callback
 	static void fallback(T) {
 	}
 };
+// and then for void...
 template<>
 struct task_helper<void> {
 	using function_t = std::packaged_task<void()>; // The actual task
 	using callback_t = std::function<void()>;      // The callback
 	using task_t = std::tuple<function_t,callback_t>;
 	using result_t = std::tuple<std::future<void>,callback_t>;
-	static void callback(std::future<void> & f, callback_t & c) {
-		f.get();
-		c();
+	static void callback(result_t & r) {
+		std::get<0>(r).get();
+		std::get<1>(r)();
 	}
 	static void fallback() {
 	}
@@ -92,8 +97,9 @@ public:
 	using callback_t = typename task_helper<T>::callback_t;
 
 	// basic constructor.
-	task_queue(std::size_t s = std::thread::hardware_concurrency()) {
-		s = std::max(std::size_t(1),std::min(s,std::size_t(8)));
+	task_queue(std::size_t s = 0) {
+		s = s == 0 ? std::thread::hardware_concurrency()-1 : s;
+		s = std::max(std::size_t(1),s);
 		for (std::size_t i = 0; i < s; i++)
 			// implicit call to std::thread constructor.
 			workers.emplace_back(std::bind(&task_queue::worker, this));
@@ -121,8 +127,19 @@ public:
 		drain();
 	}
 	void drain() {
-		while (haveresults())
+		bool done = false;
+
+		while (!done) {
+			std::unique_lock<std::mutex> lock{mtx};
+
+			if (!havework() && !haveresults())
+				done = true;
+			if (!empty && havework())
+				cv.notify_one();
+			lock.unlock(); // unlock so they can work.
+			std::this_thread::yield();
 			result(true); // wait and return;
+		}
 	}
 	// enqueue some work into the task queue and try to wake up a worker
 	template <typename F, typename C = callback_t>
@@ -133,8 +150,9 @@ public:
 			return; // throw?
 		tasks.emplace(std::forward<F>(f),std::forward<C>(cb));
 		cv.notify_one();
+		bool rv = haveresults();
 		lock.unlock(); // unlock so they can work.
-		if (haveresults())
+		if (rv)
 			result(false); // try to return a result.
 	}
 
@@ -148,8 +166,7 @@ private:
 	task_queue & operator=(const task_queue &) = delete;
 	task_queue & operator=(task_queue &&) = delete;
 
-	// This runs in the threads but in the same *this context as the main
-	// thread.
+	// This runs in the threads but in the same context as the main thread.
 	void worker() {
 		task_t task;
 
@@ -169,7 +186,17 @@ private:
 			} else if (exiting)
 				return;
 		} catch (...) {
-			// XXX need to return exceptions!
+			std::promise<T> p;
+			try {
+				results.emplace(p.get_future(),
+						callback_t(task_helper<T>::fallback));
+				// store anything thrown in the promise
+				p.set_exception(std::current_exception());
+				abort = true; // start abort ASAP
+				return; // assume this thread should die
+			} catch(...) { // set_exception() may throw too
+				throw; // just throw from the thread
+			}
 		}
 	}
 	// This runs in the main thread.
@@ -177,9 +204,16 @@ private:
 		std::unique_lock<std::mutex> lock{mtx};
 		result_t result;
 
-		if (getresult(result,wait)) {
+		if (getresult(result,wait) && !abort) {
 			lock.unlock();
-			task_helper<T>::callback(std::get<0>(result),std::get<1>(result));
+			try {
+				// The internal get() may re-throw an exception.
+				task_helper<T>::callback(result);
+			} catch (...) {
+				// try to abort all threads ASAP.
+				abort = true;
+				throw;
+			}
 		}
 	}
 	// Check if there is work (call with mtx locked)
