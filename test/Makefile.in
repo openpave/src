@@ -16,6 +16,7 @@ PROGRAMS =                             \
     test_rng                           \
     test_set                           \
     test_table                         \
+    test_task                          \
     test_thermal                       \
     test_variant                       \
     $(NULL)
@@ -55,6 +56,10 @@ CXXSRCS_test_set =                     \
 
 CXXSRCS_test_table =                   \
     test_table.cpp                     \
+    $(NULL)
+
+CXXSRCS_test_task =                    \
+    test_task.cpp                      \
     $(NULL)
 
 CXXSRCS_test_thermal =                 \

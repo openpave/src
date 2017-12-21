@@ -429,6 +429,7 @@ case "$target" in
     CXXFLAGS="$CXXFLAGS -std=c++11 -fexceptions"
     DSO_CFLAGS=-fPIC
     DSO_LDFLAGS='-shared -Wl,-soname -Wl,$(notdir $@)'
+    LDFLAGS=-pthread
     _OPTIMIZE_FLAGS=-O2
     _DEBUG_FLAGS="-g -fno-inline"
     ;;
