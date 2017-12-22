@@ -71,6 +71,11 @@ struct task_helper {
 	// Fallback for callback
 	static void fallback(T) {
 	}
+	// Direct call without threading
+	static void direct(task_t & t) {
+		std::get<0>(t)();
+		std::get<1>(t)(	std::get<0>(t).get_future().get());
+	}
 };
 // and then for void...
 template<>
@@ -85,6 +90,10 @@ struct task_helper<void> {
 	}
 	static void fallback() {
 	}
+	static void direct(task_t & t) {
+		std::get<0>(t)();
+		std::get<1>(t)();
+	}
 };
 
 /*
@@ -98,7 +107,7 @@ public:
 
 	// basic constructor.
 	task_queue(std::size_t s = 0) {
-		s = s == 0 ? std::thread::hardware_concurrency()-1 : s;
+		s = s == 0 ? std::thread::hardware_concurrency()+2 : s;
 		s = std::max(std::size_t(1),s);
 		for (std::size_t i = 0; i < s; i++)
 			// implicit call to std::thread constructor.
@@ -146,14 +155,24 @@ public:
 	void enqueue(F && f, C && cb = callback_t(task_helper<T>::fallback)) {
 		std::unique_lock<std::mutex> lock{mtx};
 
-		if (exiting || empty || abort) // Don't add more work if we are exiting
+		// Don't add more work if we are exiting
+		if (exiting || empty || abort)
 			return; // throw?
+		if (single_thread) {
+			task_t t{std::forward<F>(f),std::forward<C>(cb)};
+			task_helper<T>::direct(t);
+			return;
+		}
 		tasks.emplace(std::forward<F>(f),std::forward<C>(cb));
 		cv.notify_one();
 		bool rv = haveresults();
 		lock.unlock(); // unlock so they can work.
 		if (rv)
 			result(false); // try to return a result.
+	}
+	void force_single_threaded() {
+		single_thread = true;
+		drain();
 	}
 
 private:
@@ -258,6 +277,7 @@ private:
 	std::atomic<bool>        exiting{false};
 	std::atomic<bool>        empty{false};
 	std::atomic<bool>        abort{false};
+	std::atomic<bool>        single_thread{false};
 };
 
 } // namespace OP
