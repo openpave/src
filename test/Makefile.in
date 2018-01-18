@@ -8,6 +8,7 @@ include @OBJDIR@/build/autoconf.mk
 
 PROGRAMS =                             \
     test                               \
+    test_ctti                          \
     test_fft                           \
     test_listen                        \
     test_matrix                        \
@@ -24,6 +25,10 @@ PROGRAMS =                             \
 CXXSRCS_test =                         \
     test.cpp                           \
     test_backcalc.cpp                  \
+    $(NULL)
+
+CXXSRCS_test_ctti =                    \
+    test_ctti.cpp                      \
     $(NULL)
 
 CXXSRCS_test_fft =                     \
