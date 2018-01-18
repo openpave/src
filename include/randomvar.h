@@ -50,11 +50,8 @@
 #ifndef __RANDOMVAR_H
 #define __RANDOMVAR_H
 
-#include <assert.h>
 #include <cmath>
 #include <stdexcept>
-#include <typeindex>
-#include <tuple>
 #include "mathplus.h"
 #include "rng.h"
 #include "statistics.h"
@@ -237,6 +234,7 @@ struct random
 		if (dealer != nullptr)
 			dealer->add_variable(this);
 	}
+	// defined in statistics.cpp
 	static random * make_rv(distribution d, float m, float s, house * h);
 	static random * make_rv(const random & r, house * h);
 
