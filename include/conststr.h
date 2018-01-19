@@ -65,6 +65,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <algorithm>
 #include <cstring>
+#include <functional>
 #include <string>
 
 namespace OP {
@@ -85,32 +86,39 @@ public:
 	typedef std::size_t size_t;
 	typedef std::size_t hash_t;
 
+	// Disallow default constructor
+	conststr() = delete;
 	// This is the default constructor within most code.
 	// Template deduction is used to get the length.
 	template<size_t N>
 	constexpr conststr(const char (&s)[N]) :
-		str{s}, len{N-1} {}
+		str{s}, len{N-1}, hash{fnv1a_hash(len,str)} {}
 	// Explicit construction with known length.
-	constexpr conststr(const char * const s, size_t l) :
-		str{s}, len{l} {}
+	constexpr conststr(const char * s, size_t l) :
+		str{s}, len{l}, hash{fnv1a_hash(len,str)}  {}
 	// Explicit construction from a pointer.  Must be null
 	// terminated.
-	explicit constexpr conststr(const char * const s) :
+	explicit constexpr conststr(const char * s) :
 		conststr{s,calclen(s)} {}
 	// Explicit construction from a std::string.  Mostly
 	// should only be used for run time tests.
 	explicit conststr(const std::string & s) :
-		str{s.c_str()}, len{s.length()} {}
+		conststr{s.c_str(),s.length()} {}
 	// Explicit constructor from begin and end pointers.
-	constexpr conststr(const char * const b, const char * const e) :
+	constexpr conststr(const char * b, const char * e) :
 		conststr{b,static_cast<size_t>(e-b)} {}
+	// Default copy and move constructors and assignments.
+	constexpr conststr(const conststr & s) = default;
+	constexpr conststr(conststr &&) = default;
+	conststr & operator = (const conststr &) = default;
+	conststr & operator = (conststr &&) = default;
 	// Get the length of the string  (without null).
 	constexpr size_t length() const {
 		return len;
 	}
 	// Get an explicit hash from the string.
-	constexpr hash_t hash() const {
-		return fnv1a_hash(len,str);
+	constexpr hash_t hash_code() const {
+		return hash;
 	}
 	// Return a std::string for printing, etc.
 	operator std::string () const {
@@ -142,10 +150,10 @@ public:
 		return len == k.len ? c : (c == 0 ? (len < k.len ? -1 : 1) : c);
 	}
 	bool operator == (const conststr & k) const {
-		return compare(k) == 0;
+		return hash == k.hash && compare(k) == 0;
 	}
 	bool operator != (const conststr & k) const {
-		return compare(k) != 0;
+		return hash != k.hash && compare(k) != 0;
 	}
 	bool operator < (const conststr & k) const {
 		return compare(k) < 0;
@@ -162,9 +170,10 @@ public:
 
 private:
 	// The actual string pointer.
-	const char * const str;
+	const char * str;
 	// The length without a possible terminating null.
 	size_t len;
+	hash_t hash;
 
 	// The FNV1A hash function.
 	static constexpr const hash_t basis =
@@ -172,17 +181,31 @@ private:
 	static constexpr const hash_t prime =
 		sizeof(hash_t) >= 8 ? 0x00000100000001b3 : 0x01000193;
 	static constexpr hash_t
-	fnv1a_hash(size_t n, const char * const str, hash_t hash = basis) {
+	fnv1a_hash(size_t n, const char * str, hash_t hash = basis) {
 		return n > 0 ? fnv1a_hash(n-1,str+1,
 			(hash^static_cast<hash_t>(*str))*prime) : hash;
 	}
 	// Static strlen for explicit constructor.
 	static constexpr size_t
-	calclen(const char * const s) {
+	calclen(const char * s) {
 		return *s ? 1+calclen(s+1) : 0;
 	}
 };
 
 } // namespace OP
+
+// Inject the hashing into the standard name space, like type_info and
+// type_index.
+namespace std {
+
+template<>
+struct hash<OP::conststr>
+{
+	constexpr std::size_t operator()(const OP::conststr & s) const {
+		return s.hash_code();
+	}
+};
+
+}
 
 #endif // CONSTSTR_H

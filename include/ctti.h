@@ -63,6 +63,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef __CTTI_H
 #define __CTTI_H
 
+#include <functional>
 #include <type_traits>
 #include "conststr.h"
 
@@ -86,13 +87,16 @@ public:
 		magic{name} {}
 	// Destructor cannot be virtual
 	~type_info() = default;
-	// Disallow copy assignment like std::type_info.
-	type_info & operator = (const type_info &) = delete;
-
+	// Allow copy assignment unlike std::type_info.
+	constexpr type_info(const OP::type_info &) = default;
+	constexpr type_info(OP::type_info &&) = default;
+	OP::type_info & operator = (const OP::type_info &) = default;
+	OP::type_info & operator = (OP::type_info &&) = default;
+	// Return our hash
 	constexpr hash_t hash_code() const {
-		return magic.hash();
+		return magic.hash_code();
 	}
-	// Note that the name is pobably not null terminated.
+	// Note that the name is probably not null terminated.
 	constexpr const OP::conststr & name() const {
 		return magic;
 	}
@@ -107,7 +111,7 @@ public:
 	}
 
 private:
-	const OP::conststr magic;
+	OP::conststr magic;
 };
 
 /*
@@ -124,13 +128,19 @@ public:
 	type_index() = delete;
 	// Default constructor
 	constexpr type_index(const OP::type_info & info) :
-		type{info}, hash{info.hash_code()} {}
+		type{&info}, hash{info.hash_code()} {}
+	// Default copy and move constructors and assignments
+	constexpr type_index(const OP::type_index &) = default;
+	constexpr type_index(OP::type_index &&) = default;
+	OP::type_index & operator = (const OP::type_index &) = default;
+	OP::type_index & operator = (OP::type_index &&) = default;
+	// Get the hash directly.
 	constexpr hash_t hash_code() const {
 		return hash;
 	}
 	// Note that the name is probably not null terminated.
 	constexpr const OP::conststr & name() const {
-		return type.name();
+		return type->name();
 	}
 	constexpr bool operator == (const type_index & r) const {
 		return hash == r.hash_code();
@@ -152,8 +162,8 @@ public:
 	}
 
 private:
-	const OP::type_info & type;
-	const hash_t hash;
+	const OP::type_info * type;
+	hash_t hash;
 };
 
 // The actual magic happens here.
@@ -212,13 +222,15 @@ type_id()
 namespace std {
 
 template<>
-struct hash<OP::type_info> {
+struct hash<OP::type_info>
+{
 	constexpr std::size_t operator()(const OP::type_info & id) const {
 		return id.hash_code();
 	}
 };
 template<>
-struct hash<OP::type_index> {
+struct hash<OP::type_index>
+{
 	constexpr std::size_t operator()(const OP::type_index & id) const {
 		return id.hash_code();
 	}
