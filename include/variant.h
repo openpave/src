@@ -77,9 +77,9 @@
 #define __VARIANT_H
 
 #include <functional>
-#include <typeindex>
 #include <type_traits>
 #include <utility>
+#include "ctti.h"
 #include "hascompare.h"
 
 namespace OP {
@@ -230,19 +230,19 @@ class vunctor {
 		store & operator= (const store &) = delete;
 		store & operator= (store &&) = delete;
 		template<typename U>
-		U get(std::type_index) const {
+		U get(const OP::type_index &) const {
 			throw std::runtime_error("Attempting to get invalid type from variant!");
 		};
-		void set(std::type_index, const store &) {
+		void set(const OP::type_index &, const store &) {
 			throw std::runtime_error("Attempting to store invalid type in variant!");
 		};
-		void set(std::type_index, store &&) {
+		void set(const OP::type_index &, store &&) {
 			throw std::runtime_error("Attempting to store invalid type in variant!");
 		};
-		void clear(std::type_index) {};
+		void clear(const OP::type_index &) {};
 		// Set value from a different type of store
 		template<typename...Vs>
-		std::type_index set_r(const std::type_index, const typename vunctor<Vs...>::store &) const {
+		OP::type_index set_r(const OP::type_index &, const typename vunctor<Vs...>::store &) const {
 			throw std::runtime_error("Attempting to realize invalid value type in variant!");
 		}
 	};
@@ -264,15 +264,15 @@ class validator {
 		store(store &&) = delete;
 		store & operator= (const store &) = delete;
 		store & operator= (store &&) = delete;
-		void set(std::type_index, const store &) {
+		void set(const OP::type_index &, const store &) {
 			throw std::runtime_error("Attempting to store invalid type in validator!");
 		}
-		void set(std::type_index, store &&) {
+		void set(const OP::type_index &, store &&) {
 			throw std::runtime_error("Attempting to store invalid type in validator!");
 		}
-		void clear(std::type_index) {}
+		void clear(const OP::type_index &) {}
 		template<typename U>
-		bool check(std::type_index, const U &) const {
+		bool check(const OP::type_index &, const U &) const {
 			throw std::runtime_error("Trying to validate incorrect type from variant!");
 		}
 	};
@@ -292,16 +292,16 @@ class variant {
 		store(store &&) = delete;
 		store & operator= (const store &) = delete;
 		store & operator= (store &&) = delete;
-		void set(std::type_index, const store &) {
+		void set(const OP::type_index &, const store &) {
 			throw std::runtime_error("Attempting to store invalid type in variant!");
 		};
-		void set(std::type_index, store &&) {
+		void set(const OP::type_index &, store &&) {
 			throw std::runtime_error("Attempting to store invalid type in variant!");
 		};
-		void clear(std::type_index) {};
+		void clear(const OP::type_index &) {};
 		// Set value from a different type of store
 		template<typename...Vs>
-		std::type_index set_r(const std::type_index, const typename vunctor<Vs...>::store &) const {
+		OP::type_index set_r(const OP::type_index &, const typename vunctor<Vs...>::store &) const {
 			throw std::runtime_error("Attempting to realize invalid value type in variant!");
 		}
 	};
@@ -319,7 +319,7 @@ template<typename T, typename...Ts>
 class vunctor<T,Ts...> {
 	using base_t = vunctor<Ts...>;
 
-	std::type_index k;
+	OP::type_index k;
 	union store {
 		// A callback that can be used to get a value.
 		typedef std::function<T()> callback;
@@ -331,22 +331,22 @@ class vunctor<T,Ts...> {
 		store(store &&) = delete;
 		store & operator= (const store &) = delete;
 		store & operator= (store &&) = delete;
-		store(std::type_index d, const store & v) :
+		store(const OP::type_index & d, const store & v) :
 			f(), t() {
 			set(d,v);
 		}
-		store(std::type_index d, store && v) :
+		store(const OP::type_index & d, store && v) :
 			f(), t() {
 			set(d,std::move(v));
 		}
 		// U templates are conditioned on the union type for this slot.
 		template<typename U>
-		store(U u, std::type_index * d, typename std::enable_if<compare_v<U,T>::setable>::type * = 0) :
+		store(U u, OP::type_index * d, typename std::enable_if<compare_v<U,T>::setable>::type * = 0) :
 			f(), t(u) {
-			*d = std::type_index(typeid(T));
+			*d = OP::type_index(OP::type_id<T>());
 		}
 		template<typename U>
-		store(U u, std::type_index * d, typename std::enable_if<!compare_v<U,T>::setable>::type * = 0) :
+		store(U u, OP::type_index * d, typename std::enable_if<!compare_v<U,T>::setable>::type * = 0) :
 			b(u,d) {
 		}
 		~store() {
@@ -355,68 +355,68 @@ class vunctor<T,Ts...> {
 		// Get the function or value
 		template<typename U>
 		typename std::enable_if<compare_v<U,T>::castable,U>::type
-		get(std::type_index d) const {
-			if (d != std::type_index(typeid(T)))
+		get(const OP::type_index & d) const {
+			if (d != OP::type_index(OP::type_id<T>()))
 				throw std::runtime_error("Attempting to get wrong type from variant!");
 			return f ? f() : T(t);
 		}
 		template<typename U>
 		typename std::enable_if<!compare_v<U,T>::castable,U>::type
-		get(std::type_index d) const {
+		get(const OP::type_index & d) const {
 			return b.template get<U>(d);
 		}
 		// Set from a value
 		template<typename U>
 		typename std::enable_if<compare_v<U,T>::setable,void>::type
-		set_t(std::type_index d, const U & u) {
-			if (d != std::type_index(typeid(T)))
+		set_t(const OP::type_index & d, const U & u) {
+			if (d != OP::type_index(OP::type_id<T>()))
 				throw std::runtime_error("Attempting to set wrong type to variant!");
 			t.set(u);
 			f = nullptr;
 		}
 		template<typename U>
 		typename std::enable_if<!compare_v<U,T>::setable,void>::type
-		set_t(std::type_index d, const U & u) {
+		set_t(const OP::type_index & d, const U & u) {
 			b.template set_t<U>(d,u);
 		}
 		// Set from a functional
 		template<typename U>
 		typename std::enable_if<compare_v<U,T>::setable,void>::type
-		set_f(std::type_index d, std::function<U()> && u) {
-			if (d != std::type_index(typeid(T)))
+		set_f(const OP::type_index & d, std::function<U()> && u) {
+			if (d != OP::type_index(OP::type_id<T>()))
 				throw std::runtime_error("Attempting to set wrong type of function to variant!");
 			f = std::move(u);
 		}
 		template<typename U>
 		typename std::enable_if<!compare_v<U,T>::setable,void>::type
-		set_f(std::type_index d, std::function<U()> && u) {
+		set_f(const OP::type_index & d, std::function<U()> && u) {
 			b.template set_f<U>(d,std::move(u));
 		}
 		// Set directly based on another store
-		void set(std::type_index d, const store & v) {
-			if (d == std::type_index(typeid(T))) {
+		void set(const OP::type_index & d, const store & v) {
+			if (d == OP::type_index(OP::type_id<T>())) {
 				t.set(v.get<T>(d));
 				f = nullptr;
 			} else
 				b.set(d,v.b);
 		}
-		void set(std::type_index d, store && v) {
-			if (d == std::type_index(typeid(T))) {
+		void set(const OP::type_index & d, store && v) {
+			if (d == OP::type_index(OP::type_id<T>())) {
 				t.move(std::move(T(v.t)));
 				f = std::move(v.f);
 			} else
 				b.set(d,std::move(v.b));
 		}
 		// Chain our value to that of another variant
-		void chain(std::type_index d, const store & v) {
-			if (d == std::type_index(typeid(T))) {
+		void chain(const OP::type_index & d, const store & v) {
+			if (d == OP::type_index(OP::type_id<T>())) {
 				f = [&,d]() { return v.get<T>(d); };
 			} else
 				b.set(d,v.b);
 		}
 		// Clear if we are the tagged type, else pass
-		void clear(std::type_index d) {
-			if (d == std::type_index(typeid(T))) {
+		void clear(const OP::type_index & d) {
+			if (d == OP::type_index(OP::type_id<T>())) {
 				t.clear();
 				f.~callback();
 			} else
@@ -424,9 +424,9 @@ class vunctor<T,Ts...> {
 		}
 		// Set value from a different type of store
 		template<typename V, typename...Vs>
-		std::type_index set_r(const std::type_index d, const typename vunctor<V,Vs...>::store & v) {
-			if (d == std::type_index(typeid(V))) {
-				std::type_index i = std::type_index(typeid(typename real_type<V>::real_t));
+		OP::type_index set_r(const OP::type_index & d, const typename vunctor<V,Vs...>::store & v) {
+			if (d == OP::type_index(OP::type_id<V>())) {
+				OP::type_index i = OP::type_index(OP::type_id<typename real_type<V>::real_t>());
 				this->template set_t<typename real_type<V>::real_t>(i,
 					real_type<V>::realize(v.template get<V>(d)));
 				return i;
@@ -459,7 +459,7 @@ class vunctor<T,Ts...> {
 	friend class validator;
 
 	// Allow only private access to create an empty variant
-	vunctor(const std::type_index d) :
+	vunctor(const OP::type_index & d) :
 		k(d), s() {
 	}
 	// Convoluted templates to handle assignments from lambda functions.
@@ -489,8 +489,8 @@ class vunctor<T,Ts...> {
     }
 	// Set value from a different type of store
 	template<typename...Vs>
-	void set_r(const std::type_index d, const vunctor<Vs...> & v) {
-		 k = s.template set_r<Vs...>(d,v.s);
+	void set_r(const OP::type_index & d, const vunctor<Vs...> & v) {
+		 k = std::move(s.template set_r<Vs...>(d,v.s));
 	}
 
 public:
@@ -512,7 +512,7 @@ public:
 	template<typename V>
 	vunctor(V v) :
 		// fake out the constructor with V.  It will actually be replaced.
-		k(std::type_index(typeid(V))), s(v,&k) {
+		k(OP::type_index(OP::type_id<V>())), s(v,&k) {
 	}
 	// Destruct depending on type
 	~vunctor() {
@@ -566,7 +566,7 @@ public:
 	// Get a fixated (non-vunctor) value for this variant.
 	variant_t fixate() const;
 	// Get the actual type index for this variant.
-	std::type_index get_type() const {
+	const OP::type_index & get_type() const {
 		return k;
 	}
 };
@@ -576,7 +576,7 @@ template<typename T, typename...Ts>
 class validator<T,Ts...> {
 	typedef validator<Ts...> base_t;
 
-	std::type_index k;
+	OP::type_index k;
 	union store {
 		typedef std::function<bool(const typename cast_type<T>::type &)> callback;
 
@@ -585,23 +585,23 @@ class validator<T,Ts...> {
 		store(store &&) = delete;
 		store & operator= (const store &) = delete;
 		store & operator= (store &&) = delete;
-		store(std::type_index d, const store & v) {
+		store(const OP::type_index & d, const store & v) {
 			set(d,v);
 		}
-		store(std::type_index d, store && v) {
+		store(const OP::type_index & d, store && v) {
 			set(d,std::move(v));
 		}
 		// U templates are conditioned on the union type for this slot.
 		template<typename U>
 		store(std::function<bool(const U &)> && u,
-		      std::type_index * k,
+		      OP::type_index * k,
 			  typename std::enable_if<compare_v<U,T>::castable>::type * = 0) :
 			f(u) {
-			*k = std::type_index(typeid(T));
+			*k = OP::type_index(OP::type_id<T>());
 		}
 		template<typename U>
 		store(std::function<bool(const U &)> && u,
-		      std::type_index * k,
+		      OP::type_index * k,
 			  typename std::enable_if<!compare_v<U,T>::castable>::type * = 0) :
 			b(std::move(u),k) {
 		}
@@ -611,19 +611,19 @@ class validator<T,Ts...> {
 		// Get the function or value
 		template<typename U>
 		typename std::enable_if<compare_v<T,U>::castable,bool>::type
-		check_v(std::type_index d, const U & u) const {
-			if (d != std::type_index(typeid(T)))
+		check_v(const OP::type_index & d, const U & u) const {
+			if (d != OP::type_index(OP::type_id<T>()))
 				throw std::runtime_error("Attempting to check wrong type of variant!");
 			return f(u);
 		}
 		template<typename U>
 		typename std::enable_if<!compare_v<T,U>::castable,bool>::type
-		check_v(std::type_index d, const U & u) const {
+		check_v(const OP::type_index & d, const U & u) const {
 			return b.template check_v<U>(d,u);
 		}
 		template<typename U>
-		bool check(std::type_index d, const U & u) const {
-			if (d == std::type_index(typeid(T)))
+		bool check(const OP::type_index & d, const U & u) const {
+			if (d == OP::type_index(OP::type_id<T>()))
 				return f(u);
 			else
 				return b.check(d,u);
@@ -631,31 +631,31 @@ class validator<T,Ts...> {
 		// Set from a functional
 		template<typename U>
 		typename std::enable_if<compare_v<U,T>::castable,void>::type
-		set_f(std::type_index d, std::function<bool(const U &)> && u) {
-			if (d != std::type_index(typeid(T)))
+		set_f(const OP::type_index & d, std::function<bool(const U &)> && u) {
+			if (d != OP::type_index(OP::type_id<T>()))
 				throw std::runtime_error("Attempting to assign wrong function type to validator!");
 			f = std::move(u);
 		}
 		template<typename U>
 		typename std::enable_if<!compare_v<U,T>::castable,void>::type
-		set_f(std::type_index d, std::function<bool(const U &)> && u) {
+		set_f(const OP::type_index & d, std::function<bool(const U &)> && u) {
 			b.template set_f<U>(d,std::move(u));
 		}
-		void set(std::type_index d, const store & v) {
-			if (d == std::type_index(typeid(T))) {
+		void set(const OP::type_index & d, const store & v) {
+			if (d == OP::type_index(OP::type_id<T>())) {
 				f = v.f;
 			} else
 				b.set(d,v.b);
 		}
-		void set(std::type_index d, store && v) {
-			if (d == std::type_index(typeid(T))) {
+		void set(const OP::type_index & d, store && v) {
+			if (d == OP::type_index(OP::type_id<T>())) {
 				f = std::move(v.f);
 			} else
 				b.set(d,std::move(v.b));
 		}
 		// Clear if we are the tagged type, else pass
-		void clear(std::type_index d) {
-			if (d == std::type_index(typeid(T)))
+		void clear(const OP::type_index & d) {
+			if (d == OP::type_index(OP::type_id<T>()))
 				f.~callback();
 			else
 				b.clear(d);
@@ -688,7 +688,7 @@ public:
 		typename = typename std::enable_if<is_callable<F>::value>::type,
 		typename V = typename function_traits<F>::template arg<0>::type>
 	validator(F && v) :
-		k(std::type_index(typeid(V))),
+		k(OP::type_index(OP::type_id<V>())),
 		s(std::function<bool(const V &)>(std::forward<F>(v)),&k) {
 	}
 	// Destruct depending on type
@@ -735,7 +735,7 @@ template<typename T, typename...Ts>
 class variant<T,Ts...> {
 	using base_t = variant<Ts...>;
 
-	std::type_index k;
+	OP::type_index k;
 	union store {
 		// A callback that can be used to get a value.
 		typedef std::function<T()> callback;
@@ -746,19 +746,19 @@ class variant<T,Ts...> {
 		store(store &&) = delete;
 		store & operator= (const store &) = delete;
 		store & operator= (store &&) = delete;
-		store(std::type_index d, const store & v) {
+		store(const OP::type_index & d, const store & v) {
 			set(d,v);
 		}
-		store(std::type_index d, store && v) {
+		store(const OP::type_index & d, store && v) {
 			set(d,std::move(v));
 		}
 		template<typename U>
-		store(U u, std::type_index * k, typename std::enable_if<compare_v<U,T>::setable>::type * = 0) :
+		store(U u, OP::type_index * k, typename std::enable_if<compare_v<U,T>::setable>::type * = 0) :
 			t(u) {
-			*k = std::type_index(typeid(T));
+			*k = OP::type_index(OP::type_id<T>());
 		}
 		template<typename U>
-		store(U u, std::type_index * k, typename std::enable_if<!compare_v<U,T>::setable>::type * = 0) :
+		store(U u, OP::type_index * k, typename std::enable_if<!compare_v<U,T>::setable>::type * = 0) :
 			b(u,k) {
 		}
 		~store() {
@@ -767,54 +767,54 @@ class variant<T,Ts...> {
 		// Get the function or value
 		template<typename U>
 		typename std::enable_if<compare_v<U,T>::castable,U>::type
-		get(std::type_index d) const {
-			if (d != std::type_index(typeid(T)))
+		get(const OP::type_index & d) const {
+			if (d != OP::type_index(OP::type_id<T>()))
 				throw std::runtime_error("Attempting to get wrong type from variant!");
 			return T(t);
 		}
 		template<typename U>
 		typename std::enable_if<!compare_v<U,T>::castable,U>::type
-		get(std::type_index d) const {
+		get(const OP::type_index & d) const {
 			return b.template get<U>(d);
 		}
 		// Set from a value
 		template<typename U>
 		typename std::enable_if<compare_v<U,T>::setable,void>::type
-		set_t(std::type_index d, const U & u) {
-			if (d != std::type_index(typeid(T)))
+		set_t(const OP::type_index & d, const U & u) {
+			if (d != OP::type_index(OP::type_id<T>()))
 				throw std::runtime_error("Attempting to set wrong type to variant!");
 			t.set(u);
 		}
 		template<typename U>
 		typename std::enable_if<!compare_v<U,T>::setable,void>::type
-		set_t(std::type_index d, const U & u) {
+		set_t(const OP::type_index & d, const U & u) {
 			b.template set_t<U>(d,u);
 		}
 		// Set directly based on another store
-		void set(std::type_index d, const store & v) {
-			if (d == std::type_index(typeid(T)))
+		void set(const OP::type_index & d, const store & v) {
+			if (d == OP::type_index(OP::type_id<T>()))
 				t.set(v.get<T>(d));
 			else
 				b.set(d,v.b);
 		}
-		void set(std::type_index d, store && v) {
-			if (d == std::type_index(typeid(T)))
+		void set(const OP::type_index & d, store && v) {
+			if (d == OP::type_index(OP::type_id<T>()))
 				t.move(std::move(T(v.t)));
 			else
 				b.set(d,std::move(v.b));
 		}
 		// Clear if we are the tagged type, else pass
-		void clear(std::type_index d) {
-			if (d == std::type_index(typeid(T)))
+		void clear(const OP::type_index & d) {
+			if (d == OP::type_index(OP::type_id<T>()))
 				t.clear();
 			else
 				b.clear(d);
 		}
 		// Set value from a different type of store
 		template<typename V, typename...Vs>
-		std::type_index set_r(const std::type_index d, const typename vunctor<V,Vs...>::store & v) {
-			if (d == std::type_index(typeid(V))) {
-				std::type_index i = std::type_index(typeid(typename cast_type<V>::type));
+		OP::type_index set_r(const OP::type_index & d, const typename vunctor<V,Vs...>::store & v) {
+			if (d == OP::type_index(OP::type_id<V>())) {
+				OP::type_index i = OP::type_index(OP::type_id<typename cast_type<V>::type>());
 				this->template set_t<typename cast_type<V>::type>(i,
 					v.template get<V>(d));
 				return i;
@@ -833,13 +833,13 @@ class variant<T,Ts...> {
 	friend class vunctor;
 
 	// Allow only private access to create an empty variant
-	variant(const std::type_index d) :
+	variant(const OP::type_index & d) :
 		k(d), s() {
 	}
 	// Set value from a different type of store
 	template<typename...Vs>
-	void set_r(const std::type_index d, const vunctor<Vs...> & v) {
-		k = s.template set_r<Vs...>(d,v.s);
+	void set_r(const OP::type_index & d, const vunctor<Vs...> & v) {
+		k = std::move(s.template set_r<Vs...>(d,v.s));
 	}
 
 public:
@@ -855,7 +855,7 @@ public:
 	}
 	template<typename V>
 	variant(V v) :
-		k(std::type_index(typeid(V))), s(v,&k) {
+		k(OP::type_index(OP::type_id<V>())), s(v,&k) {
 	}
 	~variant() {
 		s.clear(k);
@@ -869,13 +869,13 @@ public:
 	variant & operator = (const variant & v) {
 		if (k != v.k)
 			throw std::runtime_error("Trying to set incorrect type into variant!");
-		s.set(k,v.s);
+		s.set(v.k,v.s);
 		return *this;
 	}
 	variant & operator = (variant && v) {
 		if (k != v.k)
 			throw std::runtime_error("Trying to set incorrect type into variant!");
-		s.set(k,std::move(v.s));
+		s.set(std::move(v.k),std::move(v.s));
 		return *this;
 	}
 	template<typename V>
@@ -896,7 +896,7 @@ public:
 	operator V () const {
 		return get<V>();
 	}
-	std::type_index get_type() const {
+	const OP::type_index & get_type() const {
 		return k;
 	}
 };
