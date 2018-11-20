@@ -17,12 +17,14 @@
 
 	The Initial Developer of the Original Software is Jeremy Lea.
 
-	Portions Copyright (C) 2006-2008 OpenPave.org.
+	Portions Copyright (C) 2006-2018 OpenPave.org.
 
 	Contributor(s): Jeremy Lea <reg@openpave.org>.
 
 	Purpose:
-		This header file implements a random number generator.
+		This header file implements a random number generator.  The main
+		reason for using this is to ensure that we get the same results
+		on all platforms.
 
 	Design:
 		These are based on DSFMT, which has the license below.  The SIMD
@@ -33,13 +35,11 @@
 
 **************************************************************************/
 
+#pragma once
 #ifndef __RNG_H
 #define __RNG_H
 
-#include "mathplus.h"
-
 /*
-
 Copyright (c) 2007, 2008 Mutsuo Saito, Makoto Matsumoto and Hiroshima
 University.  All rights reserved.
 
@@ -69,15 +69,9 @@ DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
 THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
 */
 
-#if defined(_MSC_VER)
-typedef unsigned __int32 uint32_t;
-typedef unsigned __int64 uint64_t;
-#else
-#include <inttypes.h>
-#endif
+#include "mathplus.h"
 
 namespace OP {
 
@@ -102,8 +96,7 @@ namespace OP {
 class rng {
 public:
 	// Construct and seed the RNG.
-	rng(uint32_t seed = 12345)
-	  : ni(1) {
+	explicit rng(uint32_t seed = 12345) {
 		uint64_t inner;
 
 		uint32_t * psfmt32 = &(status[0].u32[0]);
@@ -163,7 +156,7 @@ public:
 
 private:
 	int idx;
-	int ni;
+	int ni{1};
 	union {
 		uint64_t u[2];
 		uint32_t u32[4];

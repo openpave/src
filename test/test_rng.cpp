@@ -17,7 +17,7 @@
 
 	The Initial Developer of the Original Software is Jeremy Lea.
 
-	Portions Copyright (C) 2006-2008 OpenPave.org.
+	Portions Copyright (C) 2006-2018 OpenPave.org.
 
 	Contributor(s): Jeremy Lea <reg@openpave.org>.
 
@@ -26,11 +26,9 @@
 
 **************************************************************************/
 
-#include "event.h"
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 #include "rng.h"
+#include <cstdio>
+#include <cstring>
 
 using namespace OP;
 
@@ -55,6 +53,6 @@ main(int argc, char * argv[])
 			cnt++;
 	}
 	pi = double(cnt) / NUM * 4;
-	printf("%f\n", pi);
+	printf("pi = %f\n", pi);
 	return 0;
 }
