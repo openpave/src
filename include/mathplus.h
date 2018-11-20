@@ -17,7 +17,7 @@
 
 	The Initial Developer of the Original Software is Jeremy Lea.
 
-	Portions Copyright (C) 2006-2008 OpenPave.org.
+	Portions Copyright (C) 2006-2018 OpenPave.org.
 
 	Contributor(s): Jeremy Lea <reg@openpave.org>.
 
@@ -32,29 +32,45 @@
 
 **************************************************************************/
 
+#pragma once
 #ifndef __MATHPLUS_H
 #define __MATHPLUS_H
 
-#include <float.h>
-#include <limits.h>
 #if defined(_MSC_VER) && _MSC_VER >= 1800
 #define _USE_MATH_DEFINES
-#include <cmath>
-#include <math.h>
-#else
-#include <cmath>
 #include <math.h>
 #endif
-#if defined(_MSC_VER)
+#ifdef __cplusplus
+#include <cfloat>
+#include <climits>
+#include <cmath>
+#include <cstdlib>
+#include <cinttypes>
+#else
+#include <float.h>
+#include <limits.h>
+#include <math.h>
+#include <stdlib.h>
+#if defined(_MSC_VER) && _MSC_VER < 1800
+typedef unsigned __int32 uint32_t;
+typedef unsigned __int64 uint64_t;
+#else
+#include <inttypes.h>
+#endif
+#endif
+#if defined(_MSC_VER) && _MSC_VER < 1800
 #include <ymath.h>
 #endif
-#include <stdlib.h>
+#ifdef __cplusplus
 #if defined(HAVE_STD_SWAP)
 #include <utility>
 #endif
 #include <algorithm>
+#endif
 
+#ifdef __cplusplus
 namespace OP {
+#endif
 
 #if !defined(M_E)
 #define M_E         2.71828182845904523536      // e
@@ -171,6 +187,7 @@ fma(double a, double b, double c)
 }
 #endif
 
+#ifdef __cplusplus
 #if defined(HAVE_STD_SWAP)
 using std::swap;
 #else
@@ -178,7 +195,7 @@ using std::swap;
  * Simple template functions for swapping things. One day
  * someone will make these part of the language...
  */
-template <class T>
+template<class T>
 inline void
 swap(T & a, T & b)
 {
@@ -186,6 +203,7 @@ swap(T & a, T & b)
 	b = a;
 	a = temp;
 }
+#endif
 #endif
 
 /*
@@ -204,6 +222,8 @@ choose(int n, int k)
 	return c;
 }
 
+#ifdef __cplusplus
 } // namespace OP
+#endif
 
 #endif // MATHPLUS_H
