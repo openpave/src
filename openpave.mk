@@ -372,7 +372,7 @@ configure:: $(CONFIG_STATUS_DEPS)
 	echo '*** Running configure...' && \
 	cd $(OBJDIR) && $(CONFIGURE_ENV) $(CONFIGURE) $(CONFIGURE_ARGS) \
 	  || ( echo "*** Fix above errors and then restart with\
-	           \"$(value MAKE) -f openpave.mk build\"" && exit 1 )
+	           \"$(value MAKE) -f openpave.mk configure\"" && exit 1 )
 
 $(CONFIG_STATUS_OUTS): $(CONFIG_STATUS_DEPS)
 	@cd $(TOPSRCDIR) && \
