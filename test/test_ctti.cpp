@@ -17,20 +17,19 @@
 
 	The Initial Developer of the Original Software is Jeremy Lea.
 
-	Portions Copyright (C) 2006-2016 OpenPave.org.
+	Portions Copyright (C) 2016-2018 OpenPave.org.
 
 	Contributor(s): Jeremy Lea <reg@openpave.org>.
 
 	History:
-		2016/02/22 - Created by Jeremy Lea <reg@openpave.org>
+		2017/09/06 - Created by Jeremy Lea <reg@openpave.org>
 
 **************************************************************************/
 
-#include "event.h"
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 #include "ctti.h"
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
 
 using namespace OP;
 

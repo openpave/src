@@ -17,7 +17,7 @@
 
 	The Initial Developer of the Original Software is Jeremy Lea.
 
-	Portions Copyright (C) 2017 OpenPave.org.
+	Portions Copyright (C) 2017-2018 OpenPave.org.
 
 	Contributor(s): Jeremy Lea <reg@openpave.org>.
 
@@ -32,6 +32,10 @@
 		on-line sources.
 
 **************************************************************************/
+
+#pragma once
+#ifndef __CONSTSTR_H
+#define __CONSTSTR_H
 
 /* CTTI License
 
@@ -57,11 +61,7 @@ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
 CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
 */
-
-#ifndef __CONSTSTR_H
-#define __CONSTSTR_H
 
 #include <algorithm>
 #include <cstring>
@@ -83,30 +83,36 @@ namespace OP {
 class conststr
 {
 public:
-	typedef std::size_t size_t;
-	typedef std::size_t hash_t;
+	using size_t = std::size_t;
+	using hash_t = std::size_t;
 
 	// Disallow default constructor
 	conststr() = delete;
+	~conststr() = default;
 	// This is the default constructor within most code.
 	// Template deduction is used to get the length.
 	template<size_t N>
 	constexpr conststr(const char (&s)[N]) :
-		str{s}, len{N-1}, hash{fnv1a_hash(len,str)} {}
+		str{s}, len{N-1}, hash{fnv1a_hash(len,str)} {
+	}
 	// Explicit construction with known length.
 	constexpr conststr(const char * s, size_t l) :
-		str{s}, len{l}, hash{fnv1a_hash(len,str)}  {}
+		str{s}, len{l}, hash{fnv1a_hash(len,str)} {
+	}
 	// Explicit construction from a pointer.  Must be null
 	// terminated.
 	explicit constexpr conststr(const char * s) :
-		conststr{s,calclen(s)} {}
+		conststr{s,calclen(s)} {
+	}
 	// Explicit construction from a std::string.  Mostly
 	// should only be used for run time tests.
 	explicit conststr(const std::string & s) :
-		conststr{s.c_str(),s.length()} {}
+		conststr{s.c_str(),s.length()} {
+	}
 	// Explicit constructor from begin and end pointers.
 	constexpr conststr(const char * b, const char * e) :
-		conststr{b,static_cast<size_t>(e-b)} {}
+		conststr{b,static_cast<size_t>(e-b)} {
+	}
 	// Default copy and move constructors and assignments.
 	constexpr conststr(const conststr & s) = default;
 	constexpr conststr(conststr &&) = default;
@@ -180,15 +186,14 @@ private:
 		sizeof(hash_t) >= 8 ? 0xcbf29ce484222325 : 0x811c9dc5;
 	static constexpr const hash_t prime =
 		sizeof(hash_t) >= 8 ? 0x00000100000001b3 : 0x01000193;
-	static constexpr hash_t
-	fnv1a_hash(size_t n, const char * str, hash_t hash = basis) {
+	static constexpr hash_t fnv1a_hash(size_t n, const char * str,
+		                               hash_t hash = basis) {
 		return n > 0 ? fnv1a_hash(n-1,str+1,
 			(hash^static_cast<hash_t>(*str))*prime) : hash;
 	}
 	// Static strlen for explicit constructor.
-	static constexpr size_t
-	calclen(const char * s) {
-		return *s ? 1+calclen(s+1) : 0;
+	static constexpr size_t calclen(const char * s) {
+		return *s != '0' ? 1+calclen(s+1) : 0;
 	}
 };
 
@@ -201,7 +206,7 @@ namespace std {
 template<>
 struct hash<OP::conststr>
 {
-	constexpr std::size_t operator()(const OP::conststr & s) const {
+	constexpr std::size_t operator () (const OP::conststr & s) const {
 		return s.hash_code();
 	}
 };

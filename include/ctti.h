@@ -17,7 +17,7 @@
 
 	The Initial Developer of the Original Software is Jeremy Lea.
 
-	Portions Copyright (C) 2017 OpenPave.org.
+	Portions Copyright (C) 2017-2018 OpenPave.org.
 
 	Contributor(s): Jeremy Lea <reg@openpave.org>.
 
@@ -63,9 +63,9 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef __CTTI_H
 #define __CTTI_H
 
+#include "conststr.h"
 #include <functional>
 #include <type_traits>
-#include "conststr.h"
 
 namespace OP {
 
@@ -78,13 +78,14 @@ namespace OP {
 class type_info
 {
 public:
-	typedef OP::conststr::hash_t hash_t;
+	using hash_t = OP::conststr::hash_t;
 
 	// Do not allow default construction.
 	type_info() = delete;
 	// Only construct directly from a name.
 	constexpr type_info(const OP::conststr & name) :
-		magic{name} {}
+		magic{name} {
+	}
 	// Destructor cannot be virtual
 	~type_info() = default;
 	// Allow copy assignment unlike std::type_info.
@@ -123,12 +124,14 @@ private:
 class type_index
 {
 public:
-	typedef OP::conststr::hash_t hash_t;
+	using hash_t = OP::conststr::hash_t;
 
 	type_index() = delete;
 	// Default constructor
 	constexpr type_index(const OP::type_info & info) :
-		type{&info}, hash{info.hash_code()} {}
+		type{&info}, hash{info.hash_code()} {
+	}
+	~type_index() = default;
 	// Default copy and move constructors and assignments
 	constexpr type_index(const OP::type_index &) = default;
 	constexpr type_index(OP::type_index &&) = default;
@@ -204,7 +207,7 @@ constexpr OP::type_info type_deducer()
 // Compile-time equivalent of the typeid() keyword.
 template<typename T>
 constexpr type_info
-type_id(T&&)
+type_id(T &&)
 {
 	return type_deducer<typename std::decay<T>::type>();
 }
@@ -224,18 +227,18 @@ namespace std {
 template<>
 struct hash<OP::type_info>
 {
-	constexpr std::size_t operator()(const OP::type_info & id) const {
+	constexpr std::size_t operator () (const OP::type_info & id) const {
 		return id.hash_code();
 	}
 };
 template<>
 struct hash<OP::type_index>
 {
-	constexpr std::size_t operator()(const OP::type_index & id) const {
+	constexpr std::size_t operator () (const OP::type_index & id) const {
 		return id.hash_code();
 	}
 };
 
-}
+} // namespace std
 
 #endif // CTTI_H
