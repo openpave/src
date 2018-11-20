@@ -1,7 +1,7 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
-#ifdef  __cplusplus
+#ifdef __cplusplus
 # define BEGIN_C_DECLS  extern "C" {
 # define END_C_DECLS    }
 #else
@@ -29,9 +29,13 @@
 
 #if !defined(__GNUC__)
 #define __attribute__(x)
+#define __builtin_expect(exp,c)
 #endif
 
-#define OP_PRINTF(n,m)   __attribute__ ((__format__(__printf__,n,m)))
+#define OP_PRINTF(n,m)    __attribute__ ((__format__(__printf__,n,m)))
+#define OP_LIKELY(expr)   __builtin_expect(!!(expr),1)
+#define OP_UNLIKELY(expr) __builtin_expect(!!(expr),0)
+#define OP_EXPECT(expr,v) __builtin_expect(expr,v)
 
 #if defined(WIN32) || defined(_MSC_VER) || defined(__CYGWIN__)
 #ifdef BUILD_DLL
