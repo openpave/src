@@ -74,7 +74,7 @@ struct task_helper {
 	// Direct call without threading
 	static void direct(task_t & t) {
 		std::get<0>(t)();
-		std::get<1>(t)(	std::get<0>(t).get_future().get());
+		std::get<1>(t)(std::get<0>(t).get_future().get());
 	}
 };
 // and then for void...
@@ -91,8 +91,13 @@ struct task_helper<void> {
 	static void fallback() {
 	}
 	static void direct(task_t & t) {
-		std::get<0>(t)();
-		std::get<1>(t)();
+		try {
+			std::get<0>(t)();
+			std::get<0>(t).get_future().get();
+			std::get<1>(t)();
+		} catch (...) {
+			throw;
+		}
 	}
 };
 
