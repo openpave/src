@@ -318,9 +318,11 @@ struct rv_lognormal : public random_var<distribution::lognormal>
 		: random_var(h)
 	{
 		param(1, std::isinf(m) ? NAN :
-		         std::isnan(m) || m <= 0 ? NAN : sqrt(log(1 + s*s / m / m)));
+			std::isnan(m) || std::isnan(s) || m <= 0 || s < 0 ? NAN :
+			sqrt(log(1 + s*s / m / m)));
 		param(0, std::isinf(m) ? INFINITY :
-		         std::isnan(m) || m <= 0 ? NAN : log(m) - d[1] * d[1] / 2);
+			std::isnan(m) || std::isnan(s) || m <= 0 || s < 0 ? NAN :
+			log(m) - d[1] * d[1] / 2);
 	}
 
 	virtual float mean() const override final {
@@ -328,11 +330,13 @@ struct rv_lognormal : public random_var<distribution::lognormal>
 		       std::isnan(d[0]) ? NAN : exp(d[0] + d[1]*d[1]/2);
 	}
 	virtual float stddev() const override final {
-		return std::isinf(d[0]) ? INFINITY :
-		       std::isnan(d[0]) ? NAN : mean()*sqrt(exp(d[1]*d[1])-1);
+		return std::isinf(d[0]) || std::isnan(d[0]) ? NAN :
+			std::isnan(d[1]) ? NAN : mean()*sqrt(exp(d[1]*d[1])-1);
 	}
 	virtual float roll() const override final {
-		return static_cast<float>(exp(d[0]+d[1]*stdnormal()));
+		return std::isinf(d[0]) ? INFINITY :
+			std::isnan(d[0]) || std::isnan(d[1]) ? NAN :
+			static_cast<float>(exp(d[0] + d[1] * stdnormal()));
 	}
 
 protected:
