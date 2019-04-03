@@ -105,8 +105,13 @@ do
   ac_options="$ac_options \"$_opt\""
 done
 
-OPCONFIG=`$topsrcdir/build/opconfig-find $topsrcdir`
-if [ "$OPCONFIG" ]; then
+OPFIND="$topsrcdir/build/opconfig-find"
+if [ ! -s "$OPFIND" -o ! -x "$OPFIND" ]; then
+  OPFIND="$topsrcdir/openpave/build/opconfig-find"
+fi
+
+OPCONFIG=`$OPFIND $topsrcdir`
+if [ -s "$OPCONFIG" ]; then
   . "$OPCONFIG"
 fi
 
