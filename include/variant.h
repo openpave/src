@@ -239,6 +239,9 @@ class vunctor {
 		void set(const OP::type_index &, store &&) {
 			throw std::runtime_error("Attempting to store invalid type in variant!");
 		};
+		void chain(const OP::type_index &, const store &) {
+			throw std::runtime_error("Attempting to chain invalid type in variant!");
+		};
 		void clear(const OP::type_index &) {};
 		// Set value from a different type of store
 		template<typename...Vs>
@@ -410,9 +413,9 @@ class vunctor<T,Ts...> {
 		// Chain our value to that of another variant
 		void chain(const OP::type_index & d, const store & v) {
 			if (d == OP::type_index(OP::type_id<T>())) {
-				f = [&,d]() { return v.get<T>(d); };
+				f = [&,d]() -> T { return v.get<T>(d); };
 			} else
-				b.set(d,v.b);
+				b.chain(d,v.b);
 		}
 		// Clear if we are the tagged type, else pass
 		void clear(const OP::type_index & d) {
