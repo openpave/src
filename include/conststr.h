@@ -92,26 +92,26 @@ public:
 	// This is the default constructor within most code.
 	// Template deduction is used to get the length.
 	template<size_t N>
-	constexpr conststr(const char (&s)[N]) :
-		str{s}, len{N-1}, hash{fnv1a_hash(len,str)} {
+	constexpr conststr(const char (&s)[N])
+	  : str{s}, len{N-1}, hash{fnv1a_hash(len,str)} {
 	}
 	// Explicit construction with known length.
-	constexpr conststr(const char * s, size_t l) :
-		str{s}, len{l}, hash{fnv1a_hash(len,str)} {
+	constexpr conststr(const char * s, size_t l)
+	  : str{s}, len{l}, hash{fnv1a_hash(len,str)} {
 	}
 	// Explicit construction from a pointer.  Must be null
 	// terminated.
-	explicit constexpr conststr(const char * s) :
-		conststr{s,calclen(s)} {
+	explicit constexpr conststr(const char * s)
+	  : conststr{s,calclen(s)} {
 	}
 	// Explicit construction from a std::string.  Mostly
 	// should only be used for run time tests.
-	explicit conststr(const std::string & s) :
-		conststr{s.c_str(),s.length()} {
+	explicit conststr(const std::string & s)
+	  : conststr{s.c_str(),s.length()} {
 	}
 	// Explicit constructor from begin and end pointers.
-	constexpr conststr(const char * b, const char * e) :
-		conststr{b,static_cast<size_t>(e-b)} {
+	constexpr conststr(const char * b, const char * e)
+	  : conststr{b,static_cast<size_t>(e-b)} {
 	}
 	// Default copy and move constructors and assignments.
 	constexpr conststr(const conststr & s) = default;
@@ -193,7 +193,7 @@ private:
 	}
 	// Static strlen for explicit constructor.
 	static constexpr size_t calclen(const char * s) {
-		return *s != '0' ? 1+calclen(s+1) : 0;
+		return *s != 0 ? 1+calclen(s+1) : 0;
 	}
 };
 
