@@ -27,7 +27,7 @@
 **************************************************************************/
 
 #include "pavement.h"
-#include "reliability.h"
+#include "statistics.h"
 #include <stdlib.h>
 #include <stdio.h>
 
