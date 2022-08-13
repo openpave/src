@@ -412,6 +412,9 @@ public:
 	unsigned defaultgroup(unsigned g) noexcept {
 		return clg = g;
 	}
+	unsigned groups() const noexcept {
+		return lg.length();
+	}
 	void addload(const point2d & l, double f, double p, double r = 0) {
 		addload(clg,l,f,p,r);
 	}
@@ -425,6 +428,8 @@ public:
 		removeloads(clg);
 	}
 	unsigned loads() const {
+		if (lg.length() == 0)
+			return 0;
 		return loads(clg);
 	}
 	const paveload & getload(const unsigned i) {
@@ -457,6 +462,8 @@ public:
 	void removepoint(const point3d & p, unsigned l = UINT_MAX);
 	void removepoints() noexcept;
 	unsigned results() const noexcept {
+		if (cache_state < cachestate::all)
+			return 0;
 		return points.length();
 	}
 	const pavedata & result(const point3d & p, unsigned l = UINT_MAX) const {
