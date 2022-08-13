@@ -88,7 +88,7 @@ fzero(const std::function<double(double)> & f, double b = NAN,
 		lr = std::nextafter(lr,b); // actually next before...
 	}
 	// Reject some silly values.
-	if (std::isnan(ll) || std::isnan(ll))
+	if (std::isnan(ll) || std::isnan(lr))
 		throw std::runtime_error("Cannot use NaN's as a bracket in fzero()!");
 	if (lr <= ll)
 		throw std::runtime_error("Invalid bracket in fzero()!");
@@ -96,9 +96,9 @@ fzero(const std::function<double(double)> & f, double b = NAN,
 	if (std::isnan(b))
 		b = (std::isfinite(ll) ? ll : 0.0);
 	// Now guess another start value, if no bracket was supplied.
-	if (std::isinf(lr)) {
+	if (std::isinf(lr))
 		y = b+(std::abs(b) < 1 ? 0.05 : b/20);
-	} else
+	else
 		y = (b == lr ? ll : lr);
 	return fzero_core(f,b,y,ll,lr);
 }
