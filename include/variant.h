@@ -276,6 +276,10 @@ class validator {
 		}
 		void clear(const OP::type_index &) noexcept {}
 		template<typename U>
+		bool check_v(const OP::type_index &, const U &) const {
+			throw std::runtime_error("Trying to validate incorrect type from variant!");
+		}
+		template<typename U>
 		bool check(const OP::type_index &, const U &) const {
 			throw std::runtime_error("Trying to validate incorrect type from variant!");
 		}
