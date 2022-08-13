@@ -26,11 +26,10 @@
 
 **************************************************************************/
 
-#include "event.h"
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 #include "task.h"
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
 
 using namespace OP;
 
@@ -68,7 +67,11 @@ test2()
 int
 main()
 {
-	test1();
-	test2();
+	try {
+		test1();
+		test2();
+	} catch (...) {
+		return 1;
+	};
 	return 0;
 }

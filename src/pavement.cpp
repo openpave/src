@@ -28,7 +28,7 @@
 
 *************************************************************************/
 
-#include <assert.h>
+#include <cassert>
 #include <cstddef>
 #include <time.h>
 #include <stdio.h>

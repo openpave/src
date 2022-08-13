@@ -27,6 +27,7 @@
 **************************************************************************/
 
 #include "ctti.h"
+#include "event.h"
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>

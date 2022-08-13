@@ -26,11 +26,10 @@
 
 **************************************************************************/
 
-#include "event.h"
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 #include "listen.h"
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
 
 using namespace OP;
 
@@ -82,11 +81,11 @@ void
 test2()
 {
 	printf("Test 2:\n");
-	test_dispatcher * dispatcher1 = new test_dispatcher();
-	test_dispatcher * dispatcher2 = new test_dispatcher();
-	test_listener * listener1 = new test_listener();
+	auto dispatcher1 = new test_dispatcher();
+	auto dispatcher2 = new test_dispatcher();
+	auto listener1 = new test_listener();
 	listener1->test_listen(*dispatcher1);
-	test_listener * listener2 = new test_listener();
+	auto listener2 = new test_listener();
 	listener2->test_listen(*dispatcher2);
 	listener2->test_listen(*dispatcher1);
 	printf("Sending event...\n");
@@ -99,7 +98,11 @@ test2()
 int
 main()
 {
-	test1();
-	test2();
+	try {
+		test1();
+		test2();
+	} catch (...) {
+		return 1;
+	};
 	return 0;
 }
