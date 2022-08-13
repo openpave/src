@@ -46,6 +46,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include "event.h"
 #include "set.h"
 #include "traffic.h"
 
@@ -103,7 +104,7 @@ int fexists(const char * fname)
 {
 	struct stat sb;
 
-	return (stat(fname, &sb) == 0 && sb.st_mode & S_IFREG);
+	return (stat(fname, &sb) == 0 && (sb.st_mode & S_IFREG));
 }
 
 /*
@@ -367,8 +368,7 @@ bool WIMsurvey::ProcessRSADir(const char * dir, const char * bname)
 			fname = strdup(found_file.name);
 			if (fname == NULL)
 				throw std::bad_alloc();
-			if !RSAfiles.add(fname,WIMday::GetRSADate(fname))
-				return false;
+			RSAfiles.add(fname,WIMday::GetRSADate(fname));
 		} while (_findnext(fn,&found_file) == 0);
 		_findclose(fn);
 	}
