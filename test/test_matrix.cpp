@@ -379,7 +379,7 @@ struct tensor_index4 { explicit tensor_index4() {} };
 template<class E, unsigned M, unsigned N, char I, char J>
 struct tensor2_expr {
 	inline explicit tensor2_expr(const E & e) : m_e(e) {}
-	inline double operator() (const unsigned i, const unsigned j) const {
+	inline double operator () (const unsigned i, const unsigned j) const {
 		return m_e(i,j);
 	}
 private:
@@ -398,20 +398,20 @@ template<unsigned M, unsigned N> struct tensor2;
 template<unsigned M, unsigned N, char I, char J>
 struct tensor2_ref {
 	inline explicit tensor2_ref(tensor2<M,N> & e) : m_e(e) {}
-	inline double & operator() (const unsigned i, const unsigned j) {
+	inline double & operator () (const unsigned i, const unsigned j) {
 		return m_e(i,j);
 	}
-	inline double operator() (const unsigned i, const unsigned j) const {
+	inline double operator () (const unsigned i, const unsigned j) const {
 		return m_e(i,j);
 	}
-	tensor2_ref & operator= (const tensor2_ref & d) {
+	tensor2_ref & operator = (const tensor2_ref & d) {
 		for (unsigned i = 0; i < M; i++)
 			for (unsigned j = 0; j < N; j++)
 				m_e(i+1,j+1) = d(i+1,j+1);
 		return *this;
 	}
 	template<class E1>
-	tensor2_ref & operator= (const tensor2_expr<E1,M,N,I,J> & d) {
+	tensor2_ref & operator = (const tensor2_expr<E1,M,N,I,J> & d) {
 		for (unsigned i = 0; i < M; i++)
 			for (unsigned j = 0; j < N; j++)
 				m_e(i+1,j+1) = d(i+1,j+1);
@@ -441,18 +441,18 @@ struct tensor2 {
 				data[i][j] = d.data[i][j];
 	}
 	template<char I, char J>
-	const tensor2_expr<tensor2<M,N>,M,N,I,J> operator() (
+	const tensor2_expr<tensor2<M,N>,M,N,I,J> operator () (
 			tensor_index2<I,J>) const {
 		return tensor2_expr<tensor2<M,N>,M,N,I,J>(*this);
 	}
 	template<char I, char J>
-	tensor2_ref<M,N,I,J> operator() (tensor_index2<I,J>) {
+	tensor2_ref<M,N,I,J> operator () (tensor_index2<I,J>) {
 		return tensor2_ref<M,N,I,J>(*this);
 	}
-	inline double & operator() (const unsigned i, const unsigned j) {
+	inline double & operator () (const unsigned i, const unsigned j) {
 		return data[i-1][j-1];
 	}
-	inline double operator() (const unsigned i, const unsigned j) const {
+	inline double operator () (const unsigned i, const unsigned j) const {
 		return data[i-1][j-1];
 	}
 private:
@@ -471,7 +471,7 @@ template<class E, unsigned M, unsigned N, unsigned P, unsigned Q,
 		char I, char J, char K, char L>
 struct tensor4_expr {
 	inline explicit tensor4_expr(const E & e) : m_e(e) {}
-	inline double operator() (const unsigned i, const unsigned j,
+	inline double operator () (const unsigned i, const unsigned j,
 			const unsigned k, const unsigned l) const {
 		return m_e(i,j,k,l);
 	}
@@ -492,11 +492,11 @@ template<unsigned M, unsigned N, unsigned P, unsigned Q,
 		char I, char J, char K, char L>
 struct tensor4_ref {
 	inline explicit tensor4_ref(tensor4<M,N,P,Q> & e) : m_e(e) {}
-	inline double & operator() (const unsigned i, const unsigned j,
+	inline double & operator () (const unsigned i, const unsigned j,
 			const unsigned k, const unsigned l) {
 		return m_e(i,j,k,l);
 	}
-	inline double operator() (const unsigned i, const unsigned j,
+	inline double operator () (const unsigned i, const unsigned j,
 			const unsigned k, const unsigned l) const {
 		return m_e(i,j,k,l);
 	}
@@ -511,7 +511,7 @@ template<unsigned M, unsigned N, unsigned P, unsigned Q,
 		char I, char J, char K, char L>
 struct tensor4_trans_ikjl {
 	explicit tensor4_trans_ikjl(const tensor4<M,P,N,Q> & e) : m_e(e) { }
-	inline double operator() (const unsigned i, const unsigned j,
+	inline double operator () (const unsigned i, const unsigned j,
 			const unsigned k, const unsigned l) const {
 		return m_e(i,k,j,l);
 	}
@@ -533,19 +533,19 @@ public:
 	}
 	template<char I, char J, char K, char L>
 	tensor4_ref<M,N,P,Q,I,J,K,L>
-	operator() (tensor_index4<I,J,K,L>) {
+	operator () (tensor_index4<I,J,K,L>) {
 		return tensor4_ref<M,N,P,Q,I,J,K,L>(*this);
 	}
 	template<char I, char J, char K, char L>
 	const tensor4_expr<tensor4_trans_ikjl<M,P,N,Q,I,K,J,L>,M,P,N,Q,I,K,J,L>
-	operator() (tensor_index4<I,J,K,L>, tensor_index4<I,K,J,L>) {
+	operator () (tensor_index4<I,J,K,L>, tensor_index4<I,K,J,L>) {
 		return tensor4_expr<tensor4_trans_ikjl<M,P,N,Q,I,K,J,L>,
 				M,P,N,Q,I,K,J,L>(tensor4_trans_ikjl<M,P,N,Q,I,K,J,L>(*this));
 	}
-	inline double & operator() (unsigned i, unsigned j, unsigned k, unsigned l) {
+	inline double & operator () (unsigned i, unsigned j, unsigned k, unsigned l) {
 		return data[i-1][j-1][k-1][l-1];
 	}
-	inline double operator() (unsigned i, unsigned j, unsigned k, unsigned l) const {
+	inline double operator () (unsigned i, unsigned j, unsigned k, unsigned l) const {
 		return data[i-1][j-1][k-1][l-1];
 	}
 private:
@@ -556,7 +556,7 @@ template<class E1, class E2, unsigned P, unsigned Q>
 struct tensor_expr_prod_ijkl_kl {
 	explicit tensor_expr_prod_ijkl_kl(const E1 & e1, const E2 & e2)
 	  : m_e1(e1), m_e2(e2) {}
-	inline double operator() (const unsigned i, const unsigned j) const {
+	inline double operator () (const unsigned i, const unsigned j) const {
 		double m = 0.0;
 		for (unsigned k = 0; k < P; k++)
 			for (unsigned l = 0; k < Q; k++)
@@ -572,7 +572,7 @@ template<unsigned M, unsigned N, unsigned P, unsigned Q,
 inline tensor2_expr<tensor_expr_prod_ijkl_kl<
 	tensor4_ref<M,N,P,Q,I,J,K,L>,
 	tensor2_ref<P,Q,K,L>,P,Q>,M,N,I,J>
-operator* (const tensor4_ref<M,N,P,Q,I,J,K,L> & e1,
+operator * (const tensor4_ref<M,N,P,Q,I,J,K,L> & e1,
 		const tensor2_ref<P,Q,K,L> & e2) {
 	typedef tensor_expr_prod_ijkl_kl<
 		tensor4_ref<M,N,P,Q,I,J,K,L>,
@@ -584,7 +584,7 @@ template<class E, unsigned M, unsigned N, unsigned P, unsigned Q,
 inline tensor2_expr<tensor_expr_prod_ijkl_kl<
 	tensor4_expr<E,M,N,P,Q,I,J,K,L>,
 	tensor2_ref<P,Q,K,L>,P,Q>,M,N,I,J>
-operator* (const tensor4_expr<E,M,N,P,Q,I,J,K,L> & e1,
+operator * (const tensor4_expr<E,M,N,P,Q,I,J,K,L> & e1,
 		const tensor2_ref<P,Q,K,L> & e2) {
 	typedef tensor_expr_prod_ijkl_kl<
 		tensor4_expr<E,M,N,P,Q,I,J,K,L>,
@@ -596,7 +596,7 @@ template<class E, unsigned M, unsigned N, unsigned P, unsigned Q,
 inline tensor2_expr<tensor_expr_prod_ijkl_kl<
 	tensor4_ref<M,N,P,Q,I,J,K,L>,
 	tensor2_expr<E,P,Q,K,L>,P,Q>,M,N,I,J>
-operator* (const tensor4_ref<M,N,P,Q,I,J,K,L> & e1,
+operator * (const tensor4_ref<M,N,P,Q,I,J,K,L> & e1,
 		const tensor2_expr<E,P,Q,K,L> & e2) {
 	typedef tensor_expr_prod_ijkl_kl<
 		tensor4_ref<M,N,P,Q,I,J,K,L>,

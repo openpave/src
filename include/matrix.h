@@ -93,7 +93,7 @@ public:
 	}
 	virtual unsigned rows() const = 0;
 	virtual unsigned cols() const = 0;
-	virtual double operator() (unsigned i, unsigned j) const = 0;
+	virtual double operator () (unsigned i, unsigned j) const = 0;
 	virtual matrix_dense getdense() const = 0;
 
 protected:
@@ -162,7 +162,7 @@ public:
 		return count;
 	}
 	// assignment
-	matrix_storage_ptr & operator= (const matrix_storage_ptr & p) {
+	matrix_storage_ptr & operator = (const matrix_storage_ptr & p) {
 		if (this != &p) {
 			matrix_storage * t = p.ptr;
 			if (t != nullptr)
@@ -173,11 +173,11 @@ public:
 		return *this;
 	}
 	// access the value to which the pointer refers
-	matrix_storage & operator* () const {
+	matrix_storage & operator * () const {
 		assert(ptr != nullptr);
 		return *ptr;
 	}
-	matrix_storage * operator-> () const {
+	matrix_storage * operator -> () const {
 		assert(ptr != nullptr);
 		return ptr;
 	}
@@ -234,30 +234,30 @@ public:
 	}
 
 	// Assignment operator...
-	matrix_dense & operator= (const matrix_dense & m) {
+	matrix_dense & operator = (const matrix_dense & m) {
 		if (M != m.M || N != m.N)
 			resize(m.M,m.N);
 		memcpy(data,m.data,M*N*sizeof(double));
 		return *this;
 	}
-	matrix_dense & operator+= (const double & d) {
+	matrix_dense & operator += (const double & d) {
 		for (unsigned i = 0; d != 0.0 && i < M*N; i++)
 			data[i] += d;
 		return *this;
 	}
-	matrix_dense & operator+= (const matrix_dense & m) {
+	matrix_dense & operator += (const matrix_dense & m) {
 		assert(rows() == m.rows() && cols() == m.cols());
 		for (unsigned i = 0; i < M*N; i++)
 			data[i] += m.data[i];
 		return *this;
 	}
-	matrix_dense & operator-= (const matrix_dense & m) {
+	matrix_dense & operator -= (const matrix_dense & m) {
 		assert(rows() == m.rows() && cols() == m.cols());
 		for (unsigned i = 0; i < M*N; i++)
 			data[i] -= m.data[i];
 		return *this;
 	}
-	matrix_dense & operator*= (const double & d) {
+	matrix_dense & operator *= (const double & d) {
 		if (d == 0.0)
 			memset(data,0,M*N*sizeof(double));
 		else {
@@ -272,16 +272,16 @@ public:
 	virtual unsigned cols() const {
 		return N;
 	}
-	virtual double operator() (unsigned i, unsigned j) const {
+	virtual double operator () (unsigned i, unsigned j) const {
 		return data[i*N+j];
 	}
-	double & operator() (unsigned i, unsigned j) {
+	double & operator () (unsigned i, unsigned j) {
 		return data[i*N+j];
 	}
-	virtual double operator() (unsigned i) const {
+	virtual double operator () (unsigned i) const {
 		return data[i];
 	}
-	double & operator() (unsigned i) {
+	double & operator () (unsigned i) {
 		return data[i];
 	}
 	virtual matrix_dense getdense() const {
@@ -301,7 +301,7 @@ protected:
 };
 
 inline matrix_dense
-operator~ (const matrix_dense & m) {
+operator ~ (const matrix_dense & m) {
 	matrix_dense t(m.cols(),m.rows());
 	for (unsigned i = 0; i < t.rows(); i++)
 		for (unsigned j = 0; j < t.cols(); j++)
@@ -310,7 +310,7 @@ operator~ (const matrix_dense & m) {
 }
 
 inline matrix_dense
-operator- (const matrix_dense & m) {
+operator - (const matrix_dense & m) {
 	matrix_dense t(m.rows(),m.cols());
 	for (unsigned i = 0; i < t.rows(); i++)
 		for (unsigned j = 0; j < t.cols(); j++)
@@ -319,23 +319,23 @@ operator- (const matrix_dense & m) {
 }
 
 inline matrix_dense
-operator+ (const matrix_dense & m, const double & d) {
+operator + (const matrix_dense & m, const double & d) {
 	matrix_dense t(m);
 	return t += d;
 }
 
 inline matrix_dense
-operator+ (const double & d, const matrix_dense & m) {
+operator + (const double & d, const matrix_dense & m) {
 	return m + d;
 }
 
 inline matrix_dense
-operator- (const matrix_dense & m, const double & d) {
+operator - (const matrix_dense & m, const double & d) {
 	return m + (-d);
 }
 
 inline matrix_dense
-operator- (const double & d, const matrix_dense & m) {
+operator - (const double & d, const matrix_dense & m) {
 	matrix_dense t(m.rows(),m.cols());
 	for (unsigned i = 0; i < t.rows(); i++)
 		for (unsigned j = 0; j < t.cols(); j++)
@@ -344,23 +344,23 @@ operator- (const double & d, const matrix_dense & m) {
 }
 
 inline matrix_dense
-operator* (const matrix_dense & m, const double & d) {
+operator * (const matrix_dense & m, const double & d) {
 	matrix_dense t(m);
 	return t *= d;
 }
 
 inline matrix_dense
-operator* (const double & d, const matrix_dense & m) {
+operator * (const double & d, const matrix_dense & m) {
 	return m*d;
 }
 
 inline matrix_dense
-operator/ (const matrix_dense & m, const double & d) {
+operator / (const matrix_dense & m, const double & d) {
 	return m*(1.0/d);
 }
 
 inline matrix_dense
-operator/ (const double & d, const matrix_dense & m) {
+operator / (const double & d, const matrix_dense & m) {
 	matrix_dense t(m.rows(),m.cols());
 	for (unsigned i = 0; i < t.rows(); i++)
 		for (unsigned j = 0; j < t.cols(); j++)
@@ -369,19 +369,19 @@ operator/ (const double & d, const matrix_dense & m) {
 }
 
 inline matrix_dense
-operator+ (const matrix_dense & a, const matrix_dense & b) {
+operator + (const matrix_dense & a, const matrix_dense & b) {
 	matrix_dense t(a);
 	return t += b;
 }
 
 inline matrix_dense
-operator- (const matrix_dense & a, const matrix_dense & b) {
+operator - (const matrix_dense & a, const matrix_dense & b) {
 	matrix_dense t(a);
 	return t -= b;
 }
 
 inline matrix_dense
-operator* (const matrix_dense & a, const matrix_dense & b) {
+operator * (const matrix_dense & a, const matrix_dense & b) {
 	assert(a.cols() == b.rows());
 	matrix_dense t(a.rows(),b.cols());
 	for (unsigned i = 0; i < a.rows(); i++) {
@@ -412,7 +412,7 @@ public:
 	virtual unsigned cols() const {
 		return N;
 	}
-	virtual double operator() (unsigned, unsigned) const {
+	virtual double operator () (unsigned, unsigned) const {
 		return 0.0;
 	}
 	virtual matrix_dense getdense() const {
@@ -445,7 +445,7 @@ public:
 	virtual unsigned cols() const {
 		return N;
 	}
-	virtual double operator() (unsigned i, unsigned j) const {
+	virtual double operator () (unsigned i, unsigned j) const {
 		return (i == j ? 1.0 : 0.0);
 	}
 	virtual matrix_dense getdense() const {
@@ -483,7 +483,7 @@ public:
 	}
 
 	// Assignment operator...
-	matrix_operator & operator= (const matrix_operator & ) {
+	matrix_operator & operator = (const matrix_operator & ) {
 		// XXX
 		return *this;
 	}
@@ -531,7 +531,7 @@ public:
 			return 0; // XXX
 		}
 	}
-	virtual double operator() (unsigned i, unsigned j) const {
+	virtual double operator () (unsigned i, unsigned j) const {
 		switch (op) {
 		case ref:
 		case unref:
@@ -617,7 +617,7 @@ public:
 	unsigned cols() const {
 		return data->cols();
 	}
-	double operator() (unsigned i, unsigned j) const {
+	double operator () (unsigned i, unsigned j) const {
 		return (*data)(i,j);
 	}
 
@@ -632,12 +632,12 @@ public:
 	}
 
 	// Assignment operator
-	matrix & operator= (const matrix & m) {
+	matrix & operator = (const matrix & m) {
 		data = m.data;
 		return *this;
 	}
 	// Comparison operators...
-	bool operator== (const matrix & a) const {
+	bool operator == (const matrix & a) const {
 		unsigned m = rows(), n = cols(), i, j;
 		if (m != a.rows() || n != a.cols())
 			return false;
@@ -650,14 +650,14 @@ public:
 		return true;
 	}
 	// Comparison operators...
-	bool operator!= (const matrix & a) const {
+	bool operator != (const matrix & a) const {
 		return !(*this == a);
 	}
 
 private:
-	friend matrix operator! (matrix &);
-	friend matrix operator~ (const matrix &);
-	friend matrix operator- (const matrix &);
+	friend matrix operator ! (matrix &);
+	friend matrix operator ~ (const matrix &);
+	friend matrix operator - (const matrix &);
 
 	matrix_storage_ptr data;
 };
@@ -667,7 +667,7 @@ private:
 // syntax to their normal C/C++ meaning.  But this has no meaning
 // for a matrix, so we can put it to a very good use.
 inline matrix
-operator! (matrix & b) {
+operator ! (matrix & b) {
 	matrix_storage * d = new matrix_operator(matrix_operator::unref,b.data);
 	b.data.release();
 	return matrix(d);
@@ -675,14 +675,14 @@ operator! (matrix & b) {
 
 // Matrix transpose...
 inline matrix
-operator~ (const matrix & b) {
+operator ~ (const matrix & b) {
 	matrix_storage * d = new matrix_operator(matrix_operator::trans,b.data);
 	return matrix(d);
 }
 
 // Some math operators...
 inline matrix
-operator- (const matrix & b) {
+operator - (const matrix & b) {
 	matrix_storage * d = new matrix_operator(matrix_operator::neg,b.data);
 	return matrix(d);
 }

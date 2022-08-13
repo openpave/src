@@ -74,9 +74,9 @@ protected:
 	  : next(n) {
 	}
 	listelement_s(const listelement_s &) = delete;
-	listelement_s & operator= (const listelement_s &) = delete;
+	listelement_s & operator = (const listelement_s &) = delete;
 	listelement_s(listelement_s &&) = delete;
-	listelement_s & operator= (listelement_s &&) = delete;
+	listelement_s & operator = (listelement_s &&) = delete;
 	~listelement_s() {
 	}
 
@@ -98,13 +98,13 @@ protected:
 	  : next(nullptr) {
 	}
 	list_single(const list_single &) = delete;
-	list_single & operator= (const list_single &) = delete;
+	list_single & operator = (const list_single &) = delete;
 	// We just need to move the head to steal the chain.
 	list_single(list_single && e)
 	  : next(e.next) {
 		e.next = nullptr;
 	}
-	list_single & operator= (list_single && e) {
+	list_single & operator = (list_single && e) {
 		next = e.next;
 		e.next = nullptr;
 		return *this;
@@ -210,9 +210,9 @@ protected:
 	}
 	// Copying or moving list elements is inherently unsafe.
 	listelement_d(const listelement_d &) = delete;
-	listelement_d & operator= (const listelement_d &) = delete;
+	listelement_d & operator = (const listelement_d &) = delete;
 	listelement_d(listelement_d && e) = delete;
-	listelement_d & operator= (listelement_d && e) = delete;
+	listelement_d & operator = (listelement_d && e) = delete;
 	// Unlink ourselves from the list before we die...
 	~listelement_d() {
 		if (prev != nullptr)
@@ -241,12 +241,12 @@ protected:
 	  : first(nullptr), last(nullptr) {
 	}
 	list_double(const list_double &) = delete;
-	list_double & operator= (const list_double &) = delete;
+	list_double & operator = (const list_double &) = delete;
 	list_double(list_double && e)
 	  : first(e.first), last(e.last) {
 		e.first = e.last = nullptr;
 	}
-	list_double & operator= (list_double && e) {
+	list_double & operator = (list_double && e) {
 		first = e.first, last = e.last;
 		e.first = e.last = nullptr;
 		return *this;
@@ -367,9 +367,9 @@ protected:
 	}
 	// Copying or moving list elements is inherently unsafe.
 	listelement_o(const listelement_o &) = delete;
-	listelement_o & operator= (const listelement_o &) = delete;
+	listelement_o & operator = (const listelement_o &) = delete;
 	listelement_o(listelement_o &&) = delete;
-	listelement_o & operator= (listelement_o &&) = delete;
+	listelement_o & operator = (listelement_o &&) = delete;
 	// Also manage our owner's pointers.
 	~listelement_o() {
 		if (owner == nullptr)
@@ -405,7 +405,7 @@ protected:
 	  : list_double<T>() {
 	}
 	list_owned(const list_owned &) = delete;
-	list_owned & operator= (const list_owned &) = delete;
+	list_owned & operator = (const list_owned &) = delete;
 	list_owned(list_owned && l)
 	  : list_double<T>(std::move(l)) {
 		listelement_o<O,T> * t = first;
@@ -414,7 +414,7 @@ protected:
 			t = t->next;
 		}
 	}
-	list_owned & operator= (list_owned && l) {
+	list_owned & operator = (list_owned && l) {
 		list_double<T>::operator=(std::move(l));
 		listelement_o<O,T> * t = first;
 		while (t != nullptr) {

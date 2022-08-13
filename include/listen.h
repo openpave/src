@@ -61,12 +61,12 @@ struct message {
 	message(message && m)
 	  : handler(std::move(m.handler)) {
 	}
-	message & operator= (message && m) {
+	message & operator = (message && m) {
 		handler = std::move(m.handler);
 		return *this;
 	}
 	message(const message &) = delete;
-	message & operator= (const message &) = delete;
+	message & operator = (const message &) = delete;
 	~message() {
 	}
 private:

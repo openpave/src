@@ -41,11 +41,11 @@ struct key {
 	key() : i(0) {}
 	key(int s) : i(s) {}
 	int compare (const key & k) const { return (i==k.i ? 0 : SGN(i-k.i)); }
-	bool operator== (const key & k) const { return (i==k.i); }
-	bool operator<  (const key & k) const { return (i< k.i); }
-	bool operator<= (const key & k) const { return (i<=k.i); }
-	bool operator>  (const key & k) const { return (i> k.i); }
-	bool operator>= (const key & k) const { return (i>=k.i); }
+	bool operator == (const key & k) const { return (i==k.i); }
+	bool operator < (const key & k) const { return (i< k.i); }
+	bool operator <= (const key & k) const { return (i<=k.i); }
+	bool operator > (const key & k) const { return (i> k.i); }
+	bool operator >= (const key & k) const { return (i>=k.i); }
 };
 struct pair : public key {
 	double d;

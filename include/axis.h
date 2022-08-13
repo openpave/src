@@ -177,7 +177,7 @@ public:
 	// Get the full key as a tuple
 	template<unsigned N = sizeof...(Ks)>
 	typename std::enable_if<N!=1,ref_t>::type
-	operator[] (unsigned p) const {
+	operator [] (unsigned p) const {
 		if (!me.inbounds(p))
 			throw std::out_of_range("ordered index out of bounds!");
 		const axis_key & a = me.getatorder(p);
@@ -187,7 +187,7 @@ public:
 	// from the first axis.
 	template<unsigned N = sizeof...(Ks)>
 	typename std::enable_if<N==1,ref_t>::type
-	operator[] (unsigned p) const {
+	operator [] (unsigned p) const {
 		if (!me.inbounds(p))
 			throw std::out_of_range("ordered index out of bounds!");
 		const axis_key & a = me.getatorder(p);
@@ -291,7 +291,7 @@ public:
 	}
 	// Get the key at some position in the sort order
 	// This does not return a tuple to avoid making life complex.
-	const K & operator[] (unsigned p) const {
+	const K & operator [] (unsigned p) const {
 		if (!me.inbounds(p))
 			throw std::out_of_range("ordered index out of bounds!");
 		return me.getatorder(p).key;

@@ -75,7 +75,7 @@ public:
 		allocate(0);
 	}
 	// Behave like an array. Zero indexed.
-	V & operator[] (unsigned p) const {
+	V & operator [] (unsigned p) const {
 #if defined(DEBUG)
 		if (!inbounds(p))
 			throw std::out_of_range("Index out of range!");
@@ -83,17 +83,17 @@ public:
 		return buffer[p];
 	}
 	// Behave like an array. Zero indexed.
-	const V & operator() (const typename As::index_t...ps) const {
+	const V & operator () (const typename As::index_t...ps) const {
 		return buffer[make_index(0,ps...)];
 	}
-	V & operator() (const typename As::index_t...ps) {
+	V & operator () (const typename As::index_t...ps) {
 		return buffer[make_index(0,ps...)];
 	}
 	// Behave like an array using the axis keys
-	const V & operator() (const typename As::key_t &...ks) const {
+	const V & operator () (const typename As::key_t &...ks) const {
 		return buffer[make_fromkey(0,ks...)];
 	}
-	V & operator() (const typename As::key_t &...ks) {
+	V & operator () (const typename As::key_t &...ks) {
 		return buffer[make_fromkey(0,ks...)];
 	}
 	// Return the size of array below dimension d.
@@ -118,10 +118,10 @@ private:
 		operator V () const {
 			return _v;
 		}
-		void * operator new(size_t, void * p) {
+		void * operator new (size_t, void * p) {
 			return p;
 		}
-		void operator delete(void * , void *) {
+		void operator delete (void * , void *) {
 		}
 	};
 	V * buffer;                // The actual storage.

@@ -93,7 +93,7 @@ protected:
 	set(const set & s)
 	  : size(0), buffer(0), block(s.block) {
 	}
-	set & operator= (const set & s) {
+	set & operator = (const set & s) {
 		size = 0;
 		buffer = 0;
 		block = s.block;
@@ -145,7 +145,7 @@ public:
 	}
 
 	// Assignment operator.
-	fset<V> & operator= (const fset<V> & v) {
+	fset<V> & operator = (const fset<V> & v) {
 		deallocate();
 		allocate(v.size);
 		copy(v.size,v.value);
@@ -158,7 +158,7 @@ public:
 		copy(s,nullptr);
 	}
 	// Behave like an array. Zero indexed.
-	V & operator[] (unsigned p) const {
+	V & operator [] (unsigned p) const {
 #if defined(DEBUG)
 		if (!inbounds(p))
 			throw std::out_of_range("Index out of range!");
@@ -178,10 +178,10 @@ protected:
 		V _v;
 		_V() : _v() {}
 		explicit _V(const V & v) : _v(v) {}
-		void * operator new(size_t, void * p) {
+		void * operator new (size_t, void * p) {
 			return p;
 		}
-		void operator delete(void * , void *) {
+		void operator delete (void * , void *) {
 		}
 	};
 
@@ -290,7 +290,7 @@ public:
 	}
 
 	// Assignment operator.
-	sset<V> & operator= (const sset<V> & v) {
+	sset<V> & operator = (const sset<V> & v) {
 		fset<V>::operator=(v);
 		return *this;
 	}
@@ -582,13 +582,13 @@ public:
 			return UINT_MAX;
 	}
 	// Assignment operator.
-	iset<V> & operator= (const iset<V> & v) {
+	iset<V> & operator = (const iset<V> & v) {
 		deallocate();
 		allocate(v.size);
 		copy(v.size,v.value,false);
 		return *this;
 	}
-	iset<V> & operator= (const fset<V> & v) {
+	iset<V> & operator = (const fset<V> & v) {
 		deallocate();
 		allocate(v.size);
 		copy(v.size,v.value,true);
@@ -596,7 +596,7 @@ public:
 		return *this;
 	}
 	// Only integer keys make sense.
-	const V & operator[] (unsigned p) const {
+	const V & operator [] (unsigned p) const {
 #if defined(DEBUG)
 		if (!inbounds(p))
 			throw std::out_of_range("Index out of range!");
@@ -678,10 +678,10 @@ protected:
 	struct _V {                // Placement new wrapper
 		V _v;
 		explicit _V(const V & v) : _v(v) {}
-		void * operator new(size_t, void * p) {
+		void * operator new (size_t, void * p) {
 			return p;
 		}
-		void operator delete(void * , void *) {
+		void operator delete (void * , void *) {
 		}
 	};
 
@@ -796,14 +796,14 @@ public:
 		return UINT_MAX;
 	}
 	// Assignment operator.
-	kfset<K,V> & operator= (const kfset<K,V> & v) {
+	kfset<K,V> & operator = (const kfset<K,V> & v) {
 		deallocate();
 		allocate(v.size);
 		copy(v.size,v.value,false);
 		return *this;
 	}
 	// Return data based on a key lookup.
-	V & operator[] (const K & k) const {
+	V & operator [] (const K & k) const {
 		unsigned p = haskey(k);
 #if defined(DEBUG)
 		if (!inbounds(p))
@@ -812,7 +812,7 @@ public:
 		return value[p];
 	}
 	// Allow integer keys.
-	V & operator[] (unsigned p) const {
+	V & operator [] (unsigned p) const {
 #if defined(DEBUG)
 		if (!inbounds(p))
 			throw std::out_of_range("Index out of range!");
@@ -832,10 +832,10 @@ protected:
 	struct _V {                // Placement new wrapper
 		V _v;
 		explicit _V(const V & v) : _v(v) {}
-		void * operator new(size_t, void * p) {
+		void * operator new (size_t, void * p) {
 			return p;
 		}
-		void operator delete(void * , void *) {
+		void operator delete (void * , void *) {
 		}
 	};
 
@@ -910,7 +910,7 @@ public:
 	ksset(const ksset<K,V> & v)
 	  : kfset<K,V>(v) {
 	}
-	ksset<K,V> & operator= (const ksset<K,V> & v) {
+	ksset<K,V> & operator = (const ksset<K,V> & v) {
 		kfset<K,V>::operator=(v);
 		return *this;
 	}
@@ -1088,13 +1088,13 @@ public:
 			return UINT_MAX;
 	}
 	// Assignment operator.
-	kiset<K,V> & operator= (const kiset<K,V> & v) {
+	kiset<K,V> & operator = (const kiset<K,V> & v) {
 		deallocate();
 		allocate(v.size);
 		copy(v.size,v.value,false);
 		return *this;
 	}
-	kiset<K,V> & operator= (const kfset<K,V> & v) {
+	kiset<K,V> & operator = (const kfset<K,V> & v) {
 		deallocate();
 		allocate(v.size);
 		copy(v.size,v.value,true);
@@ -1102,7 +1102,7 @@ public:
 		return *this;
 	}
 	// Return data based on a key lookup.
-	const V & operator[] (const K & k) const {
+	const V & operator [] (const K & k) const {
 		unsigned p = haskey(k);
 #if defined(DEBUG)
 		if (!inbounds(p))
@@ -1111,7 +1111,7 @@ public:
 		return value[p];
 	}
 	// Allow integer keys.
-	const V & operator[] (unsigned p) const {
+	const V & operator [] (unsigned p) const {
 #if defined(DEBUG)
 		if (!inbounds(p))
 			throw std::out_of_range("Index out of range!");
@@ -1197,10 +1197,10 @@ protected:
 	struct _V {                // Placement new wrapper
 		V _v;
 		explicit _V(const V & v) : _v(v) {}
-		void * operator new(size_t, void * p) {
+		void * operator new (size_t, void * p) {
 			return p;
 		}
-		void operator delete(void * , void *) {
+		void operator delete (void * , void *) {
 		}
 	};
 
@@ -1314,14 +1314,14 @@ public:
 		return UINT_MAX;
 	}
 	// Assignment operator.
-	afset<K,V> & operator= (const afset<K,V> & v) {
+	afset<K,V> & operator = (const afset<K,V> & v) {
 		deallocate();
 		allocate(v.size);
 		copy(v.size,v.key,v.value,false);
 		return *this;
 	}
 	// Behave like an indexed array...
-	V & operator[] (const K & k) const {
+	V & operator [] (const K & k) const {
 		unsigned p = haskey(k);
 #if defined(DEBUG)
 		if (!inbounds(p))
@@ -1352,20 +1352,20 @@ protected:
 	struct _K {                // Placement new wrapper
 		K _k;
 		explicit _K(const K & k) : _k(k) {}
-		void * operator new(size_t, void * p) {
+		void * operator new (size_t, void * p) {
 			return p;
 		}
-		void operator delete(void * , void *) {
+		void operator delete (void * , void *) {
 		}
 	};
 	struct _V {                // Placement new wrapper
 		V _v;
 		_V() : _v() {}
 		explicit _V(const V & v) : _v(v) {}
-		void * operator new(size_t, void * p) {
+		void * operator new (size_t, void * p) {
 			return p;
 		}
-		void operator delete(void * , void *) {
+		void operator delete (void * , void *) {
 		}
 	};
 

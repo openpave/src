@@ -64,7 +64,7 @@ struct BST
 	  : root(nullptr) {
 	}
 	BST(const BST &) = delete;
-	BST & operator= (const BST &) = delete;
+	BST & operator = (const BST &) = delete;
 	~BST() {
 		delete root;
 	}
@@ -288,7 +288,7 @@ public:
 		return value[p];
 	}
 	// We can use node numbers to find our nodes...
-	V & operator[] (unsigned p) const {
+	V & operator [] (unsigned p) const {
 		return getatposition(p);
 	}
 	V & getatposition(unsigned p) const {
@@ -444,10 +444,10 @@ protected:
 			_node_base(), _node_val<K,V>(std::move(v)) {
 		}
 		// Placement new to support in-place initialization in the list.
-		void * operator new(size_t, void * p) {
+		void * operator new (size_t, void * p) {
 			return p;
 		}
-		void operator delete(void *, void *) {
+		void operator delete (void *, void *) {
 		}
 		// note these are reversed for historical reasons.
 		// use the compare function if it has one
@@ -484,8 +484,8 @@ protected:
 		t.root = UINT_MAX;
 		t.value = nullptr;
 	}
-	tree & operator= (const tree &) = delete;
-	tree & operator= (tree && t) {
+	tree & operator = (const tree &) = delete;
+	tree & operator = (tree && t) {
 		std::swap(size,t.size);
 		std::swap(buffer,t.buffer);
 		std::swap(root,t.root);
@@ -608,14 +608,14 @@ public:
 	explicit ktree_avl(ktree_avl && t)
 	  : tree<K,V,OP::ktree_avl>(std::move(t)) {
 	}
-	ktree_avl & operator= (const ktree_avl & t) {
+	ktree_avl & operator = (const ktree_avl & t) {
 		allocate(0);
 		allocate(t.size);
 		unsigned p = UINT_MAX;
 		for (unsigned i = 0; i < t.size; i++)
 			append(root,_V(t.value[i]),&p);
 	}
-	ktree_avl & operator= (ktree_avl && t) {
+	ktree_avl & operator = (ktree_avl && t) {
 		tree<K,V,OP::ktree_avl>::operator=(std::move(t));
 		return *this;
 	}
@@ -905,7 +905,7 @@ public:
 		return x;
 	}
 	// We can use node numbers to find our nodes...
-	V & operator[] (unsigned p) const {
+	V & operator [] (unsigned p) const {
 		return value[p]._v;
 	}
 	// Allow sorted access.
@@ -975,10 +975,10 @@ protected:
 		    order(0), left(UINT_MAX), right(UINT_MAX), red(true) {
 		}
 		// Placement new to support inplace init in the list.
-		void * operator new(size_t, void * p) {
+		void * operator new (size_t, void * p) {
 			return p;
 		}
-		void operator delete(void *, void *) {
+		void operator delete (void *, void *) {
 		}
 	} * value;            // Take a guess...
 

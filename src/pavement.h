@@ -387,7 +387,7 @@ public:
 			cache_res(failure), cache_state(cachestate::empty), cache(0) {
 	}
 	LEsystem(const LEsystem &) = delete;
-	LEsystem & operator= (const LEsystem &) = delete;
+	LEsystem & operator = (const LEsystem &) = delete;
 	LEsystem(LEsystem && s)
 	  : list_owned<LEsystem,LElayer>(std::move(s)), points(std::move(s.points)),
 		data(std::move(s.data)), lg(std::move(s.lg)), clg(s.clg),
@@ -580,7 +580,7 @@ public:
 		setup(0.0,0.0,1e-6,5);
 	}
 	LEbackcalc(const LEbackcalc &) = delete;
-	LEbackcalc & operator= (const LEbackcalc &) = delete;
+	LEbackcalc & operator = (const LEbackcalc &) = delete;
 	~LEbackcalc() {
 	}
 private:

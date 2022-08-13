@@ -146,7 +146,7 @@ public:
 		return str[i];
 	}
 	// Get a chunk from a const string.
-	constexpr conststr operator ()(size_t b, size_t e) const {
+	constexpr conststr operator () (size_t b, size_t e) const {
 		return {str+b,str+e};
 	}
 	// Compares need to be done carefully for non-null terminated

@@ -38,11 +38,11 @@ struct keyA {
 	keyA() : i(0) {}
 	explicit keyA(int s) : i(s) {}
 	int compare (const keyA & k) const { printf("."); return (i==k.i ? 0 : SGN(i-k.i)); }
-	bool operator== (const keyA & k) const { return (i==k.i); }
-	bool operator<  (const keyA & k) const { return (i< k.i); }
-	bool operator<= (const keyA & k) const { return (i<=k.i); }
-	bool operator>  (const keyA & k) const { return (i> k.i); }
-	bool operator>= (const keyA & k) const { return (i>=k.i); }
+	bool operator == (const keyA & k) const { return (i==k.i); }
+	bool operator < (const keyA & k) const { return (i< k.i); }
+	bool operator <= (const keyA & k) const { return (i<=k.i); }
+	bool operator > (const keyA & k) const { return (i> k.i); }
+	bool operator >= (const keyA & k) const { return (i>=k.i); }
 };
 
 static void

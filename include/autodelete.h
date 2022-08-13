@@ -52,22 +52,22 @@ public:
 		: ptr(a.ptr) {
 		a.ptr = nullptr;
 	}
-	autodelete & operator= (const autodelete &) = delete;
-	autodelete & operator= (autodelete && a) {
+	autodelete & operator = (const autodelete &) = delete;
+	autodelete & operator = (autodelete && a) {
 		ptr = a.ptr;
 		a.ptr = nullptr;
 		return *this;
 	}
-	T & operator[] (int i) {
+	T & operator [] (int i) {
 		return ptr[i];
 	}
-	T & operator[] (unsigned i) {
+	T & operator [] (unsigned i) {
 		return ptr[i];
 	}
-	T & operator* () {
+	T & operator * () {
 		return *ptr;
 	}
-	T * operator-> () {
+	T * operator -> () {
 		return ptr;
 	}
 	operator T* () {

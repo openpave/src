@@ -272,10 +272,10 @@ class LEsystem_cache {
 		uintptr_t s = reinterpret_cast<uintptr_t>(p);
 		return reinterpret_cast<void *>(align(s));
 	}
-	void * operator new(size_t, void * p) {
+	void * operator new (size_t, void * p) {
 		return p;
 	}
-	void operator delete(void * , void *) {
+	void operator delete (void * , void *) {
 	}
 };
 

@@ -430,10 +430,10 @@ private:
 		ux = t(0); uy = t(1); uz = t(2);
 	}
 	// Placement new to support inplace init in the list.
-	void * operator new(size_t, void * p) {
+	void * operator new (size_t, void * p) {
 		return p;
 	}
-	void operator delete(void *, void *) {
+	void operator delete (void *, void *) {
 	}
 };
 
@@ -479,7 +479,7 @@ public:
 		return x;
 	}
 	// We use node numbers to find our nodes...
-	inline node3d & operator[] (const unsigned p) const {
+	inline node3d & operator [] (const unsigned p) const {
 		return value[p];
 	}
 	// Allow sorted access.
@@ -607,7 +607,7 @@ public:
 		if (K != 0)
 			free(K);
 	}
-	inline smatrix_dof & operator() (unsigned i, unsigned j) const {
+	inline smatrix_dof & operator () (unsigned i, unsigned j) const {
 		assert(j >= i);
 		return K[index(i,j)];
 	}
@@ -2033,10 +2033,10 @@ public:
 		if (V)
 			free(V);
 	}
-	inline const svector_dof & operator() (const unsigned i) const {
+	inline const svector_dof & operator () (const unsigned i) const {
 		return V[i];
 	}
-	inline svector_dof & operator() (const unsigned i) {
+	inline svector_dof & operator () (const unsigned i) {
 		return V[i];
 	}
 
@@ -2057,13 +2057,13 @@ struct mesh_bc_key {
 	  : n(N), i(I) {
 	}
 	// Provide these for sorting.
-	bool operator== (const mesh_bc_key & k) const {
+	bool operator == (const mesh_bc_key & k) const {
 		return (n == k.n && i == k.i);
 	}
-	bool operator> (const mesh_bc_key & k) const {
+	bool operator > (const mesh_bc_key & k) const {
 		return (n > k.n || (n == k.n && i > k.i));
 	}
-	bool operator< (const mesh_bc_key & k) const {
+	bool operator < (const mesh_bc_key & k) const {
 		return (n < k.n || (n == k.n && i < k.i));
 	}
 };
@@ -2290,10 +2290,10 @@ private:
 			: prev(p), next(n), adj() {
 		}
 		// Placement new to support in-place constructor in the list.
-		void * operator new(size_t, void * p) {
+		void * operator new (size_t, void * p) {
 			return p;
 		}
-		void operator delete(void *, void *) {
+		void operator delete (void *, void *) {
 		}
 	} * diag;
 };
@@ -2782,23 +2782,23 @@ private:
 };
 
 inline mesh::dof
-operator| (const mesh::dof l, const mesh::dof r)
+operator | (const mesh::dof l, const mesh::dof r)
 {
 	return static_cast<mesh::dof>(unsigned(l) | unsigned(r));
 }
 inline mesh::dof
-operator& (const mesh::dof l, const mesh::dof r)
+operator & (const mesh::dof l, const mesh::dof r)
 {
 	return static_cast<mesh::dof>(unsigned(l) & unsigned(r));
 }
 
 inline mesh::bcplane
-operator| (const mesh::bcplane l, const mesh::bcplane r)
+operator | (const mesh::bcplane l, const mesh::bcplane r)
 {
 	return static_cast<mesh::bcplane>(unsigned(l) | unsigned(r));
 }
 inline mesh::bcplane
-operator& (const mesh::bcplane l, const mesh::bcplane r)
+operator & (const mesh::bcplane l, const mesh::bcplane r)
 {
 	return static_cast<mesh::bcplane>(unsigned(l) & unsigned(r));
 }

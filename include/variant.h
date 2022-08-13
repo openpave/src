@@ -101,8 +101,8 @@ struct wrap_type
 	}
 	wrap_type(const wrap_type &) = delete;
 	wrap_type(wrap_type &&) = delete;
-	wrap_type & operator= (const wrap_type &) = delete;
-	wrap_type & operator= (wrap_type &&) = delete;
+	wrap_type & operator = (const wrap_type &) = delete;
+	wrap_type & operator = (wrap_type &&) = delete;
 	template<typename U = T>
 	typename std::enable_if<std::is_pointer<U>::value>::type
 	set(T n) {
@@ -227,8 +227,8 @@ class vunctor {
 		store() {}
 		store(const store &) = delete;
 		store(store &&) = delete;
-		store & operator= (const store &) = delete;
-		store & operator= (store &&) = delete;
+		store & operator = (const store &) = delete;
+		store & operator = (store &&) = delete;
 		template<typename U>
 		U get(const OP::type_index &) const {
 			throw std::runtime_error("Attempting to get invalid type from variant!");
@@ -265,8 +265,8 @@ class validator {
 		store() = delete;
 		store(const store &) = delete;
 		store(store &&) = delete;
-		store & operator= (const store &) = delete;
-		store & operator= (store &&) = delete;
+		store & operator = (const store &) = delete;
+		store & operator = (store &&) = delete;
 		void set(const OP::type_index &, const store &) {
 			throw std::runtime_error("Attempting to store invalid type in validator!");
 		}
@@ -293,8 +293,8 @@ class variant {
 		store() {}
 		store(const store &) = delete;
 		store(store &&) = delete;
-		store & operator= (const store &) = delete;
-		store & operator= (store &&) = delete;
+		store & operator = (const store &) = delete;
+		store & operator = (store &&) = delete;
 		void set(const OP::type_index &, const store &) {
 			throw std::runtime_error("Attempting to store invalid type in variant!");
 		};
@@ -332,8 +332,8 @@ class vunctor<T,Ts...> {
 		};
 		store(const store &) = delete;
 		store(store &&) = delete;
-		store & operator= (const store &) = delete;
-		store & operator= (store &&) = delete;
+		store & operator = (const store &) = delete;
+		store & operator = (store &&) = delete;
 		store(const OP::type_index & d, const store & v) :
 			f(), t() {
 			set(d,v);
@@ -586,8 +586,8 @@ class validator<T,Ts...> {
 		store() = delete;
 		store(const store &) = delete;
 		store(store &&) = delete;
-		store & operator= (const store &) = delete;
-		store & operator= (store &&) = delete;
+		store & operator = (const store &) = delete;
+		store & operator = (store &&) = delete;
 		store(const OP::type_index & d, const store & v) {
 			set(d,v);
 		}
@@ -747,8 +747,8 @@ class variant<T,Ts...> {
 		};
 		store(const store &) = delete;
 		store(store &&) = delete;
-		store & operator= (const store &) = delete;
-		store & operator= (store &&) = delete;
+		store & operator = (const store &) = delete;
+		store & operator = (store &&) = delete;
 		store(const OP::type_index & d, const store & v) {
 			set(d,v);
 		}
