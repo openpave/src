@@ -17,7 +17,7 @@
 
 	The Initial Developer of the Original Software is Jeremy Lea.
 
-	Portions Copyright (C) 2007 OpenPave.org.
+	Portions Copyright (C) 2007-2022 OpenPave.org.
 
 	Contributor(s): Jeremy Lea <reg@openpave.org>.
 
