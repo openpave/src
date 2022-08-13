@@ -143,6 +143,12 @@ public:
 			drain();
 		} catch (...) {}
 	}
+	// Prevent move and copy
+	task_queue(const task_queue &) = delete;
+	task_queue(task_queue &&) = delete;
+	task_queue & operator = (const task_queue &) = delete;
+	task_queue & operator = (task_queue &&) = delete;
+	// Drain the existing work.
 	void drain() {
 		bool done = false;
 
@@ -186,12 +192,6 @@ public:
 private:
 	using task_t = typename task_helper<T>::task_t;
 	using result_t = typename task_helper<T>::result_t;
-
-	// prevent move and copy
-	task_queue(const task_queue &) = delete;
-	task_queue(task_queue &&) = delete;
-	task_queue & operator = (const task_queue &) = delete;
-	task_queue & operator = (task_queue &&) = delete;
 
 	// This runs in the threads but in the same context as the main thread.
 	void worker() {
