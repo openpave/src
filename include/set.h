@@ -85,15 +85,15 @@ public:
 	}
 
 protected:
-	unsigned size;             // The size of the set...
-	unsigned buffer;           // The allocated buffer size...
+	unsigned size{0};          // The size of the set...
+	unsigned buffer{0};        // The allocated buffer size...
 
 	// Simple constructor...
 	explicit set(unsigned b = DFLT_BLK) noexcept
-	  : size(0), buffer(0), block(b > 1 ? b : 1) {
+	  : block(b > 1 ? b : 1) {
 	}
 	set(const set & s) noexcept
-	  : size(0), buffer(0), block(s.block) {
+	  : block(s.block) {
 	}
 	set & operator = (const set & s) noexcept {
 		size = 0;
