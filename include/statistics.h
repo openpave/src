@@ -36,6 +36,7 @@
 
 **************************************************************************/
 
+#pragma once
 #ifndef __STATISTICS_H
 #define __STATISTICS_H
 

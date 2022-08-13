@@ -32,6 +32,7 @@
 
 **************************************************************************/
 
+#pragma once
 #ifndef __HASCOMPARE_H
 #define __HASCOMPARE_H
 
