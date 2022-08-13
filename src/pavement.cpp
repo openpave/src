@@ -331,7 +331,7 @@ LElayer::slip(double ts) noexcept
 	return s = ts;
 }
 
-void
+LElayer &
 LEsystem::addlayer(double h, double e, double v, double s, unsigned p)
 {
 	LElayer * pl = first;
@@ -343,7 +343,7 @@ LEsystem::addlayer(double h, double e, double v, double s, unsigned p)
 	else
 		while (i++ < p && pl->next != 0)
 			pl = pl->next;
-	new LElayer(this,pl,h,e,v,s);
+	return *(new LElayer(this,pl,h,e,v,s));
 }
 
 void

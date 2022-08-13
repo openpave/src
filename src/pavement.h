@@ -397,8 +397,8 @@ public:
 	~LEsystem() {
 		cache_free();
 	}
-	void addlayer(const double h, const double e, const double v,
-	              const double s = 1.0, const unsigned p = UINT_MAX);
+	LElayer & addlayer(const double h, const double e, const double v,
+	                   const double s = 1.0, const unsigned p = UINT_MAX);
 	void removelayer(const unsigned l) noexcept;
 	void removelayers() noexcept;
 	unsigned layers() const noexcept {
