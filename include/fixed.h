@@ -105,18 +105,18 @@ public:
 		return *this;
 	}
 	fixed<P> & operator = (double d) noexcept {
-		value = (d >= 0 ? int(d*(1 << P) + 0.5)
-			 : -int(0.5 - d*(1 << P)) );
+		value = (d >= 0 ? int(d*(1LL << P) + 0.5)
+			 : -int(0.5 - d*(1LL << P)) );
 		return *this;
 	}
 	operator int () const noexcept {
 		return value >> P;
 	}
 	operator float () const noexcept {
-		return (float(value))/(1 << P);
+		return (float(value))/(1LL << P);
 	}
 	operator double () const noexcept {
-		return (double(value))/(1 << P);
+		return (double(value))/(1LL << P);
 	}
 
 	// Comparison operators...
