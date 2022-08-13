@@ -74,7 +74,7 @@ class table : protected listener
 public:
 	table(As &...as)
 	  : axes(as...), buflen(0), blklen(DFLT_BLK), buffer(nullptr) {
-		unsigned s = init(as...);
+		const unsigned s = init(as...);
 		allocate(s); // Creates enough space
 		//copy(s,nullptr);   // Constructs the elements and increases size
 	}
@@ -139,7 +139,7 @@ private:
 	}
 	template<typename K, typename...Ks>
 	unsigned init(K & ax, Ks &...ks) {
-		const unsigned d = sizeof...(Ks);
+		constexpr const unsigned d = sizeof...(Ks);
 		const unsigned s = ax.length();
 		listen(ax,message<axis_message,unsigned>(
 			[=](axis_message e, unsigned p){
@@ -175,7 +175,7 @@ private:
 	template<typename K, typename...Ks>
 	unsigned make_fromkey(unsigned p, K k, Ks...ks) const {
 		const auto & a = std::get<sizeof...(As)-sizeof...(Ks)-1>(axes);
-		unsigned i = a.getorderof(k);
+		const unsigned i = a.getorderof(k);
 		return make_fromkey(p*sizes[sizeof...(Ks)]+i,ks...);
 	}
 	// Return the step size for dimension d.
@@ -196,7 +196,7 @@ private:
 		return blklen*(s/blklen+(s%blklen?1:0));
 	}
 	void allocate(unsigned s) {
-		unsigned b = bufsize(s);
+		const unsigned b = bufsize(s);
 		if (b == buflen)
 			return;
 		if (b == 0) {
@@ -240,16 +240,16 @@ private:
 	//}
 	// Add an element at position p.
 	void add(unsigned d, unsigned p, const V * v = nullptr) {
-		unsigned bs = length(d);
-		unsigned ss = step(d);
-		unsigned os = sizes[d];
+		const unsigned bs = length(d);
+		const unsigned ss = step(d);
+		const unsigned os = sizes[d];
 		sizes[d]++;
 		allocate(length());
 		unsigned nl = length()/sizes[d];
 		for (unsigned i = ss; i > 0; i--) {
-			unsigned ob = ((i-1)*os+p)*bs;
-			unsigned nb = ((i-1)*(os+1)+p+1)*bs;
-			unsigned ln = (i == ss ? os-p : os);
+			const unsigned ob = ((i-1)*os+p)*bs;
+			const unsigned nb = ((i-1)*(os+1)+p+1)*bs;
+			const unsigned ln = (i == ss ? os-p : os);
 			std::memmove(&buffer[nb],&buffer[ob],ln*bs*sizeof(V));
 			for (unsigned j = 0; j < bs; j++)
 				initelem(nb-bs+j,v ? &v[--nl] : nullptr);
@@ -257,14 +257,14 @@ private:
 	}
 	// Remove element position p.
 	void remove(unsigned d, unsigned p) {
-		unsigned bs = length(d);
-		unsigned ss = step(d);
-		unsigned os = sizes[d];
+		const unsigned bs = length(d);
+		const unsigned ss = step(d);
+		const unsigned os = sizes[d];
 		sizes[d]--;
 		for (unsigned i = 0; i < ss; i++) {
-			unsigned ob = (i*os+p+1)*bs;
-			unsigned nb = (i*(os-1)+p)*bs;
-			unsigned ln = (i == ss-1 ? os-p-1 : os);
+			const unsigned ob = (i*os+p+1)*bs;
+			const unsigned nb = (i*(os-1)+p)*bs;
+			const unsigned ln = (i == ss-1 ? os-p-1 : os);
 			for (unsigned j = 0; j < bs; j++)
 				buffer[nb+j].~V();
 			std::memmove(&buffer[nb],&buffer[ob],ln*bs*sizeof(V));

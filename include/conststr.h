@@ -152,7 +152,7 @@ public:
 	// Compares need to be done carefully for non-null terminated
 	// strings.
 	int compare(const conststr & k) const noexcept {
-		int c = strncmp(str,k.str,std::min(len,k.len));
+		const int c = strncmp(str,k.str,std::min(len,k.len));
 		return len == k.len ? c : (c == 0 ? (len < k.len ? -1 : 1) : c);
 	}
 	bool operator == (const conststr & k) const noexcept {

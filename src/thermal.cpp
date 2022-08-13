@@ -115,8 +115,8 @@ FEMthermal::FEMthermal(unsigned nl, const double * lh, const double * ld,
 			il++;
 		if (lb[il] - lh[il] > nd[j] || lb[il] < nd[j+w])
 			throw std::logic_error("Node coordinates and layers do not align!");
-		double d = ld[il]*2/(nd[j+w]-nd[j]);
-		double f = (nd[j+w]-nd[j])/2;
+		const double d = ld[il]*2/(nd[j+w]-nd[j]);
+		const double f = (nd[j+w]-nd[j])/2;
 		switch (w) {
 		case 1:
 			for (i = 0; i <= 1; i++) {
@@ -218,7 +218,7 @@ FEMthermal::interpolate(unsigned np, const double * pd, double * pt)
 			continue;
 		}
 		// Interpolate shape functions over [-1 1]
-		double z = 2*(pd[i]-nd[j-w])/(nd[j]-nd[j-w])-1;
+		const double z = 2*(pd[i]-nd[j-w])/(nd[j]-nd[j-w])-1;
 		switch (w) {
 		case 1:
 			pt[i] = ((z+1)*nt[j]-(z-1)*nt[j-1])/2;

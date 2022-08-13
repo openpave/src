@@ -83,8 +83,9 @@ static double
 quad8_stdnormal_pdf(double a, double b, double Q = 1.0) noexcept
 {
 	// The magic Newton-Cotes weights
-	const int w[9] = {3956, 23552, -3712, 41984, -18160, 41984, -3712, 23552, 3956};
-	const int dw = 14175;
+	static constexpr const double w[9] =
+		{3956, 23552, -3712, 41984, -18160, 41984, -3712, 23552, 3956};
+	static constexpr const double dw = 14175;
 	static int level = -1;
 	static double tol = 1e-30;
 	double h, Q1 = 0.0, Q2 = 0.0;
@@ -119,29 +120,29 @@ quad8_stdnormal_pdf(double a, double b, double Q = 1.0) noexcept
 double
 stdnormal_cdf(double u) noexcept
 {
-	const double a[5] = {
+	static constexpr const double a[5] = {
 		1.161110663653770e-002,3.951404679838207e-001,2.846603853776254e+001,
 		1.887426188426510e+002,3.209377589138469e+003
 	};
-	const double b[5] = {
+	static constexpr const double b[5] = {
 		1.767766952966369e-001,8.344316438579620e+000,1.725514762600375e+002,
 		1.813893686502485e+003,8.044716608901563e+003
 	};
-	const double c[9] = {
+	static constexpr const double c[9] = {
 		1.07655767737201917e-8,3.98941512088134664e-1,8.88314979438837682e00,
 		9.35066561321778664e01,5.97270276394800248e02,2.49453758529037214e03,
 		6.84819045053628270e03,1.16026514376473497e04,9.84271483838397762e03
 	};
-	const double d[9] = {
+	static constexpr const double d[9] = {
 		1.00000000000000000e00,2.22666880443281165e01,2.35387901782624994e02,
 		1.51937759940755473e03,6.48555829826676108e03,1.86155716408850967e04,
 		3.49009527211459790e04,3.89120032860932697e04,1.96854296768599925e04
 	};
-	const double p[6] = {
+	static constexpr const double p[6] = {
 		2.30734417649401738e-2,2.15898534057957003e-1,1.27401161160247384e-1,
 		2.22352778706498104e-2,1.42161919322789337e-3,2.91128749511687932e-5
 	};
-	const double q[6] = {
+	static constexpr const double q[6] = {
 		1.00000000000000000e00,1.28426009614491110e00,4.68238212480865112e-1,
 		6.59881378689285564e-2,3.78239633202758245e-3,7.29751555083966178e-5
 	};
@@ -188,22 +189,22 @@ stdnormal_cdf(double u) noexcept
 double
 stdnormal_inv(double p) noexcept
 {
-	const double a[6] = {
+	static constexpr const double a[6] = {
 		-3.969683028665376e+01,  2.209460984245205e+02,
 		-2.759285104469687e+02,  1.383577518672690e+02,
 		-3.066479806614716e+01,  2.506628277459239e+00
 	};
-	const double b[5] = {
+	static constexpr const double b[5] = {
 		-5.447609879822406e+01,  1.615858368580409e+02,
 		-1.556989798598866e+02,  6.680131188771972e+01,
 		-1.328068155288572e+01
 	};
-	const double c[6] = {
+	static constexpr const double c[6] = {
 		-7.784894002430293e-03, -3.223964580411365e-01,
 		-2.400758277161838e+00, -2.549732539343734e+00,
 		 4.374664141464968e+00,  2.938163982698783e+00
 	};
-	const double d[4] = {
+	static constexpr const double d[4] = {
 		 7.784695709041462e-03,  3.224671290700398e-01,
 		 2.445134137142996e+00,  3.754408661907416e+00
 	};

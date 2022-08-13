@@ -96,7 +96,7 @@ typedef tmatrix<double,NDIM,NDOF> ematrix;
  * Templated Kronecker delta
  */
 template<unsigned I, unsigned J>
-static inline double
+static constexpr inline double
 delta() noexcept
 {
 	return (I == J ? 1.0 : 0.0);
@@ -265,14 +265,14 @@ public:
 	// Get the point stiffness tensor.  This should be made to cache
 	// the result.
 	inline void pointstiffness(smatrix_dof (& E)[NDIM][NDIM]) const noexcept {
-		double lambda = v*emod/(1+v)/(1-2*v);
-		double mu = emod/2/(1+v);
+		const double lambda = v*emod/(1+v)/(1-2*v);
+		const double mu = emod/2/(1+v);
 		meta_stiffness<>::assign(E,lambda,mu);
 	}
 	// Get the point stress tensor, based on the strain.
 	inline ematrix pointstress(const ematrix & e) const noexcept {
-		double lambda = v*emod/(1+v)/(1-2*v);
-		double mu = emod/2/(1+v);
+		const double lambda = v*emod/(1+v)/(1-2*v);
+		const double mu = emod/2/(1+v);
 		ematrix s(0.0);
 
 		meta_stiffness<>::mul(s,e,lambda,mu);
@@ -469,7 +469,7 @@ public:
 	inline unsigned haskey(const coord3d & k) const noexcept {
 		unsigned x = root;
 		while (x != UINT_MAX) {
-			int cmp = k.compare(value[x]);
+			const int cmp = k.compare(value[x]);
 			if (cmp == 0)
 				break;
 			else if (cmp < 0)
@@ -500,10 +500,10 @@ public:
 	}
 	// Get the position of an element in the sort.
 	inline unsigned getorder(const unsigned i) const noexcept {
-		coord3d & k = static_cast<coord3d &>(value[i]);
+		const coord3d & k = static_cast<coord3d &>(value[i]);
 		unsigned x = root, order = 0;
 		while (x != UINT_MAX) {
-			int cmp = k.compare(value[x]);
+			const int cmp = k.compare(value[x]);
 			if (cmp == 0) {
 				order += value[x].order;
 				break;
@@ -534,7 +534,7 @@ protected:
 	void allocate(const unsigned s) {
 		while (s > 8*block)
 			block *= 8;
-		unsigned b = block*(s/block+(s%block?1:0));
+		const unsigned b = block*(s/block+(s%block?1:0));
 		if (b == buffer)
 			return;
 		node3d * temp = static_cast<node3d *>(realloc(value,
@@ -563,7 +563,7 @@ protected:
 				value[value[r].left].red = false;
 			}
 		}
-		int cmp = c.compare(value[r]);
+		const int cmp = c.compare(value[r]);
 		if (cmp == 0) {
 			assert(false);
 			return;
@@ -642,7 +642,7 @@ inv_mul_gauss(const unsigned nnd, double (& J)[NDIM][NDIM], double (* B)[NDIM])
 	unsigned i, j, k;
 
 	for (i = 0; i < NDIM; i++) {
-		double pvt = J[i][i];
+		const double pvt = J[i][i];
 		if (fabs(pvt) < DBL_EPSILON)
 			throw std::range_error("Singular matrix in inv_mul_gauss()!");
 		det *= pvt;
@@ -915,10 +915,10 @@ protected:
 	// Special shape function builder for variable node elements.
 	void buildSF_variable(const double & gx, const double & gy,
 			const double & gz, double * N, double (* dNdr)[NDIM],
-			const unsigned * mask) const {
+			const unsigned * mask) const noexcept {
 		assert(sx == absolute);
 		assert(sy == absolute);
-		const unsigned nz = unsigned(SZ);
+		constexpr const unsigned nz = unsigned(SZ);
 		unsigned j;
 		double Nx, Ny, Nz, dNdx, dNdy, dNdz;
 
@@ -992,7 +992,7 @@ protected:
 	// build the shape function vector and derivative matrix.
 	void buildSF_adaptor(const double & gx, const double & gy,
 			const double & gz, double * N, double (* dNdr)[NDIM],
-			const unsigned * mask) const {
+			const unsigned * mask) const noexcept {
 		assert(sx == quadratic);
 		assert(sy == quadratic);
 		const unsigned nz = unsigned(SZ);
@@ -1299,9 +1299,9 @@ private:
 				for (double k = 0; k < ny; k++) {
 					double x = 0.0, y = 0.0, z = 0.0;
 					for (unsigned l = 0; l < 8; l++) {
-						double s = (l   < 4 ? mz-i : i)
-								  *(l%4 < 2 ? mx-j : j)
-								  *(l%2 < 1 ? my-k : k)/(mz*mx*my);
+						const double s = (l   < 4 ? mz-i : i)
+								*(l%4 < 2 ? mx-j : j)
+								*(l%2 < 1 ? my-k : k)/(mz*mx*my);
 						x += s*double(cc[l].x);
 						y += s*double(cc[l].y);
 						z += s*double(cc[l].z);
@@ -1883,7 +1883,8 @@ public:
 			p = d->col_head;
 			if (p == 0)
 				continue; // Skip diag only
-			unsigned add = 0, c = p->i; // The max row for this column
+			unsigned add = 0;
+			const unsigned c = p->i; // The max row for this column
 			while (p) {
 				// We use the first n-c columns from the diagonal to store
 				// a mask for which elements to add.
@@ -1980,7 +1981,8 @@ public:
 			d = &(diag[n]);
 			if (!(p = d->col_head))
 				continue; // Diagonal only is OK.
-			unsigned r = p->i, a = r - n - d->nnz;
+			unsigned r = p->i;
+			const unsigned a = r - n - d->nnz;
 			d->expand(a);
 			memset(&(d->nodes[d->nnz]),0,a*sizeof(smatrix_node));
 			p = d->col_head; // The array's probably been realloced.
@@ -2100,7 +2102,7 @@ struct mesh_part : public fixed<8> {
 private:
 	static void buildtree(koset<fixed<8>,mesh_part> & p, const unsigned l,
 			const unsigned r, unsigned v, unsigned o, unsigned f) {
-		unsigned i = MIN(r,l+(r-l+f%2)/2);
+		const unsigned i = MIN(r,l+(r-l+f%2)/2);
 		p[i].order = o+(f==0?0:v/3*f);
 		if (l < i && l < r)
 			buildtree(p,l,i-1,v*3,p[i].order,1);
@@ -2192,7 +2194,7 @@ public:
 			return;
 		diag[i].adj.add(j);
 	}
-	inline void compute(fset<unsigned> & n2o) {
+	inline void compute(const fset<unsigned> & n2o) {
 		for (unsigned i = 0; i < nnd; i++)
 			diag[i].adj.sort();
 		for (unsigned i = phead; i != UINT_MAX; i = diag[i].next) {
@@ -2398,7 +2400,7 @@ public:
 		return k;
 	}
 	inline bool updatenode(const node3d & n) {
-		unsigned k = node.haskey(n);
+		const unsigned k = node.haskey(n);
 		if (k == UINT_MAX)
 			return false;
 		node[k] = n;
@@ -2434,7 +2436,7 @@ public:
 	};
 	// Add a constraint at a single point.
 	bool add_bc(const coord3d & p, const dof f, const double d) {
-		unsigned k = node.haskey(p);
+		const unsigned k = node.haskey(p);
 		if (k == UINT_MAX)
 			return false;
 		if (f & mesh::X)
@@ -2485,7 +2487,8 @@ public:
 	}
 	// Add an external force at a node.
 	bool add_fext(const coord3d & p, const dof f, const double d) {
-		unsigned j, k = node.haskey(p);
+		unsigned j;
+		const unsigned k = node.haskey(p);
 		if (k == UINT_MAX)
 			return false;
 		if (f & mesh::X) {
@@ -2510,7 +2513,8 @@ public:
 	}
 	// Finally, solve the system.
 	bool solve(const double tol) {
-		unsigned i, j, n, nnd = node.length();
+		unsigned i, j, n;
+		const unsigned nnd = node.length();
 		printf("Solving with %i nodes!",nnd);
 		smatrix K(nnd);
 		svector F(nnd), U(nnd), P(nnd), W(nnd), V(nnd), R(nnd);
@@ -2589,13 +2593,13 @@ public:
 				return false;
 			// Fix up the element matrix to account for displacement BCs
 			for (i = 0; i < ke->nnd; i++) {
-				unsigned gi = e->l2g(i);
-				unsigned ni = n2o[gi];
+				const unsigned gi = e->l2g(i);
+				const unsigned ni = n2o[gi];
 				// At least one of P(ni) is non-zero, so apply the
 				// fixup to F for this element.
 				if (node[gi].fixed & (1 << NDOF)) {
 					for (j = 0; j < ke->nnd; j++) {
-						unsigned nj = n2o[e->l2g(j)];
+						const unsigned nj = n2o[e->l2g(j)];
 						if (i > j)
 							F(nj) -=  (*ke)(j,i)*P(ni);
 						else
@@ -2604,7 +2608,7 @@ public:
 				}
 			}
 			for (i = 0; i < ke->nnd; i++) {
-				unsigned gi = e->l2g(i);
+				const unsigned gi = e->l2g(i);
 				// If this node is free or fixed, we're done.
 				if ((node[gi].fixed & ((1<<NDOF)-1)) == 0
 				 || (node[gi].fixed & ((1<<NDOF)-1)) == ((1<<NDOF)-1))
@@ -2625,13 +2629,13 @@ public:
 			}
 			// Now assemble the matrix into K.
 			for (i = 0; i < ke->nnd; i++) {
-				unsigned gi = e->l2g(i);
-				unsigned ni = n2o[gi];
+				const unsigned gi = e->l2g(i);
+				const unsigned ni = n2o[gi];
 				// If this node is completely fixed, don't add anything.
 				if ((node[gi].fixed & ((1<<NDOF)-1)) == ((1<<NDOF)-1))
 					continue;
 				for (j = i; j < ke->nnd; j++) {
-					unsigned gj = e->l2g(j);
+					const unsigned gj = e->l2g(j);
 					if ((node[gj].fixed & ((1<<NDOF)-1)) == ((1<<NDOF)-1))
 						continue;
 					K.append(ni,n2o[gj],(*ke)(i,j));
@@ -2663,7 +2667,8 @@ public:
 		double r = 0.0, ro = 0.0;
 		for (i = 0; i < nnd; i++)
 			r += tmatrix_scalar<double>(~F(i)*F(i));
-		double ri = r, a;
+		const double ri = r;
+		double a;
 		printf("with initial residual %g\n",ri);
 
 		// CG solution
@@ -2873,7 +2878,8 @@ node_depth_callback(const coord3d & c, const mesh * FEM, const material * mat) n
 	while (&(layer[i].mat) != mat)
 		i++;
 	double z = -c.z - layer[i].top;
-	double t = layer[i].top, b = layer[i].bot, h = b-t;
+	double t = layer[i].top, b = layer[i].bot;
+	const double h = b-t;
 	if (isvar)
 		n = FEM->getorderofnode(coord3d(c.x,c.y,0.0));
 	else
@@ -2913,28 +2919,28 @@ circlearea(double x, double y, double r) noexcept
 	x = fabs(x); y = fabs(y);
 	if (hypot(x,y) >= r)
 		return 0.0;
-	double t = M_PI_2 - asin(x/r) - asin(y/r);
-	double xr = (sqrt(r*r-y*y)-x)*y/2;
-	double yr = (sqrt(r*r-x*x)-y)*x/2;
+	const double t = M_PI_2 - asin(x/r) - asin(y/r);
+	const double xr = (sqrt(r*r-y*y)-x)*y/2;
+	const double yr = (sqrt(r*r-x*x)-y)*x/2;
 	return (r*r*t/2) - xr - yr;
 }
 
 inline double
 blockarea(double x1, double x2, double y1, double y2, double r) noexcept
 {
-	double h1 = hypot(x1,y1), h2 = hypot(x2,y1);
-	double h3 = hypot(x1,y2), h4 = hypot(x2,y2);
+	const double h1 = hypot(x1,y1), h2 = hypot(x2,y1);
+	const double h3 = hypot(x1,y2), h4 = hypot(x2,y2);
 	if (MIN(MIN(h1,h2),MIN(h3,h4)) >= r)
 		return 0.0;
 	if (MAX(MAX(h1,h2),MAX(h3,h4)) <= r)
 		return fabs(x1-x2)*fabs(y1-y2);
 	if (x1*x2 < 0.0) {
-		double y = MAX(fabs(y1),fabs(y2));
+		const double y = MAX(fabs(y1),fabs(y2));
 		return 2*circlearea(0.0,y,r)-circlearea(x1,y,r)
 					-circlearea(x2,y,r);
 	}
 	if (y1*y2 < 0.0) {
-		double x = MAX(fabs(x1),fabs(x2));
+		const double x = MAX(fabs(x1),fabs(x2));
 		return 2*circlearea(x,0.0,r) - circlearea(x,y1,r)
 					- circlearea(x,y2,r);
 	}
@@ -3045,7 +3051,7 @@ bessk(int k, const double x)
 	return bk;
 }
 
-static double
+static constexpr double
 gamma(const int n)
 {
   double g = 1.0;
@@ -3187,7 +3193,7 @@ result_mesh(const fset<const element *> & e, const fset<point3d> & c)
 		unsigned il = 0;
 		while (&(layer[il].mat) != &(e[i]->mat))
 			il++;
-		double ild = double(il);
+		const double ild = double(il);
 		for (unsigned j = 0; j < data.length(); j++) {
 			fwrite(&(data[j].x),sizeof(double),3,f);
 			fwrite(&ild,sizeof(double),1,f);
@@ -3214,7 +3220,7 @@ results(const fset<const element *> & e, const fset<point3d> & c,
 		unsigned il = 0;
 		while (&(layer[il].mat) != &(e[i]->mat))
 			il++;
-		double ild = double(il);
+		const double ild = double(il);
 		for (unsigned j = 0; j < data.length(); j++) {
 			fwrite(&(data[j].x),sizeof(double),3,f);
 			fwrite(&ild,sizeof(double),1,f);
@@ -3252,7 +3258,7 @@ LEresults(const fset<const element *> & e, const fset<point3d> & c,
 		unsigned il = 0;
 		while (&(layer[il].mat) != &(e[i]->mat))
 			il++;
-		double ild = double(il);
+		const double ild = double(il);
 		for (unsigned j = 0; j < data.length(); j++) {
 			data[j].z *= -1;
 			pavedata d(le.result(data[j],il));
@@ -3305,7 +3311,7 @@ main(int argc, char *argv[])
 #else
 	double delta = 4;
 #endif
-	const double edge = 4096;
+	static constexpr const double edge = 4096;
 	unsigned step = 4;
 	mesh FEM;
 	fset<coord3d> coord(8);
@@ -3323,7 +3329,7 @@ main(int argc, char *argv[])
 	for (unsigned i = 0; i < test.loads(); i++) {
 		x += test.getload(i).x;
 		y += test.getload(i).y;
-		double r = test.getload(i).radius();
+		const double r = test.getload(i).radius();
 		if (r > rmax)
 			rmax = r;
 	}
@@ -3342,7 +3348,8 @@ main(int argc, char *argv[])
 	dx = delta; dy = delta;
 	for (unsigned i = 0; i < test.loads(); i++) {
 		paveload l = test.getload(0);
-		double lx = l.x, ly = l.y, lr = l.radius(), F = -l.pressure();
+		double lx = l.x, ly = l.y;
+		const double lr = l.radius(), F = -l.pressure();
 		lx = 2*dx*(lx < 0 ? floor(lx/dx/2) : ceil(lx/dx/2));
 		ly = 2*dy*(ly < 0 ? floor(ly/dy/2) : ceil(ly/dy/2));
 		l.x = lx; l.y = ly;
@@ -3350,7 +3357,7 @@ main(int argc, char *argv[])
 		test.addload(l);
 		for (x = lx - (step-2)*dx; x < lx + (step-2)*dx; x += 2*dx) {
 			for (y = ly -(step-2)*dy; y < ly + (step-2)*dy; y += 2*dy) {
-				double ba = blockarea(x-lx,x+2*dx-lx,y-ly,y+2*dx-ly,lr);
+				const double ba = blockarea(x-lx,x+2*dx-lx,y-ly,y+2*dx-ly,lr);
 				if (ba > 0.0) {
 					FEM.addnode(coord3d(x     ,y     ,0.0));
 					FEM.addnode(coord3d(x  +dx,y     ,0.0));
@@ -3446,7 +3453,7 @@ main(int argc, char *argv[])
 					fym = (y - double(FEM.getnode(n.ym).y))/2;
 				if (n.yp != UINT_MAX)
 					fyp = (double(FEM.getnode(n.yp).y) - y)/2;
-				double f = F*blockarea(x-fxm-lx,x+fxp-lx,y-fym-ly,y+fyp-ly,lr);
+				const double f = F*blockarea(x-fxm-lx,x+fxp-lx,y-fym-ly,y+fyp-ly,lr);
 				if (fabs(f) > 0.0)
 					FEM.add_fext(n,mesh::Z,f);
 			}
@@ -3478,15 +3485,15 @@ main(int argc, char *argv[])
 		double h = layer[i].bot - layer[i].top, he = h;
 		layer[i].etop = (i == 0 ? 0.0 : double(layer[i-1].ebot));
 		for (unsigned j = i+1; j < layer.length(); j++) {
-			double v = layer[j-1].mat.v;
-			double E = layer[j-1].mat.emod;
-			double v1 = layer[j].mat.v;
-			double E1 = layer[j].mat.emod;
+			const double v = layer[j-1].mat.v;
+			const double E = layer[j-1].mat.emod;
+			const double v1 = layer[j].mat.v;
+			const double E1 = layer[j].mat.emod;
 			he *= pow(E/E1*(1+v1*v1)/(1+v*v),1.0/3.0);
 		}
 		layer[i].ebot = double(layer[i].etop) + he;
 	}
-	double zstep = 1;
+	const double zstep = 1;
 #ifdef QUAD
 	int zi = -2;
 #else
@@ -3497,7 +3504,7 @@ main(int argc, char *argv[])
 	zmax = layer[layer.length()-1].ebot; z = layer[0].etop;
 	stop.add(z); level.add(MAX(zi,0));
 	while (z < zmax) {
-		unsigned zscale = 3;
+		const unsigned zscale = 3;
 		for (; z < zscale*zstep*dz; z += dz) {
 			printf("z: %g\tzmax: %g\tdz: %g\tzi: %i\n",z,zmax,dz,zi);
 			stop.add(z+dz); level.add(MAX(zi,0));
@@ -3511,7 +3518,7 @@ main(int argc, char *argv[])
 	}
 	// now scale them to the layers
 	for (unsigned i = 0, t = 0, b; i < layer.length(); i++) {
-		femlayer & l = layer[i];
+		const femlayer & l = layer[i];
 		assert(t < stop.length());
 		assert(stop[t] == l.etop);
 		b = t;
@@ -3554,7 +3561,7 @@ main(int argc, char *argv[])
 	//stop.add(1,2); level.add(1,level[0]);
 #ifndef QUAD
 	for (unsigned i = 0, b = 0; i < layer.length()-1; i++) {
-		femlayer & l = layer[i];
+		const femlayer & l = layer[i];
 		while (b < stop.length() && stop[b] < l.bot)
 			b++;
 		if (i == 0 || i == 1) {
@@ -3574,14 +3581,14 @@ main(int argc, char *argv[])
 			while (i < layer.length() && stop[j] > layer[i].bot)
 				i++;
 			assert(i < layer.length());
-			double z1 = stop[j  ];
-			double z2 = stop[j-1];
+			const double z1 = stop[j  ];
+			const double z2 = stop[j-1];
 			printf("%.0f\t%.0f\t%f\t%i\t%i\t%i\t%i\n",filling.xp(),filled.xp(),z1,i,zi,j,level[j]);
 			element::element_t var = (i == 0 ?
 					element::variable26 : element::variable26);
 			if (z1-z2 < 5)
 				var = element::variable18;
-			element::element_t inf = (var == element::variable34 ?
+			const element::element_t inf = (var == element::variable34 ?
 					element::infinite16 : var == element::variable26 ?
 					element::infinite12 : element::infinite8);
 #ifdef QUAD
@@ -3595,13 +3602,13 @@ main(int argc, char *argv[])
 					element::adaptor26 : element::adaptor18);
 #endif
 			for (unsigned k = 0; k < filling.length(); k++) {
-				region & r = filling[k];
+				const region & r = filling[k];
 				for (unsigned xi = 1; xi < r.xstop.length(); xi++) {
 					for (unsigned yi = 1; yi < r.ystop.length(); yi++) {
-						double x1 = double(r.xstop[xi-1]);
-						double x2 = double(r.xstop[xi]);
-						double y1 = double(r.ystop[yi-1]);
-						double y2 = double(r.ystop[yi]);
+						const double x1 = double(r.xstop[xi-1]);
+						const double x2 = double(r.xstop[xi]);
+						const double y1 = double(r.ystop[yi-1]);
+						const double y2 = double(r.ystop[yi]);
 						if (filled.overlaps(x1,y1,x2,y2) && level[j] < zi)
 							continue;
 						coord.resize(8);
@@ -3788,8 +3795,8 @@ main(int argc, char *argv[])
 			for (unsigned j = i; j < np; j++) {
 				const node3d & p2 = FEM.getorderednode(j);
 				x = p1.x-p2.x; y = p1.y-p2.y;
-				double r = fabs(hypot(x,y));
-				double t = atan2(y,x); // zero is longitudinal.
+				const double r = fabs(hypot(x,y));
+				const double t = atan2(y,x); // zero is longitudinal.
 				switch (l) {
 				case 0:
 					C[T_IDX(i,j)] = (pow(8.886948,2)*exp(-pow(r/4420.595,2))
@@ -3814,8 +3821,8 @@ main(int argc, char *argv[])
 		delete [] C;
 	}
 
-	int startrun = (argc > 1 && argv[1] ? atoi(argv[1]) : 0);
-	int countrun = (argc > 2 && argv[2] ? atoi(argv[2]) : 250);
+	const int startrun = (argc > 1 && argv[1] ? atoi(argv[1]) : 0);
+	const int countrun = (argc > 2 && argv[2] ? atoi(argv[2]) : 250);
 	run = startrun;
 	isvar = false;
 	rng RNG(run+clock());

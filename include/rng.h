@@ -117,8 +117,8 @@ public:
 			status[DSFMT_N].u[1] ^= 1;
 		idx = DSFMT_N*2;
 	}
-		double * psfmt = &(status[0].d[0]);
 	double c1o2() noexcept {
+		const double * psfmt = &(status[0].d[0]);
 		if (idx >= DSFMT_N*2) {
 			regen();
 			idx = 0;
@@ -166,10 +166,10 @@ private:
 
 	void regen() noexcept {
 		for (unsigned i = 0; i < DSFMT_N; i++) {
-			uint64_t t0 = status[i].u[0];
-			uint64_t t1 = status[i].u[1];
-			uint64_t L0 = status[DSFMT_N].u[0];
-			uint64_t L1 = status[DSFMT_N].u[1];
+			const uint64_t t0 = status[i].u[0];
+			const uint64_t t1 = status[i].u[1];
+			const uint64_t L0 = status[DSFMT_N].u[0];
+			const uint64_t L1 = status[DSFMT_N].u[1];
 			status[DSFMT_N].u[0] = (t0 << DSFMT_SL1) ^ (L1 >> 32)
 				^ (L1 << 32) ^ status[(i+DSFMT_POS1)%DSFMT_N].u[0];
 			status[DSFMT_N].u[1] = (t1 << DSFMT_SL1) ^ (L0 >> 32)

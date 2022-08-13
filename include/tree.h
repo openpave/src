@@ -301,7 +301,7 @@ public:
 	unsigned getposition(const K & k) const noexcept {
 		unsigned x = root;
 		while (x != UINT_MAX) {
-			int cmp = value[x].compare(k);
+			const int cmp = value[x].compare(k);
 			if (cmp == 0)
 				break;
 			else if (cmp < 0)
@@ -335,7 +335,7 @@ public:
 	unsigned getorderof(const K & k) const noexcept {
 		unsigned x = root, o = 0;
 		while (x != UINT_MAX) {
-			int cmp = value[x].compare(k);
+			const int cmp = value[x].compare(k);
 			if (cmp == 0) {
 				o += order(x);
 				break;
@@ -504,7 +504,7 @@ protected:
 	}
 	// Make some space...
 	void allocate(unsigned s) {
-		unsigned b = bufsize(s);
+		const unsigned b = bufsize(s);
 		if (b == buffer)
 			return;
 		if (b == 0) {
@@ -729,7 +729,7 @@ private:
 		printf("Append @%d before:\n",r);
 		print();
 #endif
-		int cmp = value[r].compare(v);
+		const int cmp = value[r].compare(v);
 		if (cmp == 0) {
 			value[*p = r]._v = std::move(v._v);
 			return;
@@ -754,7 +754,7 @@ private:
 		printf("Remove @%d before:\n",r);
 		print();
 #endif
-		int cmp = value[r].compare(k);
+		const int cmp = value[r].compare(k);
 		if (cmp == 0) {
 			// We've found our node, and it's a leaf.
 			if (value[r].right == UINT_MAX) {
@@ -790,7 +790,7 @@ private:
 		printf("Rebalance @%d before:\n",r);
 		print();
 #endif
-		int b = balance(r);
+		const int b = balance(r);
 		if (b < -1) {
 			if (balance(value[r].left) > 0)
 				rotate_left(value[r].left);

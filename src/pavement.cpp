@@ -144,7 +144,7 @@ findvalue(const T * a, unsigned n, const T & v) noexcept {
 	unsigned l = 0, r = n;
 
 	while (l < r) {
-		unsigned i = l + (r-l)/2;
+		const unsigned i = l + (r-l)/2;
 		if (a[i] < v)
 			l = i+1;
 		else
@@ -449,7 +449,8 @@ LEsystem::removepoints() noexcept
 bool
 LEsystem::check()
 {
-	unsigned il, nl = layers();
+	unsigned il;
+	const unsigned nl = layers();
 	const LElayer * pl;
 
 	if (cache_state == cachestate::all)
@@ -615,7 +616,7 @@ struct axialdata {
 	// and tangential shear stresses.
 	void finalize(LEsystem::resulttype res, const double & r,
 			const double & a, const double & v, const double & E) noexcept {
-		double t1 = a*(v+1)/E, t2;
+		const double t1 = a * (v + 1) / E;
 		bool active = true;
 
 		// Always make sure we accumulate the results.
@@ -624,7 +625,7 @@ struct axialdata {
 		if (res & LEsystem::disp)
 			return;
 		if (r > 0.0) {
-			t2 = rdp/r; rse -= t2; tse += t2;
+			const double t2 = rdp/r; rse -= t2; tse += t2;
 		}
 		rdp *= t1; rse *= a; tse *= a; vse *= a; sse *= a;
 	}
@@ -958,7 +959,7 @@ buildabcd(double m, unsigned nl, const double * h,
 	R[il][2][0] = 1.0; R[il][3][1] = 1.0;
 	// Now we work back up, building the 4x2 R matrices...
 	for ( ; il > 0; il--) {
-		double z = h[il-1];
+		const double z = h[il-1];
 		double v1 = v[il-1];
 		double v2 = v[il];
 		double K = ((1+v2)*E[il-1])/((1+v1)*E[il]);
@@ -1087,7 +1088,7 @@ LEsystem::calc_accurate()
 	cache_res = failure;
 	if (!check())
 		return false;
-	unsigned nl = layers();
+	const unsigned nl = layers();
 
 	// The integration constants, per layer.
 	double (* R)[4][2] = cache_alloc<double[4][2]>(nl);
@@ -1115,8 +1116,8 @@ LEsystem::calc_accurate()
 			memset(d.data,0,sizeof(d.data));
 			// Now loop through the list of loads...
 			for (ild = 0; ild < lg[ig].length(); ild++) {
-				double a = lg[ig][ild].radius();
-				double r = lg[ig][ild].distance(d);
+				const double a = lg[ig][ild].radius();
+				const double r = lg[ig][ild].distance(d);
 				double m0, m1;
 				axialdata s;
 				memset(&s,0,sizeof(axialdata));
@@ -1151,12 +1152,13 @@ LEsystem::calc_accurate()
 				for (ib = bm0.length()-1; ib > 0; ib--) {
 					for (igp = 0; igp < NGQP; igp++) {
 						// Calculate the gauss point and weight.
-						double m = (bm0[ib]+bm0[ib-1])/2
+						const double m = (bm0[ib]+bm0[ib-1])/2
 								 + gu[NGQP][igp]*(bm0[ib]-bm0[ib-1])/2;
-						double w = gf[NGQP][igp]*(bm0[ib]-bm0[ib-1])/2;
+						const double w = gf[NGQP][igp]*(bm0[ib]-bm0[ib-1])/2;
 						// First build a new ABCD matrix.
 						buildabcd(m,nl,h,v,E,f,R,ABCD);
-						double t = m*j1(m*a)*w*j0(m*r), T[4];
+						const double t = m * j1(m * a) * w * j0(m * r);
+						double T[4];
 						buildT(m,d.z,ABCD[il],T);
 						s.vse2 += t*m*((1-2*v[il])*(T[1]+T[3])+(T[0]-T[2]));
 						s.rse2 += t*m*((1+2*v[il])*(T[1]+T[3])-(T[0]-T[2]));
@@ -1168,12 +1170,13 @@ LEsystem::calc_accurate()
 				for (ib = 1; ib < bm1.length(); ib++) {
 					for (igp = 0; igp < NGQP; igp++) {
 						// Calculate the gauss point and weight.
-						double m = (bm1[ib]+bm1[ib-1])/2
+						const double m = (bm1[ib]+bm1[ib-1])/2
 								 + gu[NGQP][igp]*(bm1[ib]-bm1[ib-1])/2;
-						double w = gf[NGQP][igp]*(bm1[ib]-bm1[ib-1])/2;
+						const double w = gf[NGQP][igp]*(bm1[ib]-bm1[ib-1])/2;
 						// First build a new ABCD matrix.
 						buildabcd(m,nl,h,v,E,f,R,ABCD);
-						double t = m*j1(m*a)*j1(m*r)*w, T[4];
+						const double t = m * j1(m * a) * j1(m * r) * w;
+						double T[4];
 						buildT(m,d.z,ABCD[il],T);
 						s.sse2 += t*m*((2*v[il])*(T[3]-T[1]) + (T[0]+T[2]));
 						s.rdp2 += t*((T[1]+T[3])-(T[0]-T[2]));
@@ -1235,7 +1238,7 @@ LEsystem::calculate(resulttype res, const double * Q)
 			nbz = MIN(NBZ,256);
 		}
 	}
-	LEsystem::resulttype orig = res;
+	const LEsystem::resulttype orig = res;
 	const double eps = ((res & mask) == dirty ? 1e-6 :
 			((res & mask) == fast ? 1e-8 : 0.0));
 	// The integration constants, per layer.
@@ -1261,7 +1264,7 @@ LEsystem::calculate(resulttype res, const double * Q)
 	if (cache_state == cachestate::empty) {
 		cset<zpoint> sz;
 		for (ixy = 0; ixy < points.length(); ixy++) {
-			pavepoint & d = points[ixy];
+			const pavepoint & d = points[ixy];
 			sz.add(zpoint(d.z,d.il));
 		}
 		sz.sort();
@@ -1344,7 +1347,7 @@ LEsystem::calculate(resulttype res, const double * Q)
 			}
 			sm.sort();
 			// Account for big r's by adding extra integration intervals...
-			x1 = 0.0, x2 = 0.0;
+			x2 = 0.0;
 			for (ir = nr; ir > 0 && r[ir-1] > a[ia]*MAX(4,ngqp-6); ir--) {
 				for (unsigned i = MAX(4,ngqp-6);
 						i <= nbz; i += MAX(4,ngqp-6)) {
@@ -1362,7 +1365,7 @@ LEsystem::calculate(resulttype res, const double * Q)
 			// Account for big z's.  We drop approximately three orders of
 			// magnitude for exp(-7).  Add 5 intervals, so we drop 15 orders
 			// of magnitude.
-			x1 = 0.0, x2 = 0.0;
+			x2 = 0.0;
 			for (iz = nz; iz > 0 && z[iz-1].z > 0.0; iz--) {
 				for (unsigned i = 1; i <= 5
 						&& i*7*a[ia] < j0r[0]*z[iz-1].z; i++) {
@@ -1391,7 +1394,7 @@ gradloop:
 			memset(&ao[0],0,sizeof(bool)*nz*nr);
 			for (ig = 0; ig < lg.length(); ig++) {
 				for (ixy = 0; ixy < points.length(); ixy++) {
-					pavepoint & d = points[ixy];
+					const pavepoint & d = points[ixy];
 					iz = findvalue(z,nz,zpoint(d.z,d.il));
 					for (ild = 0; ild < lg[ig].length(); ild++) {
 						if (fabs(lg[ig][ild].radius()-a[ia]) > DBL_MIN)
@@ -1408,8 +1411,9 @@ gradloop:
 		// We loop through all of our roots and gauss points.
 		for (im = 1; im < nm; im++) {
 			bool alldone = true;
-			bool firstpanel = (bm[im]*a[ia] <= j1r[1]);
-			unsigned agqp = (firstpanel && (res & mask) != dirty ? NGQP : ngqp);
+			const bool firstpanel = (bm[im]*a[ia] <= j1r[1]);
+			const unsigned agqp = (firstpanel && (res & mask) != dirty
+					? NGQP : ngqp);
 			if (interpolate) {
 				if (!firstpanel) {
 					for (iz = 0; iz < nz; iz++)
@@ -1421,8 +1425,8 @@ gradloop:
 			}
 			for (igp = 0; igp < agqp; igp++) {
 				// Calculate the gauss point and weight.
-				double dm = (bm[im]-bm[im-1])/2;
-				double m = (bm[im]+bm[im-1])/2 + gu[agqp][igp]*dm;
+				const double dm = (bm[im]-bm[im-1])/2;
+				const double m = (bm[im]+bm[im-1])/2 + gu[agqp][igp]*dm;
 				double w = gf[agqp][igp]*dm;
 				w *= m*j1(m*a[ia]);
 
@@ -1451,7 +1455,7 @@ gradloop:
 							double t = w*j0(m*r[ir]);
 							s.vdp2 += t*(2*(1-tv)*(T[3]-T[1])-(T[0]+T[2]));
 							if (!(res & disp)) {
-								double t1 = T[1]+T[3], t2 = T[0]-T[2];
+								const double t1 = T[1]+T[3], t2 = T[0]-T[2];
 								t *= m;
 								s.vse2 += t*((1-tv)*t1+t2);
 								s.rse2 += t*((1+tv)*t1-t2);
@@ -1459,7 +1463,7 @@ gradloop:
 							}
 						}
 						if (m < m1[ir] && !(res & disp)) {
-							double t = w*j1(m*r[ir]);
+							const double t = w*j1(m*r[ir]);
 							s.sse2 += t*m*(tv*(T[3]-T[1])+(T[0]+T[2]));
 							s.rdp2 += t*((T[1]+T[3])-(T[0]-T[2]));
 						}
@@ -1626,7 +1630,7 @@ LEsystem::calc_odemark()
 	cache_res = failure;
 	if (!check())
 		return false;
-	unsigned nl = layers();
+	const unsigned nl = layers();
 	double * h = cache_alloc<double>(nl);
 	double * v = cache_alloc<double>(nl);
 	double * E = cache_alloc<double>(nl);
@@ -1638,8 +1642,8 @@ LEsystem::calc_odemark()
 			pavedata & d = data[ig][ixy];
 			memset(d.data,0,sizeof(d.data));
 			for (ild = 0; ild < lg[ig].length(); ild++) {
-				double a = lg[ig][ild].radius();
-				double r = lg[ig][ild].distance(d);
+				const double a = lg[ig][ild].radius();
+				const double r = lg[ig][ild].distance(d);
 				double z = 0.0, he = 0.0, hc = 1.0, R, A;
 				axialdata s;
 				memset(&s,0,sizeof(axialdata));
@@ -1672,8 +1676,8 @@ LEsystem::calc_odemark()
 					}
 					z = hc*he+d.z-(il > 0 ? h[il-1] : 0.0);
 					R = hypot(r,z); A = (r > 0.0 ? 0.0 : hypot(z,a));
-					double tv = v[d.il];
-					double tE = E[d.il];
+					const double tv = v[d.il];
+					const double tE = E[d.il];
 					s.vse = boussinesq_vse(z,r,a,R,A);
 					s.rse = boussinesq_rse(z,r,a,tv,R,A);
 					s.tse = boussinesq_tse(z,r,a,tv,R);
@@ -1714,9 +1718,9 @@ quad8_vdp(double r, double z, double a, double v, double A = 0.0,
           double B = M_PI, double Q = 10.0)
 {
 	// The magic Newton-Cotes weights
-	const double w[9] = {3956, 23552, -3712, 41984, -18160, 41984,
-						-3712, 23552, 3956};
-	const double dw = 14175;
+	static constexpr const double w[9] =
+		{3956, 23552, -3712, 41984, -18160, 41984, -3712, 23552, 3956};
+	static constexpr const double dw = 14175;
 	static unsigned level = 0;
 	static double tol = 1e-6;
 	double h, t, Q1 = 0.0, Q2 = 0.0;
@@ -1781,9 +1785,9 @@ quad8_vse(double r, double z, double a, double A = 0.0,
           double B = M_PI, double Q = 10.0)
 {
 	// The magic Newton-Cotes weights
-	const double w[9] = {3956, 23552, -3712, 41984, -18160, 41984,
-						-3712, 23552, 3956};
-	const double dw = 14175;
+	static constexpr const double w[9] =
+		{3956, 23552, -3712, 41984, -18160, 41984, -3712, 23552, 3956};
+	static constexpr const double dw = 14175;
 	static unsigned level = 0;
 	static double tol = 1e-6;
 	double h, t, t1, Q1 = 0.0, Q2 = 0.0;
@@ -1854,7 +1858,7 @@ LEsystem::calc_fastnum()
 	cache_res = failure;
 	if (!check())
 		return false;
-	unsigned nl = layers();
+	const unsigned nl = layers();
 	double * h = cache_alloc<double>(nl);
 	double * v = cache_alloc<double>(nl);
 	double * E = cache_alloc<double>(nl);
@@ -1866,8 +1870,8 @@ LEsystem::calc_fastnum()
 			pavedata & d = data[ig][ixy];
 			memset(d.data,0,sizeof(d.data));
 			for (ild = 0; ild < lg[ig].length(); ild++) {
-				double a = lg[ig][ild].radius();
-				double r = lg[ig][ild].distance(d);
+				const double a = lg[ig][ild].radius();
+				const double r = lg[ig][ild].distance(d);
 				double z, he = 0.0, hc = 1.0;
 				double vdp = 0.0, vse = 0.0;
 				for (il = 0; il < nl; il++) {
@@ -1919,13 +1923,14 @@ LEsystem::calc_fastnum()
 bool
 LEbackcalc::backcalc()
 {
-	unsigned i, j, nl = layers();
+	unsigned i, j;
+	const unsigned nl = layers();
 	unsigned steps = 0;
 	//double derr = DBL_MAX, oerr = 0.0;
 	double astep, tstep = 0.0, step = 1.0;
 	bool seeded = true;
 	//bool badstep = false;
-	calctype speed = (precision >= 1e-4 ? fast : slow);
+	const calctype speed = (precision >= 1e-4 ? fast : slow);
 	ksset<pavepoint,pavepoint> orig(points);
 
 	if (nl == 0) {
@@ -1945,7 +1950,7 @@ LEbackcalc::backcalc()
 	removepoints();
 	// Add all of the measure points as evaluation points
 	for (i = 0; i < defl.length(); i++) {
-		defldata & d = defl[i];
+		const defldata & d = defl[i];
 		addpoint(d);
 	}
 	// We work in a log(E) space to avoid having to constrain the
@@ -2083,13 +2088,14 @@ LEbackcalc::backcalc()
 bool
 LEbackcalc::seed(unsigned nl, double * P)
 {
-	double E = 0.0, v = layer(nl-1).poissons();
+	double E = 0.0;
+	const double v = layer(nl - 1).poissons();
 	unsigned i, j;
 	bool negdefl = false;
 
 	// Calculate the average surface modulus based on each deflection.
 	for (i = 0; i < defl.length(); i++) {
-		defldata & d = defl[i];
+		const defldata & d = defl[i];
 		if (d.measured <= 0.0) {
 			negdefl = true;
 		} else {
@@ -2128,7 +2134,8 @@ LEbackcalc::deflgrad(unsigned nl, double * P, double * Q,
                      calctype cl)
 {
 	double step = 0.0, dgg = 0.0, gg = 0.0, dd = 0.0;
-	unsigned i, j, k, dl = defl.length();
+	unsigned i, j, k;
+	const unsigned dl = defl.length();
 
 	// Initial setup.
 	double * PG = new double[dl*nl];
@@ -2224,7 +2231,8 @@ LEbackcalc::deflgrad(unsigned nl, double * P, double * Q,
 double
 LEbackcalc::gaussnewton(unsigned nl, double * P, calctype cl)
 {
-	unsigned i, j, k, dl = defl.length();
+	unsigned i, j, k;
+	const unsigned dl = defl.length();
 	double step = 0.0;
 
 	// Initial setup.
@@ -2243,7 +2251,7 @@ LEbackcalc::gaussnewton(unsigned nl, double * P, calctype cl)
 	for (j = 0; j < dl; j++) {
 		defldata & d = defl[j];
 		d.calculated = result(d).result(pavedata::deflct, pavedata::zz);
-		double e = d.measured-d.calculated;
+		const double e = d.measured-d.calculated;
 		for (i = 0; i < nl; i++) {
 			H[j*nl+i] = result(d).deflgrad[i];
 			Y[i] += e*H[j*nl+i];
@@ -2367,9 +2375,9 @@ LEbackcalc::bowlerror(unsigned nl, const double * P, const double s,
 double
 LEbackcalc::brent(unsigned nl, double * P, double * D)
 {
-	const double GC = (3.0-sqrt(5.0))/2.0;
-	const double GR = 1/(1-GC);
-	const double TOL = 1e-6;
+	static const double GC = (3.0-std::sqrt(5.0))/2.0;
+	static const double GR = 1/(1-GC);
+	static constexpr const double TOL = 1e-6;
 
 	double A, B, C, X, Y, Z, a, b, c, x, y, z;
 	double r, q;
@@ -2467,7 +2475,8 @@ LEbackcalc::conjgrad(unsigned nl, double * P)
 {
 	double step = 1.0, dgg = 0.0, gg = 0.0;
 	double derr = DBL_MAX, oerr = 0.0;
-	unsigned i, j, k, dl = defl.length();
+	unsigned i, j, k;
+	const unsigned dl = defl.length();
 
 	// Initial setup.
 	double * D = new double[nl];
@@ -2516,11 +2525,11 @@ LEbackcalc::swarm(unsigned nl, double * P)
 	double gg = 0.0, dgg = 0.0, derr = DBL_MAX, werr = -DBL_MAX;
 	//double r1 = 0.0;
 	double r2 = 0.0;
-	double sderr = sqrt(noise*noise + (precision*precision)/3.0);
-	const double w = 0.0;
+	const double sderr = std::sqrt(noise*noise + (precision*precision)/3.0);
+	static constexpr const double w = 0.0;
 	//const double c1 = 0.2;
 	//const double c2 = 0.3;
-	const double G = 0.1;
+	static constexpr const double G = 0.1;
 	unsigned p, i, iter = 0;
 	unsigned best = 0;
 

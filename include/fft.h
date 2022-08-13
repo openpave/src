@@ -91,7 +91,7 @@ template<unsigned N>
 inline void
 fftc(complex * a) noexcept
 {
-	const unsigned n = N/8;
+	constexpr const unsigned n = N/8;
 	TRANSFORM(a[0],a[2*n],a[4*n],a[6*n],1.0,0.0);
 	TRANSFORM(a[n],a[3*n],a[5*n],a[7*n],M_SQRT1_2,M_SQRT1_2);
 	double wt = -SIN<1,N>::sin(), wpr = -2.0*wt*wt, wpi = -SIN<2,N>::sin();
@@ -109,7 +109,7 @@ template<>
 inline void
 fftc<2>(complex * a) noexcept
 {
-	double t0 = a[0].re - a[1].re, t1 = a[0].im - a[1].im;
+	const double t0 = a[0].re - a[1].re, t1 = a[0].im - a[1].im;
 	a[0].re += a[1].re; a[0].im += a[1].im;
 	a[1].re  = t0;      a[1].im  = t1;
 }
@@ -157,7 +157,7 @@ template<>
 inline void
 fftr<2>(double * a) noexcept
 {
-	double t1 = a[0] + a[1], t2 = a[0] - a[1];
+	const double t1 = a[0] + a[1], t2 = a[0] - a[1];
 	a[0] = t1; a[1] = t2;
 }
 template<>
@@ -213,7 +213,7 @@ template<>
 inline void
 fftc_un<2>(complex * a) noexcept
 {
-	double t0 = a[0].re - a[1].re, t1 = a[0].im - a[1].im;
+	const double t0 = a[0].re - a[1].re, t1 = a[0].im - a[1].im;
 	a[0].re += a[1].re; a[0].im += a[1].im;
 	a[1].re  = t0;      a[1].im  = t1;
 }
@@ -263,7 +263,7 @@ template<>
 inline void
 fftr_un<2>(double * a) noexcept
 {
-	double t1 = a[0] + a[1], t2 = a[0] - a[1];
+	const double t1 = a[0] + a[1], t2 = a[0] - a[1];
 	a[0] = t1; a[1] = t2;
 }
 template<>
@@ -299,7 +299,7 @@ inline void
 fftc_mul(complex * a, const complex * b) noexcept
 {
 	for (unsigned i = 0; i < N; i++) {
-		double t1 = a[i].re, t2 = a[i].im;
+		const double t1 = a[i].re, t2 = a[i].im;
 		a[i].re = t1 * b[i].re - t2 * b[i].im;
 		a[i].im = t1 * b[i].im + t2 * b[i].re;
 	}
@@ -307,16 +307,16 @@ fftc_mul(complex * a, const complex * b) noexcept
 
 template<unsigned N>
 inline void
-fftr_mul(double * a, double * b) noexcept
+fftr_mul(double * a, const double * b) noexcept
 {
 	double t0 = a[0]*b[0], t1 = a[1]*b[1];
 	fftc_mul<N/2>(reinterpret_cast<complex *>(a),
-	              reinterpret_cast<complex *>(b));
+	              reinterpret_cast<const complex *>(b));
 	a[0] = t0; a[1] = t1;
 }
 template<>
 inline void
-fftr_mul<2>(double * a, double * b) noexcept
+fftr_mul<2>(double * a, const double * b) noexcept
 {
 	a[0] *= b[0];
 	a[1] *= b[1];

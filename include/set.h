@@ -188,7 +188,7 @@ protected:
 
 	// Since this is a fixed size set, hide the allocator...
 	void allocate(unsigned s) {
-		unsigned b = bufsize(s);
+		const unsigned b = bufsize(s);
 		if (b == buffer)
 			return;
 		if (b == 0) {
@@ -409,7 +409,7 @@ public:
 	unsigned findvalue(const V & v) const noexcept {
 		unsigned l = 0, r = this->size;
 		while (l < r) {
-			unsigned i = l + (r-l)/2;
+			const unsigned i = l + (r-l)/2;
 			if (this->value[i] < v)
 				l = i+1;
 			else
@@ -576,7 +576,7 @@ public:
 
 	// Do a lookup, and return -1 if the value is not found.
 	unsigned hasvalue(const V & v) const {
-		unsigned p = findvalue(v);
+		const unsigned p = findvalue(v);
 		if (p < size && value[idx[p]] == v)
 			return idx[p];
 		else
@@ -688,7 +688,7 @@ protected:
 
 	// Make some space...
 	void allocate(unsigned s) {
-		unsigned b = bufsize(s);
+		const unsigned b = bufsize(s);
 		if (b == buffer)
 			return;
 		if (b == 0) {
@@ -726,7 +726,7 @@ protected:
 	unsigned findvalue(const V & v) const {
 		unsigned l = 0, r = size;
 		while (l < r) {
-			unsigned i = l + (r-l)/2;
+			const unsigned i = l + (r-l)/2;
 			if (value[idx[i]] < v)
 				l = i+1;
 			else
@@ -842,7 +842,7 @@ protected:
 
 	// Hide the allocation function.
 	void allocate(unsigned s) {
-		unsigned b = bufsize(s);
+		const unsigned b = bufsize(s);
 		if (b == buffer)
 			return;
 		if (b == 0) {
@@ -1082,7 +1082,7 @@ public:
 
 	// Do a key lookup, and return -1 if the key is not found.
 	unsigned haskey(const K & k) const noexcept {
-		unsigned p = findkey(k);
+		const unsigned p = findkey(k);
 		if (p < size && static_cast<K &>(value[idx[p]]) == k)
 			return idx[p];
 		else
@@ -1104,7 +1104,7 @@ public:
 	}
 	// Return data based on a key lookup.
 	const V & operator [] (const K & k) const {
-		unsigned p = haskey(k);
+		const unsigned p = haskey(k);
 #if defined(DEBUG)
 		if (!inbounds(p))
 			throw std::out_of_range("Key out of range!");
@@ -1207,7 +1207,7 @@ protected:
 
 	// Make some space...
 	void allocate(unsigned s) {
-		unsigned b = bufsize(s);
+		const unsigned b = bufsize(s);
 		if (b == buffer)
 			return;
 		if (b == 0) {
@@ -1245,7 +1245,7 @@ protected:
 	unsigned findkey(const K & k) const noexcept {
 		unsigned l = 0, r = size;
 		while (l < r) {
-			unsigned i = l + (r-l)/2;
+			const unsigned i = l + (r-l)/2;
 			if (static_cast<K &>(value[idx[i]]) < k)
 				l = i+1;
 			else

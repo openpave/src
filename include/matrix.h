@@ -156,7 +156,7 @@ public:
 	int release() noexcept {
 		if (ptr == nullptr)
 			return 0;
-		int count = ptr->release();
+		const int count = ptr->release();
 		if (count == 0)
 			delete ptr;
 		ptr = nullptr;
@@ -640,7 +640,8 @@ public:
 	}
 	// Comparison operators...
 	bool operator == (const matrix & a) const noexcept {
-		unsigned m = rows(), n = cols(), i, j;
+		const unsigned m = rows(), n = cols();
+		unsigned i, j;
 		if (m != a.rows() || n != a.cols())
 			return false;
 		for (i = 0; i < m; i++) {

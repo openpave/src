@@ -50,7 +50,7 @@ transpose(unsigned m, unsigned n, double * A) noexcept
 		} while (j > s);
 		if (j < s || i == 1)
 			continue;
-		double tmp = A[j = s];
+		const double tmp = A[j = s];
 		do {
 			i = (j%m)*n+j/m;
 			A[j] = (i == s ? tmp : A[i]);
@@ -157,7 +157,7 @@ inv_mul_gauss(unsigned n, unsigned m, double * A,
 		}
 		det *= pvt;
 		for (k = i+1; i < n && k < n; k++) {
-			double tmp = A[k*n+i]/pvt;
+			const double tmp = A[k*n+i]/pvt;
 			for (j = i+1; i < n && j < n; j++)
 				A[k*n+j] -= tmp*A[i*n+j];
 			for (j = 0; j < m; j++)
@@ -719,7 +719,7 @@ decmp_svd(unsigned m, unsigned n, double * A,
 			for (k = i+1; i < n && k < n; k++)
 				A[i*n+k] *= scale;
 		}
-		double tmp = fabs(W[i]) + fabs(rv1[i]);
+		const double tmp = fabs(W[i]) + fabs(rv1[i]);
 		if (tmp > anorm)
 			anorm = tmp;
 	}
@@ -747,7 +747,7 @@ decmp_svd(unsigned m, unsigned n, double * A,
 			for (j = i; i < n && j < n; j++) {
 				for (k = i, S = 0.0; i < m && k < m; k++)
 					S += A[k*n+(i-1)]*A[k*n+j];
-				double f = (S/A[(i-1)*n+(i-1)])/W[i-1];
+				const double f = (S/A[(i-1)*n+(i-1)])/W[i-1];
 				for (k = i-1; k < m; k++)
 					A[k*n+j] += f*A[k*n+(i-1)];
 			}

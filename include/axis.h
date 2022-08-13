@@ -155,7 +155,7 @@ public:
 			throw std::runtime_error("attempting to insert key into axis without key in prior!");
 		if (haskey(k,ks...))
 			throw std::runtime_error("attempting to insert duplicate key into axis!");
-		axis_key a(prior,k,ks...);
+		const axis_key a(prior,k,ks...);
 		me.add(a);
 		this->dispatch(axis_message::add,me.getorderof(a));
 	}
@@ -272,7 +272,7 @@ public:
 	void add(const K & k) {
 		if (haskey(k))
 			throw std::runtime_error("attempting to insert duplicate key into axis!");
-		axis_key a(k);
+		const axis_key a(k);
 		me.add(a);
 		this->dispatch(axis_message::add,me.getorderof(a));
 	}

@@ -171,7 +171,7 @@ public:
 		}
 		tasks.emplace(std::forward<F>(f),std::forward<C>(cb));
 		cv.notify_one();
-		bool rv = haveresults();
+		const bool rv = haveresults();
 		lock.unlock(); // unlock so they can work.
 		if (rv)
 			result(false); // try to return a result.
@@ -265,7 +265,7 @@ private:
 		if (wait) {
 			std::get<0>(r).wait();
 		} else {
-			std::future_status status =
+			const std::future_status status =
 					std::get<0>(r).wait_for(std::chrono::seconds(0));
 			if (status != std::future_status::ready)
 				return false;
