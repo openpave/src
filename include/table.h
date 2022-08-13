@@ -79,7 +79,9 @@ public:
 		//copy(s,nullptr);   // Constructs the elements and increases size
 	}
 	~table() {
-		allocate(0);
+		try {
+			allocate(0);
+		} catch (...) {}
 	}
 	// Behave like an array. Zero indexed.
 	V & operator [] (unsigned p) const NOEXCEPT {

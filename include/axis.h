@@ -148,7 +148,9 @@ public:
 		}));
 	}
 	~axis() {
-		this->dispatch(axis_message::deleting,UINT_MAX);
+		try {
+			this->dispatch(axis_message::deleting,UINT_MAX);
+		} catch (...) {}
 	}
 	void add(const K & k, const Ks &...ks) {
 		if (!prior.haskey(ks...))
@@ -267,7 +269,9 @@ public:
 	axis() {
 	}
 	~axis() {
-		this->dispatch(axis_message::deleting,UINT_MAX);
+		try {
+			this->dispatch(axis_message::deleting,UINT_MAX);
+		} catch (...) {}
 	}
 	void add(const K & k) {
 		if (haskey(k))

@@ -160,7 +160,10 @@ private:
 		  : remover(r), next(nullptr) {
 		}
 		~source() {
-			remover();
+			// Ignore any failures here.
+			try {
+				remover();
+			} catch (...) {}
 		}
 		std::function<void(void)> remover;
 		source * next;         // The next source

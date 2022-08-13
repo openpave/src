@@ -209,8 +209,10 @@ struct random
 	random & operator = (const random &) = delete;
 	random & operator = (random &&) = delete;
 	virtual ~random() {
-		if (dealer != nullptr)
-			dealer->rem_variable(this);
+		try {
+			if (dealer != nullptr)
+				dealer->rem_variable(this);
+		} catch (...) {}
 	}
 	// Distribution type.
 	virtual distribution type() const = 0;
@@ -359,8 +361,10 @@ realized::realized(house & h, const random & r, float d)
 inline
 realized::~realized()
 {
-	if (dealer != nullptr)
-		dealer->rem_realization(this);
+	try {
+		if (dealer != nullptr)
+			dealer->rem_realization(this);
+	} catch (...) {}
 }
 
 inline void

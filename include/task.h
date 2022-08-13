@@ -123,23 +123,25 @@ public:
 	}
 	// basic destructor.
 	~task_queue() {
-		bool done = false;
-		if (exiting.exchange(true))
-			return; // already exiting?
-		while (!done) {
-			std::unique_lock<std::mutex> lock{mtx};
-			if (!havework()) {
-				done = true;
-				if (empty.exchange(true))
-					return; // already empty?
+		try {
+			bool done = false;
+			if (exiting.exchange(true))
+				return; // already exiting?
+			while (!done) {
+				std::unique_lock<std::mutex> lock{mtx};
+				if (!havework()) {
+					done = true;
+					if (empty.exchange(true))
+						return; // already empty?
+				}
+				cv.notify_all(); // wake everyone up to exit.
+				lock.unlock(); // unlock so they can work.
+				std::this_thread::yield();
 			}
-			cv.notify_all(); // wake everyone up to exit.
-			lock.unlock(); // unlock so they can work.
-			std::this_thread::yield();
-		}
-		for (auto & thread : workers)
-			thread.join();
-		drain();
+			for (auto& thread : workers)
+				thread.join();
+			drain();
+		} catch (...) {}
 	}
 	void drain() {
 		bool done = false;
