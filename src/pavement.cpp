@@ -2114,6 +2114,32 @@ LEbackcalc::seed(unsigned nl, double * P)
 }
 
 /*
+ * Bowl error function.  This works out mean deviation of the difference
+ * between the caclulated and measured deflections.  Call with P=0 to
+ * avoid it rerunning the calcs.  Call with s and D to get it to do
+ * prediction at distance s along the vector D.
+ */
+double
+LEbackcalc::bowlerror(unsigned nl, const double * P, const double s,
+		              const double * D)
+{
+	unsigned i;
+	double err;
+
+	for (i = 0; P != nullptr && i < nl; i++)
+		layer(i).emod(pow(10,P[i]+(D != nullptr ? s*D[i] : 0.0)));
+	if (P != nullptr)
+		calculate(LEsystem::disp);
+	for (i = 0, err = 0.0; i < defl.length(); i++) {
+		defldata & d = defl[i];
+		if (P != nullptr)
+			d.calculated = result(d).result(pavedata::deflct, pavedata::zz);
+		err += pow(d.measured-d.calculated,2);
+	}
+	return sqrt(err/defl.length());
+}
+
+/*
  * Deflection gradient approach.
  *
  * This works by computing the gradient in deflection at each
@@ -2334,32 +2360,6 @@ LEbackcalc::kalman(unsigned nl, double * P)
 	delete [] S;
 	delete [] H;
 	return step;
-}
-
-/*
- * Bowl error function.  This works out mean deviation of the difference
- * between the caclulated and measured deflections.  Call with P=0 to
- * avoid it rerunning the calcs.  Call with s and D to get it to do
- * prediction at distance s along the vector D.
- */
-double
-LEbackcalc::bowlerror(unsigned nl, const double * P, const double s,
-                      const double * D)
-{
-	unsigned i;
-	double err;
-
-	for (i = 0; P != nullptr && i < nl; i++)
-		layer(i).emod(pow(10,P[i]+(D != nullptr ? s*D[i] : 0.0)));
-	if (P != nullptr)
-		calculate(LEsystem::disp);
-	for (i = 0, err = 0.0; i < defl.length(); i++) {
-		defldata & d = defl[i];
-		if (P != nullptr)
-			d.calculated = result(d).result(pavedata::deflct, pavedata::zz);
-		err += pow(d.measured-d.calculated,2);
-	}
-	return sqrt(err/defl.length());
 }
 
 /*
