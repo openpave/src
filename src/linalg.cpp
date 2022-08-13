@@ -91,7 +91,7 @@ orth_gs(unsigned n, double * Q) noexcept
  */
 void
 equ_gauss(unsigned n, const double * A, const double * b,
-          double * x)
+	      double * x)
 {
 	unsigned i, j, k;
 
@@ -135,8 +135,7 @@ equ_gauss(unsigned n, const double * A, const double * b,
  * This function employs Gaussian elimination with full pivoting.
  */
 double
-inv_mul_gauss(unsigned n, unsigned m, double * A,
-              double * B)
+inv_mul_gauss(unsigned n, unsigned m, double * A, double * B)
 {
 	double det = 1.0;
 	unsigned i, j, k;
@@ -184,8 +183,7 @@ inv_mul_gauss(unsigned n, unsigned m, double * A,
  * of interchanges have been performed (this is for the determinant calc).
  */
 void
-decmp_lu(unsigned n, double * A, unsigned * idx,
-         int & d)
+decmp_lu(unsigned n, double * A, unsigned * idx, int & d)
 {
 	unsigned i, j, k;
 
@@ -242,7 +240,7 @@ decmp_lu(unsigned n, double * A, unsigned * idx,
  */
 void
 bksub_lu(unsigned n, const double * A, const unsigned * idx,
-         double * b, unsigned m, unsigned c) noexcept
+	     double * b, unsigned m, unsigned c) noexcept
 {
 	unsigned i, j, k;
 
@@ -300,8 +298,7 @@ equ_lu(unsigned n, const double * A, const double * b, double * x)
  * The result is returned in B, and the determinant in the return value.
  */
 double
-inv_mul_lu(unsigned n, unsigned m, double * A,
-           double * B)
+inv_mul_lu(unsigned n, unsigned m, double * A, double * B)
 {
 	double det = 0.0;
 	unsigned i;
@@ -426,7 +423,7 @@ decmp_chol(unsigned n, unsigned w, double * A)
  */
 void
 bksub_chol(unsigned n, const double * A,
-           double * b, unsigned m, unsigned c) noexcept
+	       double * b, unsigned m, unsigned c) noexcept
 {
 	unsigned i, k;
 
@@ -448,7 +445,7 @@ bksub_chol(unsigned n, const double * A,
  */
 void
 bksub_chol(unsigned n, unsigned w, const double * A,
-           double * b, unsigned m, unsigned c) noexcept
+	       double * b, unsigned m, unsigned c) noexcept
 {
 	unsigned i, k;
 
@@ -504,7 +501,7 @@ equ_chol(unsigned n, const double * A, const double * b, double * x)
  */
 void
 equ_chol(unsigned n, unsigned w, const double * A,
-         const double * b, double * x)
+	     const double * b, double * x)
 
 {
 	unsigned i, j, iter = 0;
@@ -609,7 +606,7 @@ decmp_ldl(unsigned n, double * A)
  */
 void
 bksub_ldl(unsigned n, const double * A,
-          double * b, unsigned m, unsigned c) noexcept
+	      double * b, unsigned m, unsigned c) noexcept
 {
 	unsigned i, k;
 	double sum;
@@ -664,7 +661,7 @@ equ_ldl(unsigned n, const double * A, const double * b, double * x)
  */
 void
 decmp_svd(unsigned m, unsigned n, double * A,
-          double * W, double * V)
+	      double * W, double * V)
 {
 	double F, G = 0.0, H;
 	double C, S, X, Y;
@@ -835,8 +832,8 @@ decmp_svd(unsigned m, unsigned n, double * A,
 
 void
 bksub_svd(unsigned m, unsigned n, const double * U,
-          const double * W, const double * V,
-          double * b, unsigned p, unsigned c)
+	      const double * W, const double * V,
+	      double * b, unsigned p, unsigned c)
 {
 	unsigned i, j;
 
@@ -994,8 +991,8 @@ decmp_qr(unsigned n, double * A, double * s, double * d) noexcept
  */
 void
 bksub_qr(unsigned n, const double * A,
-         const double * s, const double * d,
-         double * b, unsigned m, unsigned c) noexcept
+	     const double * s, const double * d,
+	     double * b, unsigned m, unsigned c) noexcept
 {
 	unsigned i, j;
 	double sum;
@@ -1157,7 +1154,7 @@ eig_ql(unsigned n, double * A, double * d, bool sorted)
 
 void
 bksub_eig(unsigned n, const double * Q, const double * d,
-          double * b, unsigned p, unsigned c)
+	      double * b, unsigned p, unsigned c)
 {
 	unsigned i, j;
 

@@ -62,7 +62,7 @@ public:
 	~test_listener() {
 		printf("Deleting listener\n");
 	}
-	void onevent(test_event) {
+	void onevent(test_event ) {
 		printf("Got event!\n");
 	}
 };

@@ -39,7 +39,7 @@ test1()
 {
 	printf("Test 1:\n");
 	task_queue<> t;
-	
+
 	t.enqueue([]() {
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 		return;
@@ -51,7 +51,7 @@ test2()
 {
 	printf("Test 2:\n");
 	task_queue<int> t;
-	
+
 	t.enqueue([]() -> int {
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 		return 1;

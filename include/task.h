@@ -60,7 +60,8 @@ namespace OP {
 
 // Wrap the types so we can specialize for void.
 template<typename T>
-struct task_helper {
+struct task_helper
+{
 	using function_t = std::packaged_task<T()>; // The actual task
 	using callback_t = std::function<void(T)>;  // The callback
 	using task_t = std::tuple<function_t,callback_t>;
@@ -80,7 +81,8 @@ struct task_helper {
 };
 // and then for void...
 template<>
-struct task_helper<void> {
+struct task_helper<void>
+{
 	using function_t = std::packaged_task<void()>; // The actual task
 	using callback_t = std::function<void()>;      // The callback
 	using task_t = std::tuple<function_t,callback_t>;
@@ -122,12 +124,10 @@ public:
 	// basic destructor.
 	~task_queue() {
 		bool done = false;
-
 		if (exiting.exchange(true))
 			return; // already exiting?
 		while (!done) {
 			std::unique_lock<std::mutex> lock{mtx};
-
 			if (!havework()) {
 				done = true;
 				if (empty.exchange(true))
@@ -157,7 +157,7 @@ public:
 		}
 	}
 	// enqueue some work into the task queue and try to wake up a worker
-	template <typename F, typename C = callback_t>
+	template<typename F, typename C = callback_t>
 	void enqueue(F && f, C && cb = callback_t(task_helper<T>::fallback)) {
 		std::unique_lock<std::mutex> lock{mtx};
 
@@ -219,7 +219,7 @@ private:
 				p.set_exception(std::current_exception());
 				abort = true; // start abort ASAP
 				return; // assume this thread should die
-			} catch(...) { // set_exception() may throw too
+			} catch (...) { // set_exception() may throw too
 				throw; // just throw from the thread
 			}
 		}

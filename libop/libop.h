@@ -99,16 +99,16 @@ OP_LE_Calc_CalME(
 
 long OP_EXPORT
 OP_HT_Init(const unsigned nl, const double * h, const double * D,
-           const unsigned nn, const double * nd, const double * nt,
-           const unsigned nw, const double dt);
+	       const unsigned nn, const double * nd, const double * nt,
+	       const unsigned nw, const double dt);
 
 void OP_EXPORT
 OP_HT_Step(const long token, const unsigned nt,
-           const double * tt, const double tb);
+	       const double * tt, const double tb);
 
 void OP_EXPORT
 OP_HT_Interpolate(const long token, const unsigned np, const double * pd,
-                  double * pt);
+	              double * pt);
 
 void OP_EXPORT
 OP_HT_Reset(const long token);

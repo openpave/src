@@ -256,7 +256,7 @@ private:
  * underneath, to minimize the use of small chunks of memory.  The key class
  * K must implement compare().
  */
-template<typename K, typename V, template<typename,typename> class N>
+template<typename K, typename V, template<typename, typename> class N>
 class tree
 {
 protected:
@@ -278,7 +278,7 @@ public:
 	bool inbounds(unsigned p) const noexcept {
 		return (p < size ? true : false);
 	}
-	// Do a key lookup, and return UINT_MAX if the key is not found.
+	// Do a key lookup, and return false if the key is not found.
 	bool haskey(const K & k) const noexcept {
 		return (getposition(k) != UINT_MAX);
 	}
@@ -498,7 +498,7 @@ protected:
 		std::swap(value,t.value);
 		std::swap(block,t.block);
 		return *this;
-	};
+	}
 	~tree() {
 		allocate(0);
 	}
@@ -582,8 +582,9 @@ private:
  *
  * See https://en.wikipedia.org/wiki/AVL_tree
  */
-template <typename K, typename V = K>
-class ktree_avl : public tree<K,V,ktree_avl>
+template<typename K, typename V = K>
+class ktree_avl :
+	public tree<K,V,ktree_avl>
 {
 protected:
 	template<typename KK, typename VV>

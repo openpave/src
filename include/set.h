@@ -72,7 +72,8 @@ namespace OP {
  * This class provides the basic working for the rest of the set classes,
  * including the calculation of the buffer size.
  */
-class set {
+class set
+{
 public:
 	// The length. Nice for lots of things...
 	unsigned length() const noexcept {
@@ -120,8 +121,10 @@ private:
  *
  * This class acts like a fixed size array.
  */
-template <class V>
-class fset : public set {
+template<class V>
+class fset
+  : public set
+{
 public:
 	// Nice simple constructor...
 	fset(unsigned s, unsigned b)
@@ -264,8 +267,10 @@ fset<double>::init(unsigned i, const double * v) {
  * This class builds on fset to make a set which can be resized
  * at will. Lots of nice add() and remove() options are available.
  */
-template <class V>
-class sset : public fset<V> {
+template<class V>
+class sset
+  : public fset<V>
+{
 public:
 	// Provide a null constructor for empty sets.
 	sset() noexcept
@@ -370,8 +375,10 @@ public:
  * If you want to store your own classes, then define operator's >,
  * <=, and =.
  */
-template <class V>
-class oset : public sset<V> {
+template<class V>
+class oset
+  : public sset<V>
+{
 public:
 	// Null constructor.
 	oset()
@@ -469,8 +476,10 @@ protected:
  *
  * Custom classes should define operator!=.
  */
-template <class V>
-class cset : public oset<V> {
+template<class V>
+class cset
+  : public oset<V>
+{
 public:
 	// Getting the hang of this yet?
 	cset()
@@ -511,7 +520,7 @@ protected:
 				do
 					this->value[i].~V();
 				while (++i < this->size
-				 && this->value[j] == this->value[i]);
+						&& this->value[j] == this->value[i]);
 				s = i;
 				while (s < this->size-1
 				 && this->value[s] != this->value[s+1])
@@ -535,8 +544,10 @@ protected:
  * As a result hasvalue() is much faster, but at the expense of having
  * the set be read only...
  */
-template <class V>
-class iset : public set {
+template<class V>
+class iset
+  : public set
+{
 public:
 	// Make one...
 	iset()
@@ -762,8 +773,10 @@ protected:
  * The key must be unique. This is intended for basic database
  * like functionality.
  */
-template <class K, class V>
-class kfset : public set {
+template<class K, class V>
+class kfset
+  : public set
+{
 public:
 	// Simple constructor.
 	kfset(unsigned s, unsigned b)
@@ -892,8 +905,10 @@ protected:
  *
  * Think combination of cset and kfset.
  */
-template <class K, class V>
-class ksset : public kfset<K,V> {
+template<class K, class V>
+class ksset
+  : public kfset<K,V>
+{
 public:
 	// C++ sucks...
 	ksset()
@@ -966,8 +981,10 @@ public:
  *
  * Think oset and ksset.
  */
-template <class K, class V>
-class koset : public ksset<K,V> {
+template<class K, class V>
+class koset
+  : public ksset<K,V>
+{
 public:
 	koset()
 	  : ksset<K,V>() {
@@ -1042,8 +1059,10 @@ protected:
  * As a result haskey() is much faster, but at the expense of having
  * the set be read only...
  */
-template <class K, class V>
-class kiset : public set {
+template<class K, class V>
+class kiset
+  : public set
+{
 public:
 	// Make one...
 	kiset()
@@ -1279,8 +1298,10 @@ protected:
  * classes have separate keys and values. Now we have to manage
  * two arrays of things...
  */
-template <class K, class V>
-class afset : public set {
+template<class K, class V>
+class afset
+  : public set
+{
 public:
 	// Make one...
 	afset(unsigned s, unsigned b)
@@ -1434,8 +1455,10 @@ protected:
 /*
  * class asset - Associative sizeable set
  */
-template <class K, class V>
-class asset : public afset<K,V> {
+template<class K, class V>
+class asset
+  : public afset<K,V>
+{
 public:
 	// Empty sizeable sets are OK.
 	asset()
@@ -1509,8 +1532,10 @@ public:
  *
  * Ordered by key set.
  */
-template <class K, class V>
-class aoset : public asset<K,V> {
+template<class K, class V>
+class aoset
+  : public asset<K,V>
+{
 public:
 	aoset()
 	  : asset<K,V>() {
@@ -1584,8 +1609,10 @@ protected:
 /*
  * class avoset - Associative value ordered set
  */
-template <class K, class V>
-class avoset : public asset<K,V> {
+template<class K, class V>
+class avoset
+  : public asset<K,V>
+{
 public:
 	avoset()
 	  : asset<K,V>() {

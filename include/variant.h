@@ -146,7 +146,7 @@ struct wrap_type
 	}
 	T t;
 };
-// Now define a class to get the realized type, handling pointers. 
+// Now define a class to get the realized type, handling pointers.
 // This is the default case with no special types.
 template<typename T, typename = void_t<>>
 struct real_type
@@ -328,19 +328,19 @@ class vunctor<T,Ts...> {
 		// A callback that can be used to get a value.
 		typedef std::function<T()> callback;
 
-		store() :
-			f(), t() {
+		store()
+		  : f(), t() {
 		};
 		store(const store &) = delete;
 		store(store &&) = delete;
 		store & operator = (const store &) = delete;
 		store & operator = (store &&) = delete;
-		store(const OP::type_index & d, const store & v) :
-			f(), t() {
+		store(const OP::type_index & d, const store & v)
+		  : f(), t() {
 			set(d,v);
 		}
-		store(const OP::type_index & d, store && v) :
-			f(), t() {
+		store(const OP::type_index & d, store && v)
+		  : f(), t() {
 			set(d,std::move(v));
 		}
 		// U templates are conditioned on the union type for this slot.
@@ -465,34 +465,34 @@ class vunctor<T,Ts...> {
 	friend class validator;
 
 	// Allow only private access to create an empty variant
-	vunctor(const OP::type_index & d) :
-		k(d), s() {
+	vunctor(const OP::type_index & d)
+	  : k(d), s() {
 	}
 	// Convoluted templates to handle assignments from lambda functions.
 	template<typename V>
-    void copy_f(std::function<V()> && v) {
+	void copy_f(std::function<V()> && v) {
 		s.template set_f<V>(k,std::move(v));
-    }
+	}
 	template<typename V>
 	typename std::enable_if<!is_callable<V>::value,void>::type
 	copy_v(V && v) {
 		s.template set_t<V>(k,std::forward<V>(v));
-    }
+	}
 	template<typename V>
 	typename std::enable_if<is_callable<V>::value,void>::type
 	copy_v(V && v) {
 		copy_f<decltype(v())>(std::move(v));
-    }
+	}
 	template<typename V>
 	typename std::enable_if<!is_callable<V>::value,void>::type
 	copy_c(const V & v) {
 		s.template set_t<V>(k,v);
-    }
+	}
 	template<typename V>
 	typename std::enable_if<is_callable<V>::value,void>::type
 	copy_c(const V & v) {
 		copy_f<decltype(v())>(v);
-    }
+	}
 	// Set value from a different type of store
 	template<typename...Vs>
 	void set_r(const OP::type_index & d, const vunctor<Vs...> & v) {
@@ -508,17 +508,17 @@ public:
 	using variant_t = variant<typename cast_type<T>::type,typename cast_type<Ts>::type...>;
 
 	vunctor() = delete;
-	vunctor(const vunctor & v) :
-		k(v.k), s(k,v.s) {
+	vunctor(const vunctor & v)
+	  : k(v.k), s(k,v.s) {
 	}
-	vunctor(vunctor && v) :
-		k(std::move(v.k)), s(k,std::move(v.s)) {
+	vunctor(vunctor && v)
+	  : k(std::move(v.k)), s(k,std::move(v.s)) {
 	}
 	// Create a variant, fixing the type.
+	// fake out the constructor with V.  It will actually be replaced.
 	template<typename V>
-	vunctor(V v) noexcept :
-		// fake out the constructor with V.  It will actually be replaced.
-		k(OP::type_index(OP::type_id<V>())), s(v,&k) {
+	vunctor(V v) noexcept
+	  : k(OP::type_index(OP::type_id<V>())), s(v,&k) {
 	}
 	// Destruct depending on type
 	~vunctor() {
@@ -600,16 +600,16 @@ class validator<T,Ts...> {
 		// U templates are conditioned on the union type for this slot.
 		template<typename U>
 		store(std::function<bool(const U &)> && u,
-		      OP::type_index * k,
-			  typename std::enable_if<compare_v<U,T>::castable>::type * = 0) :
-			f(u) {
+			  OP::type_index * k,
+			  typename std::enable_if<compare_v<U,T>::castable>::type * = 0)
+		  : f(u) {
 			*k = OP::type_index(OP::type_id<T>());
 		}
 		template<typename U>
 		store(std::function<bool(const U &)> && u,
-		      OP::type_index * k,
-			  typename std::enable_if<!compare_v<U,T>::castable>::type * = 0) :
-			b(std::move(u),k) {
+			  OP::type_index * k,
+			  typename std::enable_if<!compare_v<U,T>::castable>::type * = 0)
+		  : b(std::move(u),k) {
 		}
 		~store() {
 			// clear() must be called outside...
@@ -677,24 +677,24 @@ class validator<T,Ts...> {
 
 	// Convoluted templates to handle assignments from lambda functions.
 	template<typename V>
-    void copy_f(std::function<bool(const V &)> && v) {
+	void copy_f(std::function<bool(const V &)> && v) {
 		s.set_f(std::move(v));
-    }
+	}
 
 public:
 	// Create a variant, fixing the type.
 	validator() = delete;
-	validator(const validator & v) :
-		k(v.k), s(k,v.s) {
+	validator(const validator & v)
+	  : k(v.k), s(k,v.s) {
 	}
-	validator(validator && v) :
-		k(std::move(v.k)), s(k,std::move(v.s)) {
+	validator(validator && v)
+	  : k(std::move(v.k)), s(k,std::move(v.s)) {
 	}
 	template<typename F,
 		typename = typename std::enable_if<is_callable<F>::value>::type,
 		typename V = typename function_traits<F>::template arg<0>::type>
-	validator(F && v) :
-		k(OP::type_index(OP::type_id<V>())),
+	validator(F && v)
+	  : k(OP::type_index(OP::type_id<V>())),
 		s(std::function<bool(const V &)>(std::forward<F>(v)),&k) {
 	}
 	// Destruct depending on type
@@ -759,13 +759,15 @@ class variant<T,Ts...> {
 			set(d,std::move(v));
 		}
 		template<typename U>
-		store(U u, OP::type_index * k, typename std::enable_if<compare_v<U,T>::setable>::type * = 0) :
-			t(u) {
+		store(U u, OP::type_index * k, typename std::enable_if<
+				compare_v<U,T>::setable>::type * = 0)
+		  : t(u) {
 			*k = OP::type_index(OP::type_id<T>());
 		}
 		template<typename U>
-		store(U u, OP::type_index * k, typename std::enable_if<!compare_v<U,T>::setable>::type * = 0) :
-			b(u,k) {
+		store(U u, OP::type_index * k, typename std::enable_if<
+				!compare_v<U,T>::setable>::type * = 0)
+		  : b(u,k) {
 		}
 		~store() {
 			// clear() must be called outside...
@@ -839,8 +841,8 @@ class variant<T,Ts...> {
 	friend class vunctor;
 
 	// Allow only private access to create an empty variant
-	variant(const OP::type_index & d) :
-		k(d), s() {
+	variant(const OP::type_index & d)
+	  : k(d), s() {
 	}
 	// Set value from a different type of store
 	template<typename...Vs>
@@ -850,18 +852,18 @@ class variant<T,Ts...> {
 
 public:
 	variant() = delete;
-	variant(const vunctor<T,Ts...> & v) :
-		k(v.k), s(k,v.s) {
+	variant(const vunctor<T,Ts...> & v)
+	  : k(v.k), s(k,v.s) {
 	}
-	variant(const variant & v) :
-		k(v.k), s(k,v.s) {
+	variant(const variant & v)
+	  : k(v.k), s(k,v.s) {
 	}
-	variant(variant && v) :
-		k(std::move(v.k)), s(k,std::move(v.s)) {
+	variant(variant && v)
+	  : k(std::move(v.k)), s(k,std::move(v.s)) {
 	}
 	template<typename V>
-	variant(V v) :
-		k(OP::type_index(OP::type_id<V>())), s(v,&k) {
+	variant(V v)
+	  : k(OP::type_index(OP::type_id<V>())), s(v,&k) {
 	}
 	~variant() {
 		s.clear(k);

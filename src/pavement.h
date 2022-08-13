@@ -459,8 +459,7 @@ public:
 	unsigned results() const noexcept {
 		return points.length();
 	}
-	const pavedata & result(const point3d & p, unsigned l = UINT_MAX)
-		const {
+	const pavedata & result(const point3d & p, unsigned l = UINT_MAX) const {
 		return result(clg,p,l);
 	}
 	const pavedata & result(const unsigned i) const {

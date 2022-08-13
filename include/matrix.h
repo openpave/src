@@ -217,8 +217,7 @@ public:
 			for (unsigned j = 0; j < N; j++)
 				data[i*N+j] = (!mkdiag || i == j ? d : 0.0);
 	}
-	matrix_dense(unsigned m, unsigned n,
-		const double * v)
+	matrix_dense(unsigned m, unsigned n, const double * v)
 	  : matrix_storage(none), data(nullptr) {
 		resize(m,n);
 		memcpy(data,v,M*N*sizeof(double));
@@ -602,15 +601,15 @@ public:
 	  : data(nullptr) {
 	}
 	matrix(unsigned m, unsigned n)
-		: data(nullptr) {
+	  : data(nullptr) {
 		matrix_storage * d = new matrix_zero(m,n);
 		data = matrix_storage_ptr(d);
 	}
 	matrix(const matrix & m)
-		: data(m.data) {
+	  : data(m.data) {
 	}
 	matrix(matrix_storage * d)
-		: data(matrix_storage_ptr(d)) {
+	  : data(matrix_storage_ptr(d)) {
 	}
 
 	unsigned rows() const noexcept {

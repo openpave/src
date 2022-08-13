@@ -25,7 +25,7 @@
 
 	History:
 		2002/01/10 - Created by Jeremy Lea <reg@openpave.org>
-		2016/02/02 - Seperated out of RELIABILITY.H
+		2016/02/02 - Separated out of RELIABILITY.H
 
 **************************************************************************/
 
@@ -39,7 +39,7 @@ namespace OP {
 
 /*
  * A normally distributed random number generator.  We avoid
- * the uniform rv's being 0.0 since this will result in infinte
+ * the uniform rv's being 0.0 since this will result in infinite
  * values, and double count the 0 == 2pi.
  */
 double
@@ -58,7 +58,6 @@ stdnormal_rnd() noexcept
 	} else {
 		i = 1;
 	}
-
 	return u[i];
 }
 
@@ -208,7 +207,6 @@ stdnormal_inv(double p) noexcept
 		 7.784695709041462e-03,  3.224671290700398e-01,
 		 2.445134137142996e+00,  3.754408661907416e+00
 	};
-
 	double q, t, u;
 
 	if (std::isnan(p) || p > 1.0 || p < 0.0)
@@ -241,7 +239,8 @@ stdnormal_inv(double p) noexcept
 
 // Creates a new random variable of the type specified.
 random *
-random::make_rv(distribution d, float m, float s, house * h) {
+random::make_rv(distribution d, float m, float s, house * h)
+{
 	switch (d) {
 	case distribution::normal:
 		return new rv_normal(m,s,h);
@@ -253,7 +252,8 @@ random::make_rv(distribution d, float m, float s, house * h) {
 }
 
 random *
-random::make_rv(const random & r, house * h) {
+random::make_rv(const random & r, house * h)
+{
 	switch (r.type()) {
 	case distribution::normal:
 		return new rv_normal(r,h);

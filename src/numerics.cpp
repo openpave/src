@@ -124,7 +124,7 @@ fmin_brent(const std::function<double(double)> & f, double a, double b)
 	}
 	// Now that we know we have a minimum, hunt it down...
 	// Since we've already evaluated the function at the end points,
-	// use this to initialise Y and Z. A and C are still the outer
+	// use this to initialize Y and Z. A and C are still the outer
 	// bracket, and B the current point.  Y and Z are A and C but ordered
 	// so Y < Z.  X is the new test point.
 	if (a > c)
@@ -140,7 +140,7 @@ fmin_brent(const std::function<double(double)> & f, double a, double b)
 		// Make a parabolic approximation of the minimum.
 		r = (b-z)*(B-Y), q = (b-y)*(B-Z);
 		x = (r != q ? b-((b-z)*r-(b-y)*q)/(2*(r-q)) : b);
-		// if we failed or are outside the centre of the two intervals
+		// if we failed or are outside the center of the two intervals
 		// then just take a conservative golden section step.
 		if (r == q || 2*x < (a+b) || 2*x > (b+c))
 			x = b+GC*(c-b < b-a ? a-b : c-b);

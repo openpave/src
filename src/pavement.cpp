@@ -416,8 +416,8 @@ LEsystem::addpoint(const point3d & p, unsigned l)
 
 void
 LEsystem::addgrid(unsigned nx, const double * xp,
-                  unsigned ny, const double * yp,
-                  unsigned nz, const double * zp)
+	              unsigned ny, const double * yp,
+	              unsigned nz, const double * zp)
 {
 	cached_state(cachestate::empty);
 	for (unsigned ix = 0; ix < nx; ix++) {
@@ -1715,7 +1715,7 @@ LEsystem::calc_odemark()
 
 static double
 quad8_vdp(double r, double z, double a, double v, double A = 0.0,
-          double B = M_PI, double Q = 10.0)
+	      double B = M_PI, double Q = 10.0)
 {
 	// The magic Newton-Cotes weights
 	static constexpr const double w[9] =
@@ -1782,7 +1782,7 @@ quad8_vdp(double r, double z, double a, double v, double A = 0.0,
 
 static double
 quad8_vse(double r, double z, double a, double A = 0.0,
-          double B = M_PI, double Q = 10.0)
+	      double B = M_PI, double Q = 10.0)
 {
 	// The magic Newton-Cotes weights
 	static constexpr const double w[9] =
@@ -2131,7 +2131,7 @@ LEbackcalc::seed(unsigned nl, double * P)
  */
 double
 LEbackcalc::deflgrad(unsigned nl, double * P, double * Q,
-                     calctype cl)
+	                 calctype cl)
 {
 	double step = 0.0, dgg = 0.0, gg = 0.0, dd = 0.0;
 	unsigned i, j, k;

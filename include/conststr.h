@@ -99,13 +99,12 @@ public:
 	constexpr conststr(const char * s, size_t l) noexcept
 	  : str{s}, len{l}, hash{fnv1a_hash(len,str)} {
 	}
-	// Explicit construction from a pointer.  Must be null
-	// terminated.
+	// Explicit construction from a pointer.  Must be null terminated.
 	explicit constexpr conststr(const char * s) noexcept
 	  : conststr{s,calclen(s)} {
 	}
-	// Explicit construction from a std::string.  Mostly
-	// should only be used for run time tests.
+	// Explicit construction from a std::string.  Mostly should only be
+	// used for run time tests.
 	explicit conststr(const std::string & s) noexcept
 	  : conststr{s.c_str(),s.length()} {
 	}
@@ -149,8 +148,7 @@ public:
 	constexpr conststr operator () (size_t b, size_t e) const noexcept {
 		return {str+b,str+e};
 	}
-	// Compares need to be done carefully for non-null terminated
-	// strings.
+	// Compares need to be done carefully for non-null terminated strings.
 	int compare(const conststr & k) const noexcept {
 		const int c = strncmp(str,k.str,std::min(len,k.len));
 		return len == k.len ? c : (c == 0 ? (len < k.len ? -1 : 1) : c);

@@ -28,7 +28,7 @@
 
 	Design:
 		These provide the basic building blocks for doing various
-		non-linear numerical opertions, such as minimization, root
+		non-linear numerical operations, such as minimization, root
 		finding, etc.
 
 	History:

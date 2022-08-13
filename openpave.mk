@@ -53,7 +53,7 @@
 # To checkout and build a tree,
 #    1. cvs co openpave/openpave.mk
 #    2. cd openpave
-#    3. gmake -f openpave.mk 
+#    3. gmake -f openpave.mk
 #
 
 AVAILABLE_PROJECTS = \
@@ -152,7 +152,7 @@ ifneq ($(CVS_ROOT_IN_TREE),)
     OP_CVS_USER := $(subst @cvs.openpave.org:/home/cvs,,$(subst :ext:,,$(CVS_ROOT_IN_TREE)))
   endif
 endif
-  CVS_ARGS := $(CVS_ARGS) -q -z 3 
+  CVS_ARGS := $(CVS_ARGS) -q -z 3
 endif
 
 # OP_CO_ARGS - Checkout flags
@@ -172,7 +172,7 @@ CVSCO_LOGFILE := $(shell echo $(CVSCO_LOGFILE) | sed s%//%/%)
 # Load opconfig Options
 
 OPCONFIG_LOADER := openpave/build/opconfig2make
-OPCONFIG_FINDER := openpave/build/opconfig-find 
+OPCONFIG_FINDER := openpave/build/opconfig-find
 run_for_side_effects := \
   $(shell cd $(ROOTDIR); \
      if test "$(_IS_FIRST_CHECKOUT)"; then \
@@ -233,7 +233,7 @@ endif
 
 #######################################################################
 # Rules
-# 
+#
 
 # Print out any options loaded from opconfig.
 all build scan-build checkout clean depend distclean install realclean::

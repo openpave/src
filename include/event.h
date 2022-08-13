@@ -67,9 +67,9 @@ namespace OP {
 #define EVENT_MSG               5       /* General message */
 #define EVENT_DEBUG             6       /* Debugging message */
 
-#define EVENT_PROGRESS_START    0   /* Start a progress bar */
-#define EVENT_PROGRESS_UPDATE   1   /* Update progress */
-#define EVENT_PROGRESS_STOP     2   /* Finish a progress bar */
+#define EVENT_PROGRESS_START    0       /* Start a progress bar */
+#define EVENT_PROGRESS_UPDATE   1       /* Update progress */
+#define EVENT_PROGRESS_STOP     2       /* Finish a progress bar */
 
 extern void event_msg(int level, const char *fmt, ...) noexcept OP_PRINTF(2,3);
 extern void event_progress_bar(int level, double p,
@@ -111,7 +111,8 @@ timeme(const char * msg) noexcept
 		return;
 	}
 	clock_gettime(CLOCK_PROF,&stop);
-	run_time = double(stop.tv_sec - start.tv_sec) + double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
+	run_time = double(stop.tv_sec - start.tv_sec)
+			+ double(stop.tv_nsec - start.tv_nsec) / 1000000000.0;
 #elif defined(DARWIN)
 	static struct timeval start;
 	struct timeval stop;
@@ -121,7 +122,8 @@ timeme(const char * msg) noexcept
 		return;
 	}
 	gettimeofday(&stop,NULL);
-	run_time = double(stop.tv_sec - start.tv_sec) + double(stop.tv_usec - start.tv_usec) / 1000000.0;
+	run_time = double(stop.tv_sec - start.tv_sec)
+			+ double(stop.tv_usec - start.tv_usec) / 1000000.0;
 #elif defined(_MSC_VER)
 	static clock_t start;
 	clock_t stop;

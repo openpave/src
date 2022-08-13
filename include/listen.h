@@ -28,7 +28,7 @@
 	Design:
 		There are two sets of two classes: a listener item and dispatcher
 		that stores these, and a listener object with a list of dispatchers.
-		The dispatcher is created first, and listener's register with it.
+		The dispatcher is created first, and listeners register with it.
 
 	Status:
 		This is not intended for an async event handling model with objects

@@ -24,19 +24,19 @@
 	Purpose:
 		This file contains classes that implement a random variable type,
 		where realizations of a variable can be created that take on random
-		values.  This is based on the old reliability.h file with more modern
-		C++.
+		values.  This is based on the old reliability.h file with more
+		modern C++.
 
 	Design:
 		These classes a little like variants, in that they can implement
 		a number of different random distributions.
 
 		The central feature of the design is that random variables are
-		created within a "house" (as the Monte Carlo casino), which generates
-		all of the realizations of the random variables in one shot, so that
-		they can be correlated.  The achieve this, the house stores a huge
-		list of all of the realizations and their associated random variables,
-		so that they can be linked together.
+		created within a "house" (as the Monte Carlo casino), which
+		generates all of the realizations of the random variables in one
+		shot, so that they can be correlated.  The achieve this, the house
+		stores a huge list of all of the realizations and their associated
+		random variables, so that they can be linked together.
 
 	Status:
 		These need more types of distributions...
@@ -101,7 +101,7 @@ class realized
  */
 struct realization
 {
-	// Magic typedef for the variant class to know that we are a cameleon
+	// Magic typedef for the variant class to know that we are a chameleon
 	// that has a different realized type to the abstract variable.
 	using cast_t = float;
 
@@ -199,7 +199,7 @@ private:
  */
 struct random
 {
-	// Magic typedef for the variant class to know that we are a cameleon
+	// Magic typedef for the variant class to know that we are a chameleon
 	// that has a different realized type to the abstract variable.
 	using real_t = realization;
 
@@ -241,7 +241,7 @@ struct random
 
 protected:
 	house * dealer;                     // The house - can be null.
-	float d[RV_DIST_PARAM];             // Four distribution parmeters.
+	float d[RV_DIST_PARAM];             // Four distribution parameters.
 
 	// Create a random variable.
 	random(house * h)
@@ -259,13 +259,13 @@ protected:
 		if (dealer != nullptr)
 			dealer->add_variable(this);
 	}
-	// Get distribution parmater i
+	// Get distribution parameter i
 	float param(size_t i) {
 		if (i > (RV_DIST_PARAM-1))
 			throw std::runtime_error("Invalid distribution parameter");
 		return d[i];
 	}
-	// Set distribution parmater i.
+	// Set distribution parameter i.
 	float param(size_t i, float dp) {
 		if (i > (RV_DIST_PARAM-1))
 			throw std::runtime_error("Invalid distribution parameter");
@@ -316,8 +316,7 @@ protected:
 struct rv_lognormal : public random_var<distribution::lognormal>
 {
 	rv_lognormal(float m, float s, house * h)
-		: random_var(h)
-	{
+	  : random_var(h) {
 		param(1, std::isinf(m) ? NAN :
 			std::isnan(m) || std::isnan(s) || m <= 0 || s < 0 ? NAN :
 			sqrt(log(1 + s*s / m / m)));

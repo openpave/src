@@ -735,7 +735,7 @@ public:
  * same shape functions in x and y, and a different function in the z
  * direction.
  */
-template <element::shape_t SZ, unsigned NND>
+template<element::shape_t SZ, unsigned NND>
 class element_base : public element {
 public:
 	element_base(mesh * o, const shape_t x, const shape_t y,const material & m)
@@ -2179,8 +2179,8 @@ struct mesh_part3d {
 class mesh_rcm {
 public:
 	explicit inline mesh_rcm(unsigned n)
-		: nnd(n), rtail(UINT_MAX), qhead(UINT_MAX),
-		  qtail(UINT_MAX), phead(0), diag(0) {
+	  : nnd(n), rtail(UINT_MAX), qhead(UINT_MAX),
+	    qtail(UINT_MAX), phead(0), diag(0) {
 		diag = static_cast<mesh_rcm_node *>
 				(malloc(nnd*sizeof(mesh_rcm_node)));
 		if (diag == 0)
@@ -2290,7 +2290,7 @@ private:
 		cset<unsigned> adj;
 
 		inline mesh_rcm_node(const unsigned p, const unsigned n)
-			: prev(p), next(n), adj() {
+		  : prev(p), next(n), adj() {
 		}
 		// Placement new to support in-place constructor in the list.
 		void * operator new (size_t, void * p) {
@@ -3054,11 +3054,11 @@ bessk(int k, const double x)
 static constexpr double
 gamma(const int n)
 {
-  double g = 1.0;
+	double g = 1.0;
 
-  for (int c = 1; c < n; c++)
-    g = g * c;
-  return g;
+	for (int c = 1; c < n; c++)
+		g = g * c;
+	return g;
 }
 
 static double
@@ -3066,7 +3066,7 @@ fn_matern(const int k, const double h, const double r)
 {
 	double hr;
 
-    if (h == 0.0)
+	if (h == 0.0)
 		return 1.0;
 	if (h > 600*r)
 		return 0.0;
@@ -3079,7 +3079,7 @@ fn_whittle(const double h, const double r)
 {
 	double hr;
 
-    if (h == 0.0)
+	if (h == 0.0)
 		return 1.0;
 	if (h > 600*r)
 		return 0.0;

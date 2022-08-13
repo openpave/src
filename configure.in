@@ -1,5 +1,5 @@
 dnl -*- Mode: Autoconf; tab-width: 4; indent-tabs-mode: nil; -*-
-dnl 
+dnl
 dnl CONFIGURE.IN - Autoconf macros to generate configure
 dnl  Based on NSPR's configure.in
 dnl

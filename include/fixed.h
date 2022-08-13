@@ -51,7 +51,7 @@ namespace OP {
  * The precision template argument is the number of bits to the left of
  * the decimal point.
  */
-template <unsigned int P>
+template<unsigned int P>
 class fixed {
 public:
 	// Some constructors for common cases...
@@ -185,7 +185,7 @@ public:
 	}
 
 private:
-	template <unsigned int P1>
+	template<unsigned int P1>
 	friend fixed<P1> fabs(const fixed<P1> & f) noexcept;
 
 	int value;
