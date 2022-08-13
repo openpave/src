@@ -277,15 +277,24 @@ private:
 		return true;
 	}
 
-	std::queue<task_t>       tasks;
-	std::queue<result_t>     results;
+	// A queue of tasks to run
+	std::queue<task_t> tasks;
+	// A queue of results being returned
+	std::queue<result_t> results;
+	// The pool of worker threads
 	std::vector<std::thread> workers;
-	std::condition_variable  cv;
-	std::mutex               mtx;
-	std::atomic<bool>        exiting{false};
-	std::atomic<bool>        empty{false};
-	std::atomic<bool>        abort{false};
-	std::atomic<bool>        single_thread{false};
+	// A condition variable to wait on
+	std::condition_variable cv;
+	// Mutex to lock this class from changes
+	std::mutex mtx;
+	// Are we in the process of exiting?
+	std::atomic<bool> exiting{false};
+	// Are we empty (after some work)
+	std::atomic<bool> empty{false};
+	// Are we aborting?
+	std::atomic<bool> abort{false};
+	// Are we single threaded?
+	std::atomic<bool> single_thread{false};
 };
 
 } // namespace OP
