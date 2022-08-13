@@ -236,7 +236,7 @@ private:
 	void print(int level, unsigned order, node * h) {
 		if (h->right != nullptr)
 			print(level+1,order+h->order+1,h->right);
-		printf("(%d %d %d) ",order,h->order,order+h->order);
+		printf("(%u %u %u) ",order,h->order,order+h->order);
 		for (int i = 0; i < level; i++)
 			printf(" ");
 		printf("%d: %f %s\n",h->key.i,h->value.d,(h->red?"RED  ":"BLACK"));
@@ -1137,7 +1137,7 @@ protected:
 	void print(int level, unsigned order, unsigned r) {
 		if (value[r].right != UINT_MAX)
 			print(level+1,order+value[r].order+1,value[r].right);
-		printf("%d: (%d %d %d) ",r,order,value[r].order,order+value[r].order);
+		printf("%u: (%u %u %u) ",r,order,value[r].order,order+value[r].order);
 		for (int i = 0; i < level; i++)
 			printf(" ");
 		printf("%02d: %f %s\n",value[r]._v.i,value[r]._v.d,(value[r].red?"RED  ":"BLACK"));

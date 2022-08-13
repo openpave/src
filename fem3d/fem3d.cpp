@@ -2515,7 +2515,7 @@ public:
 	bool solve(const double tol) {
 		unsigned i, j, n;
 		const unsigned nnd = node.length();
-		printf("Solving with %i nodes!",nnd);
+		printf("Solving with %u nodes!",nnd);
 		smatrix K(nnd);
 		svector F(nnd), U(nnd), P(nnd), W(nnd), V(nnd), R(nnd);
 		smatrix_diag * d;

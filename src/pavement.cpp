@@ -2558,7 +2558,7 @@ LEbackcalc::swarm(unsigned nl, double * P)
 				err += pow(d.measured-d.calculated,2);
 			}
 			err = sqrt(err/defl.length());
-			printf("%4i:",p);
+			printf("%4u:",p);
 			for (i = 0; i < nl; i++)
 				printf(" %+4.2f",X[p*nl+i]);
 			for (i = 0; i < nl; i++)
@@ -2575,7 +2575,7 @@ LEbackcalc::swarm(unsigned nl, double * P)
 			if (err > werr)
 				werr = err;
 		}
-		printf("%i: (%g)\n",best,derr);
+		printf("%u: (%g)\n",best,derr);
 		if (derr < std::max(1e-6,sderr))
 			break;
 		for (p = 0, dgg = 0.0; p < PARTICLES; p++) {
