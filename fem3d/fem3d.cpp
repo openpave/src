@@ -1494,17 +1494,17 @@ public:
 	  : base_t(o,element::linear,element::linear,m) {
 		base_t::setup_block(c);
 	}
-	virtual void buildSF(const bool ismap, const double & gx,
+	void buildSF(const bool ismap, const double & gx,
 			const double & gy, const double & gz,
 			double * N, double (* dNdr)[NDIM]) const noexcept override {
 		assert(4*int(SZ) == this->nnd);
 		base_t::buildSF_block(ismap,gx,gy,gz,N,dNdr);
 	}
-	virtual smatrix_elem * stiffness() const {
+	smatrix_elem * stiffness() const override {
 		assert(4*int(SZ) == this->nnd);
 		return base_t::buildKe();
 	}
-	virtual void results(const fset<point3d> & c, fset<pavedata> & d) const {
+	void results(const fset<point3d> & c, fset<pavedata> & d) const override {
 		assert(4*int(SZ) == this->nnd);
 		base_t::builddata(c,d);
 	}
@@ -1521,17 +1521,17 @@ public:
 	  : base_t(o,element::quadratic,element::quadratic,m) {
 		base_t::setup_block(c);
 	}
-	virtual void buildSF(const bool ismap, const double & gx,
+	void buildSF(const bool ismap, const double & gx,
 			const double & gy, const double & gz,
 			double * N, double (* dNdr)[NDIM]) const noexcept override {
 		assert(9*int(SZ) == this->nnd);
 		base_t::buildSF_block(ismap,gx,gy,gz,N,dNdr);
 	}
-	virtual smatrix_elem * stiffness() const {
+	smatrix_elem * stiffness() const override {
 		assert(9*int(SZ) == this->nnd);
 		return base_t::buildKe();
 	}
-	virtual void results(const fset<point3d> & c, fset<pavedata> & d) const {
+	void results(const fset<point3d> & c, fset<pavedata> & d) const override {
 		assert(9*int(SZ) == this->nnd);
 		base_t::builddata(c,d);
 	}
@@ -1548,16 +1548,16 @@ public:
 	  : base_t(o,element::absolute,element::absolute,m) {
 		base_t::setup_mask(c,mask);
 	}
-	virtual void buildSF(const bool ismap, const double & gx,
+	void buildSF(const bool ismap, const double & gx,
 			const double & gy, const double & gz,
 			double * N, double (* dNdr)[NDIM]) const noexcept override {
 		assert(ismap == true);
 		base_t::buildSF_variable(gx,gy,gz,N,dNdr,mask);
 	}
-	virtual smatrix_elem * stiffness() const {
+	smatrix_elem * stiffness() const override {
 		return base_t::buildKe();
 	}
-	virtual void results(const fset<point3d> & c, fset<pavedata> & d) const {
+	void results(const fset<point3d> & c, fset<pavedata> & d) const override {
 		base_t::builddata(c,d);
 	}
 
@@ -1577,16 +1577,16 @@ public:
 	  : base_t(o,element::quadratic,element::quadratic,m) {
 		base_t::setup_mask(c,mask);
 	}
-	virtual void buildSF(const bool ismap, const double & gx,
+	void buildSF(const bool ismap, const double & gx,
 			const double & gy, const double & gz,
 			double * N, double (* dNdr)[NDIM]) const noexcept override {
 		assert(ismap == true);
 		base_t::buildSF_adaptor(gx,gy,gz,N,dNdr,mask);
 	}
-	virtual smatrix_elem * stiffness() const {
+	smatrix_elem * stiffness() const override {
 		return base_t::buildKe();
 	}
-	virtual void results(const fset<point3d> & c, fset<pavedata> & d) const {
+	void results(const fset<point3d> & c, fset<pavedata> & d) const override {
 		base_t::builddata(c,d);
 	}
 
@@ -1654,17 +1654,17 @@ public:
 		}
 		base_t::setup_block(cc);
 	}
-	virtual void buildSF(const bool ismap, const double & gx,
+	void buildSF(const bool ismap, const double & gx,
 			const double & gy, const double & gz,
 			double * N, double (* dNdr)[NDIM]) const noexcept override {
 		assert(4*int(SZ) == this->nnd);
 		base_t::buildSF_block(ismap,gx,gy,gz,N,dNdr);
 	}
-	virtual smatrix_elem * stiffness() const {
+	smatrix_elem * stiffness() const override {
 		assert(4*int(SZ) == this->nnd);
 		return base_t::buildKe();
 	}
-	virtual void results(const fset<point3d> & c, fset<pavedata> & d) const {
+	void results(const fset<point3d> & c, fset<pavedata> & d) const override {
 		assert(4*int(SZ) == this->nnd);
 		base_t::builddata(c,d);
 	}

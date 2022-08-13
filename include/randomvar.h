@@ -281,7 +281,7 @@ struct random_var : public random
 {
 	static constexpr const distribution distribution_t = D;
 
-	virtual distribution type() const override final {
+	distribution type() const noexcept final {
 		return D;
 	}
 protected:
@@ -295,13 +295,13 @@ struct rv_normal : public random_var<distribution::normal>
 		param(0,m);
 		param(1,s);
 	}
-	virtual float mean() const noexcept override final {
+	float mean() const noexcept final {
 		return d[0];
 	}
-	virtual float stddev() const noexcept override final {
+	float stddev() const noexcept final {
 		return d[1];
 	}
-	virtual float roll() const noexcept override final {
+	float roll() const noexcept final {
 		return static_cast<float>(d[0]+d[1]*stdnormal());
 	}
 
@@ -324,16 +324,15 @@ struct rv_lognormal : public random_var<distribution::lognormal>
 			std::isnan(m) || std::isnan(s) || m <= 0 || s < 0 ? NAN :
 			log(m) - d[1] * d[1] / 2);
 	}
-
-	virtual float mean() const noexcept override final {
+	float mean() const noexcept final {
 		return std::isinf(d[0]) ? INFINITY :
 		       std::isnan(d[0]) ? NAN : exp(d[0] + d[1]*d[1]/2);
 	}
-	virtual float stddev() const noexcept override final {
+	float stddev() const noexcept final {
 		return std::isinf(d[0]) || std::isnan(d[0]) ? NAN :
 			std::isnan(d[1]) ? NAN : mean()*sqrt(exp(d[1]*d[1])-1);
 	}
-	virtual float roll() const noexcept override final {
+	float roll() const noexcept final {
 		return std::isinf(d[0]) ? INFINITY :
 			std::isnan(d[0]) || std::isnan(d[1]) ? NAN :
 			static_cast<float>(exp(d[0] + d[1] * stdnormal()));
