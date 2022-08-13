@@ -534,7 +534,7 @@ protected:
 	void allocate(const unsigned s) {
 		while (s > 8*block)
 			block *= 8;
-		const unsigned b = block*(s/block+(s%block?1:0));
+		const unsigned b = block*(s/block+((s%block)?1:0));
 		if (b == buffer)
 			return;
 		node3d * temp = static_cast<node3d *>(realloc(value,

@@ -570,7 +570,7 @@ private:
 			block *= 8;
 		//while (64*s < block)
 		//	block /= 8;
-		return block*(s/block+(s%block?1:0));
+		return block*(s/block+((s%block)?1:0));
 	}
 };
 
@@ -993,7 +993,7 @@ protected:
 	void allocate(unsigned s) {
 		while (s > 8*block)
 			block *= 8;
-		unsigned b = block*(s/block+(s%block?1:0));
+		unsigned b = block*(s/block+((s%block)?1:0));
 		if (b == buffer)
 			return;
 		_V * temp = static_cast<_V *>(realloc(value,

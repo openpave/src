@@ -193,7 +193,7 @@ private:
 	unsigned bufsize(unsigned s) noexcept {
 		while (s > 8*blklen)
 			blklen *= 8;
-		return blklen*(s/blklen+(s%blklen?1:0));
+		return blklen*(s/blklen+((s%blklen)?1:0));
 	}
 	void allocate(unsigned s) {
 		const unsigned b = bufsize(s);

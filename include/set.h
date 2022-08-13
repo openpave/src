@@ -109,7 +109,7 @@ protected:
 			block *= 8;
 		//while (64*s < block)
 		//	block /= 8;
-		return block*(s/block+(s%block?1:0));
+		return block*(s/block+((s%block)?1:0));
 	}
 
 private:
