@@ -454,7 +454,7 @@ class node_list {
 public:
 	// Make one...
 	inline explicit node_list()
-	  : size(0), buffer(0), block(DFLT_BLK), root(UINT_MAX), value(0) {
+	  : size(0), buffer(0), block(DFLT_BLK), root(UINT_MAX), value(nullptr) {
 	}
 	// Clean up.
 	inline ~node_list() {
@@ -539,7 +539,7 @@ protected:
 			return;
 		node3d * temp = static_cast<node3d *>(realloc(value,
 				b*sizeof(node3d)));
-		if (temp == 0)
+		if (temp == nullptr)
 			throw std::bad_alloc();
 		value = temp;
 		buffer = b;
@@ -597,15 +597,15 @@ protected:
 class smatrix_elem {
 public:
 	explicit smatrix_elem(const unsigned n)
-	  : K(0), nnd(n) {
+	  : K(nullptr), nnd(n) {
 		// calloc() to zero the memory...
 		K = static_cast<smatrix_dof *>
 				(calloc(size(),sizeof(smatrix_dof)));
-		if (K == 0)
+		if (K == nullptr)
 			throw std::bad_alloc();
 	}
 	inline ~smatrix_elem() {
-		if (K != 0)
+		if (K != nullptr)
 			free(K);
 	}
 	inline smatrix_dof & operator () (unsigned i, unsigned j) const {
@@ -766,7 +766,7 @@ protected:
 	inline void setup_mask(const fset<coord3d> & c, unsigned * mask) {
 		assert(8 == c.length());
 		assert(nnd == 0);
-		assert(mask != 0);
+		assert(mask != nullptr);
 		const unsigned nz = unsigned(SZ);
 		coord3d cc[8];
 
@@ -1061,7 +1061,8 @@ protected:
 		// Build a list of gauss points.  This will need to be stored
 		// in the element when we do plastic models with history.
 		unsigned nx = 0, ny = 0, nz = 0;
-		const double (* gx)[2] = 0, (* gy)[2] = 0, (* gz)[2] = 0;
+		const double (* gx)[2] = nullptr, (* gy)[2] = nullptr,
+				(* gz)[2] = nullptr;
 		getgauss(sx,nx,gx);
 		getgauss(sy,ny,gy);
 		getgauss(SZ,nz,gz);
@@ -1699,17 +1700,17 @@ class smatrix_diag {
 			smatrix_node * temp =
 					static_cast<smatrix_node *>
 					(realloc(nodes,nnd*sizeof(smatrix_node)));
-			if (temp == 0)
+			if (temp == nullptr)
 				throw std::bad_alloc();
 			// If realloc moved us we need to fix up everyone's pointers.
 			// This finds the offset into the old array, and then adds
 			// that to the new array.
 			if (nodes != temp) {
-				if (col_head != 0)
+				if (col_head != nullptr)
 					col_head = temp + (col_head - nodes);
 				for (unsigned k = 0; k < nnz; k++) {
 					smatrix_node * n = &(temp[k]);
-					if (n->col_next != 0)
+					if (n->col_next != nullptr)
 						n->col_next = temp + (n->col_next - nodes);
 				}
 				nodes = temp;
@@ -1739,10 +1740,10 @@ class smatrix {
 public:
 	// Create the matrix empty.
 	inline explicit smatrix(const unsigned n, double d = 0.0)
-	  : nnd(n), diag(0) {
+	  : nnd(n), diag(nullptr) {
 		diag = static_cast<smatrix_diag *>
 				(calloc(nnd,sizeof(smatrix_diag)));
-		if (diag == 0)
+		if (diag == nullptr)
 			throw std::bad_alloc();
 		for (unsigned i = 0; d != 0.0 && i < nnd; i++) {
 			for (unsigned j = 0; j < NDOF; j++)
@@ -1751,10 +1752,10 @@ public:
 	}
 	// Copy a matrix.
 	inline explicit smatrix(const smatrix & A)
-	  : nnd(A.nnd), diag(0) {
+	  : nnd(A.nnd), diag(nullptr) {
 		diag = static_cast<smatrix_diag *>
 				(calloc(nnd,sizeof(smatrix_diag)));
-		if (diag == 0)
+		if (diag == nullptr)
 			throw std::bad_alloc();
 		for (unsigned i = 0; i < nnd; i++) {
 			smatrix_diag * d = &(A.diag[i]);
@@ -1790,10 +1791,10 @@ public:
 		// we're adding.
 		smatrix_diag * d = &diag[MAX(i,j)];
 		smatrix_node * n, * o, * p = d->col_head;
-		while (p != 0 && p->i < MIN(i,j))
+		while (p != nullptr && p->i < MIN(i,j))
 			p = p->col_next;
 		// If we found a match, add to it.
-		if (p != 0 && p->i == MIN(i,j)) {
+		if (p != nullptr && p->i == MIN(i,j)) {
 			if (j < i)
 				p->K += ~t;
 			else
@@ -1812,11 +1813,11 @@ public:
 			n->K = t;
 		n->i = i;
 		// Fix up the column references.
-		p = d->col_head, o = 0;
-		while (p != 0 && p->i < i)
+		p = d->col_head, o = nullptr;
+		while (p != nullptr && p->i < i)
 			o = p, p = p->col_next;
-		assert(p == 0 || p->i > i);
-		if (o == 0)
+		assert(p == nullptr || p->i > i);
+		if (o == nullptr)
 			d->col_head = n;
 		else
 			o->col_next = n;
@@ -1839,10 +1840,10 @@ public:
 				}
 			}
 			// Now fix up the pointers.
-			if (diag[i].col_head != 0)
+			if (diag[i].col_head != nullptr)
 				diag[i].col_head = nodes;
 			for (unsigned short j = 0; j < diag[i].nnz; j++)
-				nodes[j].col_next = (j == diag[i].nnz-1 ? 0 : &nodes[j+1]);
+				nodes[j].col_next = (j == diag[i].nnz-1 ? nullptr : &nodes[j+1]);
 		}
 	}
 	// Do a level 1 fill in on the sparse matrix for incomplete Cholesky
@@ -1881,7 +1882,7 @@ public:
 		for (unsigned n = nnd; n > 0; ) {
 			d = &(diag[--n]);
 			p = d->col_head;
-			if (p == 0)
+			if (p == nullptr)
 				continue; // Skip diag only
 			unsigned add = 0;
 			const unsigned c = p->i; // The max row for this column
@@ -1923,12 +1924,12 @@ public:
 		for (unsigned n = 0; n < nnd; n++) {
 			d = &(diag[n]);
 			p = d->col_head;
-			while (p != 0) {
+			while (p != nullptr) {
 				smatrix_node * pi = diag[p->i].col_head;
 				smatrix_node * pj = d->col_head;
 				// We need to have blocks in both columns.  So skip the
 				// missing ones.
-				while (pi != 0 && pj != 0) {
+				while (pi != nullptr && pj != nullptr) {
 					if (pi->i > pj->i)
 						pj = pj->col_next;
 					else if (pi->i < pj->i)
@@ -2026,14 +2027,14 @@ private:
 class svector {
 public:
 	inline explicit svector(const unsigned n)
-	  : nnd(n), V(0) {
+	  : nnd(n), V(nullptr) {
 		V = static_cast<svector_dof *>
 				(calloc(nnd,sizeof(svector_dof)));
-		if (V == 0)
+		if (V == nullptr)
 			throw std::bad_alloc();
 	}
 	inline ~svector() {
-		if (V)
+		if (V != nullptr)
 			free(V);
 	}
 	inline const svector_dof & operator () (const unsigned i) const noexcept {
@@ -2180,10 +2181,10 @@ class mesh_rcm {
 public:
 	explicit inline mesh_rcm(unsigned n)
 	  : nnd(n), rtail(UINT_MAX), qhead(UINT_MAX),
-	    qtail(UINT_MAX), phead(0), diag(0) {
+	    qtail(UINT_MAX), phead(0), diag(nullptr) {
 		diag = static_cast<mesh_rcm_node *>
 				(malloc(nnd*sizeof(mesh_rcm_node)));
-		if (diag == 0)
+		if (diag == nullptr)
 			throw std::bad_alloc();
 		for (unsigned i = 0; i < nnd; i++)
 			new(&diag[i]) mesh_rcm_node(i-1,i+1);
@@ -2317,7 +2318,7 @@ public:
 	// Add an element, returning a pointer if successful.
 	const element * add(const element::element_t t, const material & m,
 			const fset<coord3d> & c) {
-		element * e = 0;
+		element * e = nullptr;
 		switch (t) {
 		case element::block8:
 			e = new element_block<element::linear>(this,m,c);
@@ -2587,9 +2588,9 @@ public:
 		timeme("\nAssembling Stiffness Matrix...");
 		// Loop over the elements building the stiffness matrix.
 		e = first;
-		while (e) {
+		while (e != nullptr) {
 			smatrix_elem * ke = e->stiffness();
-			if (ke == 0)
+			if (ke == nullptr)
 				return false;
 			// Fix up the element matrix to account for displacement BCs
 			for (i = 0; i < ke->nnd; i++) {
@@ -3786,7 +3787,7 @@ main(int argc, char *argv[])
 		}
 		f = fopen(fname,"wb");
 		double * C = new double[T_SIZE(np)];
-		if (L[l] == 0 || C == 0) {
+		if (L[l] == nullptr || C == nullptr) {
 			event_msg(EVENT_ERROR,"Ooops, out of memory...");
 			return 0;
 		}
@@ -3836,7 +3837,7 @@ main(int argc, char *argv[])
 		for (unsigned l = 0; isvar && l < NUM_VAR; l++) {
 			double * A = new double[np];
 			double * C = new double[T_SIZE(np)];
-			if (A == 0 || C == 0) {
+			if (A == nullptr || C == nullptr) {
 				event_msg(EVENT_ERROR,"Ooops, out of memory...");
 				return 0;
 			}

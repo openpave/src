@@ -341,7 +341,7 @@ LEsystem::addlayer(double h, double e, double v, double s, unsigned p)
 	if (p == UINT_MAX)
 		pl = last;
 	else
-		while (i++ < p && pl->next != 0)
+		while (i++ < p && pl->next != nullptr)
 			pl = pl->next;
 	return *(new LElayer(this,pl,h,e,v,s));
 }
@@ -353,7 +353,7 @@ LEsystem::removelayer(unsigned l) noexcept
 	unsigned i = 0;
 
 	cached_state(cachestate::empty);
-	while (i++ < l && pl != 0)
+	while (i++ < l && pl != nullptr)
 		pl = pl->next;
 	delete pl;
 }
@@ -371,7 +371,7 @@ LEsystem::layer(unsigned l) const noexcept
 	LElayer * pl = first;
 	unsigned i = 0;
 
-	while (i++ < l && pl->next != 0)
+	while (i++ < l && pl->next != nullptr)
 		pl = pl->next;
 	return *pl;
 }
@@ -457,7 +457,7 @@ LEsystem::check()
 		return true;
 	bool ischecked = true;
 	if (cache_state == cachestate::empty) {
-		if (nl == 0) {
+		if (nl == 0 || first == nullptr) {
 			event_msg(EVENT_WARN,
 				"Cannot calculate a pavement without any layers!");
 			ischecked = false;
@@ -480,7 +480,7 @@ LEsystem::check()
 			ischecked = false;
 		}
 	}
-	for (il = 1, pl = first; pl != 0; il++, pl = pl->next) {
+	for (il = 1, pl = first; pl != nullptr; il++, pl = pl->next) {
 		if (pl->emod() <= 0.0) {
 			event_msg(EVENT_WARN,
 				"Error: Elastic modulus of layer %d must be greater"
@@ -492,7 +492,8 @@ LEsystem::check()
 				"Error: Layer %d has an invalid bonding coefficent!", il);
 			ischecked = false;
 		}
-		if (pl->thickness() == 0.0 && pl->next == 0 && pl->slip() != 1.0) {
+		if (pl->thickness() == 0.0 && pl->next == nullptr
+				&& pl->slip() != 1.0) {
 			event_msg(EVENT_WARN,
 				"Error: Infinite layer %d cannot have imperfect bonding!", il);
 			ischecked = false;
@@ -510,18 +511,18 @@ LEsystem::check()
 				"Error: Layer %d cannot have negative thickness!", il);
 			ischecked = false;
 		}
-		if (pl->thickness() == 0.0 && pl->next != 0) {
+		if (pl->thickness() == 0.0 && pl->next != nullptr) {
 			event_msg(EVENT_WARN,
 				"Error: Layer %d cannot have zero thickness!", il);
 			ischecked = false;
 		}
 	}
-	if (last && last->bottom() > 0.0 && last->poissons() == 0.75) {
+	if (last != nullptr && last->bottom() > 0.0 && last->poissons() == 0.75) {
 		event_msg(EVENT_WARN,
 			"Error: Last layer cannot have a Poisson's ratio of 0.75!");
 		ischecked = false;
 	}
-	if (cache_state > cachestate::empty || ischecked == false)
+	if (cache_state > cachestate::empty || ischecked == false || first == nullptr)
 		return ischecked;
 	for (unsigned ixy = 0; ixy < points.length(); ixy++) {
 		pavepoint & d = points[ixy];
@@ -1101,7 +1102,7 @@ LEsystem::calc_accurate()
 	// so we never have to worry about the add()'s failing.
 	cset<double> bm0(0, 2*NBZ+2);
 	cset<double> bm1(0, 2*NBZ+2);
-	for (pl = first, il = 0; pl != 0; pl = pl->next, il++) {
+	for (pl = first, il = 0; pl != nullptr; pl = pl->next, il++) {
 		h[il] = pl->bottom();
 		f[il] = std::max(0.0,pl->slip());
 		v[il] = pl->poissons();
@@ -1508,9 +1509,10 @@ gradloop:
 			gl = (gl == UINT_MAX ? 0 : gl+1);
 			if (gl != nl) {
 				// Deflection gradients are calculated in a log(E) space.
-				for (pl = first, il = 0; pl != 0; pl = pl->next, il++) {
+				for (pl = first, il = 0; pl != nullptr;
+						pl = pl->next, il++) {
 					E[il] = pl->emod();
-					if (Q != 0)
+					if (Q != nullptr)
 						E[il] = pow(10,log10(E[il])+Q[il*nl+gl]*GRADSTEP);
 					else if (il == gl)
 						E[il] = pow(10,log10(E[il])+GRADSTEP);
@@ -1528,7 +1530,7 @@ gradloop:
 			if (!(res & disp))
 				d.principle(v[d.il],E[d.il]);
 			if (res & grad) {
-				if (Q == 0) {
+				if (Q == nullptr) {
 					for (il = 0; il < nl; il++)
 						d.deflgrad[il] = (d.deflgrad[il]-d.data[4][2])/GRADSTEP;
 				} else {
@@ -1634,7 +1636,7 @@ LEsystem::calc_odemark()
 	double * h = cache_alloc<double>(nl);
 	double * v = cache_alloc<double>(nl);
 	double * E = cache_alloc<double>(nl);
-	for (pl = first, il = 0; pl != 0; pl = pl->next, il++)
+	for (pl = first, il = 0; pl != nullptr; pl = pl->next, il++)
 		h[il] = pl->bottom(), v[il] = pl->poissons(), E[il] = pl->emod();
 
 	for (ig = 0; ig < lg.length(); ig++) {
@@ -1862,7 +1864,7 @@ LEsystem::calc_fastnum()
 	double * h = cache_alloc<double>(nl);
 	double * v = cache_alloc<double>(nl);
 	double * E = cache_alloc<double>(nl);
-	for (pl = first, il = 0; pl != 0; pl = pl->next, il++)
+	for (pl = first, il = 0; pl != nullptr; pl = pl->next, il++)
 		h[il] = pl->bottom(), v[il] = pl->poissons(), E[il] = pl->emod();
 
 	for (ig = 0; ig < lg.length(); ig++) {
@@ -2182,7 +2184,7 @@ LEbackcalc::deflgrad(unsigned nl, double * P, double * Q,
 			}
 			// Apply the step and update all of the variables.
 			for (i = 0, r = 0.0; i < nl; i++) {
-				if (Q != 0)
+				if (Q != nullptr)
 					Q[i*nl+(k-1)] = D[i];
 				D[i] *= -q/p;
 				r += pow(W[i]+D[i],2);
@@ -2213,7 +2215,7 @@ LEbackcalc::deflgrad(unsigned nl, double * P, double * Q,
 		P[i] += W[i], step += W[i]*W[i], P[i] = std::min(std::max(1.0,P[i]),9.0);
 	step = sqrt(step);
 	// Orthonormalize Q.
-	if (Q != 0)
+	if (Q != nullptr)
 		orth_gs(nl,Q);
 	delete [] W;
 	delete [] G;
@@ -2347,13 +2349,13 @@ LEbackcalc::bowlerror(unsigned nl, const double * P, const double s,
 	unsigned i;
 	double err;
 
-	for (i = 0; P != 0 && i < nl; i++)
-		layer(i).emod(pow(10,P[i]+(D != 0 ? s*D[i] : 0.0)));
-	if (P != 0)
+	for (i = 0; P != nullptr && i < nl; i++)
+		layer(i).emod(pow(10,P[i]+(D != nullptr ? s*D[i] : 0.0)));
+	if (P != nullptr)
 		calculate(LEsystem::disp);
 	for (i = 0, err = 0.0; i < defl.length(); i++) {
 		defldata & d = defl[i];
-		if (P != 0)
+		if (P != nullptr)
 			d.calculated = result(d).result(pavedata::deflct, pavedata::zz);
 		err += pow(d.measured-d.calculated,2);
 	}

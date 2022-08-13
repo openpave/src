@@ -350,13 +350,13 @@ class vunctor<T,Ts...> {
 		// U templates are conditioned on the union type for this slot.
 		template<typename U>
 		store(U u, OP::type_index * d, typename std::enable_if<
-				compare_v<U,T>::setable>::type * = 0) noexcept
+				compare_v<U,T>::setable>::type * = nullptr) noexcept
 		  : f(), t(u) {
 			*d = OP::type_index(OP::type_id<T>());
 		}
 		template<typename U>
 		store(U u, OP::type_index * d, typename std::enable_if<
-				!compare_v<U,T>::setable>::type * = 0) noexcept
+				!compare_v<U,T>::setable>::type * = nullptr) noexcept
 		  : b(u,d) {
 		}
 		~store() {
@@ -605,14 +605,14 @@ class validator<T,Ts...> {
 		template<typename U>
 		store(std::function<bool(const U &)> && u,
 			  OP::type_index * k,
-			  typename std::enable_if<compare_v<U,T>::castable>::type * = 0)
+			  typename std::enable_if<compare_v<U,T>::castable>::type * = nullptr)
 		  : f(u) {
 			*k = OP::type_index(OP::type_id<T>());
 		}
 		template<typename U>
 		store(std::function<bool(const U &)> && u,
 			  OP::type_index * k,
-			  typename std::enable_if<!compare_v<U,T>::castable>::type * = 0)
+			  typename std::enable_if<!compare_v<U,T>::castable>::type * = nullptr)
 		  : b(std::move(u),k) {
 		}
 		~store() {

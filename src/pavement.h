@@ -168,7 +168,7 @@ public:
 		return (h == 0.0 ? 0.0 : top() + h);
 	}
 	double top() const {
-		return (prev == 0 ? 0.0 : prev->bottom());
+		return (prev == nullptr ? 0.0 : prev->bottom());
 	}
 	double thickness() const noexcept {
 		return h;
@@ -501,7 +501,7 @@ public:
 		failure   = 0xFFFF
 	};
 	bool calc_accurate();
-	bool calculate(resulttype result = all, const double * Q = 0);
+	bool calculate(resulttype result = all, const double * Q = nullptr);
 	bool calc_odemark();
 	bool calc_fastnum();
 
@@ -603,8 +603,8 @@ private:
 			calctype cl = slow);
 	double gaussnewton(unsigned nl, double * P, calctype cl = slow);
 	double kalman(unsigned nl, double * P);
-	double bowlerror(unsigned nl = 0, const double * P = 0,
-			const double s = 0.0, const double * D = 0);
+	double bowlerror(unsigned nl = 0, const double * P = nullptr,
+			const double s = 0.0, const double * D = nullptr);
 	double brent(unsigned nl, double * P, double * D);
 	double conjgrad(unsigned nl, double * P);
 	double swarm(unsigned nl, double * P);

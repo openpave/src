@@ -78,8 +78,8 @@ const double Fe4[5][5] = {
 FEMthermal::FEMthermal(unsigned nl, const double * lh, const double * ld,
 		unsigned _n, const double * _nd, const double * _nt,
 		double _dt, unsigned _w)
-  : n(_n), w(_w), dt(_dt), nd(0), nt(0), ng(0),
-		KK(0), FF(0), Kt(0), Kb(0)
+  : n(_n), w(_w), dt(_dt), nd(nullptr), nt(nullptr), ng(nullptr),
+		KK(nullptr), FF(nullptr), Kt(nullptr), Kb(nullptr)
 {
 	unsigned il, i, j, k;
 
