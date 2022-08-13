@@ -150,7 +150,7 @@ test_set1c()
 }
 
 template<class K, class V>
-void afset_print(const afset<K,V> & t) {
+void afset_print(const afset<K,V> & t) noexcept {
 	printf("a = {");
 	for (unsigned i = 0; i < t.length(); i++) {
 		K & k = t.getkey(i);

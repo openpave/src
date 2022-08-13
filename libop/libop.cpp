@@ -32,7 +32,7 @@
 #include <windows.h>
 
 BOOL WINAPI
-DllMain(HANDLE, DWORD fdwReason, LPVOID)
+DllMain(HANDLE, DWORD fdwReason, LPVOID) noexcept
 {
 	switch (fdwReason) {
 	case DLL_PROCESS_ATTACH:
@@ -63,7 +63,7 @@ using namespace OP;
 /*
  * Windows error event handler.
  */
-void OP::event_msg(const int level, const char * fmt, ...)
+void OP::event_msg(const int level, const char * fmt, ...) noexcept
 {
 	va_list args;
 	char * buf;

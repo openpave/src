@@ -95,9 +95,9 @@ template<typename...Ts> using void_t = typename make_void<Ts...>::type;
 template<typename T>
 struct wrap_type
 {
-	wrap_type() : t() {
+	wrap_type() noexcept : t() {
 	}
-	explicit wrap_type(T n) : t(n) {
+	explicit wrap_type(T n) noexcept : t(n) {
 	}
 	wrap_type(const wrap_type &) = delete;
 	wrap_type(wrap_type &&) = delete;
@@ -105,42 +105,42 @@ struct wrap_type
 	wrap_type & operator = (wrap_type &&) = delete;
 	template<typename U = T>
 	typename std::enable_if<std::is_pointer<U>::value>::type
-	set(T n) {
+	set(T n) noexcept {
 		delete t;
 		t = n;
 	}
 	template<typename U = T>
 	typename std::enable_if<!std::is_pointer<U>::value>::type
-	set(T n) {
+	set(T n) noexcept {
 		t = n;
 	}
 	template<typename U = T>
 	typename std::enable_if<std::is_pointer<U>::value>::type
-	move(T && n) {
+	move(T && n) noexcept {
 		delete t;
 		t = n;
 		n = nullptr;
 	}
 	template<typename U = T>
 	typename std::enable_if<!std::is_pointer<U>::value>::type
-	move(T && n) {
+	move(T && n) noexcept {
 		t = std::move(n);
 	}
 	template<typename U = T>
 	typename std::enable_if<std::is_pointer<U>::value>::type
-	clear() {
+	clear() noexcept {
 		delete t;
 		t = nullptr;
 	}
 	template<typename U = T>
 	typename std::enable_if<!std::is_pointer<U>::value>::type
-	clear() {
+	clear() noexcept {
 		t.~T();
 	}
-	operator const T & () const {
+	operator const T & () const noexcept {
 		return t;
 	}
-	operator T & () {
+	operator T & () noexcept {
 		return t;
 	}
 	T t;
@@ -153,12 +153,12 @@ struct real_type
 	using real_t = typename std::remove_pointer<T>::type;
 	template<typename U = T>
 	static typename std::enable_if<std::is_pointer<U>::value,real_t>::type
-	realize(const U & t) {
+	realize(const U & t) noexcept {
 		return *t;
 	}
 	template<typename U = T>
 	static typename std::enable_if<!std::is_pointer<U>::value,real_t>::type
-	realize(const U & t) {
+	realize(const U & t) noexcept {
 		return t;
 	}
 };
@@ -242,7 +242,7 @@ class vunctor {
 		void chain(const OP::type_index &, const store &) {
 			throw std::runtime_error("Attempting to chain invalid type in variant!");
 		};
-		void clear(const OP::type_index &) {};
+		void clear(const OP::type_index &) noexcept {};
 		// Set value from a different type of store
 		template<typename...Vs>
 		OP::type_index set_r(const OP::type_index &, const typename vunctor<Vs...>::store &) const {
@@ -273,7 +273,7 @@ class validator {
 		void set(const OP::type_index &, store &&) {
 			throw std::runtime_error("Attempting to store invalid type in validator!");
 		}
-		void clear(const OP::type_index &) {}
+		void clear(const OP::type_index &) noexcept {}
 		template<typename U>
 		bool check(const OP::type_index &, const U &) const {
 			throw std::runtime_error("Trying to validate incorrect type from variant!");
@@ -301,7 +301,7 @@ class variant {
 		void set(const OP::type_index &, store &&) {
 			throw std::runtime_error("Attempting to store invalid type in variant!");
 		};
-		void clear(const OP::type_index &) {};
+		void clear(const OP::type_index &) noexcept {};
 		// Set value from a different type of store
 		template<typename...Vs>
 		OP::type_index set_r(const OP::type_index &, const typename vunctor<Vs...>::store &) const {
@@ -344,13 +344,15 @@ class vunctor<T,Ts...> {
 		}
 		// U templates are conditioned on the union type for this slot.
 		template<typename U>
-		store(U u, OP::type_index * d, typename std::enable_if<compare_v<U,T>::setable>::type * = 0) :
-			f(), t(u) {
+		store(U u, OP::type_index * d, typename std::enable_if<
+				compare_v<U,T>::setable>::type * = 0) noexcept
+		  : f(), t(u) {
 			*d = OP::type_index(OP::type_id<T>());
 		}
 		template<typename U>
-		store(U u, OP::type_index * d, typename std::enable_if<!compare_v<U,T>::setable>::type * = 0) :
-			b(u,d) {
+		store(U u, OP::type_index * d, typename std::enable_if<
+				!compare_v<U,T>::setable>::type * = 0) noexcept
+		  : b(u,d) {
 		}
 		~store() {
 			// clear() must be called outside...
@@ -418,7 +420,7 @@ class vunctor<T,Ts...> {
 				b.chain(d,v.b);
 		}
 		// Clear if we are the tagged type, else pass
-		void clear(const OP::type_index & d) {
+		void clear(const OP::type_index & d) noexcept {
 			if (d == OP::type_index(OP::type_id<T>())) {
 				t.clear();
 				f.~callback();
@@ -513,7 +515,7 @@ public:
 	}
 	// Create a variant, fixing the type.
 	template<typename V>
-	vunctor(V v) :
+	vunctor(V v) noexcept :
 		// fake out the constructor with V.  It will actually be replaced.
 		k(OP::type_index(OP::type_id<V>())), s(v,&k) {
 	}
@@ -569,7 +571,7 @@ public:
 	// Get a fixated (non-vunctor) value for this variant.
 	variant_t fixate() const;
 	// Get the actual type index for this variant.
-	const OP::type_index & get_type() const {
+	const OP::type_index & get_type() const noexcept {
 		return k;
 	}
 };
@@ -657,7 +659,7 @@ class validator<T,Ts...> {
 				b.set(d,std::move(v.b));
 		}
 		// Clear if we are the tagged type, else pass
-		void clear(const OP::type_index & d) {
+		void clear(const OP::type_index & d) noexcept {
 			if (d == OP::type_index(OP::type_id<T>()))
 				f.~callback();
 			else
@@ -807,7 +809,7 @@ class variant<T,Ts...> {
 				b.set(d,std::move(v.b));
 		}
 		// Clear if we are the tagged type, else pass
-		void clear(const OP::type_index & d) {
+		void clear(const OP::type_index & d) noexcept {
 			if (d == OP::type_index(OP::type_id<T>()))
 				t.clear();
 			else
@@ -899,7 +901,7 @@ public:
 	operator V () const {
 		return get<V>();
 	}
-	const OP::type_index & get_type() const {
+	const OP::type_index & get_type() const noexcept {
 		return k;
 	}
 };

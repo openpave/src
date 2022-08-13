@@ -70,12 +70,12 @@ namespace OP {
 #define EVENT_PROGRESS_UPDATE   1   /* Update progress */
 #define EVENT_PROGRESS_STOP     2   /* Finish a progress bar */
 
-extern void event_msg(int level, const char *fmt, ...) OP_PRINTF(2,3);
+extern void event_msg(int level, const char *fmt, ...) noexcept OP_PRINTF(2,3);
 extern void event_progress_bar(int level, double p,
-                               const char *fmt, ...) OP_PRINTF(3,4);
+                               const char *fmt, ...) noexcept OP_PRINTF(3,4);
 extern void event_progress(int type, int marker,
                            const char *fmt, ...) OP_PRINTF(3,4);
-extern void timeme(const char * msg = nullptr);
+extern void timeme(const char * msg = nullptr) noexcept;
 
 #ifdef _EVENT_IMP
 
@@ -83,7 +83,7 @@ extern void timeme(const char * msg = nullptr);
  * Default error event handler.
  */
 void
-event_msg(int level, const char * fmt, ...)
+event_msg(int level, const char * fmt, ...) noexcept
 {
 	va_list args;
 
@@ -96,7 +96,7 @@ event_msg(int level, const char * fmt, ...)
 }
 
 void
-timeme(const char * msg)
+timeme(const char * msg) noexcept
 {
 #if !defined(_MSC_VER) && !defined(DARWIN)
 #if !defined(__FreeBSD__)
@@ -144,7 +144,7 @@ timeme(const char * msg)
  * Default progress bar handler.
  */
 void
-event_progress_bar(int level, double p, const char * fmt, ...)
+event_progress_bar(int level, double p, const char * fmt, ...) noexcept
 {
 	va_list args;
 	static char buf[7] = "";

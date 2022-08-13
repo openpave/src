@@ -55,6 +55,12 @@
 #include <type_traits>
 #include "axis.h"
 
+#if defined(DEBUG)
+#define NOEXCEPT
+#else
+#define NOEXCEPT noexcept
+#endif
+
 namespace OP {
 
 /*
@@ -75,7 +81,7 @@ public:
 		allocate(0);
 	}
 	// Behave like an array. Zero indexed.
-	V & operator [] (unsigned p) const {
+	V & operator [] (unsigned p) const NOEXCEPT {
 #if defined(DEBUG)
 		if (!inbounds(p))
 			throw std::out_of_range("Index out of range!");
@@ -86,7 +92,7 @@ public:
 	const V & operator () (const typename As::index_t...ps) const {
 		return buffer[make_index(0,ps...)];
 	}
-	V & operator () (const typename As::index_t...ps) {
+	V & operator () (const typename As::index_t...ps) noexcept {
 		return buffer[make_index(0,ps...)];
 	}
 	// Behave like an array using the axis keys
@@ -97,7 +103,7 @@ public:
 		return buffer[make_fromkey(0,ks...)];
 	}
 	// Return the size of array below dimension d.
-	unsigned length(unsigned d = sizeof...(As)) const {
+	unsigned length(unsigned d = sizeof...(As)) const noexcept {
 		unsigned s = 1;
 		for (unsigned i = d; i > 0; i--)
 			s *= sizes[i-1];
@@ -118,22 +124,22 @@ private:
 		operator V () const {
 			return _v;
 		}
-		void * operator new (size_t, void * p) {
+		void * operator new (size_t, void * p) noexcept {
 			return p;
 		}
-		void operator delete (void * , void *) {
+		void operator delete (void * , void *) noexcept {
 		}
 	};
 	V * buffer;                // The actual storage.
 
 	template<typename...Ks>
-	unsigned init(Ks &...) {
+	unsigned init(Ks &...) noexcept {
 		return 1;
 	}
 	template<typename K, typename...Ks>
 	unsigned init(K & ax, Ks &...ks) {
 		const unsigned d = sizeof...(Ks);
-		unsigned s = ax.length();
+		const unsigned s = ax.length();
 		listen(ax,message<axis_message,unsigned>(
 			[=](axis_message e, unsigned p){
 				switch (e) {
@@ -154,15 +160,15 @@ private:
 		return s*init(ks...);
 	}
 	template<typename...Is>
-	unsigned make_index(unsigned p, Is...) const {
+	unsigned make_index(unsigned p, Is...) const noexcept {
 		return p;
 	}
 	template<typename I, typename...Is>
-	unsigned make_index(unsigned p, I i, Is...is) const {
+	unsigned make_index(unsigned p, I i, Is...is) const noexcept {
 		return make_index(p*sizes[sizeof...(Is)]+i,is...);
 	}
 	template<typename...Ks>
-	unsigned make_fromkey(unsigned p, Ks...) const {
+	unsigned make_fromkey(unsigned p, Ks...) const noexcept {
 		return p;
 	}
 	template<typename K, typename...Ks>
@@ -172,18 +178,18 @@ private:
 		return make_fromkey(p*sizes[sizeof...(Ks)]+i,ks...);
 	}
 	// Return the step size for dimension d.
-	unsigned step(unsigned d) const {
+	unsigned step(unsigned d) const noexcept {
 		unsigned s = 1;
 		for (unsigned i = d+1; i < sizeof...(As); i++)
 			s *= sizes[i];
 		return s;
 	}
 	// Check if an index is within the set...
-	bool inbounds(unsigned p) const {
+	bool inbounds(unsigned p) const noexcept {
 		return (p < length() ? true : false);
 	}
 	// Calculate the buffer size.
-	unsigned bufsize(unsigned s) {
+	unsigned bufsize(unsigned s) noexcept {
 		while (s > 8*blklen)
 			blklen *= 8;
 		return blklen*(s/blklen+(s%blklen?1:0));
@@ -214,7 +220,7 @@ private:
 	// POD constructor
 	template<typename T>
 	typename std::enable_if<std::is_pod<T>::value>::type
-	initelem(unsigned i, const T * v) {
+	initelem(unsigned i, const T * v) noexcept {
 		if (v)
 			buffer[i] = *v;
 	}

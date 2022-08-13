@@ -83,31 +83,31 @@ public:
 	// Do not allow default construction.
 	type_info() = delete;
 	// Only construct directly from a name.
-	constexpr type_info(const OP::conststr & name) :
-		magic{name} {
+	constexpr type_info(const OP::conststr & name) noexcept
+	  : magic{name} {
 	}
 	// Destructor cannot be virtual
 	~type_info() = default;
 	// Allow copy assignment unlike std::type_info.
-	constexpr type_info(const OP::type_info &) = default;
-	constexpr type_info(OP::type_info &&) = default;
-	OP::type_info & operator = (const OP::type_info &) = default;
-	OP::type_info & operator = (OP::type_info &&) = default;
+	constexpr type_info(const OP::type_info &) noexcept = default;
+	constexpr type_info(OP::type_info &&) noexcept = default;
+	OP::type_info & operator = (const OP::type_info &) noexcept = default;
+	OP::type_info & operator = (OP::type_info &&) noexcept = default;
 	// Return our hash
-	constexpr hash_t hash_code() const {
+	constexpr hash_t hash_code() const noexcept {
 		return magic.hash_code();
 	}
 	// Note that the name is probably not null terminated.
-	constexpr const OP::conststr & name() const {
+	constexpr const OP::conststr & name() const noexcept {
 		return magic;
 	}
-	bool before(const type_info & r) const {
+	bool before(const type_info & r) const noexcept {
 		return magic < r.name();
 	}
-	constexpr bool operator == (const type_info & r) const {
+	constexpr bool operator == (const type_info & r) const noexcept {
 		return hash_code() == r.hash_code();
 	}
-	constexpr bool operator != (const type_info & r) const {
+	constexpr bool operator != (const type_info & r) const noexcept {
 		return hash_code() != r.hash_code();
 	}
 
@@ -128,39 +128,39 @@ public:
 
 	type_index() = delete;
 	// Default constructor
-	constexpr type_index(const OP::type_info & info) :
-		type{&info}, hash{info.hash_code()} {
+	constexpr type_index(const OP::type_info & info) noexcept
+	  : type{&info}, hash{info.hash_code()} {
 	}
 	~type_index() = default;
 	// Default copy and move constructors and assignments
-	constexpr type_index(const OP::type_index &) = default;
-	constexpr type_index(OP::type_index &&) = default;
-	OP::type_index & operator = (const OP::type_index &) = default;
-	OP::type_index & operator = (OP::type_index &&) = default;
+	constexpr type_index(const OP::type_index &) noexcept = default;
+	constexpr type_index(OP::type_index &&) noexcept = default;
+	OP::type_index & operator = (const OP::type_index &) noexcept = default;
+	OP::type_index & operator = (OP::type_index &&) noexcept = default;
 	// Get the hash directly.
-	constexpr hash_t hash_code() const {
+	constexpr hash_t hash_code() const noexcept {
 		return hash;
 	}
 	// Note that the name is probably not null terminated.
-	constexpr const OP::conststr & name() const {
+	constexpr const OP::conststr & name() const noexcept {
 		return type->name();
 	}
-	constexpr bool operator == (const type_index & r) const {
+	constexpr bool operator == (const type_index & r) const noexcept {
 		return hash == r.hash_code();
 	}
-	constexpr bool operator != (const type_index & r) const {
+	constexpr bool operator != (const type_index & r) const noexcept {
 		return hash != r.hash_code();
 	}
-	constexpr bool operator < (const type_index & r) const {
+	constexpr bool operator < (const type_index & r) const noexcept {
 		return hash < r.hash_code();
 	}
-	constexpr bool operator <= (const type_index & r) const {
+	constexpr bool operator <= (const type_index & r) const noexcept {
 		return hash <= r.hash_code();
 	}
-	constexpr bool operator > (const type_index & r) const {
+	constexpr bool operator > (const type_index & r) const noexcept {
 		return hash > r.hash_code();
 	}
-	constexpr bool operator >= (const type_index & r) const {
+	constexpr bool operator >= (const type_index & r) const noexcept {
 		return hash >= r.hash_code();
 	}
 
@@ -190,7 +190,7 @@ private:
 
 // Internal only function, to infer the type
 template<typename T>
-constexpr OP::type_info type_deducer()
+constexpr OP::type_info type_deducer() noexcept
 {
 	// This constructs a conststr using the compiler macro, then chops a bit
 	// out of it - the deduced template parameter(not null terminated) and then
@@ -207,13 +207,13 @@ constexpr OP::type_info type_deducer()
 // Compile-time equivalent of the typeid() keyword.
 template<typename T>
 constexpr type_info
-type_id(T &&)
+type_id(T &&) noexcept
 {
 	return type_deducer<typename std::decay<T>::type>();
 }
 template<typename T>
 constexpr type_info
-type_id()
+type_id() noexcept
 {
 	return type_deducer<T>();
 }
@@ -227,14 +227,14 @@ namespace std {
 template<>
 struct hash<OP::type_info>
 {
-	constexpr std::size_t operator () (const OP::type_info & id) const {
+	constexpr std::size_t operator () (const OP::type_info & id) const noexcept {
 		return id.hash_code();
 	}
 };
 template<>
 struct hash<OP::type_index>
 {
-	constexpr std::size_t operator () (const OP::type_index & id) const {
+	constexpr std::size_t operator () (const OP::type_index & id) const noexcept {
 		return id.hash_code();
 	}
 };

@@ -50,7 +50,7 @@ namespace OP {
  */
 template<typename T>
 inline T
-eps(T x = 1)
+eps(T x = 1) noexcept
 {
 	x = std::abs(x);
 	return std::nextafter(x,x+1) - x;

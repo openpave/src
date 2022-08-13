@@ -65,7 +65,7 @@ public:
 	// Perform the FEM analysis for a single timestep, based in the top and
 	// bottom temperature at the desired time.  This function can be called
 	// repeatedly to obtain temperatures at sucessive time steps.
-	void step(double tt, double tb);
+	void step(double tt, double tb) noexcept;
 	// Interpolate temperatures at abitrary depths. pd must be sorted.
 	void interpolate(unsigned np, const double * pd, double * pt);
 

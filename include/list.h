@@ -237,12 +237,12 @@ protected:
 	T * last;                   // The tail of the list.
 
 	// All lists start empty...
-	list_double()
+	list_double() noexcept
 	  : first(nullptr), last(nullptr) {
 	}
 	list_double(const list_double &) = delete;
 	list_double & operator = (const list_double &) = delete;
-	list_double(list_double && e)
+	list_double(list_double && e) noexcept
 	  : first(e.first), last(e.last) {
 		e.first = e.last = nullptr;
 	}
@@ -251,7 +251,7 @@ protected:
 		e.first = e.last = nullptr;
 		return *this;
 	}
-	~list_double() {
+	~list_double() noexcept {
 		empty();
 	}
 
@@ -282,7 +282,7 @@ protected:
 		return e;
 	}
 	// Remove an element from the list (but don't delete it).
-	T * remove(T * e = nullptr) {
+	T * remove(T * e = nullptr) noexcept {
 		if (e == nullptr)
 			e = last;
 		if (e == nullptr)
@@ -311,15 +311,15 @@ protected:
 		return insert(e);
 	}
 	// Pop the first element off the list
-	T * pop() {
+	T * pop() noexcept {
 		return remove(first);
 	}
 	// Check in the list is empty.
-	bool isempty() const {
+	bool isempty() const noexcept {
 		return (first == nullptr ? true : false);
 	}
 	// Figure out the length of the list.
-	unsigned length() const {
+	unsigned length() const noexcept {
 		unsigned s = 0;
 		T * t = first;
 		while (t != nullptr)
@@ -327,7 +327,7 @@ protected:
 		return s;
 	}
 	// Sometimes you just need to start a new list.
-	void empty() {
+	void empty() noexcept {
 		while (first != nullptr)
 			delete first;
 	}
@@ -371,7 +371,7 @@ protected:
 	listelement_o(listelement_o &&) = delete;
 	listelement_o & operator = (listelement_o &&) = delete;
 	// Also manage our owner's pointers.
-	~listelement_o() {
+	~listelement_o() noexcept {
 		if (owner == nullptr)
 			return;
 		if (this->prev == nullptr)
@@ -380,7 +380,7 @@ protected:
 			owner->last = this->prev;
 	}
 	// Figure out the position of this element in the list.
-	unsigned position() const {
+	unsigned position() const noexcept {
 		unsigned s = 0;
 		T * t = owner->first;
 		while (static_cast<listelement_o *>(t) != this)
@@ -401,12 +401,12 @@ class list_owned : public list_double<T> {
 protected:
 	using list_double<T>::first;
 
-	list_owned()
+	list_owned() noexcept
 	  : list_double<T>() {
 	}
 	list_owned(const list_owned &) = delete;
 	list_owned & operator = (const list_owned &) = delete;
-	list_owned(list_owned && l)
+	list_owned(list_owned && l) noexcept
 	  : list_double<T>(std::move(l)) {
 		listelement_o<O,T> * t = first;
 		while (t != nullptr) {
@@ -414,7 +414,7 @@ protected:
 			t = t->next;
 		}
 	}
-	list_owned & operator = (list_owned && l) {
+	list_owned & operator = (list_owned && l) noexcept {
 		list_double<T>::operator=(std::move(l));
 		listelement_o<O,T> * t = first;
 		while (t != nullptr) {
@@ -422,7 +422,7 @@ protected:
 			t = t->next;
 		}
 	}
-	~list_owned() {
+	~list_owned() noexcept {
 	}
 
 	friend class listelement_o<O,T>;

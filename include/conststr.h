@@ -92,38 +92,38 @@ public:
 	// This is the default constructor within most code.
 	// Template deduction is used to get the length.
 	template<size_t N>
-	constexpr conststr(const char (&s)[N])
+	constexpr conststr(const char (&s)[N]) noexcept
 	  : str{s}, len{N-1}, hash{fnv1a_hash(len,str)} {
 	}
 	// Explicit construction with known length.
-	constexpr conststr(const char * s, size_t l)
+	constexpr conststr(const char * s, size_t l) noexcept
 	  : str{s}, len{l}, hash{fnv1a_hash(len,str)} {
 	}
 	// Explicit construction from a pointer.  Must be null
 	// terminated.
-	explicit constexpr conststr(const char * s)
+	explicit constexpr conststr(const char * s) noexcept
 	  : conststr{s,calclen(s)} {
 	}
 	// Explicit construction from a std::string.  Mostly
 	// should only be used for run time tests.
-	explicit conststr(const std::string & s)
+	explicit conststr(const std::string & s) noexcept
 	  : conststr{s.c_str(),s.length()} {
 	}
 	// Explicit constructor from begin and end pointers.
-	constexpr conststr(const char * b, const char * e)
+	constexpr conststr(const char * b, const char * e) noexcept
 	  : conststr{b,static_cast<size_t>(e-b)} {
 	}
 	// Default copy and move constructors and assignments.
-	constexpr conststr(const conststr & s) = default;
-	constexpr conststr(conststr &&) = default;
-	conststr & operator = (const conststr &) = default;
-	conststr & operator = (conststr &&) = default;
+	constexpr conststr(const conststr & s) noexcept = default;
+	constexpr conststr(conststr &&) noexcept = default;
+	conststr & operator = (const conststr &) noexcept = default;
+	conststr & operator = (conststr &&) noexcept = default;
 	// Get the length of the string  (without null).
-	constexpr size_t length() const {
+	constexpr size_t length() const noexcept {
 		return len;
 	}
 	// Get an explicit hash from the string.
-	constexpr hash_t hash_code() const {
+	constexpr hash_t hash_code() const noexcept {
 		return hash;
 	}
 	// Return a std::string for printing, etc.
@@ -131,46 +131,46 @@ public:
 		return {str,str+len};
 	}
 	// only call this if you know the strings are null terminated.
-	constexpr operator const char * () const {
+	constexpr operator const char * () const noexcept {
 		return str;
 	}
 	// Begin and end for iterators.
-	constexpr const char * begin() const {
+	constexpr const char * begin() const noexcept {
 		return str;
 	}
-	constexpr const char * end() const {
+	constexpr const char * end() const noexcept {
 		return str+len;
 	}
 	// Get chars from the string.
-	constexpr char operator [] (size_t i) const {
+	constexpr char operator [] (size_t i) const noexcept {
 		return str[i];
 	}
 	// Get a chunk from a const string.
-	constexpr conststr operator () (size_t b, size_t e) const {
+	constexpr conststr operator () (size_t b, size_t e) const noexcept {
 		return {str+b,str+e};
 	}
 	// Compares need to be done carefully for non-null terminated
 	// strings.
-	int compare(const conststr & k) const {
+	int compare(const conststr & k) const noexcept {
 		int c = strncmp(str,k.str,std::min(len,k.len));
 		return len == k.len ? c : (c == 0 ? (len < k.len ? -1 : 1) : c);
 	}
-	bool operator == (const conststr & k) const {
+	bool operator == (const conststr & k) const noexcept {
 		return hash == k.hash && compare(k) == 0;
 	}
-	bool operator != (const conststr & k) const {
+	bool operator != (const conststr & k) const noexcept {
 		return hash != k.hash && compare(k) != 0;
 	}
-	bool operator < (const conststr & k) const {
+	bool operator < (const conststr & k) const noexcept {
 		return compare(k) < 0;
 	}
-	bool operator <= (const conststr & k) const {
+	bool operator <= (const conststr & k) const noexcept {
 		return compare(k) <= 0;
 	}
-	bool operator > (const conststr & k) const {
+	bool operator > (const conststr & k) const noexcept {
 		return compare(k) > 0;
 	}
-	bool operator >= (const conststr & k) const {
+	bool operator >= (const conststr & k) const noexcept {
 		return compare(k) >= 0;
 	}
 
@@ -187,12 +187,12 @@ private:
 	static constexpr const hash_t prime =
 		sizeof(hash_t) >= 8 ? 0x00000100000001b3 : 0x01000193;
 	static constexpr hash_t fnv1a_hash(size_t n, const char * str,
-		                               hash_t hash = basis) {
+		                               hash_t hash = basis) noexcept {
 		return n > 0 ? fnv1a_hash(n-1,str+1,
 			(hash^static_cast<hash_t>(*str))*prime) : hash;
 	}
 	// Static strlen for explicit constructor.
-	static constexpr size_t calclen(const char * s) {
+	static constexpr size_t calclen(const char * s) noexcept {
 		return *s != 0 ? 1+calclen(s+1) : 0;
 	}
 };
@@ -206,7 +206,7 @@ namespace std {
 template<>
 struct hash<OP::conststr>
 {
-	constexpr std::size_t operator () (const OP::conststr & s) const {
+	constexpr std::size_t operator () (const OP::conststr & s) const noexcept {
 		return s.hash_code();
 	}
 };

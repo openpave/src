@@ -168,7 +168,7 @@ FEMthermal::FEMthermal(unsigned nl, const double * lh, const double * ld,
 }
 
 void
-FEMthermal::step(double tt, double tb)
+FEMthermal::step(double tt, double tb) noexcept
 {
 	unsigned i, j;
 

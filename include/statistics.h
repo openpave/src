@@ -41,11 +41,10 @@
 
 namespace OP {
 
-double stdnormal_rnd();
-double stdnormal_pdf(double);
-double quad8_stdnormal_pdf(double, double, double);
-double stdnormal_cdf(double);
-double stdnormal_inv(double);
+double stdnormal_rnd() noexcept;
+double stdnormal_pdf(double) noexcept;
+double stdnormal_cdf(double) noexcept;
+double stdnormal_inv(double) noexcept;
 
 } // namespace OP
 

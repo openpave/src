@@ -74,11 +74,11 @@ namespace OP {
 class set {
 public:
 	// The length. Nice for lots of things...
-	unsigned length() const {
+	unsigned length() const noexcept {
 		return size;
 	}
 	// Check if an index is within the set...
-	bool inbounds(unsigned p) const {
+	bool inbounds(unsigned p) const noexcept {
 		return (p < size ? true : false);
 	}
 
@@ -87,13 +87,13 @@ protected:
 	unsigned buffer;           // The allocated buffer size...
 
 	// Simple constructor...
-	explicit set(unsigned b = DFLT_BLK)
+	explicit set(unsigned b = DFLT_BLK) noexcept
 	  : size(0), buffer(0), block(b > 1 ? b : 1) {
 	}
-	set(const set & s)
+	set(const set & s) noexcept
 	  : size(0), buffer(0), block(s.block) {
 	}
-	set & operator = (const set & s) {
+	set & operator = (const set & s) noexcept {
 		size = 0;
 		buffer = 0;
 		block = s.block;
@@ -102,7 +102,7 @@ protected:
 	~set() {
 	}
 	// Calculate the buffer size.
-	unsigned bufsize(unsigned s) {
+	unsigned bufsize(unsigned s) noexcept {
 		while (s > 8*block)
 			block *= 8;
 		//while (64*s < block)
@@ -167,7 +167,7 @@ public:
 	}
 	// Flatten the set into a traditional array.  Caller is responsible
 	// for correct size.
-	void copyout(V * v) const {
+	void copyout(V * v) const noexcept {
 		for (unsigned i = 0; i < size; i++)
 			v[i] = value[i];
 	}
@@ -176,12 +176,12 @@ protected:
 	V * value;                 // The buffer.
 	struct _V {                // Placement new wrapper
 		V _v;
-		_V() : _v() {}
+		_V() noexcept : _v() {}
 		explicit _V(const V & v) : _v(v) {}
-		void * operator new (size_t, void * p) {
+		void * operator new (size_t, void * p) noexcept {
 			return p;
 		}
-		void operator delete (void * , void *) {
+		void operator delete (void * , void *) noexcept {
 		}
 	};
 
@@ -202,7 +202,7 @@ protected:
 		value = temp;
 		buffer = b;
 	}
-	void deallocate() {
+	void deallocate() noexcept {
 		if (value) {
 			for (unsigned i = 0; i < size; i++)
 				value[i].~V();
@@ -267,7 +267,7 @@ template <class V>
 class sset : public fset<V> {
 public:
 	// Provide a null constructor for empty sets.
-	sset()
+	sset() noexcept
 	  : fset<V>() {
 	}
 	sset(unsigned s, unsigned b)
@@ -353,7 +353,7 @@ public:
 		this->size -= s;
 		this->allocate(this->size);
 	}
-	void empty() {
+	void empty() noexcept {
 		this->deallocate();
 		this->allocate(0);
 	}
@@ -405,7 +405,7 @@ public:
 	}
 	// Do a lookup, and return -1 if the value is not found.
 	// You must sort the set first!
-	unsigned findvalue(const V & v) const {
+	unsigned findvalue(const V & v) const noexcept {
 		unsigned l = 0, r = this->size;
 		while (l < r) {
 			unsigned i = l + (r-l)/2;
@@ -451,7 +451,7 @@ protected:
 		}
 	}
 	// Insertion sort for if the set looks sorted already.
-	void isort(unsigned l, unsigned r) {
+	void isort(unsigned l, unsigned r) noexcept {
 		for (unsigned i = l; l < r && i < r-1; i++) {
 			for (unsigned j = i+1; j > l
 					&& this->value[j-1] > this->value[j]; j--)
@@ -667,7 +667,7 @@ public:
 			memmove(&idx[q],&idx[q+1],(size-q)*sizeof(unsigned));
 		allocate(size);
 	}
-	void empty() {
+	void empty() noexcept {
 		deallocate();
 		allocate(0);
 	}
@@ -707,7 +707,7 @@ protected:
 		value = vtemp;
 		buffer = b;
 	}
-	void deallocate() {
+	void deallocate() noexcept {
 		if (idx) {
 			free(idx);
 			idx = nullptr;
@@ -788,7 +788,7 @@ public:
 	}
 
 	// Do a key lookup, and return UINT_MAX if the key is not found.
-	unsigned haskey(const K & k) const {
+	unsigned haskey(const K & k) const noexcept {
 		for (unsigned i = 0; i < size; i++) {
 			if (static_cast<K &>(value[i]) == k)
 				return i;
@@ -832,10 +832,10 @@ protected:
 	struct _V {                // Placement new wrapper
 		V _v;
 		explicit _V(const V & v) : _v(v) {}
-		void * operator new (size_t, void * p) {
+		void * operator new (size_t, void * p) noexcept {
 			return p;
 		}
-		void operator delete (void * , void *) {
+		void operator delete (void * , void *) noexcept {
 		}
 	};
 
@@ -856,7 +856,7 @@ protected:
 		value = temp;
 		buffer = b;
 	}
-	void deallocate() {
+	void deallocate() noexcept {
 		if (value) {
 			for (unsigned i = 0; i < size; i++)
 				value[i].~V();
@@ -954,7 +954,7 @@ public:
 			throw std::invalid_argument("Cannot replace value not in set!");
 		this->value[p] = v;
 	}
-	void empty() {
+	void empty() noexcept {
 		this->deallocate();
 		this->allocate(0);
 	}
@@ -1080,7 +1080,7 @@ public:
 	}
 
 	// Do a key lookup, and return -1 if the key is not found.
-	unsigned haskey(const K & k) const {
+	unsigned haskey(const K & k) const noexcept {
 		unsigned p = findkey(k);
 		if (p < size && static_cast<K &>(value[idx[p]]) == k)
 			return idx[p];
@@ -1136,7 +1136,7 @@ public:
 	}
 	// Flatten the set into a traditional array.  Caller is responsible
 	// for correct size.
-	void copyout(V * v) const {
+	void copyout(V * v) const noexcept {
 		for (unsigned i = 0; i < size; i++)
 			v[i] = value[i];
 	}
@@ -1186,7 +1186,7 @@ public:
 			throw std::invalid_argument("Cannot replace key not in set!");
 		value[p] = v;
 	}
-	void empty() {
+	void empty() noexcept {
 		deallocate();
 		allocate(0);
 	}
@@ -1197,10 +1197,10 @@ protected:
 	struct _V {                // Placement new wrapper
 		V _v;
 		explicit _V(const V & v) : _v(v) {}
-		void * operator new (size_t, void * p) {
+		void * operator new (size_t, void * p) noexcept {
 			return p;
 		}
-		void operator delete (void * , void *) {
+		void operator delete (void * , void *) noexcept {
 		}
 	};
 
@@ -1226,7 +1226,7 @@ protected:
 		value = vtemp;
 		buffer = b;
 	}
-	void deallocate() {
+	void deallocate() noexcept {
 		if (idx) {
 			free(idx);
 			idx = nullptr;
@@ -1241,7 +1241,7 @@ protected:
 		buffer = 0;
 	}
 	// Find the position which is either equal or greater...
-	unsigned findkey(const K & k) const {
+	unsigned findkey(const K & k) const noexcept {
 		unsigned l = 0, r = size;
 		while (l < r) {
 			unsigned i = l + (r-l)/2;
@@ -1306,7 +1306,7 @@ public:
 	}
 
 	// Return an index for a key.
-	unsigned haskey(const K & k) const {
+	unsigned haskey(const K & k) const noexcept {
 		for (unsigned i = 0; i < size; i++) {
 			if (key[i] == k)
 				return i;
@@ -1352,10 +1352,10 @@ protected:
 	struct _K {                // Placement new wrapper
 		K _k;
 		explicit _K(const K & k) : _k(k) {}
-		void * operator new (size_t, void * p) {
+		void * operator new (size_t, void * p) noexcept {
 			return p;
 		}
-		void operator delete (void * , void *) {
+		void operator delete (void * , void *) noexcept {
 		}
 	};
 	struct _V {                // Placement new wrapper
@@ -1390,7 +1390,7 @@ protected:
 		value = vtemp;
 		buffer = b;
 	}
-	void deallocate() {
+	void deallocate() noexcept {
 		if (key) {
 			for (unsigned i = 0; i < size; i++)
 				key[i].~K();
@@ -1497,7 +1497,7 @@ public:
 			throw std::invalid_argument("Cannot replace key not in set!");
 		this->value[p] = v;
 	}
-	void empty() {
+	void empty() noexcept {
 		this->deallocate();
 		this->allocate(0);
 	}

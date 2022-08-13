@@ -60,7 +60,7 @@ namespace OP {
 template<class K, class V>
 struct BST
 {
-	BST()
+	BST() noexcept
 	  : root(nullptr) {
 	}
 	BST(const BST &) = delete;
@@ -68,7 +68,7 @@ struct BST
 	~BST() {
 		delete root;
 	}
-	V * get(const K & k) {
+	V * get(const K & k) noexcept {
 		node * x = root;
 		while (x != nullptr) {
 			if (k == x->key)
@@ -85,7 +85,7 @@ struct BST
 		root = insert(root,k,v,&add);
 		root->red = false;
 	}
-	void remove(const K & k) {
+	void remove(const K & k) noexcept {
 		if (root == nullptr)
 			return;
 		root = remove(root,k);
@@ -108,7 +108,7 @@ private:
 		unsigned order;
 		node * left, * right;
 		bool red;
-		node(const K & k, const V & v)
+		node(const K & k, const V & v) noexcept
 		  : key(k), value(v), order(0), left(nullptr), right(nullptr),
 		    red(true) {
 		}
@@ -147,33 +147,33 @@ private:
 			h = leanLeft(h);
 		return h;
 	}
-	node * rotL(node * h) {
+	node * rotL(node * h) noexcept {
 		node * x = h->right;
 		h->right = x->left;
 		x->left = h;
 		x->order += h->order + 1;
 		return x;
 	}
-	node * rotR(node * h) {
+	node * rotR(node * h) noexcept {
 		node * x = h->left;
 		h->left = x->right;
 		x->right = h;
 		h->order -= x->order + 1;
 		return x;
 	}
-	node * leanLeft(node * h) {
+	node * leanLeft(node * h) noexcept {
 		h = rotL(h);
 		h->red = h->left->red;
 		h->left->red = true;
 		return h;
 	}
-	node * leanRight(node * h) {
+	node * leanRight(node * h) noexcept {
 		h = rotR(h);
 		h->red = h->right->red;
 		h->right->red = true;
 		return h;
 	}
-	node * remove(node * h, const K & k) {
+	node * remove(node * h, const K & k) noexcept {
 		if (k < h->key) {
 			// If K is missing do nothing.
 			if (h->left == nullptr)
@@ -270,15 +270,15 @@ protected:
 
 public:
 	// The length. Nice for lots of things...
-	unsigned length() const {
+	unsigned length() const noexcept {
 		return size;
 	}
 	// Check if an index is within the set...
-	bool inbounds(unsigned p) const {
+	bool inbounds(unsigned p) const noexcept {
 		return (p < size ? true : false);
 	}
 	// Do a key lookup, and return UINT_MAX if the key is not found.
-	bool haskey(const K & k) const {
+	bool haskey(const K & k) const noexcept {
 		return (getposition(k) != UINT_MAX);
 	}
 	// Allow acces to the keys.
@@ -297,7 +297,7 @@ public:
 		return value[p];
 	}
 	// Do a key lookup, and return UINT_MAX if the key is not found.
-	unsigned getposition(const K & k) const {
+	unsigned getposition(const K & k) const noexcept {
 		unsigned x = root;
 		while (x != UINT_MAX) {
 			int cmp = value[x].compare(k);
@@ -331,7 +331,7 @@ public:
 		return value[x];
 	}
 	// Get the ordered position of an element in the sort.
-	unsigned getorderof(const K & k) const {
+	unsigned getorderof(const K & k) const noexcept {
 		unsigned x = root, o = 0;
 		while (x != UINT_MAX) {
 			int cmp = value[x].compare(k);
@@ -358,7 +358,7 @@ protected:
 	unsigned buffer = 0;       // The allocated buffer size...
 	unsigned root = UINT_MAX;  // Root of the tree.
 	struct _node_base : N<K,V>::node_base {
-		_node_base()
+		_node_base() noexcept
 		  : N<K,V>::node_base(), left(UINT_MAX), right(UINT_MAX) {
 		}
 		unsigned weight = 1;   // Number of nodes below (including this)
@@ -367,16 +367,16 @@ protected:
 	template<typename KK, typename VV, typename = void>
 	struct _node_val {
 		V _v;
-		explicit _node_val(const V & v)
+		explicit _node_val(const V & v) noexcept
 		  : _v(v) {
 		}
-		explicit _node_val(V && v)
+		explicit _node_val(V && v) noexcept
 		  : _v(std::move(v)) {
 		}
-		operator const V & () const {
+		operator const V & () const noexcept {
 			return _v;
 		}
-		operator V & () {
+		operator V & () noexcept {
 			return _v;
 		}
 	};
@@ -384,89 +384,94 @@ protected:
 	struct _node_val<KK,VV,typename std::enable_if<merged_v<KK,VV>::value
 			&& !std::is_same<KK,VV>::value>::type> {
 		V _v;
-		explicit _node_val(const V & v)
+		explicit _node_val(const V & v) noexcept
 		  : _v(v) {
 		}
-		explicit _node_val(V && v)
+		explicit _node_val(V && v) noexcept
 		  : _v(std::move(v)) {
 		}
-		operator const K & () const {
+		operator const K & () const noexcept {
 			return _v;
 		}
-		operator const V & () const {
+		operator const V & () const noexcept {
 			return _v;
 		}
-		operator V & () {
+		operator V & () noexcept {
 			return _v;
 		}
 	};
 	template<typename KK, typename VV>
-	struct _node_val<KK,VV,typename std::enable_if<!merged_v<KK,VV>::value>::type> {
+	struct _node_val<KK,VV,typename std::enable_if<
+			!merged_v<KK,VV>::value>::type> {
 		K _k;
 		V _v;
 		explicit _node_val(const K & k, const V & v)
 		  : _k(k), _v(v) {
 		}
-		explicit _node_val(K && k, V && v)
+		explicit _node_val(K && k, V && v) noexcept
 		  : _k(std::move(k)), _v(std::move(v)) {
 		}
-		operator const K & () const {
+		operator const K & () const noexcept {
 			return _k;
 		}
-		operator const V & () const {
+		operator const V & () const noexcept {
 			return _v;
 		}
-		operator V & () {
+		operator V & () noexcept {
 			return _v;
 		}
 	};
 	struct _V : _node_base, _node_val<K,V> {
 		template<typename KK = K, typename VV = V>
-		_V(const V & v, typename std::enable_if<merged_v<KK,VV>::value>::type * = nullptr) :
-			_node_base(), _node_val<K,V>(v) {
+		_V(const V & v, typename std::enable_if<
+				merged_v<KK,VV>::value>::type * = nullptr) noexcept
+		  : _node_base(), _node_val<K,V>(v) {
 		}
 		template<typename KK = K, typename VV = V>
-		_V(const K & k, const V & v, typename std::enable_if<!merged_v<KK,VV>::value>::type * = nullptr) :
-			_node_base(), _node_val<K,V>(k,v) {
+		_V(const K & k, const V & v, typename std::enable_if<
+				!merged_v<KK,VV>::value>::type * = nullptr)
+		  : _node_base(), _node_val<K,V>(k,v) {
 		}
 		template<typename KK = K, typename VV = V>
-		_V(V && v, typename std::enable_if<merged_v<KK,VV>::value>::type * = nullptr) :
-			_node_base(), _node_val<K,V>(std::move(v)) {
+		_V(V && v, typename std::enable_if<
+				merged_v<KK,VV>::value>::type * = nullptr)
+		  : _node_base(), _node_val<K,V>(std::move(v)) {
 		}
 		template<typename KK = K, typename VV = V>
-		_V(K && k, V && v, typename std::enable_if<!merged_v<KK,VV>::value>::type * = nullptr) :
-			_node_base(), _node_val<K,V>(std::move(k),std::move(v)) {
+		_V(K && k, V && v, typename std::enable_if<
+				!merged_v<KK,VV>::value>::type * = nullptr)
+		  : _node_base(), _node_val<K,V>(std::move(k),std::move(v)) {
 		}
-		_V(const _V & v) :
-			_node_base(), _node_val<K,V>(v) {
+		_V(const _V & v) noexcept
+		  : _node_base(), _node_val<K,V>(v) {
 		}
-		_V(_V && v) :
-			_node_base(), _node_val<K,V>(std::move(v)) {
+		_V(_V && v) noexcept
+		  : _node_base(), _node_val<K,V>(std::move(v)) {
 		}
 		// Placement new to support in-place initialization in the list.
-		void * operator new (size_t, void * p) {
+		void * operator new (size_t, void * p) noexcept {
 			return p;
 		}
-		void operator delete (void *, void *) {
+		void operator delete (void *, void *) noexcept {
 		}
 		// note these are reversed for historical reasons.
 		// use the compare function if it has one
 		template<typename T = K>
 		typename std::enable_if<has_compare<T>::value,int>::type
-		compare(const K & k) const {
+		compare(const K & k) const noexcept {
 			return k.compare(*this);
 		}
 		// else resort to operators
 		template<typename T = K>
 		typename std::enable_if<!has_compare<T>::value,int>::type
-		compare(const K & k) const {
+		compare(const K & k) const noexcept {
 			return (*this < k ? 1 :	*this == k ? 0 : -1);
 		}
 	};
 	struct _V * value = nullptr;       // Take a guess...
 
 	// Simple constructor...
-	explicit tree(unsigned b = DFLT_BLK)
+	explicit tree(unsigned b = DFLT_BLK) noexcept
 	  : block(b > 1 ? b : 1) {
 	}
 	// Copy constructor.
@@ -476,7 +481,7 @@ protected:
 		// The other real tree is responsible for the copy.
 	}
 	// Move constructor.
-	explicit tree(tree && t)
+	explicit tree(tree && t) noexcept
 	  : size(t.size), buffer(t.buffer), root(t.root), value(t.value),
 		block(t.block) {
 		t.size = 0;
@@ -485,7 +490,7 @@ protected:
 		t.value = nullptr;
 	}
 	tree & operator = (const tree &) = delete;
-	tree & operator = (tree && t) {
+	tree & operator = (tree && t) noexcept {
 		std::swap(size,t.size);
 		std::swap(buffer,t.buffer);
 		std::swap(root,t.root);
@@ -518,15 +523,15 @@ protected:
 		buffer = b;
 	}
 	// Insert an element
-	unsigned insert(const _V & v) {
+	unsigned insert(const _V & v) noexcept {
 		new(&value[size]) _V(v);
 		return size++;
 	}
-	unsigned insert(_V && v) {
+	unsigned insert(_V && v) noexcept {
 		new(&value[size]) _V(std::move(v));
 		return size++;
 	}
-	void expunge(unsigned p) {
+	void expunge(unsigned p) noexcept {
 		// Do the ugly work of removing the element and adjusting the
 		// offsets into value[].  This would be better if deferred to a
 		// compact() function of some form and used the nodes to make a
@@ -544,22 +549,22 @@ protected:
 		}
 	}
 	// This is the number of nodes in this sub-tree including the root
-	unsigned weight(unsigned r) const {
+	unsigned weight(unsigned r) const noexcept {
 		return (r != UINT_MAX ? value[r].weight : 0);
 	}
 	// This is the number of nodes in the left sub-tree
-	unsigned order(unsigned r) const {
+	unsigned order(unsigned r) const noexcept {
 		return (r != UINT_MAX ? weight(value[r].left) : 0);
 	}
 	// Get the new weight if we have disturbed the tree
-	unsigned new_weight(unsigned r) const {
+	unsigned new_weight(unsigned r) const noexcept {
 		return weight(value[r].left)+weight(value[r].right)+1;
 	}
 
 private:
 	unsigned block;            // The minimum block size.
 	// Calculate the buffer size.
-	unsigned bufsize(unsigned s) {
+	unsigned bufsize(unsigned s) noexcept {
 		while (s > 8*block)
 			block *= 8;
 		//while (64*s < block)
@@ -594,7 +599,7 @@ protected:
 
 public:
 	// Make one...
-	ktree_avl(unsigned b = DFLT_BLK)
+	ktree_avl(unsigned b = DFLT_BLK) noexcept
 	  : tree<K,V,OP::ktree_avl>(b) {
 	}
 	// Copy constructor.
@@ -605,7 +610,7 @@ public:
 			append(root,_V(t.value[i]),&p);
 	}
 	// Move constructor.
-	explicit ktree_avl(ktree_avl && t)
+	explicit ktree_avl(ktree_avl && t) noexcept
 	  : tree<K,V,OP::ktree_avl>(std::move(t)) {
 	}
 	ktree_avl & operator = (const ktree_avl & t) {
@@ -615,7 +620,7 @@ public:
 		for (unsigned i = 0; i < t.size; i++)
 			append(root,_V(t.value[i]),&p);
 	}
-	ktree_avl & operator = (ktree_avl && t) {
+	ktree_avl & operator = (ktree_avl && t) noexcept {
 		tree<K,V,OP::ktree_avl>::operator=(std::move(t));
 		return *this;
 	}
@@ -704,14 +709,14 @@ private:
 		int height = 1;
 	};
 
-	int height(unsigned r) const {
+	int height(unsigned r) const noexcept {
 		return (r != UINT_MAX ? value[r].height : 0);
 	}
-	int balance(unsigned r) const {
+	int balance(unsigned r) const noexcept {
 		return height(value[r].right)-height(value[r].left);
 	}
-	int new_height(unsigned r) const {
-		return MAX(height(value[r].left),height(value[r].right))+1;
+	int new_height(unsigned r) const noexcept {
+		return MAX(height(value[r].left), height(value[r].right)) + 1;
 	}
 	void append(unsigned & r, _V && v, unsigned * p) {
 		// If we're UINT_MAX that means we need to make a new node...
@@ -777,7 +782,7 @@ private:
 		rebalance(r);
 		return;
 	}
-	void rebalance(unsigned & r) {
+	void rebalance(unsigned & r) noexcept {
 		if (r == UINT_MAX || value[r].height < 2)
 			return;
 #ifdef TEST_TREES
@@ -803,7 +808,7 @@ private:
 #endif
 		return;
 	}
-	void rotate_left(unsigned & r) {
+	void rotate_left(unsigned & r) noexcept {
 		unsigned x = value[r].right;
 		value[r].right = value[x].left;
 		value[r].weight -= weight(x)-weight(value[x].left);
@@ -813,7 +818,7 @@ private:
 		value[x].height = new_height(x);
 		r = x;
 	}
-	void rotate_right(unsigned & r) {
+	void rotate_right(unsigned & r) noexcept {
 		unsigned x = value[r].left;
 		value[r].left = value[x].right;
 		value[r].weight -= weight(x)-weight(value[x].right);
@@ -878,7 +883,7 @@ template<class K, class V>
 class ktree_llrb {
 public:
 	// Make one...
-	ktree_llrb()
+	ktree_llrb() noexcept
 	  : size(0), buffer(0), block(DFLT_BLK), root(UINT_MAX), value(nullptr) {
 	}
 	// Clean up.
@@ -887,11 +892,11 @@ public:
 			free(value);
 	}
 	// The length. Nice for lots of things...
-	unsigned length() const {
+	unsigned length() const noexcept {
 		return size;
 	}
 	// Do a key lookup, and return UINT_MAX if the key is not found.
-	unsigned haskey(const K & k) const {
+	unsigned haskey(const K & k) const noexcept {
 		unsigned x = root;
 		while (x != UINT_MAX) {
 			int cmp = k.compare(value[x]._v);
@@ -909,7 +914,7 @@ public:
 		return value[p]._v;
 	}
 	// Allow sorted access.
-	V & getindex(unsigned i) const {
+	V & getindex(unsigned i) const noexcept {
 		unsigned x = root, order = 0;
 		while (x != UINT_MAX) {
 			if (i == order + value[x].order)
@@ -925,7 +930,7 @@ public:
 		return value[x]._v;
 	}
 	// Get the position of an element in the sort.
-	unsigned getorder(unsigned i) const {
+	unsigned getorder(unsigned i) const noexcept {
 		K & k = static_cast<K &>(value[i]._v);
 		unsigned x = root, order = 0;
 		while (x != UINT_MAX) {
@@ -970,15 +975,15 @@ protected:
 		unsigned order;        // Number of nodes on left
 		unsigned left, right;  // Left and right node numbers
 		bool red;              // Colour of link to parent
-		explicit _V(const V & v)
+		explicit _V(const V & v) noexcept
 		  : _v(v),
 		    order(0), left(UINT_MAX), right(UINT_MAX), red(true) {
 		}
 		// Placement new to support inplace init in the list.
-		void * operator new (size_t, void * p) {
+		void * operator new (size_t, void * p) noexcept {
 			return p;
 		}
-		void operator delete (void *, void *) {
+		void operator delete (void *, void *) noexcept {
 		}
 	} * value;            // Take a guess...
 
@@ -996,7 +1001,7 @@ protected:
 		value = temp;
 		buffer = b;
 	}
-	void append(unsigned & r, const V & v, bool * grew) {
+	void append(unsigned & r, const V & v, bool * grew) noexcept {
 		unsigned x;
 
 		// If we're UINT_MAX that means we need to make a new node...
@@ -1040,7 +1045,7 @@ protected:
 			value[value[r].left].red = true;
 		}
 	}
-	unsigned remove(unsigned r, const K & k) {
+	unsigned remove(unsigned r, const K & k) noexcept {
 		int cmp = k.compare(value[r]._v);
 		if (cmp < 0) {
 			// If k is missing do nothing.

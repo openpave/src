@@ -54,22 +54,22 @@ template <unsigned int P>
 class fixed {
 public:
 	// Some constructors for common cases...
-	fixed() {
+	fixed() noexcept {
 	}
-	fixed(const fixed & f) {
+	fixed(const fixed & f) noexcept {
 		value = f.value;
 	}
-	fixed(int i) {
+	fixed(int i) noexcept {
 		value = i << P;
 	}
-	fixed(unsigned i) {
+	fixed(unsigned i) noexcept {
 		value = i << P;
 	}
-	fixed(float f) {
+	fixed(float f) noexcept {
 		value = (f >= 0 ? int(f*(1 << P) + 0.5)
 			 : -int(0.5 - f*(1 << P)) );
 	}
-	fixed(double d) {
+	fixed(double d) noexcept {
 		value = (d >= 0 ? int(d*(1 << P) + 0.5)
 			 : -int(0.5 - d*(1 << P)) );
 	}
@@ -77,107 +77,107 @@ public:
 	}
 
 	// Some assignment operators...
-	fixed & operator = (const fixed & f) {
+	fixed & operator = (const fixed & f) noexcept {
 		value = f.value;
 		return *this;
 	}
-	fixed & operator += (const fixed & f) {
+	fixed & operator += (const fixed & f) noexcept {
 		value += f.value;
 		return *this;
 	}
-	fixed & operator -= (const fixed & f) {
+	fixed & operator -= (const fixed & f) noexcept {
 		value -= f.value;
 		return *this;
 	}
-	fixed & operator *= (const fixed & f) {
+	fixed & operator *= (const fixed & f) noexcept {
 		*this = double(*this) * double(f);
 		return *this;
 	}
-	fixed & operator /= (const fixed & f) {
+	fixed & operator /= (const fixed & f) noexcept {
 		*this = double(*this) / double(f);
 		return *this;
 	}
 
 	// Some conversion operators...
-	fixed<P> & operator = (int i) {
+	fixed<P> & operator = (int i) noexcept {
 		value = i << P;
 		return *this;
 	}
-	fixed<P> & operator = (double d) {
+	fixed<P> & operator = (double d) noexcept {
 		value = (d >= 0 ? int(d*(1 << P) + 0.5)
 			 : -int(0.5 - d*(1 << P)) );
 		return *this;
 	}
-	operator int () const {
+	operator int () const noexcept {
 		return value >> P;
 	}
-	operator float () const {
+	operator float () const noexcept {
 		return (float(value))/(1 << P);
 	}
-	operator double () const {
+	operator double () const noexcept {
 		return (double(value))/(1 << P);
 	}
 
 	// Comparison operators...
-	bool operator == (const fixed & f) const {
+	bool operator == (const fixed & f) const noexcept {
 		return (value == f.value);
 	}
-	bool operator != (const fixed & f) const {
+	bool operator != (const fixed & f) const noexcept {
 		return (value != f.value);
 	}
-	bool operator  < (const fixed & f) const {
+	bool operator < (const fixed & f) const noexcept {
 		return (value < f.value);
 	}
-	bool operator <= (const fixed & f) const {
+	bool operator <= (const fixed & f) const noexcept {
 		return (value <= f.value);
 	}
-	bool operator  > (const fixed & f) const {
+	bool operator > (const fixed & f) const noexcept {
 		return (value > f.value);
 	}
-	bool operator >= (const fixed & f) const {
+	bool operator >= (const fixed & f) const noexcept {
 		return (value >= f.value);
 	}
 
 	// Some math operators...
-	fixed operator - () const {
+	fixed operator - () const noexcept {
 		fixed t;
 		t.value = -value;
 		return t;
 	}
-	fixed operator + (const fixed<P> & f) const {
+	fixed operator + (const fixed<P> & f) const noexcept {
 		fixed t;
 		t.value = value + f.value;
 		return t;
 	}
-	fixed operator - (const fixed<P> & f) const {
+	fixed operator - (const fixed<P> & f) const noexcept {
 		fixed t;
 		t.value = value - f.value;
 		return t;
 	}
-	fixed operator * (const fixed<P> & f) const {
+	fixed operator * (const fixed<P> & f) const noexcept {
 		fixed t = double(*this) * double(f);
 		return t;
 	}
-	fixed operator / (const fixed<P> & f) const {
+	fixed operator / (const fixed<P> & f) const noexcept {
 		fixed t = double(*this) / double(f);
 		return t;
 	}
 
 	// The prefix and postfix operators, for convenience.
-	fixed & operator ++ () {
+	fixed & operator ++ () noexcept {
 		value += (1 << P);
 		return *this;
 	}
-	fixed & operator -- () {
+	fixed & operator -- () noexcept {
 		value -= (1 << P);
 		return *this;
 	}
-	fixed operator ++ (int) {
+	fixed operator ++ (int) noexcept {
 		fixed t(*this);
 		value += (1 << P);
 		return t;
 	}
-	fixed operator -- (int) {
+	fixed operator -- (int) noexcept {
 		fixed t(*this);
 		value -= (1 << P);
 		return t;
@@ -185,14 +185,15 @@ public:
 
 private:
 	template <unsigned int P1>
-	friend fixed<P1> fabs(const fixed<P1> & f);
+	friend fixed<P1> fabs(const fixed<P1> & f) noexcept;
 
 	int value;
 };
 
 template<unsigned int P>
 inline fixed<P>
-fabs(const fixed<P> & f) {
+fabs(const fixed<P> & f) noexcept
+{
 	fixed<P> t;
 	t.value = abs(f.value);
 	return t;

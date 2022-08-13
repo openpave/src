@@ -165,7 +165,7 @@ public:
 		this->dispatch(axis_message::remove,me.getorderof(a));
 		me.remove(a);
 	}
-	unsigned length() const {
+	unsigned length() const noexcept {
 		return me.length();
 	}
 	// Do a key lookup, and return UINT_MAX if the key is not found.
@@ -237,7 +237,7 @@ private:
 		// else resort to operators
 		template<typename T = K>
 		typename std::enable_if<!has_compare<T>::value,int>::type
-		compare(const axis_key & k) const {
+		compare(const axis_key & k) const noexcept {
 			if (pi == k.pi)
 				return (key < k.key ? -1 : key == k.key ? 0 : 1);
 			return (pi < k.pi ? -1 : 1);
@@ -282,7 +282,7 @@ public:
 		this->dispatch(axis_message::remove,me.getorderof(a));
 		me.remove(a);
 	}
-	unsigned length() const {
+	unsigned length() const noexcept {
 		return me.length();
 	}
 	// Do a key lookup, and return UINT_MAX if the key is not found.
@@ -311,17 +311,17 @@ public:
 private:
 	struct axis_key {
 		K key;
-		axis_key(const K & k) : key(k) {}
+		axis_key(const K & k) noexcept : key(k) {}
 		// use the compare function if it has one
 		template<typename T = K>
 		typename std::enable_if<has_compare<T>::value,int>::type
-		compare(const axis_key & k) const {
+		compare(const axis_key & k) const noexcept {
 			return key.compare(k.key);
 		}
 		// else resort to operators
 		template<typename T = K>
 		typename std::enable_if<!has_compare<T>::value,int>::type
-		compare(const axis_key & k) const {
+		compare(const axis_key & k) const noexcept {
 			return (key < k.key ? -1 : key == k.key ? 0 : 1);
 		}
 	};

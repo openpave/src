@@ -69,7 +69,7 @@ struct task_helper {
 		std::get<1>(r)(std::get<0>(r).get());
 	}
 	// Fallback for callback
-	static void fallback(T) {
+	static void fallback(T ) noexcept {
 	}
 	// Direct call without threading
 	static void direct(task_t & t) {
@@ -88,7 +88,7 @@ struct task_helper<void> {
 		std::get<0>(r).get();
 		std::get<1>(r)();
 	}
-	static void fallback() {
+	static void fallback() noexcept {
 	}
 	static void direct(task_t & t) {
 		try {
@@ -197,7 +197,7 @@ private:
 		while (true) try {
 			std::unique_lock<std::mutex> lock{mtx};
 
-			cv.wait(lock, [&]() {
+			cv.wait(lock, [&]() noexcept {
 				return exiting || empty || abort || havework();
 			});
 			if (empty || abort)
@@ -241,15 +241,15 @@ private:
 		}
 	}
 	// Check if there is work (call with mtx locked)
-	bool havework() const {
+	bool havework() const noexcept {
 		return !tasks.empty();
 	}
 	// Check if there is work (call with mtx locked)
-	bool haveresults() const {
+	bool haveresults() const noexcept {
 		return !results.empty();
 	}
 	// try to get a task for our worker (call with mtx locked)
-	bool gettask(task_t & task) {
+	bool gettask(task_t & task) noexcept {
 		if (tasks.empty())
 			return false;
 		task = std::move(tasks.front());

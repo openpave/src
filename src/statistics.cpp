@@ -42,7 +42,9 @@ namespace OP {
  * the uniform rv's being 0.0 since this will result in infinte
  * values, and double count the 0 == 2pi.
  */
-double stdnormal_rnd() {
+double
+stdnormal_rnd() noexcept
+{
 	static int i = 1;
 	static double u[2] = {0.0, 0.0};
 	double r[2];
@@ -64,7 +66,7 @@ double stdnormal_rnd() {
  * The standard normal PDF, for one random variable.
  */
 double
-stdnormal_pdf(double u)
+stdnormal_pdf(double u) noexcept
 {
 	return exp(-u*u/2)/M_SQRT2PI;
 }
@@ -77,8 +79,8 @@ stdnormal_pdf(double u)
  * here to check the error function approximations.
  */
 #define LEVMAX	10
-double
-quad8_stdnormal_pdf(double a, double b, double Q = 1.0)
+static double
+quad8_stdnormal_pdf(double a, double b, double Q = 1.0) noexcept
 {
 	// The magic Newton-Cotes weights
 	const int w[9] = {3956, 23552, -3712, 41984, -18160, 41984, -3712, 23552, 3956};
@@ -115,7 +117,7 @@ quad8_stdnormal_pdf(double a, double b, double Q = 1.0)
  * transform stdnormal_cdf(u)=(erfc(-u/sqrt(2))/2;
  */
 double
-stdnormal_cdf(double u)
+stdnormal_cdf(double u) noexcept
 {
 	const double a[5] = {
 		1.161110663653770e-002,3.951404679838207e-001,2.846603853776254e+001,
@@ -184,7 +186,7 @@ stdnormal_cdf(double u)
  * translated to C, and adapted for our purposes.
  */
 double
-stdnormal_inv(double p)
+stdnormal_inv(double p) noexcept
 {
 	const double a[6] = {
 		-3.969683028665376e+01,  2.209460984245205e+02,

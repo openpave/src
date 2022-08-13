@@ -35,14 +35,14 @@ using namespace OP;
 
 struct keyA {
 	int i;
-	keyA() : i(0) {}
-	explicit keyA(int s) : i(s) {}
-	int compare (const keyA & k) const { printf("."); return (i==k.i ? 0 : SGN(i-k.i)); }
-	bool operator == (const keyA & k) const { return (i==k.i); }
-	bool operator < (const keyA & k) const { return (i< k.i); }
-	bool operator <= (const keyA & k) const { return (i<=k.i); }
-	bool operator > (const keyA & k) const { return (i> k.i); }
-	bool operator >= (const keyA & k) const { return (i>=k.i); }
+	keyA() noexcept : i(0) {}
+	explicit keyA(int s) noexcept : i(s) {}
+	int compare (const keyA & k) const noexcept { printf("."); return (i==k.i ? 0 : SGN(i-k.i)); }
+	bool operator == (const keyA & k) const noexcept { return (i==k.i); }
+	bool operator < (const keyA & k) const noexcept { return (i< k.i); }
+	bool operator <= (const keyA & k) const noexcept { return (i<=k.i); }
+	bool operator > (const keyA & k) const noexcept { return (i> k.i); }
+	bool operator >= (const keyA & k) const noexcept { return (i>=k.i); }
 };
 
 static void

@@ -64,23 +64,23 @@ class LEbackcalc;
 struct point2d {
 	double x, y;
 
-	point2d() {
+	point2d() noexcept {
 	}
-	point2d(double px, double py)
+	point2d(double px, double py) noexcept
 	  : x(px), y(py) {
 	}
-	point2d(const point2d &) = default;
-	point2d & operator = (const point2d &) = default;
-	double r() const {
+	point2d(const point2d &) noexcept = default;
+	point2d & operator = (const point2d &) noexcept = default;
+	double r() const noexcept {
 		return hypot(x,y);
 	}
-	double theta() const {
+	double theta() const noexcept {
 		return atan2(x,y);
 	}
-	double distance(const point2d & p) const {
+	double distance(const point2d & p) const noexcept {
 		return hypot(x-p.x,y-p.y);
 	}
-	int compare(const point2d & p) const  {
+	int compare(const point2d & p) const noexcept {
 		if (x == p.x && y == p.y)
 			return 0;
 		if (r() < p.r())
@@ -92,22 +92,22 @@ struct point2d {
 		else
 			return 1;
 	}
-	bool operator == (const point2d & p) const {
+	bool operator == (const point2d & p) const noexcept {
 		return (x == p.x && y == p.y ? true : false);
 	}
-	bool operator != (const point2d & p) const {
+	bool operator != (const point2d & p) const noexcept {
 		return (x != p.x || y != p.y ? true : false);
 	}
-	bool operator > (const point2d & p) const {
+	bool operator > (const point2d & p) const noexcept {
 		return (compare(p) == 1 ? true : false);
 	}
-	bool operator >= (const point2d & p) const {
+	bool operator >= (const point2d & p) const noexcept {
 		return (compare(p) != -1 ? true : false);
 	}
-	bool operator < (const point2d & p) const {
+	bool operator < (const point2d & p) const noexcept {
 		return (compare(p) == -1 ? true : false);
 	}
-	bool operator <= (const point2d & p) const {
+	bool operator <= (const point2d & p) const noexcept {
 		return (compare(p) != 1 ? true : false);
 	}
 };
@@ -119,15 +119,15 @@ struct point3d : public point2d {
 	// WARNING: Z is positive down.
 	double z;
 
-	point3d()
+	point3d() noexcept
 	  : point2d() {
 	}
-	point3d(double px, double py, double pz)
+	point3d(double px, double py, double pz) noexcept
 	  : point2d(px,py), z(pz) {
 	}
-	point3d(const point3d &) = default;
-	point3d & operator = (const point3d &) = default;
-	int compare(const point3d & p) const {
+	point3d(const point3d &) noexcept = default;
+	point3d & operator = (const point3d &) noexcept = default;
+	int compare(const point3d & p) const noexcept {
 		if (x == p.x && y == p.y && z == p.z)
 			return 0;
 		if ((x*x+y*y) < (p.x*p.x+p.y*p.y))
@@ -136,22 +136,22 @@ struct point3d : public point2d {
 			return 1;
 		return point2d::compare(static_cast<const point2d &>(p));
 	}
-	bool operator == (const point3d & p) const {
+	bool operator == (const point3d & p) const noexcept {
 		return (x == p.x && y == p.y && z == p.z ? true : false);
 	}
-	bool operator != (const point3d & p) const {
+	bool operator != (const point3d & p) const noexcept {
 		return (x != p.x || y != p.y || z != p.z ? true : false);
 	}
-	bool operator > (const point3d & p) const {
+	bool operator > (const point3d & p) const noexcept {
 		return (compare(p) == 1 ? true : false);
 	}
-	bool operator >= (const point3d & p) const {
+	bool operator >= (const point3d & p) const noexcept {
 		return (compare(p) != -1 ? true : false);
 	}
-	bool operator < (const point3d & p) const {
+	bool operator < (const point3d & p) const noexcept {
 		return (compare(p) == -1 ? true : false);
 	}
-	bool operator <= (const point3d & p) const {
+	bool operator <= (const point3d & p) const noexcept {
 		return (compare(p) != 1 ? true : false);
 	}
 };
@@ -169,22 +169,22 @@ public:
 	double top() const {
 		return (prev == 0 ? 0.0 : prev->bottom());
 	}
-	double thickness() const {
+	double thickness() const noexcept {
 		return h;
 	}
-	double emod() const {
+	double emod() const noexcept {
 		return E;
 	}
-	double poissons() const {
+	double poissons() const noexcept {
 		return v;
 	}
-	double slip() const {
+	double slip() const noexcept {
 		return s;
 	}
-	double thickness(double th);
-	double emod(double te);
-	double poissons(double tv);
-	double slip(double ts);
+	double thickness(double th) noexcept;
+	double emod(double te) noexcept;
+	double poissons(double tv) noexcept;
+	double slip(double ts) noexcept;
 	LElayer(LEsystem * o, LElayer * p)
 	  : listelement_o<LEsystem,LElayer>(o,p), h(0.0), E(0.0), v(0.0),
 			s(1.0) {
@@ -213,10 +213,10 @@ private:
  */
 class paveload : public point2d {
 public:
-	paveload()
+	paveload() noexcept
 	  : point2d(0.0,0.0), f(0.0), r(0.0) {
 	}
-	paveload(const point2d & l, double lf, double lp, double lr = 0.0)
+	paveload(const point2d & l, double lf, double lp, double lr = 0.0) noexcept
 	  : point2d(l), f(lf), r(lr)  {
 		if (lf == 0.0) {
 			f = M_PI*lr*lr*lp;
@@ -224,19 +224,19 @@ public:
 			r = sqrt(lf/(lp*M_PI));
 		}
 	}
-	paveload(const paveload & pl)
+	paveload(const paveload & pl) noexcept
 	  : point2d(pl), f(pl.f), r(pl.r) {
 	}
-	double force() const {
+	double force() const noexcept {
 		return f;
 	}
-	double pressure() const {
+	double pressure() const noexcept {
 		return (r == 0.0 ? 0.0 : f/(M_PI*r*r));
 	}
-	double radius() const {
+	double radius() const noexcept {
 		return r;
 	}
-	double area() const {
+	double area() const noexcept {
 		return M_PI*r*r;
 	}
 
@@ -251,25 +251,25 @@ private:
 struct pavepoint : public point3d {
 	unsigned il;
 
-	pavepoint()
+	pavepoint() noexcept
 	  : point3d(0.0,0.0,0.0), il(UINT_MAX) {
 	}
-	pavepoint(double px, double py, double pz, unsigned l = UINT_MAX)
+	pavepoint(double px, double py, double pz, unsigned l = UINT_MAX) noexcept
 	  : point3d(px,py,pz), il(l) {
 	}
-	pavepoint(const point3d & p, unsigned l = UINT_MAX)
+	pavepoint(const point3d & p, unsigned l = UINT_MAX) noexcept
 	  : point3d(p), il(l) {
 	}
-	pavepoint(const pavepoint & p)
+	pavepoint(const pavepoint & p) noexcept
 	  : point3d(p), il(p.il) {
 	}
-	pavepoint & operator = (const pavepoint & p) {
+	pavepoint & operator = (const pavepoint & p) noexcept {
 		x = p.x; y = p.y; z = p.z;
 		if (il == UINT_MAX || p.il != UINT_MAX)
 			il = p.il;
 		return *this;
 	}
-	int compare(const pavepoint & p) const {
+	int compare(const pavepoint & p) const noexcept {
 		if (x == p.x && y == p.y && z == p.z
 		  && (il == p.il || il == UINT_MAX || p.il == UINT_MAX))
 			return 0;
@@ -279,26 +279,26 @@ struct pavepoint : public point3d {
 			return 1;
 		return point3d::compare(static_cast<const point3d &>(p));
 	}
-	bool operator == (const pavepoint & p) const {
+	bool operator == (const pavepoint & p) const noexcept {
 		return (x == p.x && y == p.y && z == p.z
 				 && (il == p.il || il == UINT_MAX || p.il == UINT_MAX)
 				 ? true : false);
 	}
-	bool operator != (const pavepoint & p) const {
+	bool operator != (const pavepoint & p) const noexcept {
 		return (x != p.x || y != p.y || z != p.z
 				 || (il != p.il && il != UINT_MAX && p.il != UINT_MAX)
 				 ? true : false);
 	}
-	bool operator > (const pavepoint & p) const {
+	bool operator > (const pavepoint & p) const noexcept {
 		return (compare(p) == 1 ? true : false);
 	}
-	bool operator >= (const pavepoint & p) const {
+	bool operator >= (const pavepoint & p) const noexcept {
 		return (compare(p) != -1 ? true : false);
 	}
-	bool operator < (const pavepoint & p) const {
+	bool operator < (const pavepoint & p) const noexcept {
 		return (compare(p) == -1 ? true : false);
 	}
-	bool operator <= (const pavepoint & p) const {
+	bool operator <= (const pavepoint & p) const noexcept {
 		return (compare(p) != 1 ? true : false);
 	}
 };
@@ -310,7 +310,7 @@ struct pavedata : public pavepoint {
 	// Return the results based on a more rational system...
 	enum type {deflct, stress, strain};
 	enum direction {xx, yy, zz, xy, xz, yz, p1, p2, p3, s1, s2, s3};
-	double result(type t, direction d) const {
+	double result(type t, direction d) const noexcept {
 		switch (t) {
 		case stress:
 			switch (d) {
@@ -374,7 +374,7 @@ struct pavedata : public pavepoint {
 
 	double data[9][3];
 	fset<double> deflgrad;
-	void principle(double v, double E);
+	void principle(double v, double E) noexcept;
 };
 
 /*
@@ -398,17 +398,17 @@ public:
 	}
 	void addlayer(const double h, const double e, const double v,
 	              const double s = 1.0, const unsigned p = UINT_MAX);
-	void removelayer(const unsigned l);
-	void removelayers();
-	unsigned layers() const {
+	void removelayer(const unsigned l) noexcept;
+	void removelayers() noexcept;
+	unsigned layers() const noexcept {
 		return length();
 	}
-	LElayer & layer(const unsigned l) const;
+	LElayer & layer(const unsigned l) const noexcept;
 
-	unsigned defaultgroup() const {
+	unsigned defaultgroup() const noexcept {
 		return clg;
 	}
-	unsigned defaultgroup(unsigned g) {
+	unsigned defaultgroup(unsigned g) noexcept {
 		return clg = g;
 	}
 	void addload(const point2d & l, double f, double p, double r = 0) {
@@ -454,8 +454,8 @@ public:
 				 const unsigned ny, const double * yp,
 				 const unsigned nz, const double * zp);
 	void removepoint(const point3d & p, unsigned l = UINT_MAX);
-	void removepoints();
-	unsigned results() const {
+	void removepoints() noexcept;
+	unsigned results() const noexcept {
 		return points.length();
 	}
 	const pavedata & result(const point3d & p, unsigned l = UINT_MAX)
@@ -529,15 +529,15 @@ private:
  * class defldata - A measured point within the pavement structure.
  */
 struct defldata : public point3d {
-	defldata()
+	defldata() noexcept
 	  : point3d() {
 	}
-	defldata(const point3d & p, const double m)
+	defldata(const point3d & p, const double m) noexcept
 	  : point3d(p) {
 		measured = m;
 		calculated = 0.0;
 	}
-	defldata(const defldata & dd)
+	defldata(const defldata & dd) noexcept
 	  : point3d(dd) {
 		measured = dd.measured;
 		calculated = dd.calculated;
@@ -559,16 +559,16 @@ public:
 	void adddefl(const defldata & d) {
 		defl.add(d);
 	}
-	unsigned deflections() {
+	unsigned deflections() const noexcept {
 		return defl.length();
 	}
-	const defldata & getdefl(const unsigned i) {
+	const defldata & getdefl(const unsigned i) const noexcept {
 		return defl[i];
 	}
-	void removedeflections() {
+	void removedeflections() noexcept {
 		defl.empty();
 	}
-	void setup(double p, double n, double t, unsigned m) {
+	void setup(double p, double n, double t, unsigned m) noexcept {
 		precision = MAX(0.0,p);
 		noise = MAX(0.0,n);
 		tolerance = MAX(1e-6,t);
@@ -576,7 +576,7 @@ public:
 	}
 	bool backcalc();
 
-	LEbackcalc() {
+	LEbackcalc() noexcept {
 		setup(0.0,0.0,1e-6,5);
 	}
 	LEbackcalc(const LEbackcalc &) = delete;

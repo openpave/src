@@ -96,7 +96,8 @@ typedef tmatrix<double,NDIM,NDOF> ematrix;
  * Templated Kronecker delta
  */
 template<unsigned I, unsigned J>
-static inline double delta()
+static inline double
+delta() noexcept
 {
 	return (I == J ? 1.0 : 0.0);
 }
@@ -110,29 +111,29 @@ template<unsigned I = NDIM, unsigned J = NDOF,
 struct meta_stiffness
 {
 	static inline void subassignR(smatrix_dof & E,
-			const double & l, const double & m) {
+			const double & l, const double & m) noexcept {
 		meta_stiffness<I,J,K,L-1>::subassignR(E,l,m);
 		E(J-1,L-1) = l*delta<I-1,J-1>()*delta<K-1,L-1>()
 				+ m*(delta<I-1,K-1>()*delta<J-1,L-1>()
 				   + delta<I-1,L-1>()*delta<J-1,K-1>());
 	}
 	static inline void subassign(smatrix_dof & E,
-			const double & l, const double & m) {
+			const double & l, const double & m) noexcept {
 		meta_stiffness<I,J-1,K,L>::subassign(E,l,m);
 		meta_stiffness<I,J,K,L>::subassignR(E,l,m);
 	}
 	static inline void assignR(smatrix_dof (& E)[NDIM][NDIM],
-			const double & l, const double & m) {
+			const double & l, const double & m) noexcept {
 		meta_stiffness<I,J,K-1,L>::assignR(E,l,m);
 		meta_stiffness<I,J,K,L>::subassign(E[I-1][K-1],l,m);
 	}
 	static inline void assign(smatrix_dof (& E)[NDIM][NDIM],
-			const double & l, const double & m) {
+			const double & l, const double & m) noexcept {
 		meta_stiffness<I-1,J,K,L>::assign(E,l,m);
 		meta_stiffness<I,J,K,L>::assignR(E,l,m);
 	}
 	static inline void submulR(ematrix & s, const ematrix & e,
-			const double & l, const double & m) {
+			const double & l, const double & m) noexcept {
 		meta_stiffness<I,J,K,L-1>::submulR(s,e,l,m);
 		s(I-1,J-1) += (l*delta<I-1,J-1>()*delta<K-1,L-1>()
 				+ m*(delta<I-1,K-1>()*delta<J-1,L-1>()
@@ -140,17 +141,17 @@ struct meta_stiffness
 				*e(K-1,L-1);
 	}
 	static inline void submul(ematrix & s, const ematrix & e,
-			const double & l, const double & m) {
+			const double & l, const double & m) noexcept {
 		meta_stiffness<I,J-1,K,L>::submul(s,e,l,m);
 		meta_stiffness<I,J,K,L>::submulR(s,e,l,m);
 	}
 	static inline void mulR(ematrix & s, const ematrix & e,
-			const double & l, const double & m) {
+			const double & l, const double & m) noexcept {
 		meta_stiffness<I,J,K-1,L>::mulR(s,e,l,m);
 		meta_stiffness<I,J,K,L>::submul(s,e,l,m);
 	}
 	static inline void mul(ematrix & s, const ematrix & e,
-			const double & l, const double & m) {
+			const double & l, const double & m) noexcept {
 		meta_stiffness<I-1,J,K,L>::mul(s,e,l,m);
 		meta_stiffness<I,J,K,L>::mulR(s,e,l,m);
 	}
@@ -159,40 +160,40 @@ template<unsigned I, unsigned J, unsigned K>
 struct meta_stiffness<I,J,K,0>
 {
 	static inline void subassignR(smatrix_dof &,
-			const double &, const double &) {}
+			const double &, const double &) noexcept {}
 	static inline void submulR(ematrix &, const ematrix &,
-			const double &, const double &) {}
+			const double &, const double &) noexcept {}
 };
 template<unsigned I, unsigned K, unsigned L>
 struct meta_stiffness<I,0,K,L>
 {
 	static inline void subassign(smatrix_dof &,
-			const double &, const double &) {}
+			const double &, const double &) noexcept {}
 	static inline void submul(ematrix &, const ematrix &,
-			const double &, const double &) {}
+			const double &, const double &) noexcept {}
 };
 template<unsigned I, unsigned J, unsigned L>
 struct meta_stiffness<I,J,0,L>
 {
 	static inline void assignR(smatrix_dof (&)[NDIM][NDIM],
-			const double &, const double &) {}
+			const double &, const double &) noexcept {}
 	static inline void mulR(ematrix &, const ematrix &,
-			const double &, const double &) {}
+			const double &, const double &) noexcept {}
 };
 template<unsigned J, unsigned K, unsigned L>
 struct meta_stiffness<0,J,K,L>
 {
 	static inline void assign(smatrix_dof (&)[NDIM][NDIM],
-			const double &, const double &) {}
+			const double &, const double &) noexcept {}
 	static inline void mul(ematrix &, const ematrix &,
-			const double &, const double &) {}
+			const double &, const double &) noexcept {}
 };
 
 /*
  * Calculate the principle stresses or strains.
  */
 static ematrix
-principle(const ematrix & s)
+principle(const ematrix & s) noexcept
 {
 	double t1, t2;
 
@@ -258,18 +259,18 @@ principle(const ematrix & s)
  */
 class material {
 public:
-	inline material(const double e, const double poissons)
+	inline material(const double e, const double poissons) noexcept
 	  : emod(e), v(poissons) {
 	}
 	// Get the point stiffness tensor.  This should be made to cache
 	// the result.
-	inline void pointstiffness(smatrix_dof (& E)[NDIM][NDIM]) const {
+	inline void pointstiffness(smatrix_dof (& E)[NDIM][NDIM]) const noexcept {
 		double lambda = v*emod/(1+v)/(1-2*v);
 		double mu = emod/2/(1+v);
 		meta_stiffness<>::assign(E,lambda,mu);
 	}
 	// Get the point stress tensor, based on the strain.
-	inline ematrix pointstress(const ematrix & e) const {
+	inline ematrix pointstress(const ematrix & e) const noexcept {
 		double lambda = v*emod/(1+v)/(1-2*v);
 		double mu = emod/2/(1+v);
 		ematrix s(0.0);
@@ -294,20 +295,20 @@ public:
 struct coord3d {
 	fixed<8> x, y, z;
 
-	inline coord3d() {
+	inline coord3d() noexcept {
 	}
-	inline coord3d(double px, double py, double pz)
+	inline coord3d(double px, double py, double pz) noexcept
 	  : x(px), y(py), z(pz) {
 	}
-	inline coord3d(const coord3d & p)
+	inline coord3d(const coord3d & p) noexcept
 	  : x(p.x), y(p.y), z(p.z) {
 	}
-	inline coord3d(const point3d & p)
+	inline coord3d(const point3d & p) noexcept
 	  : x(p.x), y(p.y), z(p.z) {
 	}
 	inline ~coord3d () {
 	}
-	int compare(const coord3d & p) const {
+	int compare(const coord3d & p) const noexcept {
 		if (x == p.x && y == p.y && z == p.z)
 			return 0;
 		if (z > p.z) return -1;
@@ -316,22 +317,22 @@ struct coord3d {
 		if (x > p.x) return  1;
 		return (y < p.y ? -1 : 1);
 	}
-	bool operator == (const coord3d & p) const {
+	bool operator == (const coord3d & p) const noexcept {
 		return (x == p.x && y == p.y && z == p.z ? true : false);
 	}
-	bool operator != (const coord3d & p) const {
+	bool operator != (const coord3d & p) const noexcept {
 		return (x != p.x || y != p.y || z != p.z ? true : false);
 	}
-	inline bool operator > (const coord3d & p) const {
+	inline bool operator > (const coord3d & p) const noexcept {
 		return (compare(p) == 1 ? true : false);
 	}
-	inline bool operator >= (const coord3d & p) const {
+	inline bool operator >= (const coord3d & p) const noexcept {
 		return (compare(p) != -1 ? true : false);
 	}
-	inline bool operator < (const coord3d & p) const {
+	inline bool operator < (const coord3d & p) const noexcept {
 		return (compare(p) == -1 ? true : false);
 	}
-	inline bool operator <= (const coord3d & p) const {
+	inline bool operator <= (const coord3d & p) const noexcept {
 		return (compare(p) != 1 ? true : false);
 	}
 };
@@ -359,10 +360,10 @@ const double gl_4[4][2] = {{        -1.0, 1.0/6},
 
 class mesh;                    // Forward declare.
 class node_list;               // Forward declare.
-double node_depth_callback(const coord3d &, const mesh *, const material *);
-double node_emod_callback(const coord3d &, const mesh *, const material *);
-double node_depth_callback_test(const coord3d &, const mesh *, const material *);
-double node_emod_callback_test(const coord3d &, const mesh *, const material *);
+double node_depth_callback(const coord3d &, const mesh *, const material *) noexcept;
+double node_emod_callback(const coord3d &, const mesh *, const material *) noexcept;
+double node_depth_callback_test(const coord3d &, const mesh *, const material *) noexcept;
+double node_emod_callback_test(const coord3d &, const mesh *, const material *) noexcept;
 
 /*
  * struct node3d
@@ -384,7 +385,7 @@ struct node3d : public coord3d {
 	// complain (if we're debugging).
 	void setneighbours(const unsigned x_m, const unsigned x_p,
 			const unsigned y_m, const unsigned y_p,
-			const unsigned z_m, const unsigned z_p) {
+			const unsigned z_m, const unsigned z_p) noexcept {
 		if (x_m != UINT_MAX) {
 			assert(xm == UINT_MAX || xm == x_m);
 			xm = x_m;
@@ -420,20 +421,20 @@ private:
 	bool red:1;                // Colour of link to parent
 	unsigned fixed:31;         // Bitmask of fixed DOFs
 
-	explicit node3d(const coord3d & c)
+	explicit node3d(const coord3d & c) noexcept
 	  : coord3d(c), xm(UINT_MAX), xp(UINT_MAX), ym(UINT_MAX), yp(UINT_MAX),
 			zm(UINT_MAX), zp(UINT_MAX), ux(0.0), uy(0.0), uz(0.0),
 			order(0), left(UINT_MAX), right(UINT_MAX), red(true), fixed(0) {
 	}
 	// Set our results.
-	void setdisp(const tmatrix<double,NDIM,1> & t) {
+	void setdisp(const tmatrix<double,NDIM,1> & t) noexcept {
 		ux = t(0); uy = t(1); uz = t(2);
 	}
 	// Placement new to support inplace init in the list.
-	void * operator new (size_t, void * p) {
+	void * operator new (size_t, void * p) noexcept {
 		return p;
 	}
-	void operator delete (void *, void *) {
+	void operator delete (void *, void *) noexcept {
 	}
 };
 
@@ -461,11 +462,11 @@ public:
 			free(value);
 	}
 	// The length. Nice for lots of things...
-	inline unsigned length() const {
+	inline unsigned length() const noexcept {
 		return size;
 	}
 	// Do a key lookup, and return UINT_MAX if the key is not found.
-	inline unsigned haskey(const coord3d & k) const {
+	inline unsigned haskey(const coord3d & k) const noexcept {
 		unsigned x = root;
 		while (x != UINT_MAX) {
 			int cmp = k.compare(value[x]);
@@ -479,11 +480,11 @@ public:
 		return x;
 	}
 	// We use node numbers to find our nodes...
-	inline node3d & operator [] (const unsigned p) const {
+	inline node3d & operator [] (const unsigned p) const noexcept {
 		return value[p];
 	}
 	// Allow sorted access.
-	inline node3d & getindex(const unsigned i) const {
+	inline node3d & getindex(const unsigned i) const noexcept {
 		unsigned x = root, order = 0;
 		while (x != UINT_MAX) {
 			if (i == order + value[x].order)
@@ -498,7 +499,7 @@ public:
 		return value[x];
 	}
 	// Get the position of an element in the sort.
-	inline unsigned getorder(const unsigned i) const {
+	inline unsigned getorder(const unsigned i) const noexcept {
 		coord3d & k = static_cast<coord3d &>(value[i]);
 		unsigned x = root, order = 0;
 		while (x != UINT_MAX) {
@@ -619,11 +620,11 @@ private:
 	const unsigned nnd;
 
 	// Size of the triangular matrix storage
-	inline unsigned size() const {
+	inline unsigned size() const noexcept {
 		return nnd*(nnd+1)/2;
 	}
 	// Index into the triangular matrix storage
-	inline unsigned index(const unsigned i, const unsigned j) const {
+	inline unsigned index(const unsigned i, const unsigned j) const noexcept {
 		return j*(j+1)/2 + i;
 	}
 };
@@ -712,7 +713,7 @@ public:
 	inline void updatenode(const node3d & n) const;
 	inline const node3d & getnode(const unsigned i) const;
 
-	virtual unsigned l2g(const unsigned i) const = 0;
+	virtual unsigned l2g(const unsigned i) const noexcept = 0;
 	virtual smatrix_elem * stiffness() const = 0;
 	virtual void results(const fset<point3d> &, fset<pavedata> &) const = 0;
 
@@ -740,7 +741,7 @@ public:
 	element_base(mesh * o, const shape_t x, const shape_t y,const material & m)
 	  : element(o,m), sx(x), sy(y) {
 	}
-	virtual unsigned l2g(const unsigned i) const {
+	unsigned l2g(const unsigned i) const noexcept override {
 		return inel[i];
 	}
 
@@ -856,7 +857,7 @@ protected:
 			xe[i*4][2] = xe[i*4+1][2], xe[i*4+2][2] = xe[i*4+3][2];
 	}
 	// Build a matrix of the emod delta values.
-	void buildEe(double * Ee) const {
+	void buildEe(double * Ee) const noexcept {
 		for (unsigned i = 0; i < nnd; i++) {
 			//const coord3d & c = getnode(inel[i]);
 			//Ee[i] = node_emod_callback(c,owner,&mat);
@@ -882,12 +883,12 @@ protected:
 	// build the shape function vector and derivative matrix.
 	virtual void buildSF(const bool ismap, const double & gx,
 			const double & gy, const double & gz,
-			double * N, double (* dNdr)[NDIM]) const = 0;
+			double * N, double (* dNdr)[NDIM]) const noexcept = 0;
 	// build the shape functions for linear and infinite elements
 	// in plan view.
 	void buildSF_block(const bool ismap, const double & gx,
 			const double & gy, const double & gz,
-			double * N, double (* dNdr)[NDIM]) const {
+			double * N, double (* dNdr)[NDIM]) const noexcept {
 		const unsigned ny = getn(sy),     my = 1;
 		const unsigned nx = getn(sx),     mx = my*ny;
 		const unsigned nz = unsigned(SZ), mz = mx*nx;
@@ -1337,7 +1338,7 @@ private:
 	}
 	// This gets the right gauss function based on the shape function.
 	static inline void getgauss(const shape_t t, unsigned & n,
-			const double (*& g)[2]) {
+			const double (*& g)[2]) noexcept {
 		switch (t) {
 			case linear:    n = 2; g = gp_2; return;
 			case quadratic: n = 3; g = gp_3; return;
@@ -1348,27 +1349,27 @@ private:
 		}
 	}
 	// Linear shape function.
-	static inline double N_2(const unsigned n, const double r) {
+	static inline double N_2(const unsigned n, const double r) noexcept {
 		switch (n) {
 		case 0: return 0.5*(1.0-r);
 		case 1: return 0.5*(1.0+r);
 		} assert(false); return 0.0;
 	}
-	static inline double dN_2(const unsigned n, const double ) {
+	static inline double dN_2(const unsigned n, const double ) noexcept {
 		switch (n) {
 		case 0: return -0.5;
 		case 1: return  0.5;
 		} assert(false); return 0.0;
 	}
 	// Absolute value shape function.
-	static inline double N_A(const unsigned n, const double r) {
+	static inline double N_A(const unsigned n, const double r) noexcept {
 		switch (n) {
 		case 0: return (r < 0.0 ? -r : 0.0);
 		case 1: return 1-fabs(r);
 		case 2: return (r > 0.0 ?  r : 0.0);
 		} assert(false); return 0.0;
 	}
-	static inline double dN_A(const unsigned n, const double r) {
+	static inline double dN_A(const unsigned n, const double r) noexcept {
 		switch (n) {
 		case 0: return (r < 0.0 ? -1.0 : r > 0.0 ?  0.0 : -0.5);
 		case 1: return (r < 0.0 ?  1.0 : r > 0.0 ? -1.0 :  0.0);
@@ -1376,14 +1377,14 @@ private:
 		} assert(false); return 0.0;
 	}
 	// Quadratic shape function.
-	static inline double N_3(const unsigned n, const double r) {
+	static inline double N_3(const unsigned n, const double r) noexcept {
 		switch (n) {
 		case 0: return 0.5*r*(r-1);
 		case 1: return 1-r*r;
 		case 2: return 0.5*r*(r+1);
 		} assert(false); return 0.0;
 	}
-	static inline double dN_3(const unsigned n, const double r) {
+	static inline double dN_3(const unsigned n, const double r) noexcept {
 		switch (n) {
 		case 0: return r-0.5;
 		case 1: return -2*r;
@@ -1391,7 +1392,7 @@ private:
 		} assert(false); return 0.0;
 	}
 	// Cubic shape function.
-	static inline double N_4(const unsigned n, const double r) {
+	static inline double N_4(const unsigned n, const double r) noexcept {
 		switch (n) {
 		case 0: return 0.0625*(-1+9*r*r)*(1-1*r);
 		case 1: return 0.0625*(+9-9*r*r)*(1-3*r);
@@ -1399,7 +1400,7 @@ private:
 		case 3: return 0.0625*(-1+9*r*r)*(1+1*r);
 		} assert(false); return 0.0;
 	}
-	static inline double dN_4(const unsigned n, const double r) {
+	static inline double dN_4(const unsigned n, const double r) noexcept {
 		switch (n) {
 		case 0: return 0.0625*((+18*r)*(1-1*r) - 1*(-1+9*r*r));
 		case 1: return 0.0625*((-18*r)*(1-3*r) - 3*(+9-9*r*r));
@@ -1408,46 +1409,46 @@ private:
 		} assert(false); return 0.0;
 	}
 	// mapping functions for infinite elements.
-	static inline double Mpi(const unsigned n, const double r) {
+	static inline double Mpi(const unsigned n, const double r) noexcept {
 		switch (n) {
 		case 0: return  -2*r/(1-r);
 		case 1: return (1+r)/(1-r);
 		} assert(false); return 0.0;
 	}
-	static inline double dMpi(const unsigned n, const double r) {
+	static inline double dMpi(const unsigned n, const double r) noexcept {
 		switch (n) {
 		case 0: return -2/((1-r)*(1-r));
 		case 1: return  2/((1-r)*(1-r));
 		} assert(false); return 0.0;
 	}
-	static inline double Mni(const unsigned n, const double r) {
+	static inline double Mni(const unsigned n, const double r) noexcept {
 		switch (n) {
 		case 0: return (1-r)/(1+r);
 		case 1: return   2*r/(1+r);
 		} assert(false); return 0.0;
 	}
-	static inline double dMni(const unsigned n, const double r) {
+	static inline double dMni(const unsigned n, const double r) noexcept {
 		switch (n) {
 		case 0: return -2/((1+r)*(1+r));
 		case 1: return  2/((1+r)*(1+r));
 		} assert(false); return 0.0;
 	}
 	// Shape functions for infinite elements are quadratic.
-	static inline double Npi(const unsigned n, const double r) {
+	static inline double Npi(const unsigned n, const double r) noexcept {
 		return N_3(n,r);
 	}
-	static inline double dNpi(const unsigned n, const double r) {
+	static inline double dNpi(const unsigned n, const double r) noexcept {
 		return dN_3(n,r);
 	}
 	// Shift the negative nodes to (0,+1).
-	static inline double Nni(const unsigned n, const double r) {
+	static inline double Nni(const unsigned n, const double r) noexcept {
 		return N_3(n+1,r);
 	}
-	static inline double dNni(const unsigned n, const double r) {
+	static inline double dNni(const unsigned n, const double r) noexcept {
 		return dN_3(n+1,r);
 	}
 	// Return the number of nodes in each shape function.
-	static inline unsigned getn(const shape_t s, const bool ismap = true) {
+	static inline unsigned getn(const shape_t s, const bool ismap = true) noexcept {
 		switch (s) {
 		case linear:    return 2;
 		case absolute:  return 3;
@@ -1459,7 +1460,7 @@ private:
 	}
 	// Build the shape/mapping function based on the type of function.
 	static inline double getN(const shape_t s, const unsigned n,
-			const double r, const bool ismap = true) {
+			const double r, const bool ismap = true) noexcept {
 		switch (s) {
 		case linear:    return N_2(n,r);
 		case absolute:  return N_A(n,r);
@@ -1470,7 +1471,7 @@ private:
 		} assert(false); return 0.0;
 	}
 	static inline double getdN(const shape_t s, const unsigned n,
-			const double r, const bool ismap = true) {
+			const double r, const bool ismap = true) noexcept {
 		switch (s) {
 		case linear:    return dN_2(n,r);
 		case absolute:  return dN_A(n,r);
@@ -1495,7 +1496,7 @@ public:
 	}
 	virtual void buildSF(const bool ismap, const double & gx,
 			const double & gy, const double & gz,
-			double * N, double (* dNdr)[NDIM]) const {
+			double * N, double (* dNdr)[NDIM]) const noexcept override {
 		assert(4*int(SZ) == this->nnd);
 		base_t::buildSF_block(ismap,gx,gy,gz,N,dNdr);
 	}
@@ -1522,7 +1523,7 @@ public:
 	}
 	virtual void buildSF(const bool ismap, const double & gx,
 			const double & gy, const double & gz,
-			double * N, double (* dNdr)[NDIM]) const {
+			double * N, double (* dNdr)[NDIM]) const noexcept override {
 		assert(9*int(SZ) == this->nnd);
 		base_t::buildSF_block(ismap,gx,gy,gz,N,dNdr);
 	}
@@ -1549,7 +1550,7 @@ public:
 	}
 	virtual void buildSF(const bool ismap, const double & gx,
 			const double & gy, const double & gz,
-			double * N, double (* dNdr)[NDIM]) const {
+			double * N, double (* dNdr)[NDIM]) const noexcept override {
 		assert(ismap == true);
 		base_t::buildSF_variable(gx,gy,gz,N,dNdr,mask);
 	}
@@ -1578,7 +1579,7 @@ public:
 	}
 	virtual void buildSF(const bool ismap, const double & gx,
 			const double & gy, const double & gz,
-			double * N, double (* dNdr)[NDIM]) const {
+			double * N, double (* dNdr)[NDIM]) const noexcept override {
 		assert(ismap == true);
 		base_t::buildSF_adaptor(gx,gy,gz,N,dNdr,mask);
 	}
@@ -1655,7 +1656,7 @@ public:
 	}
 	virtual void buildSF(const bool ismap, const double & gx,
 			const double & gy, const double & gz,
-			double * N, double (* dNdr)[NDIM]) const {
+			double * N, double (* dNdr)[NDIM]) const noexcept override {
 		assert(4*int(SZ) == this->nnd);
 		base_t::buildSF_block(ismap,gx,gy,gz,N,dNdr);
 	}
@@ -1822,7 +1823,7 @@ public:
 		n->col_next = p;
 	}
 	// This just makes things faster by sorting the node lists.
-	void tidy() {
+	void tidy() noexcept {
 		// We need somewhere to store the switched data.
 		smatrix_node temp;
 
@@ -1995,7 +1996,7 @@ public:
 		tidy();
 		incchol();
 	}
-	unsigned nonzero() {
+	unsigned nonzero() noexcept {
 		smatrix_diag * d;
 		smatrix_node * p;
 		unsigned nnz = nnd;
@@ -2033,10 +2034,10 @@ public:
 		if (V)
 			free(V);
 	}
-	inline const svector_dof & operator () (const unsigned i) const {
+	inline const svector_dof & operator () (const unsigned i) const noexcept {
 		return V[i];
 	}
-	inline svector_dof & operator () (const unsigned i) {
+	inline svector_dof & operator () (const unsigned i) noexcept {
 		return V[i];
 	}
 
@@ -2050,29 +2051,29 @@ private:
  */
 struct mesh_bc_key {
 	unsigned n, i;
-	mesh_bc_key()
+	mesh_bc_key() noexcept
 	  : n(0), i(0) {
 	}
-	mesh_bc_key(unsigned N, unsigned I)
+	mesh_bc_key(unsigned N, unsigned I) noexcept
 	  : n(N), i(I) {
 	}
 	// Provide these for sorting.
-	bool operator == (const mesh_bc_key & k) const {
+	bool operator == (const mesh_bc_key & k) const noexcept {
 		return (n == k.n && i == k.i);
 	}
-	bool operator > (const mesh_bc_key & k) const {
+	bool operator > (const mesh_bc_key & k) const noexcept {
 		return (n > k.n || (n == k.n && i > k.i));
 	}
-	bool operator < (const mesh_bc_key & k) const {
+	bool operator < (const mesh_bc_key & k) const noexcept {
 		return (n < k.n || (n == k.n && i < k.i));
 	}
 };
 struct mesh_bc : public mesh_bc_key {
 	double d;
-	mesh_bc()
+	mesh_bc() noexcept
 	  : mesh_bc_key(), d(0.0) {
 	}
-	mesh_bc(unsigned N, unsigned I, double D)
+	mesh_bc(unsigned N, unsigned I, double D) noexcept
 	  : mesh_bc_key(N,I), d(D) {
 	}
 };
@@ -2088,7 +2089,7 @@ struct mesh_bc : public mesh_bc_key {
 struct mesh_part : public fixed<8> {
 	unsigned order;
 
-	mesh_part(fixed<8> & p)
+	mesh_part(fixed<8> & p) noexcept
 	  : fixed<8>(p), order(0) {
 	}
 	static void setorder(koset<fixed<8>,mesh_part> & p) {
@@ -2113,15 +2114,15 @@ private:
 struct mesh_part3d {
 	unsigned ox, oy, oz;
 
-	inline mesh_part3d(mesh_part x, mesh_part y, mesh_part z)
+	inline mesh_part3d(mesh_part x, mesh_part y, mesh_part z) noexcept
 	  : ox(x.order), oy(y.order), oz(z.order) {
 	}
-	inline mesh_part3d(const mesh_part3d & p)
+	inline mesh_part3d(const mesh_part3d & p) noexcept
 	  : ox(p.ox), oy(p.oy), oz(p.oz) {
 	}
 	inline ~mesh_part3d () {
 	}
-	int compare(const mesh_part3d & p) const {
+	int compare(const mesh_part3d & p) const noexcept {
 		unsigned xo1, xo2, yo1, yo2, zo1, zo2;
 		unsigned m = 0, o1 = 0, o2 = 0;
 
@@ -2150,22 +2151,22 @@ struct mesh_part3d {
 		}
 		return 0;
 	}
-	bool operator == (const mesh_part3d & p) const {
+	bool operator == (const mesh_part3d & p) const noexcept {
 		return (compare(p) == 0 ? true : false);
 	}
-	bool operator != (const mesh_part3d & p) const {
+	bool operator != (const mesh_part3d & p) const noexcept {
 		return (compare(p) != 0 ? true : false);
 	}
-	inline bool operator > (const mesh_part3d & p) const {
+	inline bool operator > (const mesh_part3d & p) const noexcept {
 		return (compare(p) == 1 ? true : false);
 	}
-	inline bool operator >= (const mesh_part3d & p) const {
+	inline bool operator >= (const mesh_part3d & p) const noexcept {
 		return (compare(p) != -1 ? true : false);
 	}
-	inline bool operator < (const mesh_part3d & p) const {
+	inline bool operator < (const mesh_part3d & p) const noexcept {
 		return (compare(p) == -1 ? true : false);
 	}
-	inline bool operator <= (const mesh_part3d & p) const {
+	inline bool operator <= (const mesh_part3d & p) const noexcept {
 		return (compare(p) != 1 ? true : false);
 	}
 };
@@ -2403,7 +2404,7 @@ public:
 		node[k] = n;
 		return true;
 	}
-	inline unsigned getnodes() const {
+	inline unsigned getnodes() const noexcept {
 		return node.length();
 	}
 	inline const node3d & getnode(const unsigned i) const {
@@ -2412,10 +2413,10 @@ public:
 	inline const node3d & getorderednode(const unsigned i) const {
 		return node.getindex(i);
 	}
-	inline unsigned hasnode(const coord3d & p) const {
+	inline unsigned hasnode(const coord3d & p) const noexcept {
 		return node.haskey(p);
 	}
-	inline unsigned getorderofnode(const coord3d & p) const {
+	inline unsigned getorderofnode(const coord3d & p) const noexcept {
 		return node.getorder(node.haskey(p));
 	}
 
@@ -2782,23 +2783,23 @@ private:
 };
 
 inline mesh::dof
-operator | (const mesh::dof l, const mesh::dof r)
+operator | (const mesh::dof l, const mesh::dof r) noexcept
 {
 	return static_cast<mesh::dof>(unsigned(l) | unsigned(r));
 }
 inline mesh::dof
-operator & (const mesh::dof l, const mesh::dof r)
+operator & (const mesh::dof l, const mesh::dof r) noexcept
 {
 	return static_cast<mesh::dof>(unsigned(l) & unsigned(r));
 }
 
 inline mesh::bcplane
-operator | (const mesh::bcplane l, const mesh::bcplane r)
+operator | (const mesh::bcplane l, const mesh::bcplane r) noexcept
 {
 	return static_cast<mesh::bcplane>(unsigned(l) | unsigned(r));
 }
 inline mesh::bcplane
-operator & (const mesh::bcplane l, const mesh::bcplane r)
+operator & (const mesh::bcplane l, const mesh::bcplane r) noexcept
 {
 	return static_cast<mesh::bcplane>(unsigned(l) & unsigned(r));
 }
@@ -2852,10 +2853,10 @@ struct femlayer {
 	fixed<8> ebot;
 	material mat;
 
-	femlayer()
+	femlayer() noexcept
 	  : top(0.0), bot(0.0), etop(0.0), ebot(0.0), mat(0.0,0.0) {
 	}
-	femlayer(double t, double b, double e, double v)
+	femlayer(double t, double b, double e, double v) noexcept
 	  : top(t), bot(b), etop(0.0), ebot(0.0), mat(e,v) {
 	}
 };
@@ -2865,7 +2866,7 @@ static sset<femlayer> layer;
 double * L[NUM_VAR];
 
 double
-node_depth_callback(const coord3d & c, const mesh * FEM, const material * mat)
+node_depth_callback(const coord3d & c, const mesh * FEM, const material * mat) noexcept
 {
 	unsigned i = 0, n;
 
@@ -2893,7 +2894,7 @@ node_depth_callback(const coord3d & c, const mesh * FEM, const material * mat)
 }
 
 double
-node_emod_callback(const coord3d & c, const mesh * FEM, const material * mat)
+node_emod_callback(const coord3d & c, const mesh * FEM, const material * mat) noexcept
 {
 	unsigned i = 0, n;
 
@@ -2907,7 +2908,7 @@ node_emod_callback(const coord3d & c, const mesh * FEM, const material * mat)
 }
 
 inline double
-circlearea(double x, double y, double r)
+circlearea(double x, double y, double r) noexcept
 {
 	x = fabs(x); y = fabs(y);
 	if (hypot(x,y) >= r)
@@ -2919,7 +2920,7 @@ circlearea(double x, double y, double r)
 }
 
 inline double
-blockarea(double x1, double x2, double y1, double y2, double r)
+blockarea(double x1, double x2, double y1, double y2, double r) noexcept
 {
 	double h1 = hypot(x1,y1), h2 = hypot(x2,y1);
 	double h3 = hypot(x1,y2), h4 = hypot(x2,y2);
@@ -2947,7 +2948,7 @@ blockarea(double x1, double x2, double y1, double y2, double r)
  * Bessel functions from numerical recipes
  */
 static double
-bessi0(const double x)
+bessi0(const double x) noexcept
 {
 	double ax, y;
 
@@ -2968,7 +2969,7 @@ bessi0(const double x)
 }
 
 static double
-bessi1(double x)
+bessi1(double x) noexcept
 {
 	double ax, y;
 
@@ -3081,7 +3082,7 @@ fn_whittle(const double h, const double r)
 }
 
 static double
-fn_ellipse(const double t, const double a, const double b)
+fn_ellipse(const double t, const double a, const double b) noexcept
 {
 	return a*b/sqrt(pow(a*cos(t),2)+pow(b*sin(t),2));
 }
@@ -3095,56 +3096,56 @@ struct region {
 	cset<fixed<8> > xstop;
 	cset<fixed<8> > ystop;
 
-	region() {
+	region() noexcept {
 	}
-	fixed<8> xm() {
+	fixed<8> xm() noexcept {
 		return xstop[0];
 	}
-	fixed<8> xp() {
+	fixed<8> xp() noexcept {
 		return xstop[xstop.length()-1];
 	}
-	fixed<8> ym() {
+	fixed<8> ym() noexcept {
 		return ystop[0];
 	}
-	fixed<8> yp() {
+	fixed<8> yp() noexcept {
 		return ystop[ystop.length()-1];
 	}
-	bool overlaps(double x1, double y1, double x2, double y2) {
+	bool overlaps(double x1, double y1, double x2, double y2) noexcept {
 		fixed<8> fxm(x1), fym(y1), fxp(x2), fyp(y2);
 		return (fxm < xp() && fxp > xm() && fym < yp() && fyp > ym());
 	}
-	bool overlaps(region & r) {
+	bool overlaps(region & r) noexcept {
 		return (r.xm() < xp() && r.xp() > xm()
 				 && r.ym() < yp() && r.yp() > ym());
 	}
 };
 
 struct region_list : sset<region> {
-	double xm() {
+	double xm() noexcept {
 		fixed<8> x_m = 0;
 		for (unsigned i = 0; i < length(); i++)
 			x_m = MIN(x_m,(*this)[i].xm());
 		return x_m;
 	}
-	double xp() {
+	double xp() noexcept {
 		fixed<8> x_p = 0;
 		for (unsigned i = 0; i < length(); i++)
 			x_p = MAX(x_p,(*this)[i].xp());
 		return x_p;
 	}
-	double ym() {
+	double ym() noexcept {
 		fixed<8> y_m = 0;
 		for (unsigned i = 0; i < length(); i++)
 			y_m = MIN(y_m,(*this)[i].ym());
 		return y_m;
 	}
-	double yp() {
+	double yp() noexcept {
 		fixed<8> y_p = 0;
 		for (unsigned i = 0; i < length(); i++)
 			y_p = MAX(y_p,(*this)[i].yp());
 		return y_p;
 	}
-	bool overlaps(double x1, double y1, double x2, double y2) {
+	bool overlaps(double x1, double y1, double x2, double y2) noexcept {
 		bool rv = false;
 		for (unsigned i = 0; i < length(); i++)
 			rv = rv || (*this)[i].overlaps(x1,y1,x2,y2);
@@ -3990,13 +3991,13 @@ main(int argc, char *argv[])
 #endif
 
 double
-node_depth_callback_test(const coord3d & c, const mesh *, const material *)
+node_depth_callback_test(const coord3d & c, const mesh *, const material *) noexcept
 {
 	return c.z;
 }
 
 double
-node_emod_callback_test(const coord3d &, const mesh *, const material * mat)
+node_emod_callback_test(const coord3d &, const mesh *, const material * mat) noexcept
 {
 	return mat->emod;
 }

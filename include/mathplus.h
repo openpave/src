@@ -210,7 +210,7 @@ swap(T & a, T & b)
  * Computes n choose k
  */
 inline int
-choose(int n, int k)
+choose(int n, int k) noexcept
 {
 	int i, j = n-k+1, c = j;
 	if (k < 0 || k > n)

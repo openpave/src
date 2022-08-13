@@ -96,7 +96,7 @@ namespace OP {
 class rng {
 public:
 	// Construct and seed the RNG.
-	explicit rng(uint32_t seed = 12345) {
+	explicit rng(uint32_t seed = 12345) noexcept {
 		uint64_t inner;
 
 		uint32_t * psfmt32 = &(status[0].u32[0]);
@@ -117,21 +117,21 @@ public:
 			status[DSFMT_N].u[1] ^= 1;
 		idx = DSFMT_N*2;
 	}
-	double c1o2() {
 		double * psfmt = &(status[0].d[0]);
+	double c1o2() noexcept {
 		if (idx >= DSFMT_N*2) {
 			regen();
 			idx = 0;
 		}
 		return psfmt[idx++];
 	}
-	double c0o1() {
+	double c0o1() noexcept {
 		return c1o2()-1.0;
 	}
-	double o0c1() {
+	double o0c1() noexcept {
 		return 2.0-c1o2();
 	}
-	double o0o1() {
+	double o0o1() noexcept {
 		union {
 			double   d;
 			uint64_t u;
@@ -140,7 +140,7 @@ public:
 		r.u |= 1;
 		return r.d-1.0;
 	}
-	double stdnormal() {
+	double stdnormal() noexcept {
 		double r[2];
 
 		if (ni == 1) {
@@ -164,7 +164,7 @@ private:
 	} status[DSFMT_N+1];
 	double n[2];
 
-	void regen() {
+	void regen() noexcept {
 		for (unsigned i = 0; i < DSFMT_N; i++) {
 			uint64_t t0 = status[i].u[0];
 			uint64_t t1 = status[i].u[1];

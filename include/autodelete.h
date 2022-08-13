@@ -41,39 +41,39 @@ template<typename T>
 class autodelete
 {
 public:
-	autodelete(T * p)
-		: ptr(p) {
+	autodelete(T * p) noexcept
+	  : ptr(p) {
 	}
 	~autodelete() {
 		delete [] ptr;
 	}
 	autodelete(const autodelete &) = delete;
-	autodelete(autodelete && a)
-		: ptr(a.ptr) {
+	autodelete(autodelete && a) noexcept
+	  : ptr(a.ptr) {
 		a.ptr = nullptr;
 	}
 	autodelete & operator = (const autodelete &) = delete;
-	autodelete & operator = (autodelete && a) {
+	autodelete & operator = (autodelete && a) noexcept {
 		ptr = a.ptr;
 		a.ptr = nullptr;
 		return *this;
 	}
-	T & operator [] (int i) {
+	T & operator [] (int i) noexcept {
 		return ptr[i];
 	}
-	T & operator [] (unsigned i) {
+	T & operator [] (unsigned i) noexcept {
 		return ptr[i];
 	}
-	T & operator * () {
+	T & operator * () noexcept {
 		return *ptr;
 	}
-	T * operator -> () {
+	T * operator -> () noexcept {
 		return ptr;
 	}
-	operator T* () {
+	operator T * () noexcept {
 		return ptr;
 	}
-	operator void* () {
+	operator void * () noexcept {
 		return ptr;
 	}
 

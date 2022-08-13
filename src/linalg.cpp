@@ -41,7 +41,7 @@ namespace OP {
  * In-place transpose a rectangular matrix.
  */
 void
-transpose(unsigned m, unsigned n, double * A)
+transpose(unsigned m, unsigned n, double * A) noexcept
 {
 	for (unsigned s = 0, j = 0, i = 0; s < m * n; j = ++s, i = 0) {
 		do {
@@ -63,7 +63,7 @@ transpose(unsigned m, unsigned n, double * A)
  * Orthonormalize the nxn matrix Q, using the Gramm-Schmidt algorithm.
  */
 void
-orth_gs(unsigned n, double * Q)
+orth_gs(unsigned n, double * Q) noexcept
 {
 	double r;
 	unsigned i, j, k;
@@ -242,7 +242,7 @@ decmp_lu(unsigned n, double * A, unsigned * idx,
  */
 void
 bksub_lu(unsigned n, const double * A, const unsigned * idx,
-         double * b, unsigned m, unsigned c)
+         double * b, unsigned m, unsigned c) noexcept
 {
 	unsigned i, j, k;
 
@@ -426,7 +426,7 @@ decmp_chol(unsigned n, unsigned w, double * A)
  */
 void
 bksub_chol(unsigned n, const double * A,
-           double * b, unsigned m, unsigned c)
+           double * b, unsigned m, unsigned c) noexcept
 {
 	unsigned i, k;
 
@@ -448,7 +448,7 @@ bksub_chol(unsigned n, const double * A,
  */
 void
 bksub_chol(unsigned n, unsigned w, const double * A,
-           double * b, unsigned m, unsigned c)
+           double * b, unsigned m, unsigned c) noexcept
 {
 	unsigned i, k;
 
@@ -609,7 +609,7 @@ decmp_ldl(unsigned n, double * A)
  */
 void
 bksub_ldl(unsigned n, const double * A,
-          double * b, unsigned m, unsigned c)
+          double * b, unsigned m, unsigned c) noexcept
 {
 	unsigned i, k;
 	double sum;
@@ -948,8 +948,7 @@ orth_svd(unsigned n, double * Q)
  * XXX: this routine is using a stupid access scheme.
  */
 bool
-decmp_qr(unsigned n, double * A, double * s,
-         double * d)
+decmp_qr(unsigned n, double * A, double * s, double * d) noexcept
 {
 	bool rv = true;
 	unsigned i, j, k;
@@ -996,7 +995,7 @@ decmp_qr(unsigned n, double * A, double * s,
 void
 bksub_qr(unsigned n, const double * A,
          const double * s, const double * d,
-         double * b, unsigned m, unsigned c)
+         double * b, unsigned m, unsigned c) noexcept
 {
 	unsigned i, j;
 	double sum;
@@ -1019,8 +1018,7 @@ bksub_qr(unsigned n, const double * A,
  * Householder reduction of a nxn matrix A to tridiagonal form.
  */
 void
-tridiag_hh(unsigned n, double * A, double * d,
-           double * e)
+tridiag_hh(unsigned n, double * A, double * d, double * e) noexcept
 {
 	unsigned i, j, k;
 	double scale, f;
@@ -1080,8 +1078,7 @@ tridiag_hh(unsigned n, double * A, double * d,
  * eigenvectors of a real symmetric tridiagonal matrix.
  */
 void
-eig_tri_ql(unsigned n, double * d, double * e,
-           double * A)
+eig_tri_ql(unsigned n, double * d, double * e, double * A) noexcept
 {
 	unsigned i, j, k, m;
 	double b,c,f,g,p,r,s;

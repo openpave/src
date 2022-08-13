@@ -75,14 +75,14 @@ namespace OP {
 #define B_IDX(n,w,i,j) ((j) <= (w) ? (j)*((j)+1)/2+(i) : \
                                      ((j)+1)*(w)+(i)-(w)*((w)+1)/2)
 
-void transpose(unsigned m, unsigned n, double * A);
-void orth_gs(unsigned n, double * Q);
+void transpose(unsigned m, unsigned n, double * A) noexcept;
+void orth_gs(unsigned n, double * Q) noexcept;
 void equ_gauss(unsigned n, const double * A, const double * b,
 	double * x);
 double inv_mul_gauss(unsigned n, unsigned m, double * A, double * B);
 void decmp_lu(unsigned n, double * A, unsigned * idx, int & d);
 void bksub_lu(unsigned n, const double * A, const unsigned * idx,
-	double * b, unsigned m = 1, unsigned c = 0);
+	double * b, unsigned m = 1, unsigned c = 0) noexcept;
 void equ_lu(unsigned n, const double * A, const double * b, double * x);
 double inv_mul_lu(unsigned n, const unsigned m, double * A, double * B);
 void inv_lu(unsigned n, double * A);
@@ -90,16 +90,16 @@ void decmp_chol(unsigned n, double * A);
 void decmp_chol_tri(unsigned n, double * A);
 void decmp_chol(unsigned n, unsigned w, double * A);
 void bksub_chol(unsigned n, const double * A, double * b,
-	unsigned m = 1, unsigned c = 0);
+	unsigned m = 1, unsigned c = 0) noexcept;
 void bksub_chol(unsigned n, unsigned w, const double * A, double * b,
-	unsigned m = 1, unsigned c = 0);
+	unsigned m = 1, unsigned c = 0) noexcept;
 void equ_chol(unsigned n, const double * A, const double * b, double * x);
 void equ_chol(unsigned n, unsigned w, const double * A, const double * b,
 	double * x);
 void inv_chol(unsigned n, double * A);
 void decmp_ldl(unsigned n, double * A);
 void bksub_ldl(unsigned n, const double * A, double * b,
-	unsigned m = 1, unsigned c = 0);
+	unsigned m = 1, unsigned c = 0) noexcept;
 void equ_ldl(unsigned n, const double * A, const double * b, double * x);
 void decmp_svd(unsigned m, unsigned n, double * A, double * W, double * V);
 void bksub_svd(unsigned m, unsigned n, const double * U, const double * W,
@@ -107,11 +107,11 @@ void bksub_svd(unsigned m, unsigned n, const double * U, const double * W,
 void equ_svd(unsigned n, const double * A, const double * b, double * x);
 void inv_svd(unsigned n, double * A);
 void orth_svd(unsigned n, double * Q);
-bool decmp_qr(unsigned n, double * A, double * s, double * d);
+bool decmp_qr(unsigned n, double * A, double * s, double * d) noexcept;
 void bksub_qr(unsigned n, const double * A, const double * s,
-	const double * d, double * b, unsigned m = 1, unsigned c = 0);
-void tridiag_hh(unsigned n, double * A, double * d, double * e);
-void eig_tri_ql(unsigned n, double * d, double * e, double * A);
+	const double * d, double * b, unsigned m = 1, unsigned c = 0) noexcept;
+void tridiag_hh(unsigned n, double * A, double * d, double * e) noexcept;
+void eig_tri_ql(unsigned n, double * d, double * e, double * A) noexcept;
 void eig_ql(unsigned n, double * A, double * d, bool sorted = true);
 void bksub_eig(unsigned n, const double * Q, const double * d, double * b,
 	unsigned p = 1, unsigned c = 0);

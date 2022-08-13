@@ -87,7 +87,7 @@ class realized
 	realized & operator = (realized &&) = delete;
 	realized(house & h, const random & r, float d);
 	~realized();
-	void roll();
+	void roll() noexcept;
 
 	house * dealer;
 	const random * rv;
@@ -104,29 +104,29 @@ struct realization
 	// that has a different realized type to the abstract variable.
 	using cast_t = float;
 
-	realization()
+	realization() noexcept
 	  : me(nullptr) {
 	}
-	realization(const realization & r)
+	realization(const realization & r) noexcept
 	  : me(r.me) {
 		me->ref_cnt++;
 	}
-	realization(realization && r)
+	realization(realization && r) noexcept
 	  : me(std::move(r.me)) {
 		r.me = nullptr;
 	}
-	explicit realization(realized * r)
+	explicit realization(realized * r) noexcept
 	  : me(r) {
 		me->ref_cnt++;
 	}
-	realization & operator = (const realization & r) {
+	realization & operator = (const realization & r) noexcept {
 		if (me && --me->ref_cnt == 0)
 			delete me;
 		me = r.me;
 		me->ref_cnt++;
 		return *this;
 	}
-	realization & operator = (realization && r) {
+	realization & operator = (realization && r) noexcept {
 		std::swap(me, r.me);
 		return *this;
 	}
@@ -134,13 +134,13 @@ struct realization
 		if (me && --me->ref_cnt == 0)
 			delete me;
 	}
-	operator const float & () const {
+	operator const float & () const noexcept {
 		return me->v;
 	}
-	operator float () {
+	operator float () noexcept {
 		return me->v;
 	}
-	void overwrite(float f) {
+	void overwrite(float f) noexcept {
 		me->v = f;
 	}
 
@@ -157,7 +157,7 @@ private:
  */
 struct house
 {
-	house()
+	house() noexcept
 	  : store(), vars(), dice() {
 	}
 	~house();
@@ -214,17 +214,17 @@ struct random
 	// Distribution type.
 	virtual distribution type() const = 0;
 	// Mean value.
-	virtual float mean() const = 0;
+	virtual float mean() const noexcept = 0;
 	// Standard Deviation.
-	virtual float stddev() const = 0;
+	virtual float stddev() const noexcept = 0;
 	// Get the expected value for use in variants
 	realization realize() const {
 		realized * r = new realized(*dealer,*this,mean());
 		return realization(r);
 	}
 	// Get a new random number. XXX need covariance matrix.
-	virtual float roll() const = 0;
-	house * get_random() const {
+	virtual float roll() const noexcept = 0;
+	house * get_random() const noexcept {
 		return dealer;
 	}
 	void set_random(house * h) {
@@ -270,7 +270,7 @@ protected:
 			throw std::runtime_error("Invalid distribution parameter");
 		return d[i] = dp;
 	}
-	double stdnormal() const {
+	double stdnormal() const noexcept {
 		return dealer->dice.stdnormal();
 	}
 };
@@ -294,20 +294,20 @@ struct rv_normal : public random_var<distribution::normal>
 		param(0,m);
 		param(1,s);
 	}
-	virtual float mean() const override final {
+	virtual float mean() const noexcept override final {
 		return d[0];
 	}
-	virtual float stddev() const override final {
+	virtual float stddev() const noexcept override final {
 		return d[1];
 	}
-	virtual float roll() const override final {
+	virtual float roll() const noexcept override final {
 		return static_cast<float>(d[0]+d[1]*stdnormal());
 	}
 
 protected:
 	friend struct random;
 
-	rv_normal(const random & r, house * h)
+	rv_normal(const random & r, house * h) noexcept
 	  : random_var(r,h) {
 	}
 };
@@ -325,15 +325,15 @@ struct rv_lognormal : public random_var<distribution::lognormal>
 			log(m) - d[1] * d[1] / 2);
 	}
 
-	virtual float mean() const override final {
+	virtual float mean() const noexcept override final {
 		return std::isinf(d[0]) ? INFINITY :
 		       std::isnan(d[0]) ? NAN : exp(d[0] + d[1]*d[1]/2);
 	}
-	virtual float stddev() const override final {
+	virtual float stddev() const noexcept override final {
 		return std::isinf(d[0]) || std::isnan(d[0]) ? NAN :
 			std::isnan(d[1]) ? NAN : mean()*sqrt(exp(d[1]*d[1])-1);
 	}
-	virtual float roll() const override final {
+	virtual float roll() const noexcept override final {
 		return std::isinf(d[0]) ? INFINITY :
 			std::isnan(d[0]) || std::isnan(d[1]) ? NAN :
 			static_cast<float>(exp(d[0] + d[1] * stdnormal()));
@@ -342,7 +342,7 @@ struct rv_lognormal : public random_var<distribution::lognormal>
 protected:
 	friend struct random;
 
-	rv_lognormal(const random & r, house * h)
+	rv_lognormal(const random & r, house * h) noexcept
 	  : random_var(r,h) {
 	}
 };
@@ -365,7 +365,7 @@ realized::~realized()
 }
 
 inline void
-realized::roll()
+realized::roll() noexcept
 {
 	v = rv->roll();
 }

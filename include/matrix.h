@@ -85,19 +85,19 @@ public:
 		op     = 0x0200,
 		error  = 0x8000
 	};
-	is_t getflags() const {
+	is_t getflags() const noexcept {
 		return flags;
 	}
-	is_t setflags(is_t f) {
+	is_t setflags(is_t f) noexcept {
 		return flags = f;
 	}
-	virtual unsigned rows() const = 0;
-	virtual unsigned cols() const = 0;
-	virtual double operator () (unsigned i, unsigned j) const = 0;
+	virtual unsigned rows() const noexcept = 0;
+	virtual unsigned cols() const noexcept = 0;
+	virtual double operator () (unsigned i, unsigned j) const noexcept = 0;
 	virtual matrix_dense getdense() const = 0;
 
 protected:
-	explicit matrix_storage(is_t f)
+	explicit matrix_storage(is_t f) noexcept
 	  : count(0), flags(f) {
 		flags = f;
 	}
@@ -108,13 +108,13 @@ protected:
 private:
 	friend class matrix_storage_ptr;
 
-	int addref() {
+	int addref() noexcept {
 		return ++count;
 	}
-	int refcount() const {
+	int refcount() const noexcept {
 		return count;
 	}
-	int release() {
+	int release() noexcept {
 		assert(count > 0);
 		return --count;
 	}
@@ -130,11 +130,11 @@ private:
  */
 class matrix_storage_ptr {
 public:
-	matrix_storage_ptr(matrix_storage * p = nullptr)
+	matrix_storage_ptr(matrix_storage * p = nullptr) noexcept
 	  : ptr(p) {
 		addref();
 	}
-	matrix_storage_ptr(const matrix_storage_ptr & p)
+	matrix_storage_ptr(const matrix_storage_ptr & p) noexcept
 	  : ptr(p.ptr) {
 		addref();
 	}
@@ -142,17 +142,17 @@ public:
 		release();
 		ptr = nullptr;
 	}
-	int addref() const {
+	int addref() const noexcept {
 		if (ptr == nullptr)
 			return 0;
 		return ptr->addref();
 	}
-	int refcount() const {
+	int refcount() const noexcept {
 		if (ptr == nullptr)
 			return 0;
 		return ptr->refcount();
 	}
-	int release() {
+	int release() noexcept {
 		if (ptr == nullptr)
 			return 0;
 		int count = ptr->release();
@@ -162,7 +162,7 @@ public:
 		return count;
 	}
 	// assignment
-	matrix_storage_ptr & operator = (const matrix_storage_ptr & p) {
+	matrix_storage_ptr & operator = (const matrix_storage_ptr & p) noexcept {
 		if (this != &p) {
 			matrix_storage * t = p.ptr;
 			if (t != nullptr)
@@ -173,11 +173,11 @@ public:
 		return *this;
 	}
 	// access the value to which the pointer refers
-	matrix_storage & operator * () const {
+	matrix_storage & operator * () const noexcept {
 		assert(ptr != nullptr);
 		return *ptr;
 	}
-	matrix_storage * operator -> () const {
+	matrix_storage * operator -> () const noexcept {
 		assert(ptr != nullptr);
 		return ptr;
 	}
@@ -257,7 +257,7 @@ public:
 			data[i] -= m.data[i];
 		return *this;
 	}
-	matrix_dense & operator *= (const double & d) {
+	matrix_dense & operator *= (const double & d) noexcept {
 		if (d == 0.0)
 			memset(data,0,M*N*sizeof(double));
 		else {
@@ -266,22 +266,22 @@ public:
 		}
 		return *this;
 	}
-	virtual unsigned rows() const {
+	virtual unsigned rows() const noexcept {
 		return M;
 	}
-	virtual unsigned cols() const {
+	virtual unsigned cols() const noexcept {
 		return N;
 	}
-	virtual double operator () (unsigned i, unsigned j) const {
+	virtual double operator () (unsigned i, unsigned j) const noexcept {
 		return data[i*N+j];
 	}
-	double & operator () (unsigned i, unsigned j) {
+	double & operator () (unsigned i, unsigned j) noexcept {
 		return data[i*N+j];
 	}
-	virtual double operator () (unsigned i) const {
+	virtual double operator () (unsigned i) const noexcept {
 		return data[i];
 	}
-	double & operator () (unsigned i) {
+	double & operator () (unsigned i) noexcept {
 		return data[i];
 	}
 	virtual matrix_dense getdense() const {
@@ -400,19 +400,19 @@ operator * (const matrix_dense & a, const matrix_dense & b) {
 class matrix_zero : public matrix_storage {
 public:
 	// A few constructors, for various uses...
-	matrix_zero(unsigned m, unsigned n)
+	matrix_zero(unsigned m, unsigned n) noexcept
 	  : matrix_storage(zero) {
 		M = m, N = n;
 	}
-	virtual ~matrix_zero() {
+	virtual ~matrix_zero() noexcept {
 	}
-	virtual unsigned rows() const {
+	virtual unsigned rows() const noexcept {
 		return M;
 	}
-	virtual unsigned cols() const {
+	virtual unsigned cols() const noexcept {
 		return N;
 	}
-	virtual double operator () (unsigned, unsigned) const {
+	virtual double operator () (unsigned, unsigned) const noexcept {
 		return 0.0;
 	}
 	virtual matrix_dense getdense() const {
@@ -422,7 +422,7 @@ public:
 protected:
 	unsigned M;         // The rows
 	unsigned N;         // The cols
-	void resize(unsigned m, unsigned n) {
+	void resize(unsigned m, unsigned n) noexcept {
 		M = m, N = n;
 	}
 };
@@ -439,13 +439,13 @@ public:
 	}
 	virtual ~matrix_eye() {
 	}
-	virtual unsigned rows() const {
+	virtual unsigned rows() const noexcept {
 		return N;
 	}
-	virtual unsigned cols() const {
+	virtual unsigned cols() const noexcept {
 		return N;
 	}
-	virtual double operator () (unsigned i, unsigned j) const {
+	virtual double operator () (unsigned i, unsigned j) const noexcept {
 		return (i == j ? 1.0 : 0.0);
 	}
 	virtual matrix_dense getdense() const {
@@ -454,7 +454,7 @@ public:
 
 protected:
 	unsigned N;                     // The rows and cols
-	void resize(unsigned n) {
+	void resize(unsigned n) noexcept {
 		N = n;
 	}
 };
@@ -467,16 +467,17 @@ public:
 
 public:
 	matrix_operator(op_t op_,
-		matrix_storage * op1_ = nullptr, matrix_storage * op2_ = nullptr)
+		matrix_storage * op1_ = nullptr,
+		matrix_storage * op2_ = nullptr) noexcept
 	  : matrix_storage(none), op1(op1_), op2(op2_), op(op_) {
 	}
 	matrix_operator(op_t op_,
-		const matrix_storage_ptr & op1_)
+		const matrix_storage_ptr & op1_) noexcept
 	  : matrix_storage(none), op1(op1_), op2(nullptr), op(op_) {
 	}
 	matrix_operator(op_t op_,
 		const matrix_storage_ptr & op1_,
-		const matrix_storage_ptr & op2_)
+		const matrix_storage_ptr & op2_) noexcept
 	  : matrix_storage(none), op1(op1_), op2(op2_), op(op_) {
 	}
 	virtual ~matrix_operator() {
@@ -487,7 +488,7 @@ public:
 		// XXX
 		return *this;
 	}
-	virtual unsigned rows() const {
+	virtual unsigned rows() const noexcept {
 		switch (op) {
 		case ref:
 		case unref:
@@ -509,7 +510,7 @@ public:
 			return 0; // XXX
 		}
 	}
-	virtual unsigned cols() const {
+	virtual unsigned cols() const noexcept {
 		switch (op) {
 		case ref:
 		case unref:
@@ -531,7 +532,7 @@ public:
 			return 0; // XXX
 		}
 	}
-	virtual double operator () (unsigned i, unsigned j) const {
+	virtual double operator () (unsigned i, unsigned j) const noexcept {
 		switch (op) {
 		case ref:
 		case unref:
@@ -568,7 +569,7 @@ protected:
 	matrix_storage_ptr op2;
 	op_t op;
 
-	void evaluate() {
+	void evaluate() noexcept {
 		switch (op) {
 		case ref:
 		case unref:
@@ -596,8 +597,8 @@ protected:
  */
 class matrix {
 public:
-	matrix()
-		: data(nullptr) {
+	matrix() noexcept
+	  : data(nullptr) {
 	}
 	matrix(unsigned m, unsigned n)
 		: data(nullptr) {
@@ -611,23 +612,23 @@ public:
 		: data(matrix_storage_ptr(d)) {
 	}
 
-	unsigned rows() const {
+	unsigned rows() const noexcept {
 		return data->rows();
 	}
-	unsigned cols() const {
+	unsigned cols() const noexcept {
 		return data->cols();
 	}
-	double operator () (unsigned i, unsigned j) const {
+	double operator () (unsigned i, unsigned j) const noexcept {
 		return (*data)(i,j);
 	}
 
-	bool iszero() const {
+	bool iszero() const noexcept {
 		return ((data->getflags() & matrix_storage::zero) != 0);
 	}
-	bool iseye() const {
+	bool iseye() const noexcept {
 		return ((data->getflags() & matrix_storage::eye) != 0);
 	}
-	bool isscalar() const {
+	bool isscalar() const noexcept {
 		return ((data->getflags() & matrix_storage::scalar) != 0);
 	}
 
@@ -637,7 +638,7 @@ public:
 		return *this;
 	}
 	// Comparison operators...
-	bool operator == (const matrix & a) const {
+	bool operator == (const matrix & a) const noexcept {
 		unsigned m = rows(), n = cols(), i, j;
 		if (m != a.rows() || n != a.cols())
 			return false;
@@ -650,7 +651,7 @@ public:
 		return true;
 	}
 	// Comparison operators...
-	bool operator != (const matrix & a) const {
+	bool operator != (const matrix & a) const noexcept {
 		return !(*this == a);
 	}
 

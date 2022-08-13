@@ -49,7 +49,7 @@ namespace OP {
  * Calculate the principle stresses, and the strains.
  */
 void
-pavedata::principle(double v, double E)
+pavedata::principle(double v, double E) noexcept
 {
 	unsigned i, j;
 	double t1, t2;
@@ -140,7 +140,7 @@ pavedata::principle(double v, double E)
  */
 template<class T>
 static inline unsigned
-findvalue(const T * a, unsigned n, const T & v) {
+findvalue(const T * a, unsigned n, const T & v) noexcept {
 	unsigned l = 0, r = n;
 
 	while (l < r) {
@@ -304,28 +304,28 @@ LEsystem::cache_free()
 }
 
 double
-LElayer::thickness(double th)
+LElayer::thickness(double th) noexcept
 {
 	owner->cached_state(LEsystem::cachestate::empty);
 	return h = th;
 }
 
 double
-LElayer::emod(double te)
+LElayer::emod(double te) noexcept
 {
 	owner->cached_state(LEsystem::cachestate::emod);
 	return E = te;
 }
 
 double
-LElayer::poissons(double tv)
+LElayer::poissons(double tv) noexcept
 {
 	owner->cached_state(LEsystem::cachestate::emod);
 	return v = tv;
 }
 
 double
-LElayer::slip(double ts)
+LElayer::slip(double ts) noexcept
 {
 	owner->cached_state(LEsystem::cachestate::emod);
 	return s = ts;
@@ -347,7 +347,7 @@ LEsystem::addlayer(double h, double e, double v, double s, unsigned p)
 }
 
 void
-LEsystem::removelayer(unsigned l)
+LEsystem::removelayer(unsigned l) noexcept
 {
 	LElayer * pl = first;
 	unsigned i = 0;
@@ -359,14 +359,14 @@ LEsystem::removelayer(unsigned l)
 }
 
 void
-LEsystem::removelayers()
+LEsystem::removelayers() noexcept
 {
 	cached_state(cachestate::empty);
 	empty();
 }
 
 LElayer &
-LEsystem::layer(unsigned l) const
+LEsystem::layer(unsigned l) const noexcept
 {
 	LElayer * pl = first;
 	unsigned i = 0;
@@ -436,7 +436,7 @@ LEsystem::removepoint(const point3d & p, unsigned l)
 }
 
 void
-LEsystem::removepoints()
+LEsystem::removepoints() noexcept
 {
 	cached_state(cachestate::empty);
 	points.empty();
@@ -585,7 +585,7 @@ struct axialdata {
 	// them to the main varaibles, reseting them, and then deactivating
 	// the point if none changed by more than epsilon.
 	void accumulate(LEsystem::resulttype res, bool & active,
-			const double & eps) {
+			const double & eps) noexcept {
 		bool isactive = false;
 
 		if (!active)
@@ -614,7 +614,7 @@ struct axialdata {
 	// which is to multiply each result by a constant and fixup the radial
 	// and tangential shear stresses.
 	void finalize(LEsystem::resulttype res, const double & r,
-			const double & a, const double & v, const double & E) {
+			const double & a, const double & v, const double & E) noexcept {
 		double t1 = a*(v+1)/E, t2;
 		bool active = true;
 
@@ -632,7 +632,7 @@ struct axialdata {
 	// adds it to the general data point, accounting for rotation.
 	void addtodata(LEsystem::resulttype res, pavedata * d,
 			const paveload & l, const double & r,
-			unsigned gl = UINT_MAX) const {
+			unsigned gl = UINT_MAX) const noexcept {
 		double p = l.pressure();
 
 		assert(fabs(r-l.distance(*d)) < DBL_MIN);
@@ -681,12 +681,12 @@ struct zpoint {
 	double z;
 	unsigned il;
 
-	zpoint() {
+	zpoint() noexcept {
 	}
-	zpoint(double d, unsigned l)
+	zpoint(double d, unsigned l) noexcept
 	  : z(d), il(l) {
 	}
-	int compare(const zpoint & p) const {
+	int compare(const zpoint & p) const noexcept {
 		if (z == p.z && il == p.il)
 			return 0;
 		if (z < p.z)
@@ -698,22 +698,22 @@ struct zpoint {
 		else
 			return 1;
 	}
-	bool operator == (const zpoint & p) const {
+	bool operator == (const zpoint & p) const noexcept {
 		return (z == p.z && il == p.il ? true : false);
 	}
-	bool operator != (const zpoint & p) const {
+	bool operator != (const zpoint & p) const noexcept {
 		return (z != p.z || il != p.il ? true : false);
 	}
-	bool operator > (const zpoint & p) const {
+	bool operator > (const zpoint & p) const noexcept {
 		return (compare(p) == 1 ? true : false);
 	}
-	bool operator >= (const zpoint & p) const {
+	bool operator >= (const zpoint & p) const noexcept {
 		return (compare(p) != -1 ? true : false);
 	}
-	bool operator < (const zpoint & p) const {
+	bool operator < (const zpoint & p) const noexcept {
 		return (compare(p) == -1 ? true : false);
 	}
-	bool operator <= (const zpoint & p) const {
+	bool operator <= (const zpoint & p) const noexcept {
 		return (compare(p) != 1 ? true : false);
 	}
 };
@@ -739,7 +739,7 @@ static double gf[NGQP+1][NGQP];
  * find the zeros of the various bessel functions...
  */
 static void
-initarrays()
+initarrays() noexcept
 {
 	unsigned ib;
 	static bool done = false;
@@ -832,7 +832,7 @@ initarrays()
 #define j1j1(m,a,r) (sin((a-r)*m)/(a-r)+cos((a+r)*m)/(a+r))
 
 static double
-refine_m0(double ma, double mb, double a, double r)
+refine_m0(double ma, double mb, double a, double r) noexcept
 {
 	double m0, ya = j1j0(ma,a,r), yb = j1j0(mb,a,r), y0;
 	do {
@@ -845,7 +845,7 @@ refine_m0(double ma, double mb, double a, double r)
 }
 
 static double
-refine_m1(double ma, double mb, double a, double r)
+refine_m1(double ma, double mb, double a, double r) noexcept
 {
 	double m1, ya = j1j1(ma,a,r), yb = j1j1(mb,a,r), y1;
 	do {
@@ -864,7 +864,7 @@ refine_m1(double ma, double mb, double a, double r)
  */
 static void
 stoppingpoints(unsigned nbz, double a, double r,
-               double * m0, double * m1)
+	           double * m0, double * m1) noexcept
 {
 	unsigned ib;
 	double ra = r/a, r1 = fabs(ra-1.0);
@@ -926,9 +926,9 @@ stoppingpoints(unsigned nbz, double a, double r,
  */
 static void
 buildabcd(double m, unsigned nl, const double * h,
-          const double * v, const double * E,
-          const double * f, double (* __restrict R)[4][2],
-          double (* __restrict ABCD)[4])
+	      const double * v, const double * E,
+	      const double * f, double (* __restrict R)[4][2],
+	      double (* __restrict ABCD)[4]) noexcept
 {
 	unsigned i, j, il;
 	double B1[2][4], X[4][4], F[4][4], D[4][4];
@@ -1054,7 +1054,7 @@ buildabcd(double m, unsigned nl, const double * h,
  */
 static void
 buildT(double m, double z, const double (&ABCD)[4],
-		double (&T)[4])
+		double (&T)[4]) noexcept
 {
 	T[1] = exp(-m*z);
 	T[0] = m*(ABCD[2] + ABCD[3]*z)*T[1];
@@ -1548,7 +1548,7 @@ gradloop:
  * Boussinesq's equations for a point and circular load.
  */
 static inline double
-boussinesq_vse(double z, double r, double a, double R, double A)
+boussinesq_vse(double z, double r, double a, double R, double A) noexcept
 {
 	if (r > 0.0)
 		return -3*a*a*pow(z,3)/(2*pow(R,5));
@@ -1557,7 +1557,8 @@ boussinesq_vse(double z, double r, double a, double R, double A)
 }
 
 static inline double
-boussinesq_rse(double z, double r, double a, double v, double R, double A)
+boussinesq_rse(double z, double r, double a, double v, double R,
+		       double A) noexcept
 {
 	if (r > 0.0)
 		return -a*a*(3*z*r*r/pow(R,4)-(1-2*v)/(R+z))/(2*R);
@@ -1567,7 +1568,7 @@ boussinesq_rse(double z, double r, double a, double v, double R, double A)
 }
 
 static inline double
-boussinesq_tse(double z, double r, double a, double v, double R)
+boussinesq_tse(double z, double r, double a, double v, double R) noexcept
 {
 	if (r > 0.0)
 		return -a*a*(1-2*v)*(-z/(R*R) + 1.0/(R+z))/(2*R);
@@ -1576,7 +1577,7 @@ boussinesq_tse(double z, double r, double a, double v, double R)
 }
 
 static inline double
-boussinesq_sse(double z, double r, double a, double R)
+boussinesq_sse(double z, double r, double a, double R) noexcept
 {
 	if (r > 0.0)
 		return -3*a*a*z*z*r/(2*pow(R,5));
@@ -1586,7 +1587,7 @@ boussinesq_sse(double z, double r, double a, double R)
 
 static inline double
 boussinesq_rdp(double z, double r, double a, double v, double E,
-		double R)
+		double R) noexcept
 {
 	if (r > 0.0)
 		return a*a*((1+v)/(2*R*E))*(z*r/(R*R)-(1-2*v)*r/(R+z));
@@ -1596,7 +1597,7 @@ boussinesq_rdp(double z, double r, double a, double v, double E,
 
 static inline double
 boussinesq_vdp(double z, double r, double a, double v, double E,
-		double R, double A)
+		double R, double A) noexcept
 {
 	if (r > 0.0)
 		return a*a*((1+v)/(2*R*E))*(2*(1-v) + z*z/(R*R));
