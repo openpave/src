@@ -569,10 +569,10 @@ public:
 		defl.empty();
 	}
 	void setup(double p, double n, double t, unsigned m) noexcept {
-		precision = MAX(0.0,p);
-		noise = MAX(0.0,n);
-		tolerance = MAX(1e-6,t);
-		maxsteps = MAX(3,m);
+		precision = std::max(0.0,p);
+		noise = std::max(0.0,n);
+		tolerance = std::max(1e-6,t);
+		maxsteps = std::max(3u,m);
 	}
 	bool backcalc();
 

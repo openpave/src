@@ -215,7 +215,7 @@ stdnormal_inv(double p) noexcept
 		return -INFINITY;
 	if (p == 1.0)
 		return INFINITY;
-	q = MIN(p,1-p);
+	q = std::min(p,1-p);
 	if (q > 0.02425) {
 		// Rational approximation for central region.
 		u = q-0.5;

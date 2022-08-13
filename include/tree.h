@@ -718,7 +718,7 @@ private:
 		return height(value[r].right)-height(value[r].left);
 	}
 	int new_height(unsigned r) const noexcept {
-		return MAX(height(value[r].left), height(value[r].right)) + 1;
+		return std::max(height(value[r].left),height(value[r].right))+1;
 	}
 	void append(unsigned & r, _V && v, unsigned * p) {
 		// If we're UINT_MAX that means we need to make a new node...
@@ -840,7 +840,7 @@ private:
 		}
 		assert_avl(value[r].left,&lh,&ls);
 		assert_avl(value[r].right,&rh,&rs);
-		*h = MAX(lh,rh)+1;
+		*h = std::max(lh,rh)+1;
 		*s += ls+rs+1;
 		if (value[r].height != new_height(r))
 			throw std::runtime_error("oops");

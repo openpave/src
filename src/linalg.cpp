@@ -737,7 +737,7 @@ decmp_svd(unsigned m, unsigned n, double * A,
 		V[(i-1)*n+(i-1)] = 1.0;
 	}
 	// Accumulation of left-hand transformations.
-	for (i = MIN(m,n); i > 0; i--) {
+	for (i = std::min(m,n); i > 0; i--) {
 		for (j = i; i < n && j < n; j++)
 			A[(i-1)*n+j] = 0.0;
 		if (W[i-1] != 0.0) {

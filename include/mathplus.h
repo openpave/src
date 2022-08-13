@@ -154,6 +154,12 @@ namespace OP {
 #define FLOOR(x)    (int((x)+(1-int(x)))-(1-int(x)))
 #define CEIL(x)     ((2+int(x))-int((2+int(x))-(x)))
 #define ROUND(x)    ((x) >= 0 ? int((x)+0.5) : -int(0.5-(x)) )
+#if defined(max)
+#undef max
+#endif
+#if defined(min)
+#undef min
+#endif
 
 #if defined(HAVE_RANDOM)
 #define RAND(a,b)   ((a)+((b)-(a))*(double(random())+1.0)/(double(RAND_MAX)+2.0))

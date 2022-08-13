@@ -655,13 +655,13 @@ struct axialdata {
 			if (cost == 0.0) {
 				d->data[0][0] += p*tse;
 				d->data[0][1] += p*rse;
-				d->data[1][2] += p*SGN(sint)*sse;
-				d->data[4][1] += p*SGN(sint)*rdp;
+				d->data[1][2] += p*std::copysign(1.0,sint)*sse;
+				d->data[4][1] += p*std::copysign(1.0,sint)*rdp;
 			} else if (sint == 0.0) {
 				d->data[0][0] += p*rse;
 				d->data[0][1] += p*tse;
-				d->data[1][1] += p*SGN(cost)*sse;
-				d->data[4][0] += p*SGN(cost)*rdp;
+				d->data[1][1] += p*std::copysign(1.0,cost)*sse;
+				d->data[4][0] += p*std::copysign(1.0,cost)*rdp;
 			} else {
 				d->data[0][0] += p*(cost*cost*rse+sint*sint*tse);
 				d->data[0][1] += p*(cost*cost*tse+sint*sint*rse);
@@ -1103,7 +1103,7 @@ LEsystem::calc_accurate()
 	cset<double> bm1(0, 2*NBZ+2);
 	for (pl = first, il = 0; pl != 0; pl = pl->next, il++) {
 		h[il] = pl->bottom();
-		f[il] = MAX(0.0,pl->slip());
+		f[il] = std::max(0.0,pl->slip());
 		v[il] = pl->poissons();
 		E[il] = pl->emod();
 	}
@@ -1226,16 +1226,16 @@ LEsystem::calculate(resulttype res, const double * Q)
 		ngqp = NGQP, nbz = NBZ, gl = UINT_MAX, nl = layers();
 		interpolate = false;
 		if ((res & mask) == dirty) {
-			ngqp = MIN(NGQP,8);
-			nbz = MIN(NBZ,64);
+			ngqp = std::min(NGQP,8);
+			nbz = std::min(NBZ,64);
 			interpolate = true;
 		} else if ((res & mask) == fast) {
-			ngqp = MIN(NGQP,8);
-			nbz = MIN(NBZ,64);
+			ngqp = std::min(NGQP,8);
+			nbz = std::min(NBZ,64);
 			//interpolate = true;
 		} else {
-			ngqp = MIN(NGQP,12);
-			nbz = MIN(NBZ,256);
+			ngqp = std::min(NGQP,12);
+			nbz = std::min(NBZ,256);
 		}
 	}
 	const LEsystem::resulttype orig = res;
@@ -1253,7 +1253,7 @@ LEsystem::calculate(resulttype res, const double * Q)
 	double * g = (res & grad ? cache_alloc<double>(nl) : nullptr);
 	for (pl = first, il = 0; pl != nullptr; pl = pl->next, il++) {
 		E[il] = pl->emod();
-		f[il] = MAX(0.0,pl->slip());
+		f[il] = std::max(0.0,pl->slip());
 		v[il] = pl->poissons();
 		if (cache_state > cachestate::empty)
 			continue;
@@ -1348,16 +1348,16 @@ LEsystem::calculate(resulttype res, const double * Q)
 			sm.sort();
 			// Account for big r's by adding extra integration intervals...
 			x2 = 0.0;
-			for (ir = nr; ir > 0 && r[ir-1] > a[ia]*MAX(4,ngqp-6); ir--) {
-				for (unsigned i = MAX(4,ngqp-6);
-						i <= nbz; i += MAX(4,ngqp-6)) {
+			const unsigned ba = std::max(4u, ngqp - 6);
+			for (ir = nr; ir > 0 && r[ir-1] > a[ia]*ba; ir--) {
+				for (unsigned i = ba; i <= nbz; i += ba) {
 					if ((x1 = j1r[i]/r[ir-1]) < x2)
 						continue;
 					for (im = 1; im < sm.length() && sm[im] < x1; im++)
 						;
 					if (im == sm.length() ||
-							MIN(x1-sm[im-1],sm[im]-x1)*r[ir-1]
-								 < MAX(4,ngqp-6)*M_PI_4)
+							std::min(x1-sm[im-1],sm[im]-x1)*r[ir-1]
+								 < ba*M_PI_4)
 						continue;
 					sm.add(im,x2 = x1);
 				}
@@ -1374,7 +1374,7 @@ LEsystem::calculate(resulttype res, const double * Q)
 					for (im = 1; im < sm.length() && sm[im] < x1; im++)
 						;
 					if (im == sm.length() ||
-							MIN(x1-sm[im-1],sm[im]-x1)*z[iz-1].z < 5*a[ia])
+							std::min(x1-sm[im-1],sm[im]-x1)*z[iz-1].z < 5*a[ia])
 						continue;
 					sm.add(im,x2 = x1);
 				}
@@ -2101,11 +2101,11 @@ LEbackcalc::seed(unsigned nl, double * P)
 		} else {
 			for (j = 0; j < lg[clg].length(); j++) {
 				E += lg[clg][j].pressure()*quad8_vdp(lg[clg][j].distance(d),
-					d.z,lg[clg][j].radius(),v)/MAX(d.measured,1e-4);
+					d.z,lg[clg][j].radius(),v)/std::max(d.measured,1e-4);
 			}
 		}
 	}
-	E = log10(MIN(MAX(1e3,E/i),1e6));
+	E = log10(std::min(std::max(1e3,E/i),1e6));
 	for (i = 0; i < nl; i++)
 		P[i] = (negdefl ? 2.0 : E);
 	return negdefl;
@@ -2210,7 +2210,7 @@ LEbackcalc::deflgrad(unsigned nl, double * P, double * Q,
 			D[i] += dgg*G[i]/gg;
 	}
 	for (i = 0, step = 0.0; i < nl; i++)
-		P[i] += W[i], step += W[i]*W[i], P[i] = MIN(MAX(1,P[i]),9);
+		P[i] += W[i], step += W[i]*W[i], P[i] = std::min(std::max(1.0,P[i]),9.0);
 	step = sqrt(step);
 	// Orthonormalize Q.
 	if (Q != 0)
@@ -2324,7 +2324,7 @@ LEbackcalc::kalman(unsigned nl, double * P)
 	//	step = step*brent(nl,P,W);
 	//} else {
 		for (i = 0; i < nl; i++)
-			P[i] = MIN(MAX(1,P[i]+W[i]),9);
+			P[i] = std::min(std::max(1.0,P[i]+W[i]),9.0);
 	//}
 	delete [] W;
 	delete [] Y;
@@ -2508,10 +2508,10 @@ LEbackcalc::conjgrad(unsigned nl, double * P)
 			D[i] += dgg*G[i]/gg;
 	}
 	for (i = 0, gg = 0.0; i < nl; i++)
-		gg += (P[i]-W[i])*(P[i]-W[i]), P[i] = MIN(MAX(1,W[i]),9);
-	delete [] W;
-	delete [] G;
-	delete [] D;
+		gg += (P[i]-W[i])*(P[i]-W[i]), P[i] = std::min(std::max(1.0,W[i]),9.0);
+	delete[] W;
+	delete[] G;
+	delete[] D;
 	return sqrt(gg);
 }
 
@@ -2541,7 +2541,7 @@ LEbackcalc::swarm(unsigned nl, double * P)
 	double * R2 = new double[nl*nl];
 	for (p = 0; p < PARTICLES; p++) {
 		for (i = 0; i < nl; i++) {
-			X[p*nl+i] = RAND(MAX(2,P[i]-6.0),MIN(P[i]+4.0,8));
+			X[p*nl+i] = RAND(std::max(2.0,P[i]-6.0),std::min(P[i]+4.0,8.0));
 			V[p*nl+i] = 0.0;
 		}
 		E[2*p] = DBL_MAX;
@@ -2576,7 +2576,7 @@ LEbackcalc::swarm(unsigned nl, double * P)
 				werr = err;
 		}
 		printf("%i: (%g)\n",best,derr);
-		if (derr < MAX(1e-6,sderr))
+		if (derr < std::max(1e-6,sderr))
 			break;
 		for (p = 0, dgg = 0.0; p < PARTICLES; p++) {
 			/*
@@ -2595,8 +2595,8 @@ LEbackcalc::swarm(unsigned nl, double * P)
 				r1 += pow(B[p*nl+i]-X[p*nl+i],2);
 				r2 += pow(B[best*nl+i]-X[p*nl+i],2);
 			}
-			r1 = (r1 > 0.0 ? RAND(0.0,c1)/MAX(sqrt(r1),1.0) : 0.0);
-			r2 = (r2 > 0.0 ? RAND(0.0,c2)/MAX(sqrt(r2),1.0) : 0.0);
+			r1 = (r1 > 0.0 ? RAND(0.0,c1)/std::max(sqrt(r1),1.0) : 0.0);
+			r2 = (r2 > 0.0 ? RAND(0.0,c2)/std::max(sqrt(r2),1.0) : 0.0);
 			for (i = 0; i < nl; i++) {
 				V[p*nl+i] *= w;
 				for (j = 0; j < nl; j++)
@@ -2605,7 +2605,7 @@ LEbackcalc::swarm(unsigned nl, double * P)
 					V[p*nl+i] += r2*R2[i*nl+j]*(B[best*nl+j]-X[p*nl+j]);
 			}
 			for (i = 0, gg = 0.0; i < nl; i++) {
-				double x = MIN(MAX(1,X[p*nl+i]+V[p*nl+i]),9);
+				double x = std::min(std::max(1,X[p*nl+i]+V[p*nl+i]),9);
 				V[p*nl+i] = x-X[p*nl+i], X[p*nl+i] = x;
 				gg += pow(V[p*nl+i],2);
 			}
@@ -2622,7 +2622,7 @@ LEbackcalc::swarm(unsigned nl, double * P)
 				printf("%g %g\n",m1,m2);
 				for (i = 0, gg = 0.0; i < nl; i++)
 					gg += pow(B[q*nl+i]-X[p*nl+i],2);
-				r2 = sqrt(gg); gg = MAX(0.1,sqrt(gg));
+				r2 = sqrt(gg); gg = std::max(0.1,sqrt(gg));
 				//gg = G*(E[2*p]-E[2*q])/pow(gg,3);
 				gg = G*(E[2*p+1]-E[2*q])/pow(gg,2);
 				for (i = 0; i < nl; i++)
@@ -2631,21 +2631,21 @@ LEbackcalc::swarm(unsigned nl, double * P)
 			double r = 0.0;
 			for (i = 0; i < nl; i++)
 				r += pow(V[p*nl+i],2);
-			r = MAX(1.0,sqrt(r));
+			r = std::max(1.0,sqrt(r));
 			for (i = 0, gg = 0.0; i < nl; i++) {
-				double x = MIN(MAX(1,X[p*nl+i]+V[p*nl+i]/r),9);
+				const double x = std::min(std::max(1.0,X[p*nl+i]+V[p*nl+i]/r),9.0);
 				V[p*nl+i] = x-X[p*nl+i], X[p*nl+i] = x;
 				gg += pow(V[p*nl+i],2);
 			}
 			dgg += sqrt(gg)/PARTICLES;
 		}
 		printf("dgg = %g\n",dgg);
-		if (dgg < MAX(1e-8,tolerance))
+		if (dgg < std::max(1e-8,tolerance))
 			break;
 	}
 	for (i = 0, gg = 0.0; i < nl; i++) {
 		gg += pow(P[i]-B[best*nl+i],2);
-		P[i] = MIN(MAX(1,B[best*nl+i]),9);
+		P[i] = std::min(std::max(1.0,B[best*nl+i]),9.0);
 	}
 	delete [] X;
 	delete [] V;
