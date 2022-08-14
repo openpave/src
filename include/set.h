@@ -101,14 +101,23 @@ protected:
 	set(const set & s) noexcept
 	  : block(s.block) {
 	}
+	set(set && s) noexcept
+	  : size(s.size), buffer(s.buffer), block(s.block) {
+		s.size = 0;
+	}
 	set & operator = (const set & s) noexcept {
 		size = 0;
 		buffer = 0;
 		block = s.block;
 		return *this;
 	}
-	~set() {
+	set & operator = (set && s) noexcept {
+		std::swap(size,s.size);
+		std::swap(buffer,s.buffer);
+		std::swap(block,s.block);
+		return *this;
 	}
+	~set() = default;
 	// Calculate the buffer size.
 	unsigned bufsize(unsigned s) noexcept {
 		while (s > 8*block)
