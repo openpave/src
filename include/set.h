@@ -209,10 +209,8 @@ protected:
 		const unsigned b = bufsize(s);
 		if (b == buffer)
 			return;
-		if (b == 0) {
-			free(value);
-			value = nullptr;
-			buffer = 0;
+		if (s == 0) {
+			deallocate();
 			return;
 		}
 		V * temp = static_cast<V *>(realloc(value,b*sizeof(V)));
@@ -376,7 +374,6 @@ public:
 	}
 	void empty() noexcept {
 		this->deallocate();
-		this->allocate(0);
 	}
 };
 
@@ -505,7 +502,7 @@ public:
 	}
 	explicit cset(unsigned s, const V * v = nullptr, unsigned b = DFLT_BLK)
 	  : oset<V>(s,v,b) {
-		if (v)
+		if (this->size > 0 && v)
 			compact();
 	}
 	explicit cset(const fset<V> & v)
@@ -528,7 +525,9 @@ public:
 protected:
 	void compact() {
 		unsigned i, j, s;
-		for (i = 1, j = 0; this->size > 1 && i < this->size; i++) {
+		if (this->size <= 1)
+			return;
+		for (i = 1, j = 0; i < this->size; i++) {
 			if (this->value[j] != this->value[i])
 				j++;
 			if (j != i) {
@@ -696,7 +695,6 @@ public:
 	}
 	void empty() noexcept {
 		deallocate();
-		allocate(0);
 	}
 
 protected:
@@ -717,7 +715,7 @@ protected:
 		const unsigned b = bufsize(s);
 		if (b == buffer)
 			return;
-		if (b == 0) {
+		if (s == 0) {
 			free(idx);
 			idx = nullptr;
 			free(value);
@@ -873,10 +871,8 @@ protected:
 		const unsigned b = bufsize(s);
 		if (b == buffer)
 			return;
-		if (b == 0) {
-			free(value);
-			value = nullptr;
-			buffer = 0;
+		if (s == 0) {
+			deallocate();
 			return;
 		}
 		V * temp = static_cast<V *>(realloc(value,b*sizeof(V)));
@@ -987,7 +983,6 @@ public:
 	}
 	void empty() noexcept {
 		this->deallocate();
-		this->allocate(0);
 	}
 };
 
@@ -1223,7 +1218,6 @@ public:
 	}
 	void empty() noexcept {
 		deallocate();
-		allocate(0);
 	}
 
 protected:
@@ -1244,12 +1238,8 @@ protected:
 		const unsigned b = bufsize(s);
 		if (b == buffer)
 			return;
-		if (b == 0) {
-			free(idx);
-			idx = nullptr;
-			free(value);
-			value = nullptr;
-			buffer = 0;
+		if (s == 0) {
+			deallocate();
 			return;
 		}
 		unsigned * itemp = static_cast<unsigned *>(
@@ -1408,15 +1398,11 @@ protected:
 
 	// Make some space...
 	void allocate(unsigned s) {
-		unsigned b = bufsize(s);
+		const unsigned b = bufsize(s);
 		if (b == buffer)
 			return;
-		if (b == 0) {
-			free(key);
-			key = nullptr;
-			free(value);
-			value = nullptr;
-			buffer = 0;
+		if (s == 0) {
+			deallocate();
 			return;
 		}
 		K * ktemp = static_cast<K *>(realloc(key,b*sizeof(K)));
@@ -1538,7 +1524,6 @@ public:
 	}
 	void empty() noexcept {
 		this->deallocate();
-		this->allocate(0);
 	}
 };
 
