@@ -500,7 +500,7 @@ protected:
 		return *this;
 	}
 	~tree() {
-		allocate(0);
+		deallocate();
 	}
 	// Make some space...
 	void allocate(unsigned s) {
@@ -508,13 +508,7 @@ protected:
 		if (b == buffer)
 			return;
 		if (b == 0) {
-			for (unsigned i = 0; i < size; i++)
-				value[i].~_V();
-			free(value);
-			value = nullptr;
-			buffer = 0;
-			size = 0;
-			root = UINT_MAX;
+			deallocate();
 			return;
 		}
 		_V * temp = static_cast<_V *>(realloc(value,b*sizeof(_V)));
@@ -571,6 +565,16 @@ private:
 		//while (64*s < block)
 		//	block /= 8;
 		return block*(s/block+((s%block)?1:0));
+	}
+	// cleanup
+	void deallocate() noexcept {
+		for (unsigned i = 0; i < size; i++)
+			value[i].~_V();
+		free(value);
+		value = nullptr;
+		buffer = 0;
+		size = 0;
+		root = UINT_MAX;
 	}
 };
 
