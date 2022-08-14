@@ -52,46 +52,60 @@ namespace OP {
 template<typename M> class dispatcher;
 
 /*
- * class message
+ * class channel - Base class for channels
+ *
+ * The template parameter pack Ts defines the message.
  */
-template<typename...Ts>
-struct message {
-	message(std::function<void(Ts...)> && f)
+template<typename... Ts>
+struct channel
+{
+	// Construct a channel with a callback
+	explicit channel(std::function<void(Ts...)> && f) noexcept
 	  : handler(std::move(f)) {
 	}
-	message(message && m)
-	  : handler(std::move(m.handler)) {
+	channel(channel && c) noexcept
+	  : handler(std::move(c.handler)) {
 	}
-	message & operator = (message && m) {
-		handler = std::move(m.handler);
+	channel & operator = (channel && c) noexcept {
+		handler = std::move(c.handler);
 		return *this;
 	}
-	message(const message &) = delete;
-	message & operator = (const message &) = delete;
-	~message() {
-	}
-private:
-	friend class dispatcher<message<Ts...>>;
+	channel(const channel &) = delete;
+	channel & operator = (const channel &) = delete;
+	~channel() = default;
 
-	void dispatch(Ts...args) {
+private:
+	friend class dispatcher<channel<Ts...>>;
+
+	// Call the message handler provided by the listener.
+	void dispatch(Ts... args) {
 		handler(args...);
 	}
 	std::function<void(Ts...)> handler;
 };
 
 /*
- * class dispatcher
+ * class dispatcher - Base class for classes that send messages
+ *
+ * Maintains a list of channels to various listeners.  These are registered
+ * via attach().  Each dispatcher only sends one type of message, but you
+ * can inherit multiple times to send different types of message.
  */
-template<typename...Ts>
-class dispatcher<message<Ts...>> {
+template<typename... Ts>
+class dispatcher<channel<Ts...>>
+{
 public:
-	std::function<void(void)> attach(message<Ts...> && m) {
+	// Disallow copying
+	dispatcher(const dispatcher &) = delete;
+	dispatcher & operator = (const dispatcher &) = delete;
+	// Attach a message handler, return a remover
+	std::function<void(void)> attach(channel<Ts...> && c) {
 		// Attach to end so they are dispatched in the order attached.
 		sink ** s = &head, * t;
 		while (*s != nullptr)
 			s = &((*s)->next);
-		t = *s = new sink(std::move(m));
-		return std::function<void(void)>([this,t](){
+		t = *s = new sink(std::move(c));
+		return std::function<void(void)>([this,t] () noexcept {
 			sink ** c = &head;
 			while (*c != nullptr) {
 				if (*c == t) {
@@ -99,19 +113,21 @@ public:
 					delete t;
 					return;
 				}
-				c = &(*c)->next;
+				c = &((*c)->next);
 			}
 		});
 	}
 
 protected:
-	dispatcher()
-	  : head(nullptr) {
-	}
+	dispatcher() noexcept = default;
+	dispatcher(dispatcher &&) noexcept = default;
+	dispatcher & operator = (dispatcher &&) noexcept = default;
 	~dispatcher() {
+		// Check that we are deleted last
 		assert(head == nullptr);
 	}
-	void dispatch(const Ts &...args) {
+	// Only derived classes can dispatch messages
+	void dispatch(const Ts &... args) {
 		sink * s = head;
 		while (s != nullptr) {
 			s->dispatch(args...);
@@ -120,45 +136,67 @@ protected:
 	}
 
 private:
-	struct sink : message<Ts...> {
-		sink(message<Ts...> && m)
-		  : message<Ts...>(std::move(m)), next(nullptr) {
+	// Private internal class of sinks that are listening for dispatched
+	// messages.  Simple singularly linked list of message classes.
+	struct sink
+	  : channel<Ts...> {
+		explicit sink(channel<Ts...> && c) noexcept
+		  : channel<Ts...>(std::move(c)) {
 		}
-		~sink() {
-		}
-		sink * next;           // The next listener
-	} * head;                  // The list head
+		sink(const sink &) = delete;
+		sink(sink &&) = delete;
+		sink & operator = (const sink &) = delete;
+		sink & operator = (sink &&) = delete;
+		~sink() = default;
+		sink * next{nullptr};  // The next listener
+	} * head{nullptr};         // The list head
 };
 
 /*
- * class listener
+ * class listener - Base class for listening classes
+ *
+ * Maintains a list of callbacks to remove ourselves from any dispatcher
+ * we have attached to.  A listener can listen to multiple different types
+ * of message from different dispatcher sources.
  */
-class listener {
+class listener
+{
+public:
+	// Disallow copying (else who gets the messages?)
+	listener(const listener &) = delete;
+	listener & operator = (const listener &) = delete;
+
 protected:
-	listener()
-	  : head(nullptr) {
-	}
+	listener() noexcept = default;
+	listener(listener &&) noexcept = default;
+	listener & operator = (listener &&) noexcept = default;
 	~listener() {
+		// Remove ourselves from any sources
 		source * s;
 		while ((s = head) != nullptr) {
 			head = s->next;
 			delete s;
 		}
 	}
-	template<typename...Ts>
-	void listen(dispatcher<message<Ts...>> & d, message<Ts...> && m) {
+	// Listen to a dispatcher for a type of message.
+	template<typename... Ts>
+	void listen(dispatcher<channel<Ts...>> & d, channel<Ts...> && c) {
 		source ** s = &head;
 		while (*s != nullptr)
 			s = &((*s)->next);
-		*s = new source(d.attach(std::move(m)));
+		*s = new source(d.attach(std::move(c)));
 	}
 
 private:
 	// Simple linked list of callbacks to remove ourself from dispatcher
 	struct source {
-		source(std::function<void(void)> && r)
-		  : remover(r), next(nullptr) {
+		source(std::function<void(void)> && r) noexcept
+		  : remover(std::move(r)) {
 		}
+		source(const source &) = delete;
+		source(source &&) = delete;
+		source & operator = (const source &) = delete;
+		source & operator = (source &&) = delete;
 		~source() {
 			// Ignore any failures here.
 			try {
@@ -166,8 +204,8 @@ private:
 			} catch (...) {}
 		}
 		std::function<void(void)> remover;
-		source * next;         // The next source
-	} * head;                  // The head of the list
+		source * next{nullptr}; // The next source
+	} * head{nullptr};          // The head of the list
 };
 
 } // namespace OP

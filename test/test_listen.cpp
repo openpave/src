@@ -33,9 +33,9 @@
 
 using namespace OP;
 
-enum class test_event { test };
+enum class test_message { test };
 
-class test_dispatcher : public dispatcher<message<test_event>> {
+class test_dispatcher : public dispatcher<channel<test_message>> {
 public:
 	test_dispatcher() {
 		printf("Constructing test dispatcher\n");
@@ -44,7 +44,7 @@ public:
 		printf("Deleting test dispatcher\n");
 	}
 	void event() {
-		dispatch(test_event::test);
+		dispatch(test_message::test);
 	}
 };
 
@@ -55,13 +55,13 @@ public:
 	}
 	void test_listen(test_dispatcher & d) {
 		printf("Attaching listener\n");
-		listen(d,message<test_event>(
-			[this](test_event e){ this->onevent(e); }));
+		listen(d,channel<test_message>(
+			[this](test_message e){ this->onevent(e); }));
 	}
 	~test_listener() {
 		printf("Deleting listener\n");
 	}
-	void onevent(test_event ) {
+	void onevent(test_message ) {
 		printf("Got event!\n");
 	}
 };
@@ -93,6 +93,7 @@ test2()
 	delete listener1;
 	delete listener2;
 	delete dispatcher1;
+	delete dispatcher2;
 }
 
 int

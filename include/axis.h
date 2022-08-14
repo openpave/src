@@ -108,7 +108,7 @@ template<typename...Ks> class axis {};
  */
 template<typename K, typename...Ks>
 class axis<K,Ks...>
-  : public dispatcher<message<axis_message,unsigned>>, public listener
+  : public dispatcher<channel<axis_message,unsigned>>, public listener
 {
 public:
 	typedef unsigned index_t;
@@ -117,7 +117,7 @@ public:
 
 	axis(axis<Ks...> & pr)
 	  : prior(pr) {
-		listen(pr,message<axis_message,unsigned>(
+		listen(pr,channel<axis_message,unsigned>(
 			[this](axis_message e, unsigned p){
 				switch (e) {
 				case axis_message::add:
@@ -259,7 +259,7 @@ private:
  */
 template<typename K>
 class axis<K>
-  : public dispatcher<message<axis_message,unsigned>>
+  : public dispatcher<channel<axis_message,unsigned>>
 {
 public:
 	typedef unsigned index_t;

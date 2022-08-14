@@ -143,7 +143,7 @@ private:
 	unsigned init(K & ax, Ks &...ks) {
 		constexpr const unsigned d = sizeof...(Ks);
 		const unsigned s = ax.length();
-		listen(ax,message<axis_message,unsigned>(
+		listen(ax,channel<axis_message,unsigned>(
 			[=](axis_message e, unsigned p){
 				switch (e) {
 				case axis_message::add:
