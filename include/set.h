@@ -64,6 +64,12 @@
 #include <new>
 #include <stdexcept>
 
+#if defined(DEBUG)
+#define NOEXCEPT
+#else
+#define NOEXCEPT noexcept
+#endif
+
 namespace OP {
 
 /*
@@ -162,7 +168,7 @@ public:
 		copy(s,nullptr);
 	}
 	// Behave like an array. Zero indexed.
-	V & operator [] (unsigned p) const {
+	V & operator [] (unsigned p) const NOEXCEPT {
 #if defined(DEBUG)
 		if (!inbounds(p))
 			throw std::out_of_range("Index out of range!");
@@ -608,7 +614,7 @@ public:
 		return *this;
 	}
 	// Only integer keys make sense.
-	const V & operator [] (unsigned p) const {
+	const V & operator [] (unsigned p) const NOEXCEPT {
 #if defined(DEBUG)
 		if (!inbounds(p))
 			throw std::out_of_range("Index out of range!");
@@ -616,7 +622,7 @@ public:
 		return value[p];
 	}
 	// Allow sorted access.
-	const V & getindex(unsigned i) const {
+	const V & getindex(unsigned i) const NOEXCEPT {
 #if defined(DEBUG)
 		if (!inbounds(i))
 			throw std::out_of_range("Index out of range!");
@@ -624,7 +630,7 @@ public:
 		return value[idx[i]];
 	}
 	// Get the position of an element in the sort.
-	unsigned getorder(unsigned i) const {
+	unsigned getorder(unsigned i) const NOEXCEPT {
 #if defined(DEBUG)
 		if (!inbounds(i))
 			throw std::out_of_range("Index out of range!");
@@ -817,7 +823,7 @@ public:
 		return *this;
 	}
 	// Return data based on a key lookup.
-	V & operator [] (const K & k) const {
+	V & operator [] (const K & k) const NOEXCEPT {
 		unsigned p = haskey(k);
 #if defined(DEBUG)
 		if (!inbounds(p))
@@ -826,7 +832,7 @@ public:
 		return value[p];
 	}
 	// Allow integer keys.
-	V & operator [] (unsigned p) const {
+	V & operator [] (unsigned p) const NOEXCEPT {
 #if defined(DEBUG)
 		if (!inbounds(p))
 			throw std::out_of_range("Index out of range!");
@@ -1122,7 +1128,7 @@ public:
 		return *this;
 	}
 	// Return data based on a key lookup.
-	const V & operator [] (const K & k) const {
+	const V & operator [] (const K & k) const NOEXCEPT {
 		const unsigned p = haskey(k);
 #if defined(DEBUG)
 		if (!inbounds(p))
@@ -1131,7 +1137,7 @@ public:
 		return value[p];
 	}
 	// Allow integer keys.
-	const V & operator [] (unsigned p) const {
+	const V & operator [] (unsigned p) const NOEXCEPT {
 #if defined(DEBUG)
 		if (!inbounds(p))
 			throw std::out_of_range("Index out of range!");
@@ -1139,7 +1145,7 @@ public:
 		return value[p];
 	}
 	// Allow sorted access.
-	const V & getindex(unsigned i) const {
+	const V & getindex(unsigned i) const NOEXCEPT {
 #if defined(DEBUG)
 		if (!inbounds(i))
 			throw std::out_of_range("Index out of range!");
@@ -1147,7 +1153,7 @@ public:
 		return value[idx[i]];
 	}
 	// Get the position of an element in the sort.
-	unsigned getorder(unsigned i) const {
+	unsigned getorder(unsigned i) const NOEXCEPT {
 #if defined(DEBUG)
 		if (!inbounds(i))
 			throw std::out_of_range("Index out of range!");
@@ -1343,7 +1349,7 @@ public:
 		return *this;
 	}
 	// Behave like an indexed array...
-	V & operator [] (const K & k) const {
+	V & operator [] (const K & k) const NOEXCEPT {
 		unsigned p = haskey(k);
 #if defined(DEBUG)
 		if (!inbounds(p))
@@ -1352,7 +1358,7 @@ public:
 		return value[p];
 	}
 	// Linear access.
-	K & getkey(unsigned p) const {
+	K & getkey(unsigned p) const NOEXCEPT {
 #if defined(DEBUG)
 		if (!inbounds(p))
 			throw std::out_of_range("Index out of range!");
@@ -1360,7 +1366,7 @@ public:
 		return key[p];
 	}
 	// More linear access.
-	V & getvalue(unsigned p) const {
+	V & getvalue(unsigned p) const NOEXCEPT {
 #if defined(DEBUG)
 		if (!inbounds(p))
 			throw std::out_of_range("Index out of range!");
