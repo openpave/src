@@ -489,6 +489,7 @@ protected:
 		t.root = UINT_MAX;
 		t.value = nullptr;
 	}
+	// Prevent copy assignments (they're probably wrong...)
 	tree & operator = (const tree &) = delete;
 	tree & operator = (tree && t) noexcept {
 		std::swap(size,t.size);
