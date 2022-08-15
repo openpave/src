@@ -259,16 +259,6 @@ private:
 template<typename K, typename V, template<typename, typename> class N>
 class tree
 {
-protected:
-	template<typename KK, typename VV>
-	struct merged_v
-	{
-		using type = typename std::conditional<
-		std::is_base_of<KK,VV>::value || std::is_same<KK,VV>::value
-			,std::true_type,std::false_type>::type;
-		static constexpr bool value = type::value;
-	};
-
 public:
 	// The length. Nice for lots of things...
 	unsigned length() const noexcept {
@@ -591,8 +581,6 @@ class ktree_avl :
 	public tree<K,V,ktree_avl>
 {
 protected:
-	template<typename KK, typename VV>
-	using merged_v = typename tree<K,V,OP::ktree_avl>::template merged_v<KK,VV>;
 	using _V = typename tree<K,V,OP::ktree_avl>::_V;
 	using tree<K,V,OP::ktree_avl>::value;
 	using tree<K,V,OP::ktree_avl>::root;

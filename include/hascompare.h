@@ -176,6 +176,15 @@ struct function_traits<F &&>
 {
 };
 
+template<typename K, typename V>
+struct merged_v
+{
+	using type = typename std::conditional<
+	std::is_base_of<K,V>::value || std::is_same<K,V>::value
+		,std::true_type,std::false_type>::type;
+	static constexpr bool value = type::value;
+};
+
 } // namespace OP
 
 #endif // HASCOMPARE_H
