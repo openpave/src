@@ -32,13 +32,6 @@
 #include <cstddef>
 #include <time.h>
 #include <stdio.h>
-#if defined(_MSC_VER)
-#include <stddef.h>
-#include <BaseTsd.h>
-typedef SSIZE_T ssize_t;
-#else
-#include <stdint.h>
-#endif
 #include "pavement.h"
 #include "event.h"
 #include "linalg.h"
@@ -154,153 +147,6 @@ findvalue(const T * a, unsigned n, const T & v) noexcept {
 		return l;
 	else
 		return UINT_MAX; // XXX throw?
-}
-
-/*
- * class LEsystem_cache - A hackish slab allocator.
- *
- * The result cache is a very hackish slab allocator which stores
- * intermediate calculation values.  It is implemented via a single pointer.
- * That is the head of a linked list of malloc()'ed pages where memory is
- * handed out from.  The pointer to the next page is stored in the first
- * slot in the slab, and the second slot stores the fill level of the slab.
- * If this points to the same address as the cache pointer then we are in a
- * reset state and will not allocate memory but will give back pointers to
- * already allocated space.  The LEsystem class knows if it can just reuse
- * these arrays without recalculating the contents.
- *
- * The pointers are always aligned to sixteen byte boundaries.  On some
- * platforms this could be assisted by allocating aligned space.
- */
-class LEsystem_cache {
-	friend class LEsystem;
-
-	// always under allocate a little to help malloc()
-	// 6*sizeof(void *) ~= 32+sizeof(this);
-	static const size_t page_size = 0x400000-6*sizeof(void *);
-
-	LEsystem_cache * next;              // the next slab
-	void * mark;                        // the fill level for this slab
-
-	LEsystem_cache()
-	  : next(nullptr), mark(nullptr) {
-	}
-	~LEsystem_cache() {
-	}
-	void * allocate(size_t len) {
-		size_t s = align(MAX(len,page_size))+align(sizeof(LEsystem_cache));
-		LEsystem_cache * c = this;
-		void * p = this, * q = this->mark;
-		ptrdiff_t l;
-
-		assert(this->mark != nullptr);
-		while (p != nullptr) {
-			// now get the new mark
-			c = static_cast<LEsystem_cache *>(p);
-			if (c->mark == c)
-				// The cache is empty or has been reset
-				c->mark = align(static_cast<char *>(static_cast<void *>(c))
-					+ sizeof(LEsystem_cache));
-			q = c->mark;
-		    // get the amount of space left in this slab.
-			l = static_cast<char *>(p)+s-static_cast<char *>(q);
-			// check if there is enough space for this request
-			if (l-static_cast<ssize_t>(align(len)) >= 0)
-				break;
-			// get the next slab
-			p = c->next;
-		}
-		// Allocate a new slab
-		if (p == nullptr) {
-			// First mark the current slab as full.
-			c->mark = align(static_cast<char *>(static_cast<void *>(c))+s);
-			p = malloc(s);
-			if (p == nullptr)
-				throw std::bad_alloc();
-			// Connect to current slab
-			c->next = static_cast<LEsystem_cache *>(p);
-			// Create the new entry at the start of the slab
-			c = new(p) LEsystem_cache();
-			// set the new mark
-			q = c->mark = align(static_cast<char *>(static_cast<void *>(c))
-				+sizeof(LEsystem_cache));
-		}
-		// Finally increment the mark to cover the space
-		c->mark = align(static_cast<char *>(q)+len);
-		// Return the original mark to the caller
-		return q;
-	}
-	void reset() {
-		LEsystem_cache * c = this;
-
-		while (c != nullptr) {
-			c->mark = c;
-			c = c->next;
-		};
-	}
-	static LEsystem_cache * create() {
-		void * p;
-		LEsystem_cache * c;
-
-		p = malloc(page_size);
-		if (p == nullptr)
-			throw std::bad_alloc();
-		c = new(p) LEsystem_cache();
-		c->mark = c;
-		return c;
-	}
-	static void destroy(LEsystem_cache * cache) {
-		void * p;
-		LEsystem_cache * c = cache;
-
-		if (c == nullptr)
-			return;
-		p = c->next;
-		while (p != nullptr) {
-			c = static_cast<LEsystem_cache *>(p);
-			p = c->next;
-			c->~LEsystem_cache();
-			free(c);
-		}
-		cache->~LEsystem_cache();
-		free(cache);
-	}
-	static uintptr_t align(uintptr_t s) {
-		return s+(16-s%16)%16;
-	}
-	static void * align(const void * p) {
-		uintptr_t s = reinterpret_cast<uintptr_t>(p);
-		return reinterpret_cast<void *>(align(s));
-	}
-	void * operator new (size_t, void * p) {
-		return p;
-	}
-	void operator delete (void * , void *) {
-	}
-};
-
-template<typename T>
-T *
-LEsystem::cache_alloc(unsigned count)
-{
-	if (cache == nullptr)
-		cache = LEsystem_cache::create();
-	return static_cast<T *>(cache->allocate(count*sizeof(T)));
-}
-
-void
-LEsystem::cache_reset()
-{
-	if (cache != nullptr)
-		cache->reset();
-}
-
-void
-LEsystem::cache_free()
-{
-	cached_state(cachestate::empty);
-	LEsystem_cache::destroy(cache);
-	cache = nullptr;
 }
 
 double
@@ -2165,14 +2011,18 @@ LEbackcalc::deflgrad(unsigned nl, double * P, double * Q,
 	unsigned i, j, k;
 	const unsigned dl = defl.length();
 
+	if (cache_state == cachestate::deflgrad)
+		cache_reset();
+	else
+		cache_free();
 	// Initial setup.
-	double * PG = new double[dl*nl];
-	double * MD = new double[dl];
-	double * CD = new double[dl];
-	double * DG = new double[dl];
-	double * D = new double[nl];
-	double * G = new double[nl];
-	double * W = new double[nl];
+	double * PG = cache_alloc<double>(dl*nl);
+	double * MD = cache_alloc<double>(dl);
+	double * CD = cache_alloc<double>(dl);
+	double * DG = cache_alloc<double>(dl);
+	double * D = cache_alloc<double>(nl);
+	double * G = cache_alloc<double>(nl);
+	double * W = cache_alloc<double>(nl);
 	memset(W,0,sizeof(double)*nl);
 	for (i = 0; i < nl; i++)
 		layer(i).emod(pow(10,P[i]));
@@ -2243,13 +2093,7 @@ LEbackcalc::deflgrad(unsigned nl, double * P, double * Q,
 	// Orthonormalize Q.
 	if (Q != nullptr)
 		orth_gs(nl,Q);
-	delete [] W;
-	delete [] G;
-	delete [] D;
-	delete [] DG;
-	delete [] CD;
-	delete [] MD;
-	delete [] PG;
+	cached_state(cachestate::deflgrad);
 	return step;
 }
 
@@ -2263,11 +2107,15 @@ LEbackcalc::gaussnewton(unsigned nl, double * P, calctype cl)
 	const unsigned dl = defl.length();
 	double step = 0.0;
 
+	if (cache_state == cachestate::gausssnewton)
+		cache_reset();
+	else
+		cache_free();
 	// Initial setup.
-	double * H = new double[dl*nl];
-	double * S = new double[nl*nl];
-	double * W = new double[nl];
-	double * Y = new double[nl];
+	double * H = cache_alloc<double>(dl*nl);
+	double * S = cache_alloc<double>(nl*nl);
+	double * W = cache_alloc<double>(nl);
+	double * Y = cache_alloc<double>(nl);
 	memset(Y,0,sizeof(double)*nl);
 	for (i = 0; i < nl; i++)
 		layer(i).emod(pow(10,P[i]));
@@ -2295,10 +2143,7 @@ LEbackcalc::gaussnewton(unsigned nl, double * P, calctype cl)
 	for (i = 0, step = 0.0; i < nl; i++)
 		step += W[i]*W[i], P[i] += W[i];
 	step = sqrt(step);
-	delete [] Y;
-	delete [] W;
-	delete [] S;
-	delete [] H;
+	cached_state(cachestate::gausssnewton);
 	return step;
 }
 
@@ -2314,12 +2159,16 @@ LEbackcalc::kalman(unsigned nl, double * P)
 	unsigned i, j, k, dl = defl.length();
 	double step = 0.0;
 
+	if (cache_state == cachestate::kalman)
+		cache_reset();
+	else
+		cache_free();
 	// Initial setup.
-	double * H = new double[dl*nl];
-	double * S = new double[dl*dl];
-	double * K = new double[nl*dl];
-	double * Y = new double[dl];
-	double * W = new double[nl];
+	double * H = cache_alloc<double>(dl*nl);
+	double * S = cache_alloc<double>(dl*dl);
+	double * K = cache_alloc<double>(nl*dl);
+	double * Y = cache_alloc<double>(dl);
+	double * W = cache_alloc<double>(nl);
 	for (j = 0; j < dl; j++) {
 		defldata & d = defl[j];
 		d.calculated = result(d).result(pavedata::deflct, pavedata::zz);
@@ -2354,11 +2203,7 @@ LEbackcalc::kalman(unsigned nl, double * P)
 		for (i = 0; i < nl; i++)
 			P[i] = std::min(std::max(1.0,P[i]+W[i]),9.0);
 	//}
-	delete [] W;
-	delete [] Y;
-	delete [] K;
-	delete [] S;
-	delete [] H;
+	cached_state(cachestate::kalman);
 	return step;
 }
 
@@ -2480,10 +2325,14 @@ LEbackcalc::conjgrad(unsigned nl, double * P)
 	unsigned i, j, k;
 	const unsigned dl = defl.length();
 
+	if (cache_state == cachestate::conjgrad)
+		cache_reset();
+	else
+		cache_free();
 	// Initial setup.
-	double * D = new double[nl];
-	double * G = new double[nl];
-	double * W = new double[nl];
+	double * D = cache_alloc<double>(nl);
+	double * G = cache_alloc<double>(nl);
+	double * W = cache_alloc<double>(nl);
 	memcpy(W,P,sizeof(double)*nl);
 	memset(D,0,sizeof(double)*nl);
 	for (k = 0; k <= maxsteps*nl; k++) {
@@ -2511,9 +2360,7 @@ LEbackcalc::conjgrad(unsigned nl, double * P)
 	}
 	for (i = 0, gg = 0.0; i < nl; i++)
 		gg += (P[i]-W[i])*(P[i]-W[i]), P[i] = std::min(std::max(1.0,W[i]),9.0);
-	delete[] W;
-	delete[] G;
-	delete[] D;
+	cached_state(cachestate::conjgrad);
 	return sqrt(gg);
 }
 
@@ -2535,12 +2382,16 @@ LEbackcalc::swarm(unsigned nl, double * P)
 	unsigned p, i, iter = 0;
 	unsigned best = 0;
 
-	double * X = new double[PARTICLES*nl];
-	double * V = new double[PARTICLES*nl];
-	double * B = new double[PARTICLES*nl];
-	double * E = new double[2*PARTICLES];
-	double * R1 = new double[nl*nl];
-	double * R2 = new double[nl*nl];
+	if (cache_state == cachestate::conjgrad)
+		cache_reset();
+	else
+		cache_free();
+	double * X = cache_alloc<double>(PARTICLES*nl);
+	double * V = cache_alloc<double>(PARTICLES*nl);
+	double * B = cache_alloc<double>(PARTICLES* nl);
+	double * E = cache_alloc<double>(2*PARTICLES);
+	//double * R1 = cache_alloc<double>(nl*nl);
+	//double * R2 = cache_alloc<double>(nl*nl);
 	for (p = 0; p < PARTICLES; p++) {
 		for (i = 0; i < nl; i++) {
 			X[p*nl+i] = RAND(std::max(2.0,P[i]-6.0),std::min(P[i]+4.0,8.0));
@@ -2649,12 +2500,7 @@ LEbackcalc::swarm(unsigned nl, double * P)
 		gg += pow(P[i]-B[best*nl+i],2);
 		P[i] = std::min(std::max(1.0,B[best*nl+i]),9.0);
 	}
-	delete [] X;
-	delete [] V;
-	delete [] B;
-	delete [] E;
-	delete [] R1;
-	delete [] R2;
+	cached_state(cachestate::swarm);
 	return sqrt(gg);
 }
 

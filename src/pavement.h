@@ -49,6 +49,7 @@
 
 #include <memory.h>
 #include <stdexcept>
+#include "../include/cache.h"
 #include "../include/mathplus.h"
 #include "../include/set.h"
 #include "../include/list.h"
@@ -56,7 +57,6 @@
 namespace OP {
 
 class LEsystem;
-class LEsystem_cache;
 class LEbackcalc;
 
 /*
@@ -379,20 +379,70 @@ struct pavedata : public pavepoint {
 };
 
 /*
+ * class LEsystem_cache - A wrapper for the slab_cache.
+ */
+template<typename S>
+class LEsystem_cache {
+protected:
+	LEsystem_cache() noexcept
+	  : cache_state(S::empty), cache(nullptr) {
+	}
+	LEsystem_cache(const LEsystem_cache&) = delete;
+	LEsystem_cache& operator = (const LEsystem_cache&) = delete;
+	LEsystem_cache(LEsystem_cache&&) noexcept
+	  : cache_state(S::empty), cache(nullptr) {
+	}
+	~LEsystem_cache() {
+		cache_free();
+	}
+
+	template<typename T> T* cache_alloc(unsigned count) {
+		if (cache == nullptr)
+			cache = slab_cache::create();
+		return static_cast<T*>(cache->allocate(count * sizeof(T)));
+	}
+	void cache_reset() noexcept {
+		if (cache != nullptr)
+			cache->reset();
+	}
+	void cache_free() noexcept {
+		cached_state(S::empty);
+		slab_cache::destroy(cache);
+		cache = nullptr;
+	}
+	void cached_state(S s) noexcept {
+		cache_state = MIN(cache_state, s);
+	}
+
+	S cache_state;
+	slab_cache* cache;
+};
+
+// declare externally to avoid ordering issues
+enum class LEsystem_cachestate {
+	empty, emod, all
+};
+
+/*
  * class LEsystem - A layered elastic pavement system.
  */
-class LEsystem : private list_owned<LEsystem, LElayer> {
+class LEsystem
+  : private list_owned<LEsystem, LElayer>,
+	private LEsystem_cache<LEsystem_cachestate>
+{
 public:
 	LEsystem()
-	  : list_owned<LEsystem,LElayer>(), points(), data(), lg(), clg(0),
-			cache_res(failure), cache_state(cachestate::empty), cache(0) {
+	  : list_owned<LEsystem,LElayer>(),
+		LEsystem_cache<LEsystem_cachestate>(),
+		points(), data(), lg(), clg(0) {
 	}
 	LEsystem(const LEsystem &) = delete;
 	LEsystem & operator = (const LEsystem &) = delete;
 	LEsystem(LEsystem && s)
-	  : list_owned<LEsystem,LElayer>(std::move(s)), points(std::move(s.points)),
-		data(std::move(s.data)), lg(std::move(s.lg)), clg(s.clg),
-			cache_res(failure), cache_state(cachestate::empty), cache(0) {
+	  : list_owned<LEsystem,LElayer>(std::move(s)),
+		LEsystem_cache<LEsystem_cachestate>(std::move(s)),
+		points(std::move(s.points)), data(std::move(s.data)),
+		lg(std::move(s.lg)), clg(s.clg) {
 	}
 	~LEsystem() {
 		cache_free();
@@ -507,9 +557,6 @@ public:
 
 protected:
 	bool check();
-	template<typename T> T * cache_alloc(unsigned count);
-	void cache_reset();
-	void cache_free();
 
 private:
 	friend class listelement_o<LEsystem,LElayer>;
@@ -522,14 +569,13 @@ private:
 	sset<sset<paveload>> lg;
 	unsigned clg;
 
-	resulttype cache_res;
-	enum class cachestate {
-	    empty, emod, all
-	} cache_state;
-	void cached_state(cachestate s) {
-		cache_state = MIN(cache_state,s);
-	}
-	LEsystem_cache * cache;
+	resulttype cache_res = failure;
+	using cachestate = LEsystem_cachestate;
+	using LEsystem_cache<LEsystem_cachestate>::cache_alloc;
+	using LEsystem_cache<LEsystem_cachestate>::cache_reset;
+	using LEsystem_cache<LEsystem_cachestate>::cache_free;
+	using LEsystem_cache<LEsystem_cachestate>::cached_state;
+	using LEsystem_cache<LEsystem_cachestate>::cache_state;
 };
 
 /*
@@ -555,10 +601,17 @@ struct defldata : public point3d {
 	double calculated;
 };
 
+enum class LEbackcalc_cachestate {
+	empty, deflgrad, kalman, conjgrad, gausssnewton, swarm
+};
+
 /*
  * class LEbackcalc - A layered elastic backcalculation.
  */
-class LEbackcalc : public LEsystem {
+class LEbackcalc
+  : private LEsystem_cache<LEbackcalc_cachestate>,
+	public LEsystem
+{
 public:
 	void adddefl(const point3d & p, double d) {
 		defl.add(defldata(p,d));
@@ -608,6 +661,13 @@ private:
 	double brent(unsigned nl, double * P, double * D);
 	double conjgrad(unsigned nl, double * P);
 	double swarm(unsigned nl, double * P);
+
+	using cachestate = LEbackcalc_cachestate;
+	using LEsystem_cache<LEbackcalc_cachestate>::cache_alloc;
+	using LEsystem_cache<LEbackcalc_cachestate>::cache_reset;
+	using LEsystem_cache<LEbackcalc_cachestate>::cache_free;
+	using LEsystem_cache<LEbackcalc_cachestate>::cached_state;
+	using LEsystem_cache<LEbackcalc_cachestate>::cache_state;
 };
 
 } // namespace OP
