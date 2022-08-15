@@ -39,13 +39,13 @@
 #define DFLT_BLK    64
 #endif
 
+#include "mathplus.h"
+#include "meta.h"
 #include <cstring>
 #include <stdexcept>
 #ifdef TEST_TREES
 #include <cstdio>
 #endif
-#include "mathplus.h"
-#include "hascompare.h"
 
 namespace OP {
 

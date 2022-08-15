@@ -1,6 +1,6 @@
 /**************************************************************************
 
-	HASCOMPARE.H - Simple SFINAE class to check if we have compare()
+	META.H - SFINAE and other template meta-programming classes
 
 	The contents of this file are subject to the Academic Development
 	and Distribution License Version 1.0 (the "License"); you may not
@@ -22,10 +22,11 @@
 	Contributor(s): Jeremy Lea <reg@openpave.org>.
 
 	Purpose:
-		This header implements templated C++ classes for SFINAE
-		(Substitution failure is not an error) checking if a class has
-		a compare() method that returns -1/0/1.  It is used to specialise
-		various classes that need to to order comparisons.
+		This header implements templated C++ classes for various template
+		meta-programming uses, using various techniques, such as SFINAE
+		(Substitution failure is not an error).  Some of these are local
+		versions of future C++17/C++20 classes which are not available in
+		all compilers yet.
 
 	History:
 		2016/03/08 - Created a basic implementation.
@@ -33,8 +34,8 @@
 **************************************************************************/
 
 #pragma once
-#ifndef __HASCOMPARE_H
-#define __HASCOMPARE_H
+#ifndef __META_H
+#define __META_H
 
 #include <type_traits>
 #include <tuple>
@@ -187,4 +188,4 @@ struct merged_v
 
 } // namespace OP
 
-#endif // HASCOMPARE_H
+#endif // META_H

@@ -81,7 +81,7 @@
 #include <type_traits>
 #include <utility>
 #include "ctti.h"
-#include "hascompare.h"
+#include "meta.h"
 
 namespace OP {
 
