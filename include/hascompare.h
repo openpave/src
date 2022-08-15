@@ -40,37 +40,53 @@
 
 namespace OP {
 
-#define HAS_MEMBER_FUNCTION(NAME,RET, ...)                                \
+// Macroized class that creates a template meta-program that tests if a
+// class has a member function with a certain signature (name, return type
+// and arguements).
+#define HAS_MEMBER_FUNCTION(NAME, RET, ...)                               \
 template<typename T>                                                      \
 class has_##NAME                                                          \
 {                                                                         \
 	template<typename C>                                                  \
-	static typename std::is_same<                                         \
-		decltype(std::declval<C>().NAME(__VA_ARGS__)),RET>::type          \
-		check(C *) { return std::true_type(); }                           \
+	static typename std::is_same<decltype(std::declval<C>().NAME(         \
+			__VA_ARGS__)),RET>::type                                      \
+	check(C *) {                                                          \
+		return {};                                                        \
+	}                                                                     \
 	template<typename>                                                    \
-	static std::false_type check(...) { return std::false_type(); }       \
-	typedef decltype(check<T>(0)) type;                                   \
+	static std::false_type                                                \
+	check(...) {                                                          \
+		return {};                                                        \
+	}                                                                     \
+	using type = decltype(check<T>(nullptr));                             \
 public:                                                                   \
 	static constexpr bool value = type::value;                            \
-	~has_##NAME() {}  /* Keep GCC happy */                                \
 };
 
+// Macroized class that creates a template meta-program that tests if a
+// class has a nested class with a certain name.
 #define HAS_NESTED_CLASS(NAME)                                            \
 template<typename T>                                                      \
 class has_##NAME                                                          \
 {                                                                         \
 	template<typename C>                                                  \
 	static typename std::is_class<typename C::NAME>::type                 \
-		check(C *) { return std::true_type(); }                           \
+	check(C *) {                                                          \
+		return {};                                                        \
+	}                                                                     \
 	template<typename>                                                    \
-	static std::false_type check(...) { return std::false_type(); }       \
-	typedef decltype(check<T>(0)) type;                                   \
+	static std::false_type                                                \
+	check(...) {                                                          \
+		return {};                                                        \
+	}                                                                     \
+	using type = decltype(check<T>(nullptr));                             \
 public:                                                                   \
 	static constexpr bool value = type::value;                            \
-	~has_##NAME() {}  /* Keep GCC happy */                                \
 };
 
+// Create a has_compare meta-program to check if a class has a compare()
+// method that returns -1/0/1.  It is used to specialise various classes
+// that need to do order comparisons.
 HAS_MEMBER_FUNCTION(compare,int,std::declval<C>())
 
 // Replace once C++17 version is available.
