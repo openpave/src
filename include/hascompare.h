@@ -37,6 +37,7 @@
 #define __HASCOMPARE_H
 
 #include <type_traits>
+#include <tuple>
 
 namespace OP {
 
@@ -126,60 +127,54 @@ public:
 	                           || decltype(check2<T>(nullptr))::value;
 };
 
-// We really only need arg<0> from this...
+/*
+ * class function_traits - get various details about a function
+ *
+ * This looks at callable objects and extracts the return type and
+ * parameters.  We really only need arg<0> from this...
+ */
+// Forward declare
 template<typename>
 struct function_traits;
+// Specialize for functors and lambdas.
 template<typename F>
-struct function_traits :
-	public function_traits<decltype(&F::operator())>
-{};
-template<typename C, typename R, typename...Ts>
+struct function_traits
+  : public function_traits<decltype(&F::operator())>
+{
+};
+// Real meta-program, using template deduction to split type
+template<typename C, typename R, typename... Ts>
 struct function_traits<R(C::*)(Ts...) const>
 {
+	// Get the number of function arguments
 	static constexpr std::size_t arg_count = sizeof...(Ts);
+	// Get the return type of the function
 	using result_type = R;
+	// Get the type of the Nth argument
 	template<std::size_t N>
 	struct arg {
-		static_assert(N < arg_count,"error: index exceeds arguement count");
+		static_assert(N < arg_count,"error: index exceeds argument count");
 		using type = typename std::tuple_element<N,std::tuple<Ts...>>::type;
 	};
 };
-/*
-template<typename R, typename...Ts>
-struct function_traits<R(*)(Ts...)> :
-	public function_traits<R(Ts...)>
-{};
-// member function pointer
-template<typename C, typename R, typename...Ts>
-struct function_traits<R(C::*)(Ts...)> :
-	public function_traits<R(C&,Ts...)>
-{};
-// const member function pointer
-template<typename C, typename R, typename...Ts>
-struct function_traits<R(C::*)(Ts...) const> :
-	public function_traits<R(C&,Ts...)>
-{};
+// Specialize for references
 template<typename F>
-struct function_traits<std::function<F>> :
-	public function_traits<F>
-{};
-// member object pointer
-template<typename C, typename R>
-struct function_traits<R(C::*)> :
-	public function_traits<R(C&)>
-{};
-*/
-template<typename F> struct function_traits<F&> :
-	public function_traits<F>
-{};
+struct function_traits<F &>
+  : public function_traits<F>
+{
+};
+// Specialize for const references
 template<typename F>
-struct function_traits<const F&> :
-	public function_traits<F>
-{};
+struct function_traits<const F &>
+  : public function_traits<F>
+{
+};
+// Specialize for r-value references
 template<typename F>
-struct function_traits<F&&> :
-	public function_traits<F>
-{};
+struct function_traits<F &&>
+  : public function_traits<F>
+{
+};
 
 } // namespace OP
 
