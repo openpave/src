@@ -89,25 +89,38 @@ public:                                                                   \
 // that need to do order comparisons.
 HAS_MEMBER_FUNCTION(compare,int,std::declval<C>())
 
-// Replace once C++17 version is available.
+/*
+ * is_callable - check if a type can be called
+ *
+ * Template meta-program using SFINAE to test if a type can be called as a
+ * function.  This implies no parameters or return value.  Replace once
+ * C++17 version is available.
+ */
 template<typename F>
 class is_callable
 {
+	// base of F
 	using T = typename std::remove_cv<
-		typename std::remove_reference<F>::type>::type;
+			typename std::remove_reference<F>::type>::type;
 
+	// check1 tests for a callable type
 	template<typename C>
-	static auto check1(C * c) -> decltype((*c)(),void(),std::true_type())
-	{ return std::true_type(); }
+	static auto check1(C * c) -> decltype((*c)(),std::true_type()) {
+		return {};
+	}
 	template<typename>
-	static auto check1(...) -> decltype(std::false_type())
-	{ return std::false_type(); }
+	static std::false_type check1(...) {
+		return {};
+	}
+	// check2 tests for operator () (a functor)
 	template<typename C>
-	static auto check2(C *) -> decltype(&C::operator(),void(),std::true_type())
-	{ return std::true_type(); }
+	static auto check2(C *)	-> decltype(&C::operator(),std::true_type()) {
+		return {};
+	}
 	template<typename>
-	static auto check2(...) -> decltype(std::false_type())
-	{ return std::false_type(); }
+	static std::false_type check2(...) {
+		return {};
+	}
 public:
 	static constexpr bool value = decltype(check1<T>(nullptr))::value
 	                           || decltype(check2<T>(nullptr))::value;
