@@ -35,6 +35,7 @@
 #include "pavement.h"
 #include "event.h"
 #include "linalg.h"
+#include "autodelete.h"
 
 namespace OP {
 
@@ -1789,10 +1790,10 @@ LEbackcalc::backcalc()
 		event_msg(EVENT_ERROR,"LEbackcalc::backcalc() called without deflections!");
 		return false;
 	}
-	double * P = new double[nl];
-	double * T = new double[nl];
-	double * O = new double[nl];
-	double * Q = new double[nl*nl];
+	autodelete<double> P(new double[nl]);
+	autodelete<double> T(new double[nl]);
+	autodelete<double> O(new double[nl]);
+	autodelete<double> Q(new double[nl*nl]);
 
 	// Remove all existing evaluation points, after saving...
 	removepoints();
@@ -1923,10 +1924,6 @@ LEbackcalc::backcalc()
 	}
 	// Restore original evaluation points...
 	points = orig;
-	delete [] Q;
-	delete [] O;
-	delete [] T;
-	delete [] P;
 	return (step <= tolerance);
 }
 
