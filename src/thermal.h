@@ -51,9 +51,14 @@ namespace OP {
 class FEMthermal
 {
 public:
+	FEMthermal() = delete;
 	FEMthermal(unsigned nl, const double * lh, const double * ld,
 			unsigned _n, const double * _nd, const double * _nt,
 			double _dt = 1, unsigned _w = 1);
+	FEMthermal(const FEMthermal& ) = delete;
+	FEMthermal(FEMthermal&& ) = delete;
+	FEMthermal & operator = (const FEMthermal& ) = delete;
+	FEMthermal & operator = (FEMthermal&& ) = delete;
 	~FEMthermal() {
 		delete [] nd;
 		delete [] nt;
