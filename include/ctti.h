@@ -130,7 +130,7 @@ public:
 	type_index() = delete;
 	// Default constructor
 	constexpr type_index(const OP::type_info & info) noexcept
-	  : type{&info}, hash{info.hash_code()} {
+	  : magic{info.name()}, hash{info.hash_code()} {
 	}
 	~type_index() = default;
 	// Default copy and move constructors and assignments
@@ -144,7 +144,7 @@ public:
 	}
 	// Note that the name is probably not null terminated.
 	constexpr const OP::conststr & name() const noexcept {
-		return type->name();
+		return magic;
 	}
 	constexpr bool operator == (const type_index & r) const noexcept {
 		return hash == r.hash_code();
@@ -166,7 +166,7 @@ public:
 	}
 
 private:
-	const OP::type_info * type;
+	OP::conststr magic;
 	hash_t hash;
 };
 
@@ -182,7 +182,7 @@ private:
 #elif defined(_MSC_VER)
 	#define CTTI __FUNCSIG__
 	#define CTTI_PREFIX "class OP::type_info __cdecl OP::type_deducer<"
-	#define CTTI_SUFFIX ">(void)"
+	#define CTTI_SUFFIX ">(void) noexcept"
 #else
 	#error "No support for this compiler."
 #endif
