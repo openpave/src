@@ -67,6 +67,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <cstring>
 #include <functional>
 #include <string>
+#include <string_view>
 
 namespace OP {
 
@@ -108,6 +109,11 @@ public:
 	explicit conststr(const std::string & s) noexcept
 	  : conststr{s.c_str(),s.length()} {
 	}
+	// Explicit construction from a std::string_view.  Should only be
+	// used for run time tests.
+	constexpr explicit conststr(const std::string_view & s) noexcept
+		: conststr{s.data(),s.length()} {
+	}
 	// Explicit constructor from begin and end pointers.
 	constexpr conststr(const char * b, const char * e) noexcept
 	  : conststr{b,static_cast<size_t>(e-b)} {
@@ -129,6 +135,10 @@ public:
 	operator std::string () const {
 		return {str,str+len};
 	}
+	// Return a std::string_view for printing, etc.
+	operator std::string_view() const noexcept {
+		return {str,str+len};
+	}
 	// only call this if you know the strings are null terminated.
 	constexpr operator const char * () const noexcept {
 		return str;
@@ -139,6 +149,13 @@ public:
 	}
 	constexpr const char * end() const noexcept {
 		return str+len;
+	}
+	// Begin and end for iterators.
+	constexpr const char * cbegin() const noexcept {
+		return str;
+	}
+	constexpr const char * cend() const noexcept {
+		return str + len;
 	}
 	// Get chars from the string.
 	constexpr char operator [] (size_t i) const noexcept {
