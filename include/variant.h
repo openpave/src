@@ -604,16 +604,16 @@ class validator<T,Ts...> {
 		// U templates are conditioned on the union type for this slot.
 		template<typename U>
 		store(std::function<bool(const U &)> && u,
-			  OP::type_index * k,
+			  OP::type_index * kr,
 			  typename std::enable_if<compare_v<U,T>::castable>::type * = nullptr)
 		  : f(u) {
-			*k = OP::type_index(OP::type_id<T>());
+			*kr = OP::type_index(OP::type_id<T>());
 		}
 		template<typename U>
 		store(std::function<bool(const U &)> && u,
-			  OP::type_index * k,
+			  OP::type_index * kr,
 			  typename std::enable_if<!compare_v<U,T>::castable>::type * = nullptr)
-		  : b(std::move(u),k) {
+		  : b(std::move(u),kr) {
 		}
 		~store() {
 			// clear() must be called outside...
@@ -763,15 +763,15 @@ class variant<T,Ts...> {
 			set(d,std::move(v));
 		}
 		template<typename U>
-		store(U u, OP::type_index * k, typename std::enable_if<
-				compare_v<U,T>::setable>::type * = 0)
+		store(U u, OP::type_index * kr, typename std::enable_if<
+				compare_v<U,T>::setable>::type * = nullptr)
 		  : t(u) {
-			*k = OP::type_index(OP::type_id<T>());
+			*kr = OP::type_index(OP::type_id<T>());
 		}
 		template<typename U>
-		store(U u, OP::type_index * k, typename std::enable_if<
-				!compare_v<U,T>::setable>::type * = 0)
-		  : b(u,k) {
+		store(U u, OP::type_index * kr, typename std::enable_if<
+				!compare_v<U,T>::setable>::type * = nullptr)
+		  : b(u,kr) {
 		}
 		~store() {
 			// clear() must be called outside...
