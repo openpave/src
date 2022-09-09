@@ -186,20 +186,21 @@ protected:
 template<typename T>
 class listelement_d {
 protected:
-	T * next;                   // The next element.
 	T * prev;                   // The previous element.
+	T * next;                   // The next element.
 
 	// Create a new list element, with an optional previous element.
 	// We force the consumer to use nullptr so that they have to think.
 	listelement_d(T * p, T * n = nullptr)
-	  : next(n), prev(p) {
+	  : prev(p), next(n) {
 		if (next != nullptr) {
 			if (next->prev != nullptr) {
 				if (prev != nullptr && prev != next->prev)
 					throw std::runtime_error("Linked list pointer mismatch!");
 				prev = next->prev;
 				prev->next = static_cast<T *>(this);
-			}
+			} else if (prev != nullptr)
+					throw std::runtime_error("Linked list pointer mismatch!");
 			next->prev = static_cast<T *>(this);
 		} else if (prev != nullptr) {
 			if (prev->next != nullptr) {
@@ -343,6 +344,8 @@ protected:
 template<typename O, typename T>
 class listelement_o : public listelement_d<T> {
 protected:
+	using listelement_d<T>::prev;
+	using listelement_d<T>::next;
 	O * owner;                  // Our owner.
 
 	// Create an element.
@@ -389,6 +392,8 @@ protected:
 		return s;
 	}
 
+	friend class listelement_d<T>;
+	friend class list_double<T>;
 	friend class list_owned<O,T>;
 };
 
@@ -401,6 +406,7 @@ template<typename O, typename T>
 class list_owned : public list_double<T> {
 protected:
 	using list_double<T>::first;
+	using list_double<T>::last;
 
 	list_owned() noexcept
 	  : list_double<T>() {
