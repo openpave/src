@@ -46,6 +46,7 @@
 #include <cassert>
 #include <functional>
 #include <memory>
+#include <stdexcept>
 
 namespace OP {
 
@@ -94,28 +95,40 @@ private:
 template<typename... Ts>
 class dispatcher<channel<Ts...>>
 {
+private:
+	struct sink;
 public:
 	// Disallow copying
 	dispatcher(const dispatcher &) = delete;
 	dispatcher & operator = (const dispatcher &) = delete;
 	// Attach a message handler, return a remover
-	std::function<void(void)> attach(channel<Ts...> && c) {
+	std::function<void(void)> attach(channel<Ts...> && c,
+			void * const before = nullptr) {
 		// Attach to end so they are dispatched in the order attached.
-		sink ** s = &head, * t;
-		while (*s != nullptr)
+		sink ** s = &head, * t = static_cast<sink *>(before);
+		assert(s != nullptr);
+		while (*s != t) {
 			s = &((*s)->next);
-		t = *s = new sink(std::move(c));
+			if (*s == nullptr && t != nullptr)
+				throw std::runtime_error("Invalid before pointer!");
+		}
+		*s = new sink(std::move(c));
+		(*s)->next = t;
+		t = *s;
 		return std::function<void(void)>([this,t] () noexcept {
-			sink ** c = &head;
-			while (*c != nullptr) {
-				if (*c == t) {
-					*c = t->next;
+			sink ** k = &head;
+			while (*k != nullptr) {
+				if (*k == t) {
+					*k = t->next;
 					delete t;
 					return;
 				}
-				c = &((*c)->next);
+				k = &((*k)->next);
 			}
 		});
+	}
+	sink * get_current_head() const noexcept {
+		return head;
 	}
 
 protected:
@@ -180,11 +193,12 @@ protected:
 	}
 	// Listen to a dispatcher for a type of message.
 	template<typename... Ts>
-	void listen(dispatcher<channel<Ts...>> & d, channel<Ts...> && c) {
+	void listen(dispatcher<channel<Ts...>> & d, channel<Ts...> && c,
+		void * const before = nullptr) {
 		source ** s = &head;
 		while (*s != nullptr)
 			s = &((*s)->next);
-		*s = new source(d.attach(std::move(c)));
+		*s = new source(d.attach(std::move(c),before));
 	}
 
 private:
