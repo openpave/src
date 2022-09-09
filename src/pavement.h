@@ -186,17 +186,17 @@ public:
 	double emod(double te) noexcept;
 	double poissons(double tv) noexcept;
 	double slip(double ts) noexcept;
-	LElayer(LEsystem * o, LElayer * p)
-	  : listelement_o<LEsystem,LElayer>(o,p), h(0.0), E(0.0), v(0.0),
+	LElayer(LEsystem * o, LElayer * p, LElayer * n = nullptr)
+	  : listelement_o<LEsystem,LElayer>(o,p,n), h(0.0), E(0.0), v(0.0),
 			s(1.0) {
 	}
-	LElayer(LEsystem * o, LElayer * p, double th, double te, double tv,
-			double ts = 1.0)
-	  : listelement_o<LEsystem,LElayer>(o,p), h(th), E(te), v(tv),
+	LElayer(LEsystem * o, LElayer * p, LElayer * n, double th, double te,
+			double tv, double ts = 1.0)
+	  : listelement_o<LEsystem,LElayer>(o,p,n), h(th), E(te), v(tv),
 			s(ts) {
 	}
-	LElayer(LEsystem * o, LElayer * p, const LElayer & l)
-	  : listelement_o<LEsystem,LElayer>(o,p), h(l.h), E(l.E), v(l.v),
+	LElayer(LEsystem * o, LElayer * p, LElayer * n, const LElayer & l)
+	  : listelement_o<LEsystem,LElayer>(o,p,n), h(l.h), E(l.E), v(l.v),
 			s(l.s) {
 	}
 

@@ -185,12 +185,12 @@ LEsystem::addlayer(double h, double e, double v, double s, unsigned p)
 	unsigned i = 0;
 
 	cached_state(cachestate::empty);
-	if (p == UINT_MAX)
-		pl = last;
+	if (p == UINT_MAX || pl == nullptr)
+		pl = nullptr;
 	else
 		while (i++ < p && pl->next != nullptr)
 			pl = pl->next;
-	return *(new LElayer(this,pl,h,e,v,s));
+	return *(new LElayer(this,pl == nullptr ? last : nullptr,pl,h,e,v,s));
 }
 
 void
