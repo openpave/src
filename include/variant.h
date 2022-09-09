@@ -300,6 +300,10 @@ class variant {
 		store(store &&) = delete;
 		store & operator = (const store &) = delete;
 		store & operator = (store &&) = delete;
+		template<typename U>
+		store(U, OP::type_index *) {
+			throw std::runtime_error("Attempting to store invalid type in variant!");
+		}
 		void set(const OP::type_index &, const store &) {
 			throw std::runtime_error("Attempting to store invalid type in variant!");
 		}
