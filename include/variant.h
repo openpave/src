@@ -218,6 +218,19 @@ struct compare_v
 	static constexpr const bool castable = castable_t::value;
 };
 
+template<typename...Ts>
+struct limit_to
+{
+	template<typename U>
+	static constexpr const bool is_getable = std::disjunction<
+		typename compare_v<U,Ts>::castable_t...
+	>::value;
+	template<typename U>
+	static constexpr const bool is_setable = std::disjunction<
+		typename compare_v<U,Ts>::setable_t...
+	>::value;
+};
+
 /*
  * class vunctor - A variant functor type.
  */
@@ -524,8 +537,12 @@ public:
 	}
 	// Create a variant, fixing the type.
 	// fake out the constructor with V.  It will actually be replaced.
-	template<typename V>
+	template<typename V, typename = typename std::enable_if<limit_to<T, Ts...>::template is_setable<V>>::type>
 	vunctor(V v) noexcept
+	  : k(OP::type_index(OP::type_id<V>())), s(v,&k) {
+	}
+	template<typename V>
+	vunctor(V v, typename std::enable_if<is_callable<V>::value>::type * = nullptr) noexcept
 	  : k(OP::type_index(OP::type_id<V>())), s(v,&k) {
 	}
 	// Destruct depending on type
@@ -546,12 +563,26 @@ public:
 	}
 	// Assign from value (of the correct type).  This cannot change the type.
 	template<typename V>
-	vunctor & operator = (const V & v) {
+	typename std::enable_if<limit_to<T,Ts...>::template is_setable<V>,vunctor&>::type
+	operator = (const V & v) {
 		copy_c(v);
 		return *this;
 	}
 	template<typename V>
-	vunctor & operator = (V && v) {
+	typename std::enable_if<is_callable<V>::value,vunctor&>::type
+	operator = (const V & v) {
+		copy_c(v);
+		return *this;
+	}
+	template<typename V>
+	typename std::enable_if<limit_to<T,Ts...>::template is_setable<V>,vunctor&>::type
+	operator = (V && v) {
+		copy_v(std::forward<V>(v));
+		return *this;
+	}
+	template<typename V>
+	typename std::enable_if<is_callable<V>::value, vunctor &>::type
+	operator = (V && v) {
 		copy_v(std::forward<V>(v));
 		return *this;
 	}
@@ -563,7 +594,8 @@ public:
 	}
 	// Return the contained value.
 	template<typename V>
-	V get() const {
+	typename std::enable_if<limit_to<T,Ts...>::template is_getable<V>,V>::type
+	get() const {
 		return s.template get<V>(k);
 	}
 	// Also allow casting in some applications.
@@ -869,7 +901,7 @@ public:
 	variant(variant && v)
 	  : k(std::move(v.k)), s(k,std::move(v.s)) {
 	}
-	template<typename V>
+	template<typename V, typename = typename std::enable_if<limit_to<T, Ts...>::template is_setable<V>>::type>
 	variant(V v)
 	  : k(OP::type_index(OP::type_id<V>())), s(v,&k) {
 	}
@@ -905,7 +937,8 @@ public:
 		return *this;
 	}
 	template<typename V>
-	V get() const {
+	typename std::enable_if<limit_to<T, Ts...>::template is_getable<V>, V>::type
+	get() const {
 		return s.template get<V>(k);
 	}
 	template<typename V>
