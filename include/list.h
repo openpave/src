@@ -125,7 +125,7 @@ protected:
 				return e;
 			} else
 				l = t, t = &((*t)->next);
-		};
+		}
 		return *t = e;
 	}
 	// Remove an element from the list (but don't delete it)

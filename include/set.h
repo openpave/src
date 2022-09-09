@@ -456,8 +456,8 @@ protected:
 			return;
 		for (i = l, j = r-1, k = 0; ;
 				p = (p==i?j++:(p==j?i--:p)), k++) {
-			while (++i < p && !(this->value[i] > this->value[p])) {};
-			while (p < --j && !(this->value[p] > this->value[j])) {};
+			while (++i < p && !(this->value[i] > this->value[p])) {}
+			while (p < --j && !(this->value[p] > this->value[j])) {}
 			if (i >= j)
 				break;
 			std::swap(this->value[i],this->value[j]);
@@ -1036,9 +1036,9 @@ protected:
 		for (i = l, j = r-1, k = 0; ;
 						p = (p==i?j++:(p==j?i--:p)), k++) {
 			while (++i < p && !(static_cast<K &>(this->value[i])
-					> static_cast<K &>(this->value[p]))) {};
+					> static_cast<K &>(this->value[p]))) {}
 			while (p < --j && !(static_cast<K &>(this->value[p])
-					> static_cast<K &>(this->value[j]))) {};
+					> static_cast<K &>(this->value[j]))) {}
 			if (i >= j)
 				break;
 			std::swap(this->value[i],this->value[j]);
@@ -1580,8 +1580,8 @@ protected:
 			return;
 		for (i = l, j = r-1, k = 0; ;
 				p = (p==i?j++:(p==j?i--:p)), k++) {
-			while (++i < p && !(this->key[i] > this->key[p])) {};
-			while (p < --j && !(this->key[p] > this->key[j])) {};
+			while (++i < p && !(this->key[i] > this->key[p])) {}
+			while (p < --j && !(this->key[p] > this->key[j])) {}
 			if (i >= j)
 				break;
 			std::swap(this->key[i],this->key[j]);
@@ -1658,8 +1658,8 @@ protected:
 			return;
 		for (i = l, j = r-1, k = 0; ;
 				p = (p==i?j++:(p==j?i--:p)), k++) {
-			while (++i < p && !(this->value[i] > this->value[p])) {};
-			while (p < --j && !(this->value[p] > this->value[j])) {};
+			while (++i < p && !(this->value[i] > this->value[p])) {}
+			while (p < --j && !(this->value[p] > this->value[j])) {}
 			if (i >= j)
 				break;
 			std::swap(this->key[i],this->key[j]);

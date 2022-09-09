@@ -112,7 +112,7 @@ public:
 		while (c != nullptr) {
 			c->mark = c;
 			c = c->next;
-		};
+		}
 	}
 	static slab_cache* create() {
 		void* p;

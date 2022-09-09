@@ -233,17 +233,17 @@ class vunctor {
 		template<typename U>
 		U get(const OP::type_index &) const {
 			throw std::runtime_error("Attempting to get invalid type from variant!");
-		};
+		}
 		void set(const OP::type_index &, const store &) {
 			throw std::runtime_error("Attempting to store invalid type in variant!");
-		};
+		}
 		void set(const OP::type_index &, store &&) {
 			throw std::runtime_error("Attempting to store invalid type in variant!");
-		};
+		}
 		void chain(const OP::type_index &, const store &) {
 			throw std::runtime_error("Attempting to chain invalid type in variant!");
-		};
-		void clear(const OP::type_index &) noexcept {};
+		}
+		void clear(const OP::type_index &) noexcept {}
 		// Set value from a different type of store
 		template<typename...Vs>
 		OP::type_index set_r(const OP::type_index &, const typename vunctor<Vs...>::store &) const {
@@ -302,11 +302,11 @@ class variant {
 		store & operator = (store &&) = delete;
 		void set(const OP::type_index &, const store &) {
 			throw std::runtime_error("Attempting to store invalid type in variant!");
-		};
+		}
 		void set(const OP::type_index &, store &&) {
 			throw std::runtime_error("Attempting to store invalid type in variant!");
-		};
-		void clear(const OP::type_index &) noexcept {};
+		}
+		void clear(const OP::type_index &) noexcept {}
 		// Set value from a different type of store
 		template<typename...Vs>
 		OP::type_index set_r(const OP::type_index &, const typename vunctor<Vs...>::store &) const {
@@ -334,7 +334,7 @@ class vunctor<T,Ts...> {
 
 		store()
 		  : f(), t() {
-		};
+		}
 		store(const store &) = delete;
 		store(store &&) = delete;
 		store & operator = (const store &) = delete;
@@ -751,7 +751,7 @@ class variant<T,Ts...> {
 		typedef std::function<T()> callback;
 
 		store() {
-		};
+		}
 		store(const store &) = delete;
 		store(store &&) = delete;
 		store & operator = (const store &) = delete;

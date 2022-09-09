@@ -1664,7 +1664,7 @@ quad8_vse(double r, double z, double a, double A = 0.0,
 			z*z*z*(((r*r+z*z-3*r*a*t)*t1
 					- 2*t*r*a*(a*a-3*a*t*r)) / pow(sqrt(a*a-2*r*a*t+r*r+z*z),3)
 				-t1/hypot(r,z)) / pow((1-t*t)*r*r+z*z,2));
-	};
+	}
 	// This is the adaptive recursive bit.  We only recurse if we
 	// can improve...
 	if (fabs(Q1+Q2-Q) > tol*fabs(Q1+Q2) && level <= LEVMAX) {
