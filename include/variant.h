@@ -350,25 +350,25 @@ class vunctor<T,Ts...> {
 		typedef std::function<T()> callback;
 
 		store()
-		  : f(), t() {
+		  : read{false}, written{false}, used{false}, f(), t() {
 		}
 		store(const store &) = delete;
 		store(store &&) = delete;
 		store & operator = (const store &) = delete;
 		store & operator = (store &&) = delete;
 		store(const OP::type_index & d, const store & v)
-		  : f(), t() {
+		  : read{false}, written{false}, used{false}, f(), t() {
 			set(d,v);
 		}
 		store(const OP::type_index & d, store && v)
-		  : f(), t() {
+		  : read{false}, written{false}, used{false}, f(), t() {
 			set(d,std::move(v));
 		}
 		// U templates are conditioned on the union type for this slot.
 		template<typename U>
 		store(U u, OP::type_index * d, typename std::enable_if<
 				compare_v<U,T>::setable>::type * = nullptr) noexcept
-		  : f(), t(u) {
+		  : read{false}, written{false}, used{false}, f(), t(u) {
 			*d = OP::type_index(OP::type_id<T>());
 		}
 		template<typename U>
@@ -385,6 +385,7 @@ class vunctor<T,Ts...> {
 		get(const OP::type_index & d) const {
 			if (d != OP::type_index(OP::type_id<T>()))
 				throw std::runtime_error("Attempting to get wrong type from variant!");
+			read = true;
 			return f ? f() : T(t);
 		}
 		template<typename U>
@@ -398,6 +399,7 @@ class vunctor<T,Ts...> {
 		set_t(const OP::type_index & d, const U & u) {
 			if (d != OP::type_index(OP::type_id<T>()))
 				throw std::runtime_error("Attempting to set wrong type to variant!");
+			written = true;
 			t.set(u);
 			f = nullptr;
 		}
@@ -412,6 +414,7 @@ class vunctor<T,Ts...> {
 		set_f(const OP::type_index & d, std::function<U()> && u) {
 			if (d != OP::type_index(OP::type_id<T>()))
 				throw std::runtime_error("Attempting to set wrong type of function to variant!");
+			written = true;
 			f = std::move(u);
 		}
 		template<typename U>
@@ -422,6 +425,7 @@ class vunctor<T,Ts...> {
 		// Set directly based on another store
 		void set(const OP::type_index & d, const store & v) {
 			if (d == OP::type_index(OP::type_id<T>())) {
+				written = true;
 				t.set(v.get<T>(d));
 				f = nullptr;
 			} else
@@ -429,6 +433,7 @@ class vunctor<T,Ts...> {
 		}
 		void set(const OP::type_index & d, store && v) {
 			if (d == OP::type_index(OP::type_id<T>())) {
+				written = true;
 				t.move(std::move(T(v.t)));
 				f = std::move(v.f);
 			} else
@@ -437,6 +442,7 @@ class vunctor<T,Ts...> {
 		// Chain our value to that of another variant
 		void chain(const OP::type_index & d, const store & v) {
 			if (d == OP::type_index(OP::type_id<T>())) {
+				written = true;
 				f = [&,d]() -> T { return v.get<T>(d); };
 			} else
 				b.chain(d,v.b);
@@ -468,6 +474,11 @@ class vunctor<T,Ts...> {
 #pragma warning(disable: 4201)
 #endif
 		struct {
+			// By C++ rules these three bools will be the same actual
+			// variables in all of the members of this union.
+			mutable bool read    : 1;
+			mutable bool written : 1;
+			mutable bool used    : 1;
 			callback f;
 			wrap_type<T> t;
 		};
@@ -565,28 +576,38 @@ public:
 	template<typename V>
 	typename std::enable_if<limit_to<T,Ts...>::template is_setable<V>,vunctor&>::type
 	operator = (const V & v) {
+		if (s.used)
+			throw std::runtime_error("Trying to write to a variable that's already been used!");
 		copy_c(v);
 		return *this;
 	}
 	template<typename V>
 	typename std::enable_if<is_callable<V>::value,vunctor&>::type
 	operator = (const V & v) {
+		if (s.used)
+			throw std::runtime_error("Trying to write to a variable that's already been used!");
 		copy_c(v);
 		return *this;
 	}
 	template<typename V>
 	typename std::enable_if<limit_to<T,Ts...>::template is_setable<V>,vunctor&>::type
 	operator = (V && v) {
+		if (s.used)
+			throw std::runtime_error("Trying to write to a variable that's already been used!");
 		copy_v(std::forward<V>(v));
 		return *this;
 	}
 	template<typename V>
 	typename std::enable_if<is_callable<V>::value, vunctor &>::type
 	operator = (V && v) {
+		if (s.used)
+			throw std::runtime_error("Trying to write to a variable that's already been used!");
 		copy_v(std::forward<V>(v));
 		return *this;
 	}
 	vunctor & chain(const vunctor & v) {
+		if (s.used)
+			throw std::runtime_error("Trying to write to a variable that's already been used!");
 		if (k != v.k)
 			throw std::runtime_error("Trying to chain incorrect type with variant!");
 		s.chain(k,v.s);
@@ -614,6 +635,23 @@ public:
 	// Get the actual type index for this variant.
 	const OP::type_index & get_type() const noexcept {
 		return k;
+	}
+	// Reset the variable debug markings before a phase begins
+	void mark_reset() const noexcept {
+		s.read = s.written = s.used = false;
+	}
+	// Unmark self reads before moving them to read
+	void unmark_self_reads() const noexcept {
+		s.read = false;
+	}
+	// Move read markings to used after each model phase
+	void mark_read_as_used() const {
+		if (s.written && (s.used || s.read))
+			throw std::runtime_error("A variable was read after being written!");
+		if (s.read) {
+			s.used = true;
+			s.read = false;
+		}
 	}
 };
 
