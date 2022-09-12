@@ -56,7 +56,7 @@
 #include "mathplus.h"
 #include "rng.h"
 #include "statistics.h"
-#include "tree.h"
+#include "set.h"
 
 namespace OP {
 
@@ -69,36 +69,46 @@ enum class distribution {
 };
 
 // forward declare
+template<typename K>
 struct realization;
 struct random;
-struct house;
+template<typename K>
+struct randomvar;
+template<typename K>
+class house;
 
 /*
  * struct realized - a store for a realization of a random variable.
  */
+template<typename K>
 class realized
 {
-	friend struct realization;
-	friend struct random;
-	friend struct house;
+	friend struct realization<K>;
+	friend struct randomvar<K>;
+	friend class house<K>;
 
 	realized(const realized &) = delete;
 	realized(realized &&) = delete;
 	realized & operator = (const realized &) = delete;
 	realized & operator = (realized &&) = delete;
-	realized(house & h, const random & r, float d);
+	realized(house<K> &, const random &, float );
 	~realized();
-	void roll() noexcept;
+	// Get a new random number. XXX need covariance matrix.
+	void rolldice() noexcept;
 
-	house * dealer;
+	unsigned trial;
+	K sortkey;
+	house<K> * dealer;
 	const random * rv;
 	float v;
-	unsigned ref_cnt = 0;
+	unsigned ref_cnt{0};
+	bool rolled{false};
 };
 
 /*
  * struct realization - a handle to a realization of a random variable.
  */
+template<typename K>
 struct realization
 {
 	// Magic typedef for the variant class to know that we are a chameleon
@@ -113,10 +123,10 @@ struct realization
 		me->ref_cnt++;
 	}
 	realization(realization && r) noexcept
-	  : me(std::move(r.me)) {
+	  : me(r.me) {
 		r.me = nullptr;
 	}
-	explicit realization(realized * r) noexcept
+	explicit realization(realized<K> * r) noexcept
 	  : me(r) {
 		me->ref_cnt++;
 	}
@@ -144,50 +154,72 @@ struct realization
 	void overwrite(float f) noexcept {
 		me->v = f;
 	}
+	void set_house_sortkey(const unsigned t, const K & k) noexcept {
+		me->trial = t;
+		me->sortkey = k;
+	}
+	bool operator == (const realization & a) noexcept {
+		return me->trial == a.me->trial && me->sortkey == a.me->sortkey;
+	}
+	bool operator != (const realization & a) noexcept {
+		return me->trial != a.me->trial || me->sortkey != a.me->sortkey;
+	}
+	bool operator < (const realization & a) noexcept {
+		return me->trial < a.me->trial
+			|| (me->trial == a.me->trial && me->sortkey < a.me->sortkey);
+	}
+	bool operator > (const realization & a) noexcept {
+		return me->trial > a.me->trial
+			|| (me->trial == a.me->trial && me->sortkey > a.me->sortkey);
+	}
 
 private:
-	realized * me;
+	friend class house<K>;
+
+	realized<K> * me;
 };
 
 /*
- * struct house - A centralized store for random variables.
+ * class house - A centralized store for random variables.
  *
  * In any particular Monte Carlo simulation must have only one house.  All
  * created random variables and realizations store a reference to the house
  * and use that reference to ensure they are tracked.
  */
-struct house
+template<typename K>
+class house
 {
+public:
 	house() noexcept
-	  : store(), vars(), dice() {
+	  : store(), dice() {
 	}
-	~house();
-	random * make_rv(const random & r);
-	random * make_rv(distribution d, float m, float s);
+	~house() = default;
+	randomvar<K> make_rv(const random & r);
+	randomvar<K> make_rv(distribution d, float m, float s);
 	template<typename T>
-	random * make_rv(float m, float s);
-	void rolldice();
+	randomvar<K> make_rv(float m, float s);
+	float rnd_stdnormal() noexcept {
+		return static_cast<float>(dice.stdnormal());
+	}
+	void rolldice() noexcept;
 
 private:
-	friend class realized;
-	friend struct random;
+	friend class realized<K>;
+	friend struct randomvar<K>;
 
-	void add_realization(realized * r) {
-		store.add(r);
+	void add_realization(realized<K> * r) {
+		store.add(realization<K>(r));
 	}
-	void rem_realization(realized * r) {
-		store.remove(r);
-	}
-	void add_variable(random * r) {
-		vars.add(r);
-	}
-	void rem_variable(random * r) {
-		vars.remove(r);
+	void rem_realization(realized<K> * r) {
+		for (unsigned i = 0; i < store.length(); i++) {
+			if (store[i].me == r)
+				return store.remove(i);
+		}
+		throw std::runtime_error("Trying to remove unknown realization!");
 	}
 
-	ktree_avl<realized *> store;
-	ktree_avl<random *> vars;
-	rng dice;
+	oset<realization<K>> store;       // All the realized variables
+	rng dice;                         // This is the source of randomness
 };
 
 /*
@@ -199,101 +231,139 @@ private:
  */
 struct random
 {
-	// Magic typedef for the variant class to know that we are a chameleon
-	// that has a different realized type to the abstract variable.
-	using real_t = realization;
-
-	random() = delete;
-	random(const random &) = delete;
 	random(random &&) = delete;
 	random & operator = (const random &) = delete;
 	random & operator = (random &&) = delete;
-	virtual ~random() {
-		try {
-			if (dealer != nullptr)
-				dealer->rem_variable(this);
-		} catch (...) {}
-	}
+	virtual ~random() = default;
 	// Distribution type.
 	virtual distribution type() const = 0;
 	// Mean value.
 	virtual float mean() const noexcept = 0;
 	// Standard Deviation.
 	virtual float stddev() const noexcept = 0;
-	// Get the expected value for use in variants
-	realization realize() const {
-		realized * r = new realized(*dealer,*this,mean());
-		return realization(r);
-	}
 	// Get a new random number. XXX need covariance matrix.
-	virtual float roll() const noexcept = 0;
-	house * get_random() const noexcept {
-		return dealer;
-	}
-	void set_random(house * h) {
-		if (dealer != nullptr)
-			dealer->rem_variable(this);
-		dealer = h;
-		if (dealer != nullptr)
-			dealer->add_variable(this);
-	}
+	virtual float scale_stdnormal(float z) const noexcept = 0;
 	// defined in statistics.cpp
-	static random * make_rv(distribution d, float m, float s, house * h);
-	static random * make_rv(const random & r, house * h);
+	static random * make_rv(distribution d, float m, float s);
+	static random * make_rv(const random & r);
 
 protected:
-	house * dealer;                     // The house - can be null.
-	float d[RV_DIST_PARAM];             // Four distribution parameters.
-
 	// Create a random variable.
-	random(house * h)
-	  : dealer(h) {
+	random() noexcept {
 		for (size_t i = 0; i < RV_DIST_PARAM; i++)
 			d[i] = NAN;
-		if (dealer != nullptr)
-			dealer->add_variable(this);
 	}
 	// copy a random variable.
-	random(const random & r, house * h)
-	  : dealer(h == nullptr ? r.dealer : h) {
+	random(const random & r) noexcept {
 		for (size_t i = 0; i < RV_DIST_PARAM; i++)
 			d[i] = r.d[i];
-		if (dealer != nullptr)
-			dealer->add_variable(this);
 	}
 	// Get distribution parameter i
-	float param(size_t i) {
+	float param(const size_t i) const {
 		if (i > (RV_DIST_PARAM-1))
 			throw std::runtime_error("Invalid distribution parameter");
 		return d[i];
 	}
 	// Set distribution parameter i.
-	float param(size_t i, float dp) {
+	float param(const size_t i, float dp) {
 		if (i > (RV_DIST_PARAM-1))
 			throw std::runtime_error("Invalid distribution parameter");
 		return d[i] = dp;
 	}
-	double stdnormal() const noexcept {
-		return dealer->dice.stdnormal();
+
+	float d[RV_DIST_PARAM];             // Four distribution parameters.
+
+private:
+	template<typename K>
+	friend struct randomvar;
+
+	volatile unsigned ref_cnt{0};       // for randomvar
+};
+
+/*
+ * struct randomvar - A useable random variable.
+ *
+ * This is just a class holding two pointers: one to a random variable,
+ * and another to a house.  This allows it to be used to realize instances
+ * of the random variable.  The random variable is owned by this class.
+ */
+template<typename K>
+struct randomvar
+{
+	// Magic typedef for the variant class to know that we are a chameleon
+	// that has a different realized type to the abstract variable.
+	using real_t = realization<K>;
+
+	// Create a random variable.
+	randomvar() = delete;
+	randomvar(const randomvar & r) noexcept
+		: dealer(r.dealer), rv(r.rv) {
+		rv->ref_cnt++;
 	}
+	randomvar(randomvar && r) noexcept
+		: dealer(r.dealer), rv(r.rv) {
+		r.rv = nullptr;
+	}
+	randomvar(house<K> * h, random * r)
+		: dealer(h), rv(r) {
+		if (rv == nullptr)
+			throw std::runtime_error("Cannot set a null random variable!");
+		rv->ref_cnt++;
+	}
+	randomvar & operator = (const randomvar & r) noexcept {
+		if (rv && --rv->ref_cnt == 0)
+			delete rv;
+		rv = r.rv;
+		rv->ref_cnt++;
+		return *this;
+	}
+	randomvar & operator = (randomvar && r) noexcept {
+		std::swap(dealer, r.dealer);
+		std::swap(rv, r.rv);
+		return *this;
+	}
+	~randomvar() {
+		if (rv && --rv->ref_cnt == 0)
+			delete rv;
+	}
+	realization<K> realize() const {
+		realized<K> * r = new realized<K>(*dealer, *rv, rv->mean());
+		return realization<K>(r);
+	}
+	house<K> * get_random() const noexcept {
+		return dealer;
+	}
+	const random & get_rv() const noexcept {
+		return *rv;
+	}
+
+private:
+	house<K> * dealer;
+	random * rv;
 };
 
 template<distribution D>
-struct random_var : public random
+struct rv_base
+  : public random
 {
 	static constexpr const distribution distribution_t = D;
 
 	distribution type() const noexcept final {
 		return D;
 	}
+
 protected:
-	using random::random;
+	rv_base() = default;
+	rv_base(const random & r) noexcept
+	  : random(r) {
+	}
 };
 
-struct rv_normal : public random_var<distribution::normal>
+struct rv_normal
+  : public rv_base<distribution::normal>
 {
-	rv_normal(float m, float s, house * h)
-	  : random_var(h) {
+	rv_normal(float m, float s)
+	  : rv_base() {
 		param(0,m);
 		param(1,s);
 	}
@@ -303,22 +373,23 @@ struct rv_normal : public random_var<distribution::normal>
 	float stddev() const noexcept final {
 		return d[1];
 	}
-	float roll() const noexcept final {
-		return static_cast<float>(d[0]+d[1]*stdnormal());
+	float scale_stdnormal(float z) const noexcept final {
+		return static_cast<float>(d[0]+d[1]*z);
 	}
 
 protected:
 	friend struct random;
 
-	rv_normal(const random & r, house * h) noexcept
-	  : random_var(r,h) {
+	rv_normal(const random & r) noexcept
+	  : rv_base(r) {
 	}
 };
 
-struct rv_lognormal : public random_var<distribution::lognormal>
+struct rv_lognormal
+  : public rv_base<distribution::lognormal>
 {
-	rv_lognormal(float m, float s, house * h)
-	  : random_var(h) {
+	rv_lognormal(float m, float s)
+	  : rv_base() {
 		param(1, std::isinf(m) ? NAN :
 			std::isnan(m) || std::isnan(s) || m <= 0 || s < 0 ? NAN :
 			sqrt(log(1 + s*s / m / m)));
@@ -334,32 +405,34 @@ struct rv_lognormal : public random_var<distribution::lognormal>
 		return std::isinf(d[0]) || std::isnan(d[0]) ? NAN :
 			std::isnan(d[1]) ? NAN : mean()*sqrt(exp(d[1]*d[1])-1);
 	}
-	float roll() const noexcept final {
+	float scale_stdnormal(float z) const noexcept final {
 		return std::isinf(d[0]) ? INFINITY :
 			std::isnan(d[0]) || std::isnan(d[1]) ? NAN :
-			static_cast<float>(exp(d[0] + d[1] * stdnormal()));
+			static_cast<float>(exp(d[0] + d[1] * z));
 	}
 
 protected:
 	friend struct random;
 
-	rv_lognormal(const random & r, house * h) noexcept
-	  : random_var(r,h) {
+	rv_lognormal(const random & r) noexcept
+	  : rv_base(r) {
 	}
 };
 
 // Out-of-line constructor to add ourselves to the house.
+template<typename K>
 inline
-realized::realized(house & h, const random & r, float d)
-  : dealer(&h), rv(&r), v(d)
+realized<K>::realized(house<K> & h, const random & r, float d)
+  : trial(UINT_MAX), sortkey(), dealer(&h), rv(&r), v(d)
 {
 	if (dealer != nullptr)
 		dealer->add_realization(this);
 }
 
 // Out-of-line constructor to add ourselves to the house.
+template<typename K>
 inline
-realized::~realized()
+realized<K>::~realized()
 {
 	try {
 		if (dealer != nullptr)
@@ -367,45 +440,46 @@ realized::~realized()
 	} catch (...) {}
 }
 
+template<typename K>
 inline void
-realized::roll() noexcept
+realized<K>::rolldice() noexcept
 {
-	v = rv->roll();
+	if (!rolled)
+		v = rv->scale_stdnormal(dealer->rnd_stdnormal());
+	rolled = true;
 }
 
-// Out-line-destructor to call ~random().
-inline
-house::~house()
-{
-	//assert(vars.length() == 0);
-}
-
+template<typename K>
 inline void
-house::rolldice()
+house<K>::rolldice() noexcept
 {
+	store.sort();
 	for (unsigned i = 0; i < store.length(); i++) {
-		store[i]->roll();
+		store[i].me->rolldice();
 	}
 }
 
 // Let the house make random variables too..
-inline random *
-house::make_rv(const random & r)
+template<typename K>
+inline randomvar<K>
+house<K>::make_rv(const random & r)
 {
-	return random::make_rv(r,this);
+	return randomvar<K>(this,random::make_rv(r));
 }
 
-inline random *
-house::make_rv(distribution d, float m, float s)
+template<typename K>
+inline randomvar<K>
+house<K>::make_rv(distribution d, float m, float s)
 {
-	return random::make_rv(d,m,s,this);
+	return randomvar<K>(this,random::make_rv(d,m,s));
 }
 
+template<typename K>
 template<typename T>
-inline random *
-house::make_rv(float m, float s)
+inline randomvar<K>
+house<K>::make_rv(float m, float s)
 {
-	return random::make_rv(T::distribution_t,m,s,this);
+	return randomvar<K>(this,random::make_rv(T::distribution_t,m,s));
 }
 
 #undef RV_DIST_PARAM

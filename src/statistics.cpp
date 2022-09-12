@@ -239,26 +239,26 @@ stdnormal_inv(double p) noexcept
 
 // Creates a new random variable of the type specified.
 random *
-random::make_rv(distribution d, float m, float s, house * h)
+random::make_rv(distribution d, float m, float s)
 {
 	switch (d) {
 	case distribution::normal:
-		return new rv_normal(m,s,h);
+		return new rv_normal(m,s);
 	case distribution::lognormal:
-		return new rv_lognormal(m,s,h);
+		return new rv_lognormal(m,s);
 	default:
 		throw std::runtime_error("Trying to create an unknown rv type!");
 	}
 }
 
 random *
-random::make_rv(const random & r, house * h)
+random::make_rv(const random & r)
 {
 	switch (r.type()) {
 	case distribution::normal:
-		return new rv_normal(r,h);
+		return new rv_normal(r);
 	case distribution::lognormal:
-		return new rv_lognormal(r,h);
+		return new rv_lognormal(r);
 	default:
 		throw std::runtime_error("Trying to create an unknown rv type!");
 	}
