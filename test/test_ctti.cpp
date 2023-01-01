@@ -34,7 +34,7 @@
 
 using namespace OP;
 
-void
+static void
 test1()
 {
 	printf("Test 1:\n");
@@ -43,7 +43,7 @@ test1()
 	printf("test: %s\n",static_cast<const char *>(v1));
 }
 
-void
+static void
 test2()
 {
 	printf("Test 2:\n");

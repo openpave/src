@@ -37,7 +37,7 @@ using namespace OP;
 double f1() { return 0.4; };
 int f2() { return 5; };
 
-void
+static void
 test1()
 {
 	printf("Test 1:\n");
@@ -55,7 +55,7 @@ test1()
 	printf("v1:%f, v2: %i\n",double(v1),int(v2));
 }
 
-void
+static void
 test2()
 {
 	printf("Test 2:\n");
@@ -84,7 +84,7 @@ test2()
 double t1(const double & d) { return d == 0.3; };
 int t2(const int & i) { return i == 2; };
 
-void
+static void
 test3()
 {
 	printf("Test 3:\n");

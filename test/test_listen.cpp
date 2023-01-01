@@ -66,7 +66,7 @@ public:
 	}
 };
 
-void
+static void
 test1()
 {
 	printf("Test 1:\n");
@@ -77,7 +77,7 @@ test1()
 	dispatcher.event();
 }
 
-void
+static void
 test2()
 {
 	printf("Test 2:\n");
