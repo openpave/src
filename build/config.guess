@@ -507,7 +507,7 @@ EOF
 		sed 's/^		//' << EOF >$dummy.c
 		#include <sys/systemcfg.h>
 
-		main()
+		int main()
 			{
 			if (!__power_pc())
 				exit(1);

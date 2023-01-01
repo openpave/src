@@ -197,7 +197,7 @@ case "$host" in
     if test -z "$CC"; then
         AC_CHECK_PROGS(ICC, icl.exe)
         if test -n "$ICC"; then
-            echo 'main() { return 0; }' > dummy.c
+            echo 'int main() { return 0; }' > dummy.c
             ${ICC} /Fedummy.exe dummy.c >/dev/null 2>&1
             if test $? = 0; then
                 CC="$ICC"
@@ -212,7 +212,7 @@ case "$host" in
     if test -z "$CC"; then
         AC_CHECK_PROGS(MSVC, cl.exe)
         if test -n "$MSVC"; then
-            echo 'main() { return 0; }' > dummy.c
+            echo 'int main() { return 0; }' > dummy.c
             ${MSVC} /Fedummy.exe dummy.c >/dev/null 2>&1
             if test $? = 0; then
                 CC="$MSVC"

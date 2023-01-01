@@ -899,7 +899,7 @@ test -n "$ICC" && break
 done
 
         if test -n "$ICC"; then
-            echo 'main() { return 0; }' > dummy.c
+            echo 'int main() { return 0; }' > dummy.c
             ${ICC} /Fedummy.exe dummy.c >/dev/null 2>&1
             if test $? = 0; then
                 CC="$ICC"
@@ -947,7 +947,7 @@ test -n "$MSVC" && break
 done
 
         if test -n "$MSVC"; then
-            echo 'main() { return 0; }' > dummy.c
+            echo 'int main() { return 0; }' > dummy.c
             ${MSVC} /Fedummy.exe dummy.c >/dev/null 2>&1
             if test $? = 0; then
                 CC="$MSVC"
