@@ -244,6 +244,8 @@ LEsystem::removeload(unsigned g, unsigned i)
 	if (!lg[g].inbounds(i))
 		throw std::out_of_range("Load out of range!");
 	lg[g].remove(i);
+	if (lg[g].length() == 0)
+		lg.remove(g);
 }
 
 void
