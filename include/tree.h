@@ -287,6 +287,10 @@ public:
 			throw std::out_of_range("unordered index out of bounds!");
 		return value[p];
 	}
+	V & getatposition_noexcept(unsigned p) const noexcept {
+		assert(inbounds(p));
+		return value[p];
+	}
 	// Do a key lookup, and return UINT_MAX if the key is not found.
 	unsigned getposition(const K & k) const noexcept {
 		unsigned x = root;
@@ -303,6 +307,9 @@ public:
 	}
 	V & get(const K & k) const {
 		return getatposition(getposition(k));
+	}
+	V & get_noexcept(const K & k) const noexcept {
+		return getatposition_noexcept(getposition(k));
 	}
 	// Allow sorted access by returning the in-order position in the tree.
 	V & getatorder(unsigned i) const {
