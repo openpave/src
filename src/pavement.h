@@ -516,6 +516,9 @@ public:
 			return 0;
 		return points.length();
 	}
+	unsigned resultpoint(const point3d & p, unsigned l = UINT_MAX) const noexcept {
+		return points.haskey(pavepoint(p,l));
+	}
 	const pavedata & result(const point3d & p, unsigned l = UINT_MAX) const {
 		return result(clg,p,l);
 	}
@@ -524,9 +527,10 @@ public:
 	}
 	const pavedata & result(const unsigned g, const point3d & p,
 		unsigned l = UINT_MAX) const {
-		if (cache_state < cachestate::all)
-			throw std::runtime_error("No results available!");
-		return result(g,points.haskey(pavepoint(p,l)));
+		const unsigned i = resultpoint(p,l);
+		if (i == UINT_MAX)
+			throw std::runtime_error("Invalid result point!");
+		return result(g,i);
 	}
 	const pavedata & result(const unsigned g, const unsigned i) const {
 		if (cache_state < cachestate::all)
