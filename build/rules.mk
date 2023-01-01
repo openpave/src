@@ -278,7 +278,7 @@ ifdef WIN32
 	@sh $(topsrcdir)/build/cygwin-wrapper -quiet \
 	    $(CXX) -EP -showIncludes $(OS_CXXFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<) 2>&1 > $@.i \
 	        | grep "including" | grep -v ";" \
-	        | sed -e's/^.*file:[ ]*//g' -e's/^/\"/g' -e's/$$/\"/g' -e's#^[.][.]#$(PWD)/#g' \
+	        | sed -e's/^.*file:[ ]*//g' -e's/^/\"/g' -e's/$$/\"/g' -e's#^[.][.]#$(PWD)/#g' -e's/\r//g' \
 	        | xargs cygpath -a -s -m | xargs cygpath -u | sed -e 's/^/\t/g' -e 's/$$/ \\/g' >> $@.d
 	@sh $(topsrcdir)/build/cygwin-wrapper \
 	    $(CXX) -Fo$@ -c $(OS_CXXFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<)
@@ -292,7 +292,7 @@ ifdef WIN32
 	@sh $(topsrcdir)/build/cygwin-wrapper -quiet \
 	    $(CC) -EP -showIncludes $(OS_CFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<) 2>&1 > $@.i \
 	        | grep "including" | grep -v ";" \
-	        | sed -e's/^.*file:[ ]*//g' -e's/^/\"/g' -e's/$$/\"/g' -e's#^[.][.]#$(PWD)/#g' \
+	        | sed -e's/^.*file:[ ]*//g' -e's/^/\"/g' -e's/$$/\"/g' -e's#^[.][.]#$(PWD)/#g' -e's/\r//g' \
 	        | xargs cygpath -a -s -m | xargs cygpath -u | sed -e 's/^/\t/g' -e 's/$$/ \\/g' >> $@.d
 	@sh $(topsrcdir)/build/cygwin-wrapper \
 	    $(CC) -Fo$@ -c $(OS_CFLAGS) $(DEFINES) $(INCLUDES) $(call abspath,$<)
