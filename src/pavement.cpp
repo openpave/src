@@ -160,21 +160,24 @@ LElayer::thickness(double th) noexcept
 double
 LElayer::emod(double te) noexcept
 {
-	owner->cached_state(LEsystem::cachestate::emod);
+	if (te != E)
+		owner->cached_state(LEsystem::cachestate::emod);
 	return E = te;
 }
 
 double
 LElayer::poissons(double tv) noexcept
 {
-	owner->cached_state(LEsystem::cachestate::emod);
+	if (tv != v)
+		owner->cached_state(LEsystem::cachestate::emod);
 	return v = tv;
 }
 
 double
 LElayer::slip(double ts) noexcept
 {
-	owner->cached_state(LEsystem::cachestate::emod);
+	if (ts != s)
+		owner->cached_state(LEsystem::cachestate::emod);
 	return s = ts;
 }
 
