@@ -13429,30 +13429,41 @@ const double data[LINES][DEFLS+4] = {
 
 redo:
 	Bowl.removelayers();
+	while (Bowl.groups() > 0)
+		Bowl.removeloads(0);
+	Bowl.removedeflections();
 
 	Bowl.addlayer(data[line][DEFLS+0],0.0,0.40);
 	Bowl.addlayer(data[line][DEFLS+1],0.0,0.35);
-	//Bowl.addlayer(data[line][DEFLS+2],0.0,0.35);
+	Bowl.addlayer(data[line][DEFLS+2],0.0,0.35);
 	Bowl.addlayer(                0.0,0.0,0.35);
 
-	Bowl.removeloads();
-	Bowl.addload(point2d(0.0,  0.0),0.0,data[line][DEFLS+3],150.0);
-
-	Bowl.removedeflections();
-	for (i = 0; i < DEFLS; i++)
-		Bowl.adddefl(p[i],data[line][i]);
+	unsigned g = 0;
+	while (true) {
+		Bowl.addload(g,point2d(0.0,0.0),0.0,data[line][DEFLS+3],150.0);
+		for (i = 0; i < DEFLS; i++)
+			Bowl.adddefl(g,p[i],data[line][i]);
+		if (line + 1 >= LINES
+				|| data[line][DEFLS+0]!=data[line+1][DEFLS+0]
+				|| data[line][DEFLS+1]!=data[line+1][DEFLS+1])
+			break;
+		line++, g++;
+	}
 
 	bool rv = Bowl.backcalc();
 	printf("Line %2i %s",line+1,rv ? "DONE!   " : "FAILED! ");
 	for (i = 0; i < Bowl.layers(); i++)
 		printf(" %7.1f",Bowl.layer(i).emod()/1000);
-	for (i = 0, err = 0.0; i < DEFLS; i++) {
+	printf("\n");
+	for (i = 0, err = 0.0; i < Bowl.deflections(); i++) {
 		const defldata & d = Bowl.getdefl(i);
-		printf(" %6.1f",d.calculated*1000);
+		printf(" %6.1f",(d.measured-d.calculated)*1000);
 		err += pow(d.measured-d.calculated,2);
+		if ((i+1) % DEFLS == 0)
+			printf("\n");
 	}
-	err = sqrt(err/(DEFLS));
-	printf(" %5.1f\n",err*1000);
+	err = sqrt(err/(Bowl.deflections()));
+	printf("err = %5.1f\n",err*1000);
 	while (++line < LINES)
 		goto redo;
 	return 0;
