@@ -1772,6 +1772,19 @@ LEsystem::calc_fastnum()
 }
 
 /*
+ * Simple function to compute the distance between two points
+ */
+static inline double
+step_len(unsigned nl, const double * O, const double * P) noexcept
+{
+	double step = 0.0;
+
+	for (unsigned i = 0; i < nl; i++)
+		step += (O[i]-P[i])*(O[i]-P[i]);
+	return sqrt(step);
+}
+
+/*
  * The overall backcalculation routine.
  */
 bool
@@ -1781,7 +1794,7 @@ LEbackcalc::backcalc()
 	const unsigned nl = layers();
 	unsigned steps = 0;
 	//double derr = DBL_MAX, oerr = 0.0;
-	double astep, tstep = 0.0, step = 1.0;
+	double ostep, astep, tstep = 0.0, step = 1.0;
 	bool seeded = true;
 	//bool badstep = false;
 	const calctype speed = (precision >= 1e-4 ? fast : slow);
@@ -1844,19 +1857,17 @@ LEbackcalc::backcalc()
 		astep = step, tstep += step = deflgrad(nl,P,Q,speed);
 		//printf("E%s ",speed == fast ? "*" : speed == slow ? "!" : "@");
 		//printf("step = %10.8f ",step);
-		if (astep < 0.1 && step > astep) {
+		if (astep < 0.1 && step > astep && step >= tolerance) {
 			//printf(" Bailing...\n");
 			memcpy(P,T,sizeof(double)*nl);
 			break;
 		}
-		//for (i = 0, astep = 0.0; i < nl; i++)
-		//	astep += (O[i]-P[i])*(O[i]-P[i]);
-		//astep = sqrt(astep);
-		//printf("tstep = %10.8f (%10.8f) (%6.4f) %d\n",tstep,astep,tstep/astep,ns);
+		ostep = step_len(nl,O,P);
+		//printf("tstep = %10.8f (%10.8f) (%6.4f) (%10.8f) (%6.4f) %u\n",tstep,astep,tstep/astep,ostep,tstep/ostep,steps);
 		//for (i = 0; i < nl; i++)
 		//	printf(" %8.5g",P[i]);
 		//printf("\n");
-		if (step < tolerance)
+		if (step < 1e2*tolerance || tstep/step > 60.0 || tstep/ostep > 6.0)
 			break;
 		//if (tstep/astep > 3.0 && P[0] > P[1] && !badstep) {
 		//	// We're wandering around...  This normally happens if the
@@ -1916,10 +1927,13 @@ LEbackcalc::backcalc()
 			break;
 	}
 	// If we still haven't converged, resort to brute force...
-	//if (step > tolerance) {
+	//if (step >= tolerance) {
 	//	step = conjgrad(nl,P);
-	//	printf("G! ");
-	//	printf("step = %g\n",step);
+	//	//printf("G! ");
+	//	//for (i = 0; i < nl; i++)
+	//	//	printf(" %8.5g", P[i]);
+	//	//printf("\n");
+	//	//printf("step = %g\n",step);
 	//}
 	// Now put the modulli back and calculate the final deflections.
 	for (i = 0; i < nl; i++)
