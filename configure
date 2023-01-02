@@ -1944,7 +1944,7 @@ test -n "$RC" || RC=":"
         ASM_SUFFIX=asm
         OBJ_SUFFIX=obj
         LIB_SUFFIX=lib
-        CPPFLAGS="$CPPFLAGS -W3 -GF -Gy -GR- -EHsc"
+        CPPFLAGS="$CPPFLAGS -W3 -GF -Gy -GR- -EHsc -std:c++20"
         if test "$_CC_MAJOR_VERSION" = "18" -o "$_CC_MAJOR_VERSION" = "19"; then
 			_OPTIMIZE_FLAGS="-Ox -Ob2 -Oi -Ot -fp:fast -GS-"
 		else
