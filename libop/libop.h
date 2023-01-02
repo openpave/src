@@ -169,6 +169,30 @@ OP_LE_GroupResults(const long token, const unsigned g, double (* res)[27]) noexc
 int OP_EXPORT
 OP_LE_Reset(const long token) noexcept;
 
+int OP_EXPORT
+OP_LE_BackCalc(
+	const double p,                 // Precision (typically 1e-4 mm)
+	const double n,                 // Noise (typically 5e-4 mm)
+	const double t,                 // Tolerance (typically < 1e-12)
+	const unsigned m,               // Maximum iterations (typically 12)
+	const unsigned nl,              // Number of layers
+	const double * h,               // Layer thickness (0 for semi-inf)
+	double * E,                     // Elastic modulus
+	const double * v,               // Poisson's ratio
+	const double * f,               // Friction (0.0 to 1.0)
+	const unsigned na,              // Number of loads
+	const double * ax,              // Center X location
+	const double * ay,              // Center Y location
+	const double * al,              // Load (0 for auto)
+	const double * ap,              // Pressure (0 for auto)
+	const double * ar,              // Radius (0 for auto)
+	const unsigned np,              // Number of evaluation points
+	const unsigned nd,              // Number of drops
+	const double * px,              // Point X
+	const double * py,              // Point Y
+	const double * dz               // Deflections
+) noexcept;
+
 long OP_EXPORT
 OP_HT_Init(const unsigned nl, const double * h, const double * D,
 	       const unsigned nn, const double * nd, const double * nt,

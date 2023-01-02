@@ -669,6 +669,56 @@ OP_LE_Reset(const long token) noexcept
 	return false;
 }
 
+int OP_EXPORT
+OP_LE_BackCalc(
+	const double p, const double n, const double t,
+	const unsigned m, const unsigned nl, const double * h,
+	double * E, const double * v, const double * f,
+	const unsigned na, const double * ax, const double * ay,
+	const double * al, const double * ap, const double * ar,
+	const unsigned np, const unsigned nd, const double * px,
+	const double * py, const double * dz) noexcept
+{
+	LEbackcalc pave;
+	unsigned i;
+	bool rv = false;
+
+	if (nd > 1 && na > 1) {
+		event_msg(EVENT_ERROR, "Can only have one load location with multiple drops!");
+		return true;
+	}
+	pave.setup(p,n,t,m);
+	try {
+		for (i = 0; i < nl; i++)
+			pave.addlayer(h[i],E[i],v[i],f[i]);
+		if (nd > 1) {
+			for (unsigned g = 0; g < nd; g++) {
+				if (al[0] == 0.0)
+					pave.addload(g,point2d(ax[0],ay[0]),al[0],ap[g],ar[0]);
+				else
+					pave.addload(g,point2d(ax[0],ay[0]),al[g],ap[0],ar[0]);
+				for (i = 0; i < np; i++)
+					pave.adddefl(g,point3d(px[i],py[i],0),dz[g*np+i]);
+			}
+		} else {
+			for (i = 0; i < na; i++)
+				pave.addload(point2d(ax[i],ay[i]),al[i],ap[i],ar[i]);
+			for (i = 0; i < np; i++)
+				pave.adddefl(point3d(px[i],py[i],0),dz[i]);
+		}
+		rv = pave.backcalc();
+		for (i = 0; i < pave.layers(); i++)
+			E[i] = pave.layer(i).emod();
+	} catch (const std::exception & e) {
+		event_msg(EVENT_ERROR,e.what());
+		rv = true;
+	}
+#if defined(_MSC_VER) || defined(__MINGW32__)
+	_clearfp();
+#endif
+	return rv;
+}
+
 ktree_avl<long, FEMthermal *> tokens;
 
 long OP_EXPORT
