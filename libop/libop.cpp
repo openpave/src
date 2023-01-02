@@ -251,6 +251,424 @@ OP_LE_Calc_CalME(const unsigned flags,
 	return rv;
 }
 
+ktree_avl<long, LEsystem *> lesystems;
+
+long OP_EXPORT
+OP_LE_Create() noexcept
+{
+	long token = 1;
+	try {
+		LEsystem * system = new LEsystem();
+		while (lesystems.haskey(token))
+			token++;
+		lesystems.add(token, system);
+	} catch (const std::exception & e) {
+		event_msg(EVENT_ERROR,e.what());
+		token = 0;
+	}
+	return token;
+}
+
+int OP_EXPORT
+OP_LE_AddLayer(const long token, const double h, const double E,
+	const double v, const double f) noexcept
+{
+	if (!lesystems.haskey(token)) {
+		event_msg(EVENT_ERROR,"Invalid token!");
+		return true;
+	}
+	LEsystem * system = lesystems.get_noexcept(token);
+	try {
+		system->addlayer(h,E,v,f);
+	} catch (const std::exception & e) {
+		event_msg(EVENT_ERROR,e.what());
+		return true;
+	}
+	return false;
+}
+
+int OP_EXPORT
+OP_LE_InsertLayer(const long token, const unsigned p, const double h,
+	const double E, const double v, const double f) noexcept
+{
+	if (!lesystems.haskey(token)) {
+		event_msg(EVENT_ERROR,"Invalid token!");
+		return true;
+	}
+	LEsystem * system = lesystems.get_noexcept(token);
+	if (p == 0 || (p > system->layers() && system->layers() > 0)) {
+		event_msg(EVENT_WARN,"Bad before layer number!");
+		return true;
+	}
+	try {
+		system->addlayer(h,E,v,f,p-1);
+	} catch (const std::exception & e) {
+		event_msg(EVENT_ERROR,e.what());
+		return true;
+	}
+	return false;
+}
+
+int OP_EXPORT
+OP_LE_RemoveLayer(const long token, const unsigned p) noexcept
+{
+	if (!lesystems.haskey(token)) {
+		event_msg(EVENT_ERROR,"Invalid token!");
+		return true;
+	}
+	LEsystem * system = lesystems.get_noexcept(token);
+	if (p == 0 || p > system->layers()) {
+		event_msg(EVENT_WARN,"Bad layer number!");
+		return true;
+	}
+	system->removelayer(p-1);
+	return false;
+}
+
+int OP_EXPORT
+OP_LE_RemoveLayers(const long token) noexcept
+{
+	if (!lesystems.haskey(token)) {
+		event_msg(EVENT_ERROR,"Invalid token!");
+		return true;
+	}
+	LEsystem * system = lesystems.get_noexcept(token);
+	system->removelayers();
+	return false;
+}
+
+int OP_EXPORT
+OP_LE_AddLoad(const long token, const double ax, const double ay,
+	const double al, const double ap, const double ar) noexcept
+{
+	if (!lesystems.haskey(token)) {
+		event_msg(EVENT_ERROR,"Invalid token!");
+		return true;
+	}
+	LEsystem * system = lesystems.get_noexcept(token);
+	try {
+		system->addload(point2d(ax,ay),al,ap,ar);
+	} catch (const std::exception & e) {
+		event_msg(EVENT_ERROR,e.what());
+		return true;
+	}
+	return false;
+}
+
+int OP_EXPORT
+OP_LE_RemoveLoad(const long token, const unsigned l) noexcept
+{
+	if (!lesystems.haskey(token)) {
+		event_msg(EVENT_ERROR,"Invalid token!");
+		return true;
+	}
+	LEsystem * system = lesystems.get_noexcept(token);
+	try {
+		if (l == 0 || l > system->loads()) {
+			event_msg(EVENT_WARN,"Bad load number!");
+			return true;
+		}
+		system->removeload(l-1);
+	} catch (const std::exception & e) {
+		event_msg(EVENT_ERROR,e.what());
+		return true;
+	}
+	return false;
+}
+
+int OP_EXPORT
+OP_LE_RemoveLoads(const long token) noexcept
+{
+	if (!lesystems.haskey(token)) {
+		event_msg(EVENT_ERROR,"Invalid token!");
+		return true;
+	}
+	LEsystem * system = lesystems.get_noexcept(token);
+	try {
+		system->removeloads();
+	} catch (const std::exception & e) {
+		event_msg(EVENT_ERROR,e.what());
+		return true;
+	}
+	return false;
+}
+
+int OP_EXPORT
+OP_LE_AddGroupLoad(const long token, const unsigned g, const double ax,
+	const double ay, const double al, const double ap, const double ar) noexcept
+{
+	if (!lesystems.haskey(token)) {
+		event_msg(EVENT_ERROR,"Invalid token!");
+		return true;
+	}
+	LEsystem * system = lesystems.get_noexcept(token);
+	try {
+		system->addload(g,point2d(ax,ay),al,ap,ar);
+	} catch (const std::exception & e) {
+		event_msg(EVENT_ERROR,e.what());
+		return true;
+	}
+	return false;
+}
+
+int OP_EXPORT
+OP_LE_RemoveGroupLoad(const long token, const unsigned g, const unsigned l) noexcept
+{
+	if (!lesystems.haskey(token)) {
+		event_msg(EVENT_ERROR,"Invalid token!");
+		return true;
+	}
+	LEsystem * system = lesystems.get_noexcept(token);
+	if (g == 0 || g > system->groups()) {
+		event_msg(EVENT_WARN,"Bad group number!");
+		return true;
+	}
+	try {
+		if (l == 0 || l > system->loads(g-1)) {
+			event_msg(EVENT_WARN,"Bad load number!");
+			return true;
+		}
+		system->removeload(g-1,l-1);
+	} catch (const std::exception & e) {
+		event_msg(EVENT_ERROR,e.what());
+		return true;
+	}
+	return false;
+}
+
+int OP_EXPORT
+OP_LE_RemoveGroup(const long token, const unsigned g) noexcept
+{
+	if (!lesystems.haskey(token)) {
+		event_msg(EVENT_ERROR,"Invalid token!");
+		return true;
+	}
+	LEsystem * system = lesystems.get_noexcept(token);
+	if (g == 0 || g > system->groups()) {
+		event_msg(EVENT_WARN,"Bad group number!");
+		return true;
+	}
+	try {
+		system->removeloads(g-1);
+	} catch (const std::exception & e) {
+		event_msg(EVENT_ERROR,e.what());
+		return true;
+	}
+	return false;
+}
+
+int OP_EXPORT
+OP_LE_RemoveAllLoadGroups(const long token) noexcept
+{
+	if (!lesystems.haskey(token)) {
+		event_msg(EVENT_ERROR,"Invalid token!");
+		return true;
+	}
+	LEsystem * system = lesystems.get_noexcept(token);
+	try {
+		while (system->groups() > 0)
+			system->removeloads(0);
+	} catch (const std::exception & e) {
+		event_msg(EVENT_ERROR,e.what());
+		return true;
+	}
+	return false;
+}
+
+int OP_EXPORT
+OP_LE_AddPoint(const long token, const double px, const double py,
+	const double pz, const unsigned pl) noexcept
+{
+	if (!lesystems.haskey(token)) {
+		event_msg(EVENT_ERROR,"Invalid token!");
+		return true;
+	}
+	LEsystem * system = lesystems.get_noexcept(token);
+	try {
+		if (pl == 0)
+			system->addpoint(point3d(px,py,pz));
+		else
+			system->addpoint(point3d(px,py,pz),pl-1);
+	} catch (const std::exception & e) {
+		event_msg(EVENT_ERROR,e.what());
+		return true;
+	}
+	return false;
+}
+
+int OP_EXPORT
+OP_LE_RemovePoint(const long token, const double px, const double py,
+	const double pz, const unsigned pl) noexcept
+{
+	if (!lesystems.haskey(token)) {
+		event_msg(EVENT_ERROR,"Invalid token!");
+		return true;
+	}
+	LEsystem * system = lesystems.get_noexcept(token);
+	try {
+		if (pl == 0)
+			system->removepoint(point3d(px,py,pz));
+		else
+			system->removepoint(point3d(px,py,pz),pl-1);
+	} catch (const std::exception & e) {
+		event_msg(EVENT_ERROR,e.what());
+		return true;
+	}
+	return false;
+}
+
+int OP_EXPORT
+OP_LE_RemovePoints(const long token) noexcept
+{
+	if (!lesystems.haskey(token)) {
+		event_msg(EVENT_ERROR,"Invalid token!");
+		return true;
+	}
+	LEsystem * system = lesystems.get_noexcept(token);
+	system->removepoints();
+	return false;
+}
+
+int OP_EXPORT
+OP_LE_Calculate(const long token, const unsigned flags) noexcept
+{
+	bool rv = false;
+
+	if (!lesystems.haskey(token)) {
+		event_msg(EVENT_ERROR, "Invalid token!");
+		return true;
+	}
+	LEsystem * system = lesystems.get_noexcept(token);
+	try {
+		switch (flags & 0xFF) {
+		case 0x00:
+		default:
+			rv = !system->calculate(flags > 0xFF
+				? LEsystem::disp : LEsystem::all);
+		break;
+		case 0x01:
+			rv = !system->calculate(flags > 0xFF
+					? LEsystem::fastdisp : LEsystem::fast);
+			break;
+		case 0x02:
+			rv = !system->calculate(flags > 0xFF
+					? LEsystem::dirtydisp : LEsystem::dirty);
+			break;
+		case 0x03:
+			rv = !system->calc_odemark();
+			break;
+		case 0x04:
+			rv = !system->calc_fastnum();
+			break;
+		case 0xFF:
+			rv = !system->calc_accurate();
+			break;
+		}
+	} catch (const std::exception & e) {
+		event_msg(EVENT_ERROR,e.what());
+		rv = true;
+	}
+#if defined(_MSC_VER) || defined(__MINGW32__)
+	_clearfp();
+#endif
+	return rv;
+}
+
+int OP_EXPORT
+OP_LE_Result(const long token, const unsigned i, double res[27]) noexcept
+{
+	if (!lesystems.haskey(token)) {
+		event_msg(EVENT_ERROR, "Invalid token!");
+		return true;
+	}
+	const LEsystem * system = lesystems.get_noexcept(token);
+	try {
+		const pavedata & d = system->result(i);
+		copy_res(res,d);
+	} catch (const std::exception & e) {
+		event_msg(EVENT_ERROR,e.what());
+		return true;
+	}
+	return false;
+}
+
+int OP_EXPORT
+OP_LE_Results(const long token, double (*res)[27]) noexcept
+{
+	if (!lesystems.haskey(token)) {
+		event_msg(EVENT_ERROR, "Invalid token!");
+		return true;
+	}
+	const LEsystem * system = lesystems.get_noexcept(token);
+	try {
+		for (unsigned i = 0; i < system->results(); i++) {
+			const pavedata & d = system->result(i);
+			copy_res(res[i],d);
+		}
+	} catch (const std::exception & e) {
+		event_msg(EVENT_ERROR,e.what());
+		return true;
+	}
+	return false;
+}
+
+int OP_EXPORT
+OP_LE_GroupResult(const long token, const unsigned g, const unsigned i,
+	double res[27]) noexcept
+{
+	if (!lesystems.haskey(token)) {
+		event_msg(EVENT_ERROR, "Invalid token!");
+		return true;
+	}
+	const LEsystem * system = lesystems.get_noexcept(token);
+	try {
+		const pavedata & d = system->result(g,i);
+		copy_res(res,d);
+	} catch (const std::exception & e) {
+		event_msg(EVENT_ERROR,e.what());
+		return true;
+	}
+	return false;
+}
+
+int OP_EXPORT
+OP_LE_GroupResults(const long token, const unsigned g, double (* res)[27]) noexcept
+{
+	if (!lesystems.haskey(token)) {
+		event_msg(EVENT_ERROR, "Invalid token!");
+		return true;
+	}
+	const LEsystem * system = lesystems.get_noexcept(token);
+	try {
+		for (unsigned i = 0; i < system->results(); i++) {
+			const pavedata & d = system->result(g,i);
+			copy_res(res[i],d);
+		}
+	} catch (const std::exception & e) {
+		event_msg(EVENT_ERROR,e.what());
+		return true;
+	}
+	return false;
+}
+
+int OP_EXPORT
+OP_LE_Reset(const long token) noexcept
+{
+	if (!lesystems.haskey(token)) {
+		event_msg(EVENT_ERROR,"Invalid token!");
+		return true;
+	}
+	LEsystem * system = lesystems.get_noexcept(token);
+	delete system;
+	try {
+		lesystems.remove(token);
+	} catch (const std::exception & e) {
+		event_msg(EVENT_ERROR,e.what());
+		return true;
+	}
+	return false;
+}
+
 ktree_avl<long, FEMthermal *> tokens;
 
 long OP_EXPORT

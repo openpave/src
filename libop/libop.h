@@ -100,6 +100,76 @@ OP_LE_Calc_CalME(
 ) noexcept;
 
 long OP_EXPORT
+OP_LE_Create() noexcept;
+
+int OP_EXPORT
+OP_LE_AddLayer(const long token, const double h, const double E,
+	const double v, const double f) noexcept;
+
+int OP_EXPORT
+OP_LE_InsertLayer(const long token, const unsigned p, const double h,
+	const double E, const double v, const double f) noexcept;
+
+int OP_EXPORT
+OP_LE_RemoveLayer(const long token, const unsigned p) noexcept;
+
+int OP_EXPORT
+OP_LE_RemoveLayers(const long token) noexcept;
+
+int OP_EXPORT
+OP_LE_AddLoad(const long token, const double ax, const double ay,
+	const double al, const double ap, const double ar) noexcept;
+
+int OP_EXPORT
+OP_LE_RemoveLoad(const long token, const unsigned l) noexcept;
+
+int OP_EXPORT
+OP_LE_RemoveLoads(const long token) noexcept;
+
+int OP_EXPORT
+OP_LE_AddGroupLoad(const long token, const unsigned g, const double ax,
+	const double ay, const double al, const double ap, const double ar) noexcept;
+
+int OP_EXPORT
+OP_LE_RemoveGroupLoad(const long token, const unsigned g, const unsigned l) noexcept;
+
+int OP_EXPORT
+OP_LE_RemoveGroup(const long token, const unsigned g) noexcept;
+
+int OP_EXPORT
+OP_LE_RemoveAllLoadGroups(const long token) noexcept;
+
+int OP_EXPORT
+OP_LE_AddPoint(const long token, const double px, const double py,
+	const double pz, const unsigned pl) noexcept;
+
+int OP_EXPORT
+OP_LE_RemovePoint(const long token, const double px, const double py,
+	const double pz, const unsigned pl) noexcept;
+
+int OP_EXPORT
+OP_LE_RemovePoints(const long token) noexcept;
+
+int OP_EXPORT
+OP_LE_Calculate(const long token, const unsigned flags) noexcept;
+
+int OP_EXPORT
+OP_LE_Result(const long token, const unsigned i, double res[27]) noexcept;
+
+int OP_EXPORT
+OP_LE_Results(const long token, double (*res)[27]) noexcept;
+
+int OP_EXPORT
+OP_LE_GroupResult(const long token, const unsigned g, const unsigned i,
+	double res[27]) noexcept;
+
+int OP_EXPORT
+OP_LE_GroupResults(const long token, const unsigned g, double (* res)[27]) noexcept;
+
+int OP_EXPORT
+OP_LE_Reset(const long token) noexcept;
+
+long OP_EXPORT
 OP_HT_Init(const unsigned nl, const double * h, const double * D,
 	       const unsigned nn, const double * nd, const double * nt,
 	       const unsigned nw, const double dt) noexcept;
