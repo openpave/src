@@ -589,18 +589,21 @@ struct defldata : public point3d {
 	defldata() noexcept
 	  : point3d() {
 	}
-	defldata(const point3d & p, const double m) noexcept
+	defldata(const unsigned g, const point3d & p, const double m) noexcept
 	  : point3d(p) {
+		lg = g;
 		measured = m;
 		calculated = 0.0;
 	}
 	defldata(const defldata & dd) noexcept
 	  : point3d(dd) {
+		lg = dd.lg;
 		measured = dd.measured;
 		calculated = dd.calculated;
 	}
 	~defldata() {
 	}
+	unsigned lg;
 	double measured;
 	double calculated;
 };
@@ -617,8 +620,11 @@ class LEbackcalc
 	public LEsystem
 {
 public:
-	void adddefl(const point3d & p, double d) {
-		defl.add(defldata(p,d));
+	void adddefl(const point3d & p, const double d) {
+		defl.add(defldata(defaultgroup(),p,d));
+	}
+	void adddefl(const unsigned g, const point3d & p, const double d) {
+		defl.add(defldata(g,p,d));
 	}
 	void adddefl(const defldata & d) {
 		defl.add(d);

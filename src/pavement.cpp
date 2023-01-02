@@ -1805,6 +1805,8 @@ LEbackcalc::backcalc()
 	// Add all of the measure points as evaluation points
 	for (i = 0; i < defl.length(); i++) {
 		const defldata & d = defl[i];
+		if (!lg.inbounds(d.lg))
+			throw std::runtime_error("Deflection for invalid load group!");
 		addpoint(d);
 	}
 	// We work in a log(E) space to avoid having to constrain the
@@ -1925,7 +1927,7 @@ LEbackcalc::backcalc()
 	calculate(LEsystem::disp);
 	for (i = 0; i < defl.length(); i++) {
 		defldata & d = defl[i];
-		d.calculated = result(d).result(pavedata::deflct, pavedata::zz);
+		d.calculated = result(d.lg,d).result(pavedata::deflct, pavedata::zz);
 	}
 	// Restore original evaluation points...
 	points = orig;
@@ -1949,9 +1951,9 @@ LEbackcalc::seed(unsigned nl, double * P)
 		if (d.measured <= 0.0) {
 			negdefl = true;
 		} else {
-			for (j = 0; j < lg[clg].length(); j++) {
-				E += lg[clg][j].pressure()*quad8_vdp(lg[clg][j].distance(d),
-					d.z,lg[clg][j].radius(),v)/std::max(d.measured,1e-4);
+			for (j = 0; j < lg[d.lg].length(); j++) {
+				E += lg[d.lg][j].pressure()*quad8_vdp(lg[d.lg][j].distance(d),
+					d.z,lg[d.lg][j].radius(),v)/std::max(d.measured,1e-4);
 			}
 		}
 	}
@@ -1981,7 +1983,7 @@ LEbackcalc::bowlerror(unsigned nl, const double * P, const double s,
 	for (i = 0, err = 0.0; i < defl.length(); i++) {
 		defldata & d = defl[i];
 		if (P != nullptr)
-			d.calculated = result(d).result(pavedata::deflct, pavedata::zz);
+			d.calculated = result(d.lg,d).result(pavedata::deflct, pavedata::zz);
 		err += pow(d.measured-d.calculated,2);
 	}
 	return sqrt(err/defl.length());
@@ -2035,7 +2037,7 @@ LEbackcalc::deflgrad(unsigned nl, double * P, double * Q,
 	}
 	for (j = 0; j < dl; j++) {
 		defldata & d = defl[j];
-		d.calculated = result(d).result(pavedata::deflct, pavedata::zz);
+		d.calculated = result(d.lg,d).result(pavedata::deflct, pavedata::zz);
 		CD[j] = d.calculated;
 		MD[j] = d.measured;
 		for (i = 0, DG[j] = 0.0; i < nl; i++) {
@@ -2128,7 +2130,7 @@ LEbackcalc::gaussnewton(unsigned nl, double * P, calctype cl)
 	}
 	for (j = 0; j < dl; j++) {
 		defldata & d = defl[j];
-		d.calculated = result(d).result(pavedata::deflct, pavedata::zz);
+		d.calculated = result(d.lg,d).result(pavedata::deflct, pavedata::zz);
 		const double e = d.measured-d.calculated;
 		for (i = 0; i < nl; i++) {
 			H[j*nl+i] = result(d).deflgrad[i];
@@ -2173,7 +2175,7 @@ LEbackcalc::kalman(unsigned nl, double * P)
 	double * W = cache_alloc<double>(nl);
 	for (j = 0; j < dl; j++) {
 		defldata & d = defl[j];
-		d.calculated = result(d).result(pavedata::deflct, pavedata::zz);
+		d.calculated = result(d.lg,d).result(pavedata::deflct,pavedata::zz);
 		Y[j] = d.measured-d.calculated;
 		for (i = 0; i < nl; i++)
 			H[j*nl+i] = result(d).deflgrad[i];
@@ -2349,7 +2351,7 @@ LEbackcalc::conjgrad(unsigned nl, double * P)
 			G[i] = D[i], D[i] = 0.0;
 			for (j = 0; j < dl; j++) {
 				defldata & d = defl[j];
-				d.calculated = result(d).result(pavedata::deflct, pavedata::zz);
+				d.calculated = result(d.lg,d).result(pavedata::deflct, pavedata::zz);
 				D[i] -= 2*(d.calculated-d.measured)*result(d).deflgrad[i];
 			}
 			dgg += D[i]*D[i];
@@ -2409,7 +2411,7 @@ LEbackcalc::swarm(unsigned nl, double * P)
 			calculate(LEsystem::disp);
 			for (i = 0; i < defl.length(); i++) {
 				defldata & d = defl[i];
-				d.calculated = result(d).result(pavedata::deflct, pavedata::zz);
+				d.calculated = result(d.lg,d).result(pavedata::deflct, pavedata::zz);
 				err += pow(d.measured-d.calculated,2);
 			}
 			err = sqrt(err/defl.length());
