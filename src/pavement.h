@@ -632,7 +632,8 @@ public:
 	void removedeflections() noexcept {
 		defl.empty();
 	}
-	void setup(double p, double n, double t, unsigned m) noexcept {
+	void setup(const double p, const double n, const double t,
+			const unsigned m) noexcept {
 		precision = std::max(0.0,p);
 		noise = std::max(0.0,n);
 		tolerance = std::max(1e-6,t);

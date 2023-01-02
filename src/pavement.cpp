@@ -1898,7 +1898,7 @@ LEbackcalc::backcalc()
 			layer(i).emod(pow(10,P[i]));
 		calculate((speed == fast ? LEsystem::fastgrad : LEsystem::dispgrad));
 		//oerr = derr;
-		//derr = (precision > 0.0
+		//const double derr = (precision > 0.0
 		//	? ROUND(bowlerror()/precision)*precision : bowlerror());
 		//printf("K%s ",speed == fast ? "*" : speed == slow ? "!" : "@");
 		//printf("err = %g ",derr);
