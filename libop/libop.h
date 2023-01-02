@@ -102,18 +102,18 @@ OP_LE_Calc_CalME(
 long OP_EXPORT
 OP_HT_Init(const unsigned nl, const double * h, const double * D,
 	       const unsigned nn, const double * nd, const double * nt,
-	       const unsigned nw, const double dt);
+	       const unsigned nw, const double dt) noexcept;
 
-void OP_EXPORT
+int OP_EXPORT
 OP_HT_Step(const long token, const unsigned nt,
-	       const double * tt, const double tb);
+	       const double * tt, const double tb) noexcept;
 
-void OP_EXPORT
+int OP_EXPORT
 OP_HT_Interpolate(const long token, const unsigned np, const double * pd,
-	              double * pt);
+	              double * pt) noexcept;
 
-void OP_EXPORT
-OP_HT_Reset(const long token);
+int OP_EXPORT
+OP_HT_Reset(const long token) noexcept;
 
 END_C_DECLS
 

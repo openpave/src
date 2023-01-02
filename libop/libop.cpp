@@ -256,17 +256,17 @@ ktree_avl<long, FEMthermal *> tokens;
 long OP_EXPORT
 OP_HT_Init(const unsigned nl, const double * h, const double * D,
 	       const unsigned nn, const double * nd, const double * nt,
-	       const unsigned nw, const double dt)
+	       const unsigned nw, const double dt) noexcept
 {
 	unsigned i;
 	long token = 0;
 
 	if (!(nw == 1 || nw == 2 || nw == 4)) {
-		event_msg(EVENT_WARN, "Invalid bandwidth!");
+		event_msg(EVENT_WARN,"Invalid bandwidth!");
 		return 0;
 	}
 	if (nn < nw+1 || (nn-1)%nw != 0) {
-		event_msg(EVENT_WARN, "Bad temperature mesh! Nodes must match bandwidth!");
+		event_msg(EVENT_WARN,"Bad temperature mesh! Nodes must match bandwidth!");
 		return 0;
 	}
 	// Set up layer top and bottom.
@@ -276,58 +276,73 @@ OP_HT_Init(const unsigned nl, const double * h, const double * D,
 			return 0;
 		}
 	}
-	FEMthermal * rv = new FEMthermal(nl,h,D,nn,nd,nt,dt,nw);
-	while (tokens.haskey(token))
-		token++;
-	tokens.add(token, rv);
-
+	try {
+		FEMthermal * rv = new FEMthermal(nl,h,D,nn,nd,nt,dt,nw);
+		while (tokens.haskey(token))
+			token++;
+		tokens.add(token,rv);
+	} catch (const std::exception & e) {
+		event_msg(EVENT_ERROR,e.what());
+		return 0;
+	}
 #if defined(_MSC_VER) || defined(__MINGW32__)
 	_clearfp();
 #endif
 	return token;
 }
 
-void OP_EXPORT
+int OP_EXPORT
 OP_HT_Step(const long token, const unsigned nt,
-	       const double * tt, const double tb)
+	       const double * tt, const double tb) noexcept
 {
 	if (!tokens.haskey(token)) {
-		event_msg(EVENT_ERROR, "Invalid token!");
-		return;
+		event_msg(EVENT_ERROR,"Invalid token!");
+		return true;
 	}
-	FEMthermal * system = tokens.get(token);
-
+	FEMthermal * system = tokens.get_noexcept(token);
 	for (unsigned i = 0; i < nt; i++)
 		system->step(tt[i],tb);
 #if defined(_MSC_VER) || defined(__MINGW32__)
 	_clearfp();
 #endif
+	return false;
 }
 
-void OP_EXPORT
+int OP_EXPORT
 OP_HT_Interpolate(const long token, const unsigned np, const double * pd,
-	              double * pt)
+	              double * pt) noexcept
 {
 	if (!tokens.haskey(token)) {
-		event_msg(EVENT_ERROR, "Invalid token!");
-		return;
+		event_msg(EVENT_ERROR,"Invalid token!");
+		return true;
 	}
-	FEMthermal * system = tokens.get(token);
-
-	system->interpolate(np,pd,pt);
+	FEMthermal * system = tokens.get_noexcept(token);
+	try {
+		system->interpolate(np,pd,pt);
+	} catch (const std::exception & e) {
+		event_msg(EVENT_ERROR,e.what());
+		return true;
+	}
 #if defined(_MSC_VER) || defined(__MINGW32__)
 	_clearfp();
 #endif
+	return false;
 }
 
-void OP_EXPORT
-OP_HT_Reset(const long token)
+int OP_EXPORT
+OP_HT_Reset(const long token) noexcept
 {
 	if (!tokens.haskey(token)) {
-		event_msg(EVENT_ERROR, "Invalid token!");
-		return;
+		event_msg(EVENT_ERROR,"Invalid token!");
+		return true;
 	}
-	FEMthermal * system = tokens.get(token);
-	tokens.remove(token);
+	FEMthermal * system = tokens.get_noexcept(token);
 	delete system;
+	try {
+		tokens.remove(token);
+	} catch (const std::exception & e) {
+		event_msg(EVENT_ERROR,e.what());
+		return true;
+	}
+	return false;
 }
