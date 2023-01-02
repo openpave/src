@@ -666,7 +666,7 @@ private:
 	double deflgrad(unsigned nl, double * P, double * Q,
 			calctype cl = slow);
 	double gaussnewton(unsigned nl, double * P, calctype cl = slow);
-	double kalman(unsigned nl, double * P);
+	double kalman(unsigned nl, double * P, const double wt);
 	double bowlerror(unsigned nl = 0, const double * P = nullptr,
 			const double s = 0.0, const double * D = nullptr);
 	double brent(unsigned nl, double * P, double * D);

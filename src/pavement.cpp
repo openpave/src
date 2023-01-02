@@ -1792,7 +1792,7 @@ LEbackcalc::backcalc()
 {
 	unsigned i, j;
 	const unsigned nl = layers();
-	unsigned steps = 0;
+	unsigned steps = 0, ksteps = 0;
 	//double derr = DBL_MAX, oerr = 0.0;
 	double ostep, astep, tstep = 0.0, step = 1.0;
 	bool seeded = true;
@@ -1838,7 +1838,7 @@ LEbackcalc::backcalc()
 	// can get the error to improve.
 	if (seeded) {
 		calculate(LEsystem::dispgrad);
-		step = kalman(nl,P);
+		step = kalman(nl,P,1.0);
 		if (step < tolerance)
 			return true;
 	}
@@ -1921,10 +1921,22 @@ LEbackcalc::backcalc()
 		//	break;
 		//}
 		memcpy(T,P,sizeof(double)*nl);
-		step = kalman(nl,P);
+		step = kalman(nl,P,std::exp(-(5.0+ksteps++)));
+		//for (i = 0; i < nl; i++)
+		//	printf(" %8.5g", P[i]);
+		//printf("\n");
 		//printf("step = %g\n",step);
 		if (step < tolerance) // We're not moving any more...
 			break;
+		//if (step > 1.0) {
+		//	memcpy(T,P,sizeof(double)*nl);
+		//	step = gaussnewton(nl,P,speed);
+		//	printf("G%s ",speed == fast ? "*" : speed == slow ? "!" : "@");
+		//	for (i = 0; i < nl; i++)
+		//		printf(" %8.5g", P[i]);
+		//	printf("\n");
+		//	printf("step = %10.8f ",step);
+		//}
 	}
 	// If we still haven't converged, resort to brute force...
 	//if (step >= tolerance) {
@@ -2172,7 +2184,7 @@ LEbackcalc::gaussnewton(unsigned nl, double * P, calctype cl)
  * on Wikipedia article.
  */
 double
-LEbackcalc::kalman(unsigned nl, double * P)
+LEbackcalc::kalman(unsigned nl, double * P, const double wt)
 {
 	unsigned i, j, k, dl = defl.length();
 	double step = 0.0;
@@ -2198,6 +2210,7 @@ LEbackcalc::kalman(unsigned nl, double * P)
 		for (j = 0; j < dl; j++) {
 			for (k = 0, S[i*dl+j] = 0.0; k < nl; k++)
 				S[i*dl+j] += H[i*nl+k]*H[j*nl+k];
+			S[i*dl+j] *= wt;
 		}
 	}
 	for (i = 0; i < dl; i++)
@@ -2206,7 +2219,7 @@ LEbackcalc::kalman(unsigned nl, double * P)
 	for (i = 0; i < nl; i++) {
 		for (j = 0; j < dl; j++) {
 			for (k = 0, K[i*dl+j] = 0.0; k < dl; k++)
-				K[i*dl+j] += H[k*nl+i]*S[k*dl+j];
+				K[i*dl+j] += H[k*nl+i]*S[k*dl+j]*wt;
 		}
 	}
 	for (i = 0, step = 0.0; i < nl; i++) {
