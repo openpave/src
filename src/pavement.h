@@ -609,7 +609,7 @@ struct defldata : public point3d {
 };
 
 enum class LEbackcalc_cachestate {
-	empty, deflgrad, kalman, conjgrad, gausssnewton, swarm
+	empty, deflgrad, kalman, conjgrad, gausssnewton, dsm, swarm
 };
 
 /*
@@ -671,6 +671,7 @@ private:
 			const double s = 0.0, const double * D = nullptr);
 	double brent(unsigned nl, double * P, double * D);
 	double conjgrad(unsigned nl, double * P);
+	double dsm(unsigned nl, double * P);
 	double swarm(unsigned nl, double * P);
 
 	using cachestate = LEbackcalc_cachestate;

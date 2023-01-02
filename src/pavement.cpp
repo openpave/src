@@ -32,6 +32,7 @@
 #include <cstddef>
 #include <time.h>
 #include <stdio.h>
+#include <functional>
 #include "pavement.h"
 #include "event.h"
 #include "linalg.h"
@@ -1905,6 +1906,8 @@ LEbackcalc::backcalc()
 		//if (false && ns >= 6)
 		//	break;
 	}
+	if (step >= 0.1)
+		dsm(nl,P);
 	// Now change to the Kalman filter to converge in deflection space
 	while (++steps <= maxsteps*nl) {
 		for (i = 0; i < nl; i++)
@@ -2394,6 +2397,121 @@ LEbackcalc::conjgrad(unsigned nl, double * P)
 		gg += (P[i]-W[i])*(P[i]-W[i]), P[i] = std::min(std::max(1.0,W[i]),9.0);
 	cached_state(cachestate::conjgrad);
 	return sqrt(gg);
+}
+
+double
+LEbackcalc::dsm(unsigned nl, double * P)
+{
+	unsigned i, c = 0;
+	bool r = false;
+	double a = 0.0;
+	//const char * Action = "Init";
+
+	const auto midpoint =
+			[this](unsigned nl, double * A, double * B, double * M) {
+		for (unsigned i = 0; i < nl; i++)
+			M[i] = (A[i]+B[i])/2;
+		M[nl] = this->bowlerror(nl,M);
+	};
+	const auto reflect =
+		[this](unsigned nl, double * A, double * P, double * R, double c) {
+		for (unsigned i = 0; i < nl; i++)
+			R[i] = P[i] + c*(P[i]-A[i]);
+		R[nl] = this->bowlerror(nl,R);
+	};
+
+	if (cache_state == cachestate::dsm)
+		cache_reset();
+	else
+		cache_free();
+	double * V = cache_alloc<double>((nl+1)*(nl+1));
+	double * S = cache_alloc<double>((nl+1)*(nl+1));
+	double * D = cache_alloc<double>(nl+1);
+	double * R = cache_alloc<double>(nl+1);
+	double * E = cache_alloc<double>(nl+1);
+	double * C = cache_alloc<double>(nl+1);
+
+	memcpy(V,P,sizeof(double)*nl);
+	V[nl] = bowlerror(nl,P);
+	for (i = 1; i < nl+1; i++) {
+		memcpy(&(V[(nl+1)*i]),V,sizeof(double)*nl);
+		V[(nl+1)*i+(i-1)] += (i < nl/2 ? 0.1 : -0.1);
+		V[(nl+1)*i+nl] = bowlerror(nl,&(V[(nl+1)*i]));
+	}
+	do {
+		//Action = "No step!";
+		for (i = 0; i < nl+1; i++) {
+			for (unsigned j = i + 1; j < nl+1; j++) {
+				if (V[(nl+1)*i+nl] > V[(nl+1)*j+nl]) {
+					memcpy(D,&(V[(nl+1)*i]),sizeof(double)*(nl+1));
+					memcpy(&(V[(nl+1)*i]),&(V[(nl+1)*j]),sizeof(double)*(nl+1));
+					memcpy(&(V[(nl+1)*j]),D,sizeof(double)*(nl+1));
+				}
+			}
+		}
+		for (i = 0, a = 0.0; i < nl+1; i++) {
+			for (unsigned j = i + 1; j < nl+1; j++)
+				a = std::max(a,step_len(nl,&(V[(nl+1)*i]),&(V[(nl+1)*j])));
+		}
+		memcpy(S,V,sizeof(double)*(nl+1)*(nl+1));
+		memset(E,0,sizeof(double)*(nl+1));
+		memset(C,0,sizeof(double)*(nl+1));
+		if (c > 0 && a < 1e2*tolerance)
+			break;
+		c++, r = false;
+		for (i = 0; i < nl; i++) {
+			//D[i] = 0.0, D[nl] = 0.0;
+			//for (unsigned j = 0; j < nl; j++) {
+			//	double v = (V[(nl+1)*nl+nl]-V[(nl+1)*j+nl])
+			//			  /(V[(nl+1)*nl+nl]-V[(nl+1)*0+nl]);
+			//	D[i] += V[(nl+1)*j+i]*v;
+			//	D[nl] += v;
+			//}
+			//D[i] /= D[nl];
+			D[i] = 0.0;
+			for (unsigned j = 0; j < nl; j++)
+				D[i] += V[(nl+1)*j+i];
+			D[i] /= nl;
+		}
+		reflect(nl,&(V[(nl+1)*nl]),D,R,1.0);
+		if (R[nl] < V[(nl+1)*nl+nl]) {
+			memcpy(&(V[(nl+1)*nl]),R,sizeof(double)*(nl+1));
+			//Action = "Reflection";
+			r = true;
+		}
+		if (R[nl] < V[(nl+1)*0+nl]) {
+			reflect(nl,R,D,E,-2.0);
+			if (E[nl] < R[nl]) {
+				memcpy(&(V[(nl+1)*nl]),E,sizeof(double)*(nl+1));
+				//Action = "Expansion";
+			}
+		} else if (R[nl] >= V[(nl+1)*(nl-1)+nl]) {
+			reflect(nl,&(V[(nl+1)*nl]),D,C,-0.5);
+			if (C[nl] < V[(nl+1)*nl+nl]) {
+				memcpy(&(V[(nl+1)*nl]),C,sizeof(double)*(nl+1));
+				//Action = r ? "Contraction with Reflection" : "Contraction";
+			} else {
+				for (i = 1; i < nl + 1; i++)
+					midpoint(nl,&(V[(nl+1)*0]),&(V[(nl+1)*i]),&(V[(nl+1)*i]));
+				//Action =  r ? "Shrink with Reflection" : "Shrink";
+			}
+		}
+		//printf(" Interation Number : %i\n", c);
+		//printf("        Ps       Ph       Pg       Pa       Pr       Pe       Pc\n");
+		//for (i = 0; i < nl; i++)
+		//	printf(" %i   % 7.5lf % 7.5lf % 7.5lf % 7.5lf % 7.5lf % 7.5lf % 7.5lf\n",
+		//		i,S[(nl+1)*0+i],S[(nl+1)*(nl-1)+i],S[(nl+1)*nl+i],D[i],R[i],E[i],C[i]);
+		//printf("F(P) %lf %lf %lf          %lf %lf %lf\n\n",
+		//	S[(nl+1)*0+nl],S[(nl+1)*(nl-1)+nl],S[(nl+1)*nl+nl],R[nl],E[nl],C[nl]);
+		//for (i = 0; i < nl; i++)
+		//	printf(" %i   % 7.5lf % 7.5lf % 7.5lf\n",
+		//		i,V[(nl+1)*0+i],V[(nl+1)*(nl-1)+i],V[(nl+1)*nl+i]);
+		//printf("F(p) %lf %lf %lf  Circumference = %5.3lf %s\n\n",
+		//	V[(nl+1)*0+nl],V[(nl+1)*(nl-1)+nl],V[(nl+1)*nl+nl],a,Action);
+	} while (true);
+	for (i = 0, a = 0.0; i < nl; i++)
+		a += (P[i]-V[i])*(P[i]-V[i]), P[i] = std::min(std::max(1.0,V[i]),9.0);
+	return sqrt(a);
 }
 
 /*
