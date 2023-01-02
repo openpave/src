@@ -2145,7 +2145,7 @@ LEbackcalc::gaussnewton(unsigned nl, double * P, calctype cl)
 	}
 	equ_eig(nl,S,Y,W); // try
 	for (i = 0, step = 0.0; i < nl; i++)
-		step += W[i]*W[i], P[i] += W[i];
+		step += W[i]*W[i], P[i] = std::min(std::max(1.0,P[i]+W[i]),9.0);
 	step = sqrt(step);
 	cached_state(cachestate::gausssnewton);
 	return step;
@@ -2201,11 +2201,12 @@ LEbackcalc::kalman(unsigned nl, double * P)
 		step += W[i]*W[i];
 	}
 	step = sqrt(step);
+	const double a = std::min(step, 1.0)/step;
 	//if (step > 1.0) {
 	//	step = step*brent(nl,P,W);
 	//} else {
 		for (i = 0; i < nl; i++)
-			P[i] = std::min(std::max(1.0,P[i]+W[i]),9.0);
+			P[i] = std::min(std::max(1.0,P[i]+a*W[i]),9.0);
 	//}
 	cached_state(cachestate::kalman);
 	return step;
