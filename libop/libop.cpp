@@ -43,6 +43,8 @@ DllMain(HANDLE, DWORD fdwReason, LPVOID) noexcept
 		break;
 	case DLL_PROCESS_DETACH:
 		break;
+	default:
+		break;
 	}
 	return TRUE;
 }
@@ -50,6 +52,7 @@ DllMain(HANDLE, DWORD fdwReason, LPVOID) noexcept
 #define _EVENT_IMP
 #endif
 
+#include <cassert>
 #define _PROGRESS_IMP
 #include "event.h"
 #include "tree.h"
@@ -85,6 +88,37 @@ void OP::event_msg(const int level, const char * fmt, ...) noexcept
 }
 #endif
 
+static void
+copy_res(double res[27], const pavedata & d) noexcept {
+	res[0] = d.result(pavedata::stress,pavedata::xx);
+	res[1] = d.result(pavedata::stress,pavedata::yy);
+	res[2] = d.result(pavedata::stress,pavedata::zz);
+	res[3] = d.result(pavedata::stress,pavedata::xy);
+	res[4] = d.result(pavedata::stress,pavedata::xz);
+	res[5] = d.result(pavedata::stress,pavedata::yz);
+	res[6] = d.result(pavedata::stress,pavedata::p1);
+	res[7] = d.result(pavedata::stress,pavedata::p2);
+	res[8] = d.result(pavedata::stress,pavedata::p3);
+	res[9] = d.result(pavedata::stress,pavedata::s1);
+	res[10] = d.result(pavedata::stress,pavedata::s2);
+	res[11] = d.result(pavedata::stress,pavedata::s3);
+	res[12] = d.result(pavedata::deflct,pavedata::xx);
+	res[13] = d.result(pavedata::deflct,pavedata::yy);
+	res[14] = d.result(pavedata::deflct,pavedata::zz);
+	res[15] = d.result(pavedata::strain,pavedata::xx);
+	res[16] = d.result(pavedata::strain,pavedata::yy);
+	res[17] = d.result(pavedata::strain,pavedata::zz);
+	res[18] = d.result(pavedata::strain,pavedata::xy);
+	res[19] = d.result(pavedata::strain,pavedata::xz);
+	res[20] = d.result(pavedata::strain,pavedata::yz);
+	res[21] = d.result(pavedata::strain,pavedata::p1);
+	res[22] = d.result(pavedata::strain,pavedata::p2);
+	res[23] = d.result(pavedata::strain,pavedata::p3);
+	res[24] = d.result(pavedata::strain,pavedata::s1);
+	res[25] = d.result(pavedata::strain,pavedata::s2);
+	res[26] = d.result(pavedata::strain,pavedata::s3);
+}
+
 int OP_EXPORT
 OP_LE_Calc(const unsigned flags,
 	       const unsigned nl, const double * h, const double * E,
@@ -92,79 +126,58 @@ OP_LE_Calc(const unsigned flags,
 	       const unsigned na, const double * ax, const double * ay,
 	         const double * al, const double * ap, const double * ar,
 	       const unsigned np, const double * px, const double * py,
-	         const double * pz, const unsigned * pl, double (* res)[27])
+	         const double * pz, const unsigned * pl, double (* res)[27]) noexcept
 {
 	LEsystem pave;
 	unsigned i;
 	bool rv = false;
 
-	for (i = 0; i < nl; i++) {
-		pave.addlayer(h[i],E[i],v[i],f[i]);
-	}
-	for (i = 0; i < na; i++) {
-		pave.addload(point2d(ax[i],ay[i]),al[i],ap[i],ar[i]);
-	}
-	for (i = 0; i < np; i++) {
-		if (pl[i] == 0)
-			pave.addpoint(point3d(px[i],py[i],pz[i]));
-		else
-			pave.addpoint(point3d(px[i],py[i],pz[i]),pl[i]-1);
-	}
-	switch (flags & 0xFF) {
-	case 0x00:
-	default:
-		rv = !pave.calculate(flags > 0xFF
-				? LEsystem::disp : LEsystem::all);
-		break;
-	case 0x01:
-		rv = !pave.calculate(flags > 0xFF
-				? LEsystem::fastdisp : LEsystem::fast);
-		break;
-	case 0x02:
-		rv = !pave.calculate(flags > 0xFF
-				? LEsystem::dirtydisp : LEsystem::dirty);
-		break;
-	case 0x03:
-		rv = !pave.calc_odemark();
-		break;
-	case 0x04:
-		rv = !pave.calc_fastnum();
-		break;
-	case 0xFF:
-		rv = !pave.calc_accurate();
-		break;
-	}
-	for (i = 0; i < np; i++) {
-		point3d p(px[i],py[i],pz[i]);
-		unsigned l = (pl[i] == 0 ? UINT_MAX : pl[i]-1);
-		const pavedata & d = pave.result(p,l);
-		res[i][ 0] = d.result(pavedata::stress,pavedata::xx);
-		res[i][ 1] = d.result(pavedata::stress,pavedata::yy);
-		res[i][ 2] = d.result(pavedata::stress,pavedata::zz);
-		res[i][ 3] = d.result(pavedata::stress,pavedata::xy);
-		res[i][ 4] = d.result(pavedata::stress,pavedata::xz);
-		res[i][ 5] = d.result(pavedata::stress,pavedata::yz);
-		res[i][ 6] = d.result(pavedata::stress,pavedata::p1);
-		res[i][ 7] = d.result(pavedata::stress,pavedata::p2);
-		res[i][ 8] = d.result(pavedata::stress,pavedata::p3);
-		res[i][ 9] = d.result(pavedata::stress,pavedata::s1);
-		res[i][10] = d.result(pavedata::stress,pavedata::s2);
-		res[i][11] = d.result(pavedata::stress,pavedata::s3);
-		res[i][12] = d.result(pavedata::deflct,pavedata::xx);
-		res[i][13] = d.result(pavedata::deflct,pavedata::yy);
-		res[i][14] = d.result(pavedata::deflct,pavedata::zz);
-		res[i][15] = d.result(pavedata::strain,pavedata::xx);
-		res[i][16] = d.result(pavedata::strain,pavedata::yy);
-		res[i][17] = d.result(pavedata::strain,pavedata::zz);
-		res[i][18] = d.result(pavedata::strain,pavedata::xy);
-		res[i][19] = d.result(pavedata::strain,pavedata::xz);
-		res[i][20] = d.result(pavedata::strain,pavedata::yz);
-		res[i][21] = d.result(pavedata::strain,pavedata::p1);
-		res[i][22] = d.result(pavedata::strain,pavedata::p2);
-		res[i][23] = d.result(pavedata::strain,pavedata::p3);
-		res[i][24] = d.result(pavedata::strain,pavedata::s1);
-		res[i][25] = d.result(pavedata::strain,pavedata::s2);
-		res[i][26] = d.result(pavedata::strain,pavedata::s3);
+	try {
+		for (i = 0; i < nl; i++) {
+			pave.addlayer(h[i],E[i],v[i],f[i]);
+		}
+		for (i = 0; i < na; i++) {
+			pave.addload(point2d(ax[i],ay[i]),al[i],ap[i],ar[i]);
+		}
+		for (i = 0; i < np; i++) {
+			if (pl[i] == 0)
+				pave.addpoint(point3d(px[i],py[i],pz[i]));
+			else
+				pave.addpoint(point3d(px[i],py[i],pz[i]),pl[i]-1);
+		}
+		switch (flags & 0xFF) {
+		case 0x00:
+		default:
+			rv = !pave.calculate(flags > 0xFF
+					? LEsystem::disp : LEsystem::all);
+			break;
+		case 0x01:
+			rv = !pave.calculate(flags > 0xFF
+					? LEsystem::fastdisp : LEsystem::fast);
+			break;
+		case 0x02:
+			rv = !pave.calculate(flags > 0xFF
+					? LEsystem::dirtydisp : LEsystem::dirty);
+			break;
+		case 0x03:
+			rv = !pave.calc_odemark();
+			break;
+		case 0x04:
+			rv = !pave.calc_fastnum();
+			break;
+		case 0xFF:
+			rv = !pave.calc_accurate();
+			break;
+		}
+		for (i = 0; i < np; i++) {
+			const point3d p(px[i],py[i],pz[i]);
+			const unsigned l = (pl[i] == 0 ? UINT_MAX : pl[i]-1);
+			const pavedata & d = pave.result(p,l);
+			copy_res(res[i],d);
+		}
+	} catch (const std::exception & e) {
+		event_msg(EVENT_ERROR,e.what());
+		rv = true;
 	}
 #if defined(_MSC_VER) || defined(__MINGW32__)
 	_clearfp();
@@ -179,53 +192,58 @@ OP_LE_Calc_CalME(const unsigned flags,
 	       const unsigned na, const double * ax, const double * ay,
 	         const double * ap, const double * ar,
 	       const unsigned np, const double * px, const double * py,
-	         const double * pz, const unsigned * pl, double * res)
+	         const double * pz, const unsigned * pl, double * res) noexcept
 {
 	LEsystem pave;
 	unsigned i;
 	bool rv = false;
 
-	for (i = 0; i < nl; i++)
-		pave.addlayer(h[i],E[i]*1000,v[i],f[i]);
-	for (i = 0; i < na; i++)
-		pave.addload(point2d(ax[i],ay[i]),0.0,ap[i]*1000,ar[i]);
-	for (i = 0; i < np; i++)
-		pave.addpoint(point3d(px[i],py[i],pz[i]),pl[i]-1);
-	switch (flags & 0xFF) {
-	case 0x00:
-	default:
-		rv = !pave.calculate(flags > 0xFF
-				? LEsystem::disp : LEsystem::all);
-		break;
-	case 0x01:
-		rv = !pave.calculate(flags > 0xFF
-				? LEsystem::fastdisp : LEsystem::fast);
-		break;
-	case 0x02:
-		rv = !pave.calculate(flags > 0xFF
-				? LEsystem::dirtydisp : LEsystem::dirty);
-		break;
-	case 0x03:
-		rv = !pave.calc_odemark();
-		break;
-	case 0x04:
-		rv = !pave.calc_fastnum();
-		break;
-	case 0xFF:
-		rv = !pave.calc_accurate();
-		break;
-	}
-	for (i = 0; i < np; i++) {
-		const pavedata & d = pave.result(point3d(px[i],py[i],pz[i]),pl[i]-1);
-		res[ 1*150+i] = -d.result(pavedata::stress,pavedata::yy)/1000;
-		res[ 2*150+i] = -d.result(pavedata::stress,pavedata::zz)/1000;
-		res[ 4*150+i] = -d.result(pavedata::stress,pavedata::xz)/1000;
-		res[15*150+i] = -d.result(pavedata::strain,pavedata::xx);
-		res[16*150+i] = -d.result(pavedata::strain,pavedata::yy);
-		res[17*150+i] = -d.result(pavedata::strain,pavedata::zz);
-		res[ 9*150+i] = -d.result(pavedata::strain,pavedata::p1);
-		res[10*150+i] = -d.result(pavedata::strain,pavedata::p2);
-		res[11*150+i] = -d.result(pavedata::strain,pavedata::p3);
+	try {
+		for (i = 0; i < nl; i++)
+			pave.addlayer(h[i],E[i]*1000,v[i],f[i]);
+		for (i = 0; i < na; i++)
+			pave.addload(point2d(ax[i],ay[i]),0.0,ap[i]*1000,ar[i]);
+		for (i = 0; i < np; i++)
+			pave.addpoint(point3d(px[i],py[i],pz[i]),pl[i]-1);
+		switch (flags & 0xFF) {
+		case 0x00:
+		default:
+			rv = !pave.calculate(flags > 0xFF
+					? LEsystem::disp : LEsystem::all);
+			break;
+		case 0x01:
+			rv = !pave.calculate(flags > 0xFF
+					? LEsystem::fastdisp : LEsystem::fast);
+			break;
+		case 0x02:
+			rv = !pave.calculate(flags > 0xFF
+					? LEsystem::dirtydisp : LEsystem::dirty);
+			break;
+		case 0x03:
+			rv = !pave.calc_odemark();
+			break;
+		case 0x04:
+			rv = !pave.calc_fastnum();
+			break;
+		case 0xFF:
+			rv = !pave.calc_accurate();
+			break;
+		}
+		for (i = 0; i < np; i++) {
+			const pavedata & d = pave.result(point3d(px[i],py[i],pz[i]),pl[i]-1);
+			res[ 1*150+i] = -d.result(pavedata::stress,pavedata::yy)/1000;
+			res[ 2*150+i] = -d.result(pavedata::stress,pavedata::zz)/1000;
+			res[ 4*150+i] = -d.result(pavedata::stress,pavedata::xz)/1000;
+			res[15*150+i] = -d.result(pavedata::strain,pavedata::xx);
+			res[16*150+i] = -d.result(pavedata::strain,pavedata::yy);
+			res[17*150+i] = -d.result(pavedata::strain,pavedata::zz);
+			res[ 9*150+i] = -d.result(pavedata::strain,pavedata::p1);
+			res[10*150+i] = -d.result(pavedata::strain,pavedata::p2);
+			res[11*150+i] = -d.result(pavedata::strain,pavedata::p3);
+		}
+	} catch (const std::exception & e) {
+		event_msg(EVENT_ERROR,e.what());
+		rv = true;
 	}
 #if defined(_MSC_VER) || defined(__MINGW32__)
 	_clearfp();

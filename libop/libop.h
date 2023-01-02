@@ -75,7 +75,8 @@ OP_LE_Calc(
 	const double * py,              // Point Y
 	const double * pz,              // Point Z
 	const unsigned * pl,            // Point layer (0 for auto)
-	double (* res)[27]);            // Results
+	double (* res)[27]              // Results
+) noexcept;
 
 int OP_EXPORT
 OP_LE_Calc_CalME(
@@ -95,7 +96,8 @@ OP_LE_Calc_CalME(
 	const double * py,              // Point Y
 	const double * pz,              // Point Z
 	const unsigned * pl,            // Point layer (0 for auto)
-	double * res);                  // Results
+	double * res                    // Results
+) noexcept;
 
 long OP_EXPORT
 OP_HT_Init(const unsigned nl, const double * h, const double * D,
