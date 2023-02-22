@@ -246,6 +246,12 @@ random::make_rv(distribution d, float m, float s)
 		return new rv_normal(m,s);
 	case distribution::lognormal:
 		return new rv_lognormal(m,s);
+	case distribution::uniform:
+		return new rv_uniform(m,s);
+	case distribution::dirac:
+		return new rv_dirac(m);
+	case distribution::discrete:
+		return new rv_discrete(m,s);
 	default:
 		throw std::runtime_error("Trying to create an unknown rv type!");
 	}
@@ -259,6 +265,12 @@ random::make_rv(const random & r)
 		return new rv_normal(r);
 	case distribution::lognormal:
 		return new rv_lognormal(r);
+	case distribution::uniform:
+		return new rv_uniform(r);
+	case distribution::dirac:
+		return new rv_uniform(r);
+	case distribution::discrete:
+		return new rv_discrete(r);
 	default:
 		throw std::runtime_error("Trying to create an unknown rv type!");
 	}

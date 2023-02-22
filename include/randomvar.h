@@ -60,12 +60,15 @@
 
 namespace OP {
 
-#define RV_DIST_PARAM 3                // # of distribution parameters
+#define RV_DIST_PARAM 4                // # of distribution parameters
 
 // Possible types of distribution
 enum class distribution {
 	normal,
-	lognormal
+	lognormal,
+	uniform,
+	dirac,
+	discrete
 };
 
 // forward declare
@@ -210,7 +213,7 @@ private:
 	void add_realization(realized<K> * r) {
 		store.add(realization<K>(r));
 	}
-	void rem_realization(realized<K> * r) {
+	void rem_realization(const realized<K> * r) {
 		for (unsigned i = 0; i < store.length(); i++) {
 			if (store[i].me == r)
 				return store.remove(i);
@@ -415,6 +418,83 @@ protected:
 	friend struct random;
 
 	rv_lognormal(const random & r) noexcept
+	  : rv_base(r) {
+	}
+};
+
+struct rv_uniform
+  : public rv_base<distribution::uniform>
+{
+	rv_uniform(float a, float b)
+	  : rv_base() {
+		param(0,a);
+		param(1,b);
+	}
+	float mean() const noexcept final {
+		return (d[0]+d[1])/2;
+	}
+	float stddev() const noexcept final {
+		return (d[1]-d[0])/(2*sqrt(3.0f));
+	}
+	float scale_stdnormal(float z) const noexcept final {
+		return static_cast<float>(d[0]+(d[1]-d[0])*stdnormal_cdf(z));
+	}
+
+protected:
+	friend struct random;
+
+	rv_uniform(const random & r) noexcept
+	  : rv_base(r) {
+	}
+};
+
+struct rv_dirac
+  : public rv_base<distribution::dirac>
+{
+	rv_dirac(float a)
+	  : rv_base() {
+		param(0,a);
+	}
+	float mean() const noexcept final {
+		return d[0];
+	}
+	float stddev() const noexcept final {
+		return 0.0f;
+	}
+	float scale_stdnormal(float ) const noexcept final {
+		return d[0];
+	}
+
+protected:
+	friend struct random;
+
+	rv_dirac(const random & r) noexcept
+	  : rv_base(r) {
+	}
+};
+
+struct rv_discrete
+  : public rv_base<distribution::discrete>
+{
+	rv_discrete(float a, float b)
+	  : rv_base() {
+		param(0,a);
+		param(1,b);
+	}
+	float mean() const noexcept final {
+		return (d[0]+d[1])/2;
+	}
+	float stddev() const noexcept final {
+		return (sqrt((d[1]-d[0]+1))-1)/(2*sqrt(3.0f));
+	}
+	float scale_stdnormal(float z) const noexcept final {
+		return d[0]-1+std::ceil(static_cast<float>((d[1]-d[0]+1)*stdnormal_cdf(z)));
+	}
+
+protected:
+	friend struct random;
+
+	rv_discrete(const random & r) noexcept
 	  : rv_base(r) {
 	}
 };
