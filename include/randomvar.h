@@ -244,6 +244,8 @@ struct random
 	virtual float mean() const noexcept = 0;
 	// Standard Deviation.
 	virtual float stddev() const noexcept = 0;
+	// Is this randomizable?
+	virtual bool randomizable() const noexcept = 0;
 	// Get a new random number. XXX need covariance matrix.
 	virtual float scale_stdnormal(float z) const noexcept = 0;
 	// defined in statistics.cpp
@@ -274,7 +276,7 @@ protected:
 		return d[i] = dp;
 	}
 
-	float d[RV_DIST_PARAM];             // Four distribution parameters.
+	float d[RV_DIST_PARAM] = {NAN, NAN, NAN, NAN}; // Four distribution parameters.
 
 private:
 	template<typename K>
@@ -376,6 +378,9 @@ struct rv_normal
 	float stddev() const noexcept final {
 		return d[1];
 	}
+	bool randomizable() const noexcept final {
+		return std::isfinite(d[0]) && std::isfinite(d[1]);
+	}
 	float scale_stdnormal(float z) const noexcept final {
 		return static_cast<float>(d[0]+d[1]*z);
 	}
@@ -408,6 +413,9 @@ struct rv_lognormal
 		return std::isinf(d[0]) || std::isnan(d[0]) ? NAN :
 			std::isnan(d[1]) ? NAN : mean()*sqrt(exp(d[1]*d[1])-1);
 	}
+	bool randomizable() const noexcept final {
+		return std::isfinite(d[0]) && std::isfinite(d[1]);
+	}
 	float scale_stdnormal(float z) const noexcept final {
 		return std::isinf(d[0]) ? INFINITY :
 			std::isnan(d[0]) || std::isnan(d[1]) ? NAN :
@@ -436,6 +444,10 @@ struct rv_uniform
 	float stddev() const noexcept final {
 		return (d[1]-d[0])/(2*sqrt(3.0f));
 	}
+	bool randomizable() const noexcept final {
+		return std::isfinite(d[0]) && std::isfinite(d[1]) &&
+				d[1] != d[0];
+	}
 	float scale_stdnormal(float z) const noexcept final {
 		return static_cast<float>(d[0]+(d[1]-d[0])*stdnormal_cdf(z));
 	}
@@ -461,6 +473,9 @@ struct rv_dirac
 	float stddev() const noexcept final {
 		return 0.0f;
 	}
+	bool randomizable() const noexcept final {
+		return false;
+	}
 	float scale_stdnormal(float ) const noexcept final {
 		return d[0];
 	}
@@ -478,6 +493,8 @@ struct rv_discrete
 {
 	rv_discrete(float a, float b)
 	  : rv_base() {
+		if (std::ceil(a) != a || std::ceil(b) != b)
+			throw std::runtime_error("Discrete distribution must have integer parameters");
 		param(0,a);
 		param(1,b);
 	}
@@ -486,6 +503,10 @@ struct rv_discrete
 	}
 	float stddev() const noexcept final {
 		return (sqrt((d[1]-d[0]+1))-1)/(2*sqrt(3.0f));
+	}
+	bool randomizable() const noexcept final {
+		return std::isfinite(d[0]) && std::isfinite(d[1]) &&
+			d[1] != d[0];
 	}
 	float scale_stdnormal(float z) const noexcept final {
 		return d[0]-1+std::ceil(static_cast<float>((d[1]-d[0]+1)*stdnormal_cdf(z)));
@@ -524,8 +545,12 @@ template<typename K>
 inline void
 realized<K>::rolldice() noexcept
 {
-	if (!rolled)
-		v = rv->scale_stdnormal(dealer->rnd_stdnormal());
+	if (!rolled) {
+		if (rv->randomizable())
+			v = rv->scale_stdnormal(dealer->rnd_stdnormal());
+		else
+			v = rv->mean();
+	}
 	rolled = true;
 }
 
