@@ -239,6 +239,12 @@ EMSCRIPTEN_BINDINGS(openpave) {
 		select_overload<void(const defldata &)>(
 			&LEbackcalc::adddefl))
 	.property("deflections",&LEbackcalc::deflections)
+	.function("deflection",optional_override(
+			[](LEbackcalc& this_, unsigned i)
+					-> const defldata * {
+				return &(this_.getdefl(i));
+			}
+		),allow_raw_pointers())
 	.function("removedeflections",&LEbackcalc::removedeflections)
 	.function("setup",&LEbackcalc::setup)
 	.function("backcalc",&LEbackcalc::backcalc)
