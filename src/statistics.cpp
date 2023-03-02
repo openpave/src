@@ -268,7 +268,7 @@ random::make_rv(const random & r)
 	case distribution::uniform:
 		return new rv_uniform(r);
 	case distribution::dirac:
-		return new rv_uniform(r);
+		return new rv_dirac(r);
 	case distribution::discrete:
 		return new rv_discrete(r);
 	default:
