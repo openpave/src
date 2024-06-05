@@ -405,6 +405,43 @@ main()
 #endif
 
 #ifdef NOBUILD
+/*
+ * An implementation of adaptive, recursive Newton-Cotes integration.
+ * Based on the Matlab implementation, but covered in a lot of books...
+ *
+ * This only does integration over the standard normal PDF.  It's just
+ * here to check the error function approximations.
+ */
+#define LEVMAX	10
+static double
+quad8_stdnormal_pdf(double a, double b, double Q = 1.0) noexcept
+{
+	// The magic Newton-Cotes weights
+	static constexpr const double w[9] =
+		{3956, 23552, -3712, 41984, -18160, 41984, -3712, 23552, 3956};
+	static constexpr const double dw = 14175;
+	static int level = -1;
+	static double tol = 1e-30;
+	double h, Q1 = 0.0, Q2 = 0.0;
+	int i;
+
+	level++;
+	h = (b-a)/16.0;
+	for (i = 0; i < 9; i++) {
+		Q1 += h*w[i]*stdnormal_pdf(a+i*h)/dw;
+		Q2 += h*w[i]*stdnormal_pdf(a+(i+8)*h)/dw;
+	}
+	/* This is the adaptive recursive bit.  We only recurse if we can improve... */
+	if (fabs(Q1+Q2-Q) > tol*fabs(Q1+Q2) && level <= LEVMAX) {
+		tol = tol/2;
+		Q1 = quad8_stdnormal_pdf(a,(a+b)/2,Q1);
+		Q2 = quad8_stdnormal_pdf((a+b)/2,b,Q2);
+		tol = tol*2;
+	}
+	level--;
+	return Q1 + Q2;
+}
+
 int
 main()
 {
