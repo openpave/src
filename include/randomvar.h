@@ -51,7 +51,9 @@
 #ifndef __RANDOMVAR_H
 #define __RANDOMVAR_H
 
+#include <atomic>
 #include <cmath>
+#include <mutex>
 #include <stdexcept>
 #include "mathplus.h"
 #include "rng.h"
@@ -104,7 +106,7 @@ class realized
 	house<K> * dealer;
 	const random * rv;
 	float v;
-	unsigned ref_cnt{0};
+	std::atomic<unsigned> ref_cnt{0};
 	bool rolled{false};
 };
 
@@ -201,8 +203,8 @@ public:
 	randomvar<K> make_rv(distribution d, float m, float s);
 	template<typename T>
 	randomvar<K> make_rv(float m, float s);
-	float rnd_stdnormal() noexcept {
-		return static_cast<float>(dice.stdnormal());
+	double rnd_stdnormal() noexcept {
+		return dice.stdnormal();
 	}
 	void rolldice() noexcept;
 
@@ -211,9 +213,13 @@ private:
 	friend struct randomvar<K>;
 
 	void add_realization(realized<K> * r) {
+		std::unique_lock<std::mutex> lock{mtx};
+
 		store.add(realization<K>(r));
 	}
 	void rem_realization(const realized<K> * r) {
+		std::unique_lock<std::mutex> lock{mtx};
+
 		for (unsigned i = 0; i < store.length(); i++) {
 			if (store[i].me == r)
 				return store.remove(i);
@@ -223,6 +229,7 @@ private:
 
 	oset<realization<K>> store;       // All the realized variables
 	rng dice;                         // This is the source of randomness
+	std::mutex mtx;                   // Lock this class from changes
 };
 
 /*
@@ -247,7 +254,7 @@ struct random
 	// Is this randomizable?
 	virtual bool randomizable() const noexcept = 0;
 	// Get a new random number. XXX need covariance matrix.
-	virtual float scale_stdnormal(float z) const noexcept = 0;
+	virtual float scale_stdnormal(double z) const noexcept = 0;
 	// defined in statistics.cpp
 	static random * make_rv(distribution d, float m, float s);
 	static random * make_rv(const random & r);
@@ -282,7 +289,7 @@ private:
 	template<typename K>
 	friend struct randomvar;
 
-	volatile unsigned ref_cnt{0};       // for randomvar
+	std::atomic<unsigned> ref_cnt{0};       // for randomvar
 };
 
 /*
@@ -381,7 +388,7 @@ struct rv_normal
 	bool randomizable() const noexcept final {
 		return std::isfinite(d[0]) && std::isfinite(d[1]);
 	}
-	float scale_stdnormal(float z) const noexcept final {
+	float scale_stdnormal(double z) const noexcept final {
 		return static_cast<float>(d[0]+d[1]*z);
 	}
 
@@ -416,7 +423,7 @@ struct rv_lognormal
 	bool randomizable() const noexcept final {
 		return std::isfinite(d[0]) && std::isfinite(d[1]);
 	}
-	float scale_stdnormal(float z) const noexcept final {
+	float scale_stdnormal(double z) const noexcept final {
 		return std::isinf(d[0]) ? INFINITY :
 			std::isnan(d[0]) || std::isnan(d[1]) ? NAN :
 			static_cast<float>(exp(d[0] + d[1] * z));
@@ -448,7 +455,7 @@ struct rv_uniform
 		return std::isfinite(d[0]) && std::isfinite(d[1]) &&
 				d[1] != d[0];
 	}
-	float scale_stdnormal(float z) const noexcept final {
+	float scale_stdnormal(double z) const noexcept final {
 		return static_cast<float>(d[0]+(d[1]-d[0])*stdnormal_cdf(z));
 	}
 
@@ -476,7 +483,7 @@ struct rv_dirac
 	bool randomizable() const noexcept final {
 		return false;
 	}
-	float scale_stdnormal(float ) const noexcept final {
+	float scale_stdnormal(double ) const noexcept final {
 		return d[0];
 	}
 
@@ -508,7 +515,7 @@ struct rv_discrete
 		return std::isfinite(d[0]) && std::isfinite(d[1]) &&
 			d[1] != d[0];
 	}
-	float scale_stdnormal(float z) const noexcept final {
+	float scale_stdnormal(double z) const noexcept final {
 		return d[0]-1+std::ceil(static_cast<float>((d[1]-d[0]+1)*stdnormal_cdf(z)));
 	}
 
@@ -558,6 +565,8 @@ template<typename K>
 inline void
 house<K>::rolldice() noexcept
 {
+	std::unique_lock<std::mutex> lock{mtx};
+
 	store.sort();
 	for (unsigned i = 0; i < store.length(); i++) {
 		store[i].me->rolldice();
